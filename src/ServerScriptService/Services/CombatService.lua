@@ -14,6 +14,7 @@ local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 local CombatService = {}
 local cooldowns = {}
+
 local function getCharacter(instance) if instance:IsA("Player") then return instance.Character elseif instance:IsA("Model") then return instance end end
 local function isPlayerTarget(target) return target:IsA("Player") or (target:IsA("Model") and Players:GetPlayerFromCharacter(target) ~= nil) end
 local function emitCombatEffect(crystalId,targetModel,ability)
@@ -29,9 +30,20 @@ local function fireProgress(player,levelsGained,mastery)
 	if levelsGained>0 and remotes:FindFirstChild("LevelUp") then remotes.LevelUp:FireClient(player,profile.Level) end
 	if mastery and remotes:FindFirstChild("CrystalMasteryChanged") then remotes.CrystalMasteryChanged:FireClient(player,mastery.Crystal,mastery.Level,mastery.XP) end
 end
+local function startNextQuest(player, profile)
+	local candidates = { "CRYSTAL_POWER", "HUNT_EMBERLINGS", "TIDE_EXPEDITION", "WIND_TRIAL", "GUARDIAN_TRIAL", "GOLEM_HUNT", "BAT_HUNT" }
+	for _, questId in ipairs(candidates) do
+		if QuestSystem.CanStart(profile, questId) then
+			if QuestService.Start(player, profile, questId) then
+				player:SetAttribute("QuestMessage", "New quest: " .. QuestSystem.GetDefinition(questId).Name)
+				return
+			end
+		end
+	end
+end
 local function completeQuest(player,profile,questId,message)
 	local definition=QuestSystem.GetDefinition(questId); if not definition or not QuestSystem.IsActive(profile,questId) then return false end; if not QuestSystem.Complete(profile,questId) then return false end
-	XPService.AddXP(profile,definition.XP); EconomyService.AddMoney(profile,definition.Money); PlayerService.Sync(player); player:SetAttribute("QuestMessage",message or (definition.Name.." complete!")); return true
+	XPService.AddXP(profile,definition.XP); EconomyService.AddMoney(profile,definition.Money); PlayerService.Sync(player); player:SetAttribute("QuestMessage",message or (definition.Name.." complete!")); startNextQuest(player, profile); return true
 end
 local function advanceEnemyQuest(player,profile,enemyType)
 	for questId,definition in pairs(QuestSystem.GetDefinitions()) do if definition.EnemyType==enemyType and QuestSystem.IsActive(profile,questId) then local complete,progress,goal=QuestSystem.Advance(profile,questId,1); player:SetAttribute("QuestProgress",string.format("%s: %d/%d",definition.Name,progress,goal)); if complete then completeQuest(player,profile,questId,definition.Name.." complete!") end end end
@@ -44,8 +56,7 @@ local function rewardDefeat(player,profile,targetModel,action,crystalId)
 	if targetModel:GetAttribute("Enemy")~=true or targetModel:GetAttribute("DeathRewarded")==true then return end
 	targetModel:SetAttribute("DeathRewarded",true)
 	local enemyType=targetModel:GetAttribute("EnemyType"); local enemyConfig=enemyType and EnemyConfig.Get(enemyType) or nil; local xpGain=enemyConfig and enemyConfig.XP or (action=="Ability" and 40 or 25); local moneyGain=enemyConfig and enemyConfig.Money or (action=="Ability" and 20 or 10)
-	local _,_,levelsGained=XPService.AddXP(profile,xpGain); EconomyService.AddMoney(profile,moneyGain); giveLoot(profile,targetModel,crystalId)
-	profile.Stats.EnemiesDefeated=(profile.Stats.EnemiesDefeated or 0)+1
+	local _,_,levelsGained=XPService.AddXP(profile,xpGain); EconomyService.AddMoney(profile,moneyGain); giveLoot(profile,targetModel,crystalId); profile.Stats.EnemiesDefeated=(profile.Stats.EnemiesDefeated or 0)+1
 	if enemyType=="AncientGolem" then profile.Stats.AncientGolemsDefeated=(profile.Stats.AncientGolemsDefeated or 0)+1 elseif enemyType=="CrystalBat" then profile.Stats.CrystalBatsDefeated=(profile.Stats.CrystalBatsDefeated or 0)+1 end
 	local masteryLevel,masteryXP,masteryLevels=CrystalMastery.AddXP(profile,crystalId,math.max(10,math.floor(xpGain*0.5)))
 	advanceEnemyQuest(player,profile,enemyType); if targetModel.Name=="TrainingDummy" then completeQuest(player,profile,"FIRST_FIGHT","First Trial complete!") end
@@ -61,13 +72,10 @@ local function applyAbilitySpecial(player,profile,crystalId,targetModel,abilityD
 end
 function CombatService.HandleRequest(player,action,target)
 	if not player:IsA("Player") then return end; local profile=PlayerService.GetProfile(player); if not profile or not profile.Crystals then return end; if typeof(target)~="Instance" or target==player or isPlayerTarget(target) then return end
-	local crystalId=profile.Crystals.Equipped; local config=action=="Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId); if not config then return end
-	cooldowns[player]=cooldowns[player] or {}; local now=os.clock(); if now<(cooldowns[player][action] or 0) then return end; cooldowns[player][action]=now+config.Cooldown
+	local crystalId=profile.Crystals.Equipped; local config=action=="Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId); if not config then return end; cooldowns[player]=cooldowns[player] or {}; local now=os.clock(); if now<(cooldowns[player][action] or 0) then return end; cooldowns[player][action]=now+config.Cooldown
 	local targetModel=getCharacter(target); if not targetModel then return end; local passive=CrystalSystem.GetPassive(crystalId); local mastery=CrystalMastery.GetBonuses(profile,crystalId); local multiplier=math.max(0.1,tonumber(passive.DamageMultiplier) or 1)*mastery.DamageMultiplier; if action=="Ability" then multiplier*=mastery.AbilityDamageMultiplier end
-	local damage=(config.Damage+math.max(0,(profile.Stats.Damage or 0)-10))*multiplier; local humanoid=targetModel:FindFirstChildOfClass("Humanoid"); if not humanoid or humanoid.Health<=0 then return end
-	targetModel:SetAttribute("LastAttackerUserId",player.UserId)
-	local result=DamageService.ProcessDamage({Attacker=player,Target=targetModel,Amount=damage,Range=config.Range,DamageType="Crystal"}); if not result.Success then return end
-	emitCombatEffect(crystalId,targetModel,action=="Ability")
+	local damage=(config.Damage+math.max(0,(profile.Stats.Damage or 0)-10))*multiplier; local humanoid=targetModel:FindFirstChildOfClass("Humanoid"); if not humanoid or humanoid.Health<=0 then return end; targetModel:SetAttribute("LastAttackerUserId",player.UserId)
+	local result=DamageService.ProcessDamage({Attacker=player,Target=targetModel,Amount=damage,Range=config.Range,DamageType="Crystal"}); if not result.Success then return end; emitCombatEffect(crystalId,targetModel,action=="Ability")
 	if action=="Ability" then applyAbilitySpecial(player,profile,crystalId,targetModel,damage); completeQuest(player,profile,"CRYSTAL_POWER","Crystal Power complete!") end
 	if humanoid.Health<=0 then rewardDefeat(player,profile,targetModel,action,crystalId) end
 end
