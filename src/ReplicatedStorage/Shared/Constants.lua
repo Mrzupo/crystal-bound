@@ -1,0 +1,1 @@
+return { MAX_LEVEL = 100, AUTOSAVE_INTERVAL = 60 }
