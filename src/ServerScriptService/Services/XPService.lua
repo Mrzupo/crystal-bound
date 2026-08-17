@@ -6,7 +6,12 @@ local XPService = {}
 function XPService.AddXP(profile, amount)
 	amount = math.max(0, tonumber(amount) or 0)
 	local levelsGained = 0
-	profile.Experience += amount
+	if profile.Level >= XPConfig.MaxLevel then
+		profile.Experience = 0
+		return profile.Level, profile.Experience, levelsGained
+	end
+
+	profile.Experience = math.min(1000000000, profile.Experience + amount)
 
 	while profile.Level < XPConfig.MaxLevel do
 		local required = XPConfig.GetRequiredXP(profile.Level)
@@ -18,6 +23,9 @@ function XPService.AddXP(profile, amount)
 		levelsGained += 1
 	end
 
+	if profile.Level >= XPConfig.MaxLevel then
+		profile.Experience = 0
+	end
 	return profile.Level, profile.Experience, levelsGained
 end
 
