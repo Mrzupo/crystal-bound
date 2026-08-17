@@ -5,7 +5,13 @@ local Workspace = game:GetService("Workspace")
 local PlayerService = require(script.Parent.Services.PlayerService)
 local CombatService = require(script.Parent.Services.CombatService)
 local QuestService = require(script.Parent.Services.QuestService)
+local CrystalService = require(script.Parent.Services.CrystalService)
+local InventoryService = require(script.Parent.Services.InventoryService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
+local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
+
+local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
+local crystals = { "EMBER", "TIDE", "GALE" }
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -22,33 +28,58 @@ local function ensureRemote(className, name)
 	return remote
 end
 
-for _, name in ipairs({ "CombatRequest", "QuestRequest", "NPCRequest", "InventoryRequest", "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged" }) do
+for _, name in ipairs({ "CombatRequest", "QuestRequest", "NPCRequest", "InventoryRequest", "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged" }) do
 	ensureRemote("RemoteEvent", name)
 end
 ensureRemote("RemoteFunction", "GetPlayerData")
 ensureRemote("RemoteFunction", "GetQuestData")
 
-local combatRemote = ReplicatedStorage.Remotes.CombatRequest
-combatRemote.OnServerEvent:Connect(function(player, action, target)
+local remotes = ReplicatedStorage.Remotes
+
+remotes.CombatRequest.OnServerEvent:Connect(function(player, action, target)
 	CombatService.HandleRequest(player, action, target)
 end)
 
-local questRemote = ReplicatedStorage.Remotes.QuestRequest
-questRemote.OnServerEvent:Connect(function(player, action, questId)
+remotes.QuestRequest.OnServerEvent:Connect(function(player, action, questId)
 	local profile = PlayerService.GetProfile(player)
-	if not profile then return end
-	if action == "Start" and type(questId) == "string" then
+	if not profile or type(questId) ~= "string" then return end
+	if action == "Start" then
 		QuestService.Start(player, profile, questId)
-	elseif action == "Complete" and type(questId) == "string" then
-		QuestService.Complete(player, profile, questId, require(script.Parent.Services.XPService), require(script.Parent.Services.EconomyService), PlayerService)
 	end
 end)
 
-ReplicatedStorage.Remotes.GetPlayerData.OnServerInvoke = function(player)
+remotes.InventoryRequest.OnServerEvent:Connect(function(player)
+	local profile = PlayerService.GetProfile(player)
+	if not profile then return end
+	remotes.InventoryChanged:FireClient(player, profile.Inventory)
+end)
+
+remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
+	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
+	local profile = PlayerService.GetProfile(player)
+	if not profile then return end
+
+	local requiredLevel = crystalRequirements[crystalId] or math.huge
+	if profile.Level < requiredLevel then
+		player:SetAttribute("CrystalMessage", string.format("%s unlocks at level %d", crystalId, requiredLevel))
+		return
+	end
+
+	if not CrystalService.OwnsCrystal(profile, crystalId) then
+		CrystalService.UnlockCrystal(profile, crystalId)
+	end
+	if CrystalService.EquipCrystal(profile, crystalId) then
+		PlayerService.Sync(player)
+		player:SetAttribute("CrystalMessage", crystalId .. " equipped")
+		remotes.XPChanged:FireClient(player, profile.Experience, profile.Level)
+	end
+end)
+
+remotes.GetPlayerData.OnServerInvoke = function(player)
 	return PlayerService.GetProfile(player)
 end
 
-ReplicatedStorage.Remotes.GetQuestData.OnServerInvoke = function(player)
+remotes.GetQuestData.OnServerInvoke = function(player)
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return { Active = {}, Completed = {}, Definitions = QuestSystem.GetDefinitions() } end
 	return { Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Definitions = QuestSystem.GetDefinitions() }
@@ -177,8 +208,8 @@ local function spawnTrainingDummy()
 	weld2.Part0 = torso
 	weld2.Part1 = head
 	weld2.Parent = torso
-
 	model.PrimaryPart = root
+
 	humanoid.Died:Connect(function()
 		task.delay(3, function()
 			if npcs.Parent and not npcs:FindFirstChild("TrainingDummy") then spawnTrainingDummy() end
@@ -192,14 +223,14 @@ spawnTrainingDummy()
 
 Players.PlayerAdded:Connect(function(player)
 	local profile = PlayerService.Load(player)
-	if not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
+	if profile and not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
 		QuestService.Start(player, profile, "FIRST_FIGHT")
 	end
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
 	local profile = PlayerService.Load(player)
-	if not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
+	if profile and not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
 		QuestService.Start(player, profile, "FIRST_FIGHT")
 	end
 end
