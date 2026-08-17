@@ -9,8 +9,9 @@ local function ensure(profile, crystalId)
 		mastery = { Level = 1, XP = 0 }
 		profile.CrystalMastery[crystalId] = mastery
 	end
-	mastery.Level = math.max(1, math.floor(tonumber(mastery.Level) or 1))
+	mastery.Level = math.clamp(math.floor(tonumber(mastery.Level) or 1), 1, Config.MaxLevel)
 	mastery.XP = math.max(0, math.floor(tonumber(mastery.XP) or 0))
+	if mastery.Level >= Config.MaxLevel then mastery.XP = 0 end
 	return mastery
 end
 
@@ -24,7 +25,11 @@ end
 
 function CrystalMastery.AddXP(profile, crystalId, amount)
 	local mastery = ensure(profile, crystalId)
-	mastery.XP += math.max(0, math.floor(tonumber(amount) or 0))
+	if mastery.Level >= Config.MaxLevel then
+		mastery.XP = 0
+		return mastery.Level, mastery.XP, 0
+	end
+	mastery.XP = math.min(100000000, mastery.XP + math.max(0, math.floor(tonumber(amount) or 0)))
 	local levels = 0
 	while mastery.Level < Config.MaxLevel do
 		local required = CrystalMastery.GetRequiredXP(mastery.Level)
@@ -33,6 +38,7 @@ function CrystalMastery.AddXP(profile, crystalId, amount)
 		mastery.Level += 1
 		levels += 1
 	end
+	if mastery.Level >= Config.MaxLevel then mastery.XP = 0 end
 	return mastery.Level, mastery.XP, levels
 end
 
