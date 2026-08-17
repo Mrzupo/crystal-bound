@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 
 local EnemyConfig = require(game.ReplicatedStorage.Config.EnemyConfig)
 local AIPathService = require(script.Parent.AIPathService)
+local StatusEffectService = require(script.Parent.StatusEffectService)
 
 local NPCService = {}
 
@@ -108,13 +109,12 @@ local function specialAttack(typeId, model, character, targetHumanoid, targetRoo
 		if (targetRoot.Position - root.Position).Magnitude <= 14 then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(255, 90, 30), 6)
 			targetHumanoid:TakeDamage(baseDamage + 6)
+			StatusEffectService.ApplyBurn(targetHumanoid, 2, 3, 0.6)
 		end
 	elseif typeId == "Tidecrawler" then
 		emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
 		targetHumanoid:TakeDamage(baseDamage + 3)
-		local oldSpeed = targetHumanoid.WalkSpeed
-		targetHumanoid.WalkSpeed = math.max(8, oldSpeed - 5)
-		task.delay(1.5, function() if targetHumanoid.Parent and targetHumanoid.Health > 0 then targetHumanoid.WalkSpeed = oldSpeed end end)
+		StatusEffectService.ApplySlow(targetHumanoid, 0.65, 1.5)
 	elseif typeId == "Galewisp" then
 		local direction = targetRoot.Position - root.Position
 		if direction.Magnitude > 0.1 and direction.Magnitude <= 18 then
@@ -131,7 +131,9 @@ local function specialAttack(typeId, model, character, targetHumanoid, targetRoo
 			local otherCharacter = player.Character
 			local otherHumanoid = otherCharacter and otherCharacter:FindFirstChildOfClass("Humanoid")
 			local otherRoot = otherCharacter and otherCharacter:FindFirstChild("HumanoidRootPart")
-			if otherHumanoid and otherHumanoid.Health > 0 and otherRoot and (otherRoot.Position - root.Position).Magnitude <= 10 then otherHumanoid:TakeDamage(baseDamage + 10) end
+			if otherHumanoid and otherHumanoid.Health > 0 and otherRoot and (otherRoot.Position - root.Position).Magnitude <= 10 then
+				otherHumanoid:TakeDamage(baseDamage + 10)
+			end
 		end
 	end
 end
@@ -185,6 +187,7 @@ function NPCService.StartEnemyAI(model)
 			task.wait(0.1)
 		end
 		AIPathService.Clear(model)
+		StatusEffectService.Clear(humanoid)
 	end)
 end
 
@@ -204,6 +207,7 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	model.PrimaryPart = root; attachHealthBar(model, humanoid, root)
 	humanoid.Died:Connect(function()
 		AIPathService.Clear(model)
+		StatusEffectService.Clear(humanoid)
 		if onDeath then onDeath(model, config) end
 		task.delay(1.5, function() if model.Parent then model:Destroy() end end)
 	end)
