@@ -23,6 +23,28 @@ local function setupLeaderstats(player, profile)
 	money.Parent = leaderstats
 end
 
+local function updateTitleTag(player, title)
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	if not head then return end
+	local existing = head:FindFirstChild("CrystalBoundTitle")
+	if existing then existing:Destroy() end
+	if not title or title == "" then return end
+	local tag = Instance.new("BillboardGui")
+	tag.Name = "CrystalBoundTitle"
+	tag.Size = UDim2.fromOffset(240, 36)
+	tag.StudsOffset = Vector3.new(0, 2.8, 0)
+	tag.AlwaysOnTop = true
+	tag.Parent = head
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = "< " .. title .. " >"
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 16
+	label.Parent = tag
+end
+
 function PlayerService.GetProfile(player)
 	return PlayerService.Profiles[player]
 end
@@ -65,6 +87,7 @@ function PlayerService.Sync(player)
 	local passive = CrystalSystem.GetPassive(crystalId)
 	local mastery = CrystalMastery.Get(profile, crystalId)
 	local masteryBonuses = CrystalMastery.GetBonuses(profile, crystalId)
+	local title = (profile.Titles and profile.Titles[#profile.Titles]) or ""
 	player:SetAttribute("Level", profile.Level)
 	player:SetAttribute("Experience", profile.Experience)
 	player:SetAttribute("Money", profile.Money)
@@ -74,8 +97,9 @@ function PlayerService.Sync(player)
 	player:SetAttribute("MaxHealthBonus", (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus)
 	player:SetAttribute("CrystalMasteryLevel", mastery.Level)
 	player:SetAttribute("CrystalMasteryXP", mastery.XP)
-	player:SetAttribute("Title", (profile.Titles and profile.Titles[#profile.Titles]) or "")
+	player:SetAttribute("Title", title)
 	player:SetAttribute("AchievementCount", #(profile.Achievements or {}))
+	updateTitleTag(player, title)
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
