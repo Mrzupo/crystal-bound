@@ -8,6 +8,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local XPService = require(script.Parent.XPService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local QuestService = require(script.Parent.QuestService)
+local DodgeService = require(script.Parent.DodgeService)
 local BossService = { Bound = false }
 
 local function shockwave(center, radius, damage, ignoreModel)
@@ -16,7 +17,7 @@ local function shockwave(center, radius, damage, ignoreModel)
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
-			humanoid:TakeDamage(math.max(0, damage))
+			DodgeService.ApplyDamage(player, humanoid, math.max(0, damage))
 		end
 	end
 
@@ -123,7 +124,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 						end
 					elseif os.clock() >= nextAttack then
 						nextAttack = os.clock() + (phase == 2 and 1.0 or config.AttackCooldown)
-						targetHumanoid:TakeDamage(phase == 2 and math.floor(config.AttackDamage * 1.35) or config.AttackDamage)
+						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, phase == 2 and math.floor(config.AttackDamage * 1.35) or config.AttackDamage)
 					end
 					if os.clock() >= nextAbility and nearestDistance <= config.AbilityRadius * 1.5 then
 						nextAbility = os.clock() + config.AbilityCooldown
