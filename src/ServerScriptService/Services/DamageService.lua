@@ -26,11 +26,9 @@ function DamageService.CanDamage(request)
 	if not DamageService.ValidateRequest(request) then return false end
 	if request.Attacker == request.Target then return false end
 	if not request.Target:IsDescendantOf(workspace) then return false end
-
 	local attackerRoot = getRoot(request.Attacker)
 	local targetRoot = getRoot(request.Target)
 	if not attackerRoot or not targetRoot then return false end
-
 	local maxRange = tonumber(request.Range) or 16
 	return (attackerRoot.Position - targetRoot.Position).Magnitude <= maxRange
 end
@@ -59,6 +57,14 @@ function DamageService.ProcessDamage(request)
 	local amount = math.clamp(tonumber(request.Amount) or 0, 0, 1000)
 	if amount <= 0 then
 		return DamageResult.new(false, 0, "Invalid damage")
+	end
+
+	if targetModel:GetAttribute("DodgeInvulnerable") == true then
+		return DamageResult.new(true, 0, "Dodged")
+	end
+	local owner = game:GetService("Players"):GetPlayerFromCharacter(targetModel)
+	if owner and owner:GetAttribute("DodgeInvulnerable") == true then
+		return DamageResult.new(true, 0, "Dodged")
 	end
 
 	humanoid:TakeDamage(amount)
