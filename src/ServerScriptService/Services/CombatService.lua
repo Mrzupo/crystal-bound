@@ -7,6 +7,7 @@ local XPService = require(script.Parent.XPService)
 local EconomyService = require(script.Parent.EconomyService)
 local InventoryService = require(script.Parent.InventoryService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
+local QuestService = require(script.Parent.QuestService)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 
@@ -35,13 +36,29 @@ local function fireProgress(player, levelsGained, moneyChanged, inventoryChanged
 	if levelsGained > 0 and remotes:FindFirstChild("LevelUp") then remotes.LevelUp:FireClient(player, profile.Level) end
 end
 
+local function startNextQuest(player, profile)
+	local candidates = {}
+	if profile.Level >= 3 then table.insert(candidates, "HUNT_EMBERLINGS") end
+	if profile.Level >= 6 then table.insert(candidates, "TIDE_EXPEDITION") end
+	for _, questId in ipairs(candidates) do
+		if not QuestSystem.IsActive(profile, questId) and not QuestSystem.IsCompleted(profile, questId) then
+			if QuestService.Start(player, profile, questId) then
+				player:SetAttribute("QuestMessage", "New quest: " .. QuestSystem.GetDefinition(questId).Name)
+				return
+			end
+		end
+	end
+end
+
 local function completeQuest(player, profile, questId, message)
 	local definition = QuestSystem.GetDefinition(questId)
 	if not definition or not QuestSystem.IsActive(profile, questId) then return false end
 	if not QuestSystem.Complete(profile, questId) then return false end
 	XPService.AddXP(profile, definition.XP)
 	EconomyService.AddMoney(profile, definition.Money)
+	PlayerService.Sync(player)
 	player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!"))
+	startNextQuest(player, profile)
 	return true
 end
 
