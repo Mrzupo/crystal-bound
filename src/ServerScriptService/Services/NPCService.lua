@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 
 local EnemyConfig = require(game.ReplicatedStorage.Config.EnemyConfig)
 
@@ -67,12 +68,51 @@ local function applyVisualStyle(typeId, body, head)
 	body.Size = config.BodySize; head.Size = config.HeadSize; head.Shape = config.HeadShape
 	body.Color = config.Color; head.Color = config.Color; body.Material = config.Material; head.Material = config.Material
 	if typeId == "Galewisp" or typeId == "CrystalBat" then
-		local light = Instance.new("PointLight")
-		light.Color = config.Color; light.Range = 8; light.Brightness = 1.5; light.Parent = head
+		local light = Instance.new("PointLight"); light.Color = config.Color; light.Range = 8; light.Brightness = 1.5; light.Parent = head
 	end
 	if typeId == "Emberling" or typeId == "Tidecrawler" or typeId == "AncientGolem" then
-		local aura = Instance.new("SelectionBox")
-		aura.Name = "CrystalAura"; aura.Adornee = body; aura.LineThickness = 0.03; aura.SurfaceTransparency = 1; aura.Color3 = config.Color; aura.Parent = body
+		local aura = Instance.new("SelectionBox"); aura.Name = "CrystalAura"; aura.Adornee = body; aura.LineThickness = 0.03; aura.SurfaceTransparency = 1; aura.Color3 = config.Color; aura.Parent = body
+	end
+end
+
+local function emitSpecialEffect(position, color, radius)
+	local part = Instance.new("Part")
+	part.Anchored = true; part.CanCollide = false; part.CanTouch = false; part.CanQuery = false; part.Shape = Enum.PartType.Ball; part.Material = Enum.Material.Neon; part.Color = color; part.Size = Vector3.new(2, 2, 2); part.CFrame = CFrame.new(position); part.Transparency = 0.2; part.Parent = workspace
+	TweenService:Create(part, TweenInfo.new(0.3), { Size = Vector3.new(radius, radius, radius), Transparency = 1 }):Play()
+	task.delay(0.35, function() if part.Parent then part:Destroy() end end)
+end
+
+local function specialAttack(typeId, model, character, targetHumanoid, targetRoot, root)
+	local baseDamage = EnemyConfig.Get(typeId).AttackDamage
+	if typeId == "Emberling" then
+		if (targetRoot.Position - root.Position).Magnitude <= 14 then
+			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(255, 90, 30), 6)
+			targetHumanoid:TakeDamage(baseDamage + 6)
+		end
+	elseif typeId == "Tidecrawler" then
+		emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
+		targetHumanoid:TakeDamage(baseDamage + 3)
+		local oldSpeed = targetHumanoid.WalkSpeed
+		targetHumanoid.WalkSpeed = math.max(8, oldSpeed - 5)
+		task.delay(1.5, function() if targetHumanoid.Parent and targetHumanoid.Health > 0 then targetHumanoid.WalkSpeed = oldSpeed end end)
+	elseif typeId == "Galewisp" then
+		local direction = targetRoot.Position - root.Position
+		if direction.Magnitude > 0.1 and direction.Magnitude <= 18 then
+			emitSpecialEffect(root.Position, Color3.fromRGB(175, 120, 255), 8)
+			model:PivotTo(CFrame.lookAt(targetRoot.Position - direction.Unit * 4, targetRoot.Position))
+			targetHumanoid:TakeDamage(baseDamage + 8)
+		end
+	elseif typeId == "CrystalBat" then
+		emitSpecialEffect(targetRoot.Position, Color3.fromRGB(80, 255, 240), 5)
+		targetHumanoid:TakeDamage(baseDamage + 5)
+	elseif typeId == "AncientGolem" then
+		emitSpecialEffect(root.Position, Color3.fromRGB(150, 140, 125), 12)
+		for _, player in ipairs(Players:GetPlayers()) do
+			local otherCharacter = player.Character
+			local otherHumanoid = otherCharacter and otherCharacter:FindFirstChildOfClass("Humanoid")
+			local otherRoot = otherCharacter and otherCharacter:FindFirstChild("HumanoidRootPart")
+			if otherHumanoid and otherHumanoid.Health > 0 and otherRoot and (otherRoot.Position - root.Position).Magnitude <= 10 then otherHumanoid:TakeDamage(baseDamage + 10) end
+		end
 	end
 end
 
@@ -83,7 +123,7 @@ function NPCService.StartEnemyAI(model)
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
 	if not humanoid or not root or config.AggroRange <= 0 then return end
 	task.spawn(function()
-		local nextAttack = 0
+		local nextAttack, nextSpecial = 0, os.clock() + 3
 		local homePosition = root.Position
 		local leashDistance = math.max(config.AggroRange * 1.8, 50)
 		while model.Parent and humanoid.Health > 0 do
@@ -102,6 +142,10 @@ function NPCService.StartEnemyAI(model)
 					elseif os.clock() >= nextAttack then
 						nextAttack = os.clock() + math.max(0.25, config.AttackCooldown)
 						targetHumanoid:TakeDamage(math.max(0, config.AttackDamage))
+					end
+					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" then
+						nextSpecial = os.clock() + 6
+						specialAttack(typeId, model, character, targetHumanoid, targetRoot, root)
 					end
 				end
 			else
@@ -126,20 +170,14 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	model.Name = uniqueName or config.DisplayName:gsub("%s+", "")
 	model:SetAttribute("Enemy", true); model:SetAttribute("EnemyType", typeId); model:SetAttribute("RewardXP", config.XP); model:SetAttribute("RewardMoney", config.Money)
 	model:SetAttribute("SpawnX", position.X); model:SetAttribute("SpawnY", position.Y); model:SetAttribute("SpawnZ", position.Z); model.Parent = parent
-
-	local root = Instance.new("Part")
-	root.Name = "HumanoidRootPart"; root.Size = Vector3.new(2, 2, 1); root.Position = position + Vector3.new(0, 3, 0); root.Transparency = 1; root.Anchored = true; root.CanCollide = false; root.Parent = model
-	local body = Instance.new("Part")
-	body.Name = "Body"; body.Size = Vector3.new(3, 4, 2); body.Position = position + Vector3.new(0, 4, 0); body.Anchored = true; body.Parent = model
-	local head = Instance.new("Part")
-	head.Name = "Head"; head.Shape = Enum.PartType.Ball; head.Size = Vector3.new(2, 2, 2); head.Position = position + Vector3.new(0, 7, 0); head.Anchored = true; head.Parent = model
+	local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Size = Vector3.new(2, 2, 1); root.Position = position + Vector3.new(0, 3, 0); root.Transparency = 1; root.Anchored = true; root.CanCollide = false; root.Parent = model
+	local body = Instance.new("Part"); body.Name = "Body"; body.Size = Vector3.new(3, 4, 2); body.Position = position + Vector3.new(0, 4, 0); body.Anchored = true; body.Parent = model
+	local head = Instance.new("Part"); head.Name = "Head"; head.Shape = Enum.PartType.Ball; head.Size = Vector3.new(2, 2, 2); head.Position = position + Vector3.new(0, 7, 0); head.Anchored = true; head.Parent = model
 	applyVisualStyle(typeId, body, head)
-	local humanoid = Instance.new("Humanoid")
-	humanoid.MaxHealth = config.Health; humanoid.Health = config.Health; humanoid.DisplayName = config.DisplayName; humanoid.Parent = model
+	local humanoid = Instance.new("Humanoid"); humanoid.MaxHealth = config.Health; humanoid.Health = config.Health; humanoid.DisplayName = config.DisplayName; humanoid.Parent = model
 	local weldA = Instance.new("WeldConstraint"); weldA.Part0 = root; weldA.Part1 = body; weldA.Parent = root
 	local weldB = Instance.new("WeldConstraint"); weldB.Part0 = body; weldB.Part1 = head; weldB.Parent = body
-	model.PrimaryPart = root
-	attachHealthBar(model, humanoid, root)
+	model.PrimaryPart = root; attachHealthBar(model, humanoid, root)
 	humanoid.Died:Connect(function() if onDeath then onDeath(model, config) end end)
 	NPCService.StartEnemyAI(model)
 	return model
