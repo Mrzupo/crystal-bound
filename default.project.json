@@ -112,7 +112,8 @@
         "QuestMenu": { "$path": "src/StarterPlayer/StarterPlayerScripts/QuestMenu.client.lua" },
         "TouchControls": { "$path": "src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua" },
         "AchievementMenu": { "$path": "src/StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua" },
-        "TouchMenus": { "$path": "src/StarterPlayer/StarterPlayerScripts/TouchMenus.client.lua" }
+        "TouchMenus": { "$path": "src/StarterPlayer/StarterPlayerScripts/TouchMenus.client.lua" },
+        "StatusMessages": { "$path": "src/StarterPlayer/StarterPlayerScripts/StatusMessages.client.lua" }
       }
     },
     "StarterGui": {
