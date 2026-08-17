@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -120,6 +121,49 @@ local function ensureHud()
 		message.Parent = gui
 		Instance.new("UICorner", message).CornerRadius = UDim.new(0, 10)
 
+		local boss = Instance.new("Frame")
+		boss.Name = "BossBar"
+		boss.AnchorPoint = Vector2.new(0.5, 0)
+		boss.Position = UDim2.new(0.5, 0, 0, 78)
+		boss.Size = UDim2.fromOffset(620, 74)
+		boss.BackgroundTransparency = 0.12
+		boss.Visible = false
+		boss.Parent = gui
+		Instance.new("UICorner", boss).CornerRadius = UDim.new(0, 10)
+
+		local bossName = Instance.new("TextLabel")
+		bossName.Name = "Name"
+		bossName.Position = UDim2.fromOffset(12, 6)
+		bossName.Size = UDim2.fromOffset(596, 24)
+		bossName.BackgroundTransparency = 1
+		bossName.TextXAlignment = Enum.TextXAlignment.Center
+		bossName.Font = Enum.Font.GothamBold
+		bossName.TextSize = 19
+		bossName.Parent = boss
+
+		local hpBack = Instance.new("Frame")
+		hpBack.Name = "HPBack"
+		hpBack.Position = UDim2.fromOffset(12, 35)
+		hpBack.Size = UDim2.fromOffset(596, 25)
+		hpBack.BackgroundTransparency = 0.15
+		hpBack.Parent = boss
+		Instance.new("UICorner", hpBack).CornerRadius = UDim.new(0, 6)
+
+		local hpFill = Instance.new("Frame")
+		hpFill.Name = "HPFill"
+		hpFill.Size = UDim2.fromScale(1, 1)
+		hpFill.Parent = hpBack
+		Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0, 6)
+
+		local hpText = Instance.new("TextLabel")
+		hpText.Name = "HPText"
+		hpText.Size = UDim2.fromScale(1, 1)
+		hpText.BackgroundTransparency = 1
+		hpText.TextXAlignment = Enum.TextXAlignment.Center
+		hpText.Font = Enum.Font.GothamBold
+		hpText.TextSize = 14
+		hpText.Parent = hpBack
+
 		local help = Instance.new("TextLabel")
 		help.Name = "Help"
 		help.AnchorPoint = Vector2.new(0.5, 1)
@@ -131,10 +175,10 @@ local function ensureHud()
 		help.TextSize = 16
 		help.Parent = gui
 	end
-	return panel.Stats, panel.Mastery, panel.Achievements, panel.Inventory, gui.Quest, gui.Message
+	return panel.Stats, panel.Mastery, panel.Achievements, panel.Inventory, gui.Quest, gui.Message, gui.BossBar
 end
 
-local statsLabel, masteryLabel, achievementsLabel, inventoryLabel, questLabel, messageLabel = ensureHud()
+local statsLabel, masteryLabel, achievementsLabel, inventoryLabel, questLabel, messageLabel, bossBar = ensureHud()
 
 local function showMessage(text)
 	if type(text) ~= "string" or text == "" then return end
@@ -202,6 +246,22 @@ local function refreshQuests()
 	questLabel.Text = table.concat(lines, "\n")
 end
 
+local function refreshBoss()
+	local workspaceFolder = workspace:FindFirstChild("NPCs")
+	local boss = workspaceFolder and workspaceFolder:FindFirstChild("CrystalGuardian")
+	local humanoid = boss and boss:FindFirstChildOfClass("Humanoid")
+	if not boss or not humanoid or humanoid.Health <= 0 then
+		bossBar.Visible = false
+		return
+	end
+	bossBar.Visible = true
+	local phase = boss:GetAttribute("BossPhase") or 1
+	bossBar.Name.Text = string.format("Crystal Guardian  •  Phase %d", phase)
+	local ratio = math.clamp(humanoid.Health / math.max(1, humanoid.MaxHealth), 0, 1)
+	bossBar.HPBack.HPFill.Size = UDim2.fromScale(ratio, 1)
+	bossBar.HPBack.HPText.Text = string.format("%d / %d HP", math.max(0, math.floor(humanoid.Health)), math.floor(humanoid.MaxHealth))
+end
+
 for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", "CrystalMasteryLevel", "CrystalMasteryXP", "AchievementCount", "Title", "AchievementMessage", "BossMessage", "QuestMessage", "CrystalMessage", "PortalMessage", "ShopMessage", "QuestProgress" }) do
 	player:GetAttributeChangedSignal(attribute):Connect(function()
 		refreshHud()
@@ -262,4 +322,5 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
+RunService.RenderStepped:Connect(refreshBoss)
 print("Crystal Bound client ready")
