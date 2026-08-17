@@ -35,6 +35,23 @@ local function getNearestPlayer(position, maxDistance)
 	return nearestCharacter, nearestDistance
 end
 
+local function steerAroundObstacle(model, desiredDirection)
+	if desiredDirection.Magnitude < 0.01 or not model.PrimaryPart then return desiredDirection end
+	local root = model.PrimaryPart
+	local direction = desiredDirection.Unit
+	local origin = root.Position + Vector3.new(0, 2, 0)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { model }
+	params.IgnoreWater = true
+	if not Workspace:Raycast(origin, direction * 7, params) then return desiredDirection end
+	local left = CFrame.Angles(0, math.rad(-55), 0):VectorToWorldSpace(direction)
+	if not Workspace:Raycast(origin, left * 7, params) then return left end
+	local right = CFrame.Angles(0, math.rad(55), 0):VectorToWorldSpace(direction)
+	if not Workspace:Raycast(origin, right * 7, params) then return right end
+	return CFrame.Angles(0, math.rad(90), 0):VectorToWorldSpace(direction)
+end
+
 local function attachHealthBar(model, humanoid, root)
 	local existing = root:FindFirstChild("EnemyHealthBar")
 	if existing then existing:Destroy() end
@@ -122,9 +139,10 @@ function NPCService.StartEnemyAI(model)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
 	if not humanoid or not root or config.AggroRange <= 0 then return end
+	local homePosition = root.Position
+	model:SetAttribute("HomeX", homePosition.X); model:SetAttribute("HomeY", homePosition.Y); model:SetAttribute("HomeZ", homePosition.Z)
 	task.spawn(function()
 		local nextAttack, nextSpecial = 0, os.clock() + 3
-		local homePosition = root.Position
 		local leashDistance = math.max(config.AggroRange * 1.8, 50)
 		while model.Parent and humanoid.Health > 0 do
 			local character, distance = getNearestPlayer(root.Position, config.AggroRange)
@@ -134,9 +152,10 @@ function NPCService.StartEnemyAI(model)
 				if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
 					if distance > config.AttackRange then
 						local direction = targetRoot.Position - root.Position
-						if direction.Magnitude > 0.1 then
+						local steer = steerAroundObstacle(model, direction)
+						if steer.Magnitude > 0.1 then
 							local step = math.min(0.9, direction.Magnitude)
-							local nextPosition = root.Position + direction.Unit * step
+							local nextPosition = root.Position + steer.Unit * step
 							if (nextPosition - homePosition).Magnitude <= leashDistance then model:PivotTo(CFrame.lookAt(nextPosition, targetRoot.Position)) end
 						end
 					elseif os.clock() >= nextAttack then
@@ -152,9 +171,10 @@ function NPCService.StartEnemyAI(model)
 				local distanceFromHome = (root.Position - homePosition).Magnitude
 				if distanceFromHome > 3 then
 					local direction = homePosition - root.Position
-					if direction.Magnitude > 0.1 then
+					local steer = steerAroundObstacle(model, direction)
+					if steer.Magnitude > 0.1 then
 						local step = math.min(0.75, direction.Magnitude)
-						local nextPosition = root.Position + direction.Unit * step
+						local nextPosition = root.Position + steer.Unit * step
 						model:PivotTo(CFrame.lookAt(nextPosition, homePosition))
 					end
 				end
