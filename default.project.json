@@ -7,6 +7,7 @@
       "Modules": {
         "$className": "Folder",
         "PlayerData": { "$path": "src/ReplicatedStorage/Modules/PlayerData.lua" },
+        "SafeProfileStore": { "$path": "src/ReplicatedStorage/Modules/SafeProfileStore.lua" },
         "CombatSystem": { "$path": "src/ReplicatedStorage/Modules/CombatSystem.lua" },
         "CrystalSystem": { "$path": "src/ReplicatedStorage/Modules/CrystalSystem.lua" },
         "CrystalMastery": { "$path": "src/ReplicatedStorage/Modules/CrystalMastery.lua" },
