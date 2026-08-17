@@ -39,6 +39,7 @@
         "GameConfig": { "$path": "src/ReplicatedStorage/Config/GameConfig.lua" },
         "CrystalConfig": { "$path": "src/ReplicatedStorage/Config/CrystalConfig.lua" },
         "CrystalUpgradeConfig": { "$path": "src/ReplicatedStorage/Config/CrystalUpgradeConfig.lua" },
+        "BossConfig": { "$path": "src/ReplicatedStorage/Config/BossConfig.lua" },
         "EnemyConfig": { "$path": "src/ReplicatedStorage/Config/EnemyConfig.lua" },
         "XPConfig": { "$path": "src/ReplicatedStorage/Config/XPConfig.lua" },
         "EconomyConfig": { "$path": "src/ReplicatedStorage/Config/EconomyConfig.lua" },
@@ -85,6 +86,7 @@
         "QuestService": { "$path": "src/ServerScriptService/Services/QuestService.lua" },
         "CrystalService": { "$path": "src/ServerScriptService/Services/CrystalService.lua" },
         "NPCService": { "$path": "src/ServerScriptService/Services/NPCService.lua" },
+        "BossService": { "$path": "src/ServerScriptService/Services/BossService.lua" },
         "XPService": { "$path": "src/ServerScriptService/Services/XPService.lua" },
         "EconomyService": { "$path": "src/ServerScriptService/Services/EconomyService.lua" },
         "InventoryService": { "$path": "src/ServerScriptService/Services/InventoryService.lua" }
