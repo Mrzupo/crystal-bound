@@ -6,9 +6,11 @@
 - [x] DataStore Save/Load + Retry
 - [x] Autosave alle 60 Sekunden
 - [x] Session-Locking mit Timeout und Release beim Server-Shutdown
+- [x] Separater Session-Heartbeat gegen Lock-Ablauf bei Save-Ausfällen
 - [x] Sicherer Profil-Ladefehlerpfad ohne leeres Fallback-Profil
 - [x] Persistente Daten-Normalisierung für Zahlen, Kristalle, Inventar, Quests und Daily Bounty
-- [x] XP- und Levelsystem
+- [x] Validierung der Daily-Bounty-Gegner bei Save-Migration
+- [x] XP- und Levelsystem mit sauberem Max-Level-Cap
 - [x] Geldsystem
 - [x] Inventar + Material-Loot
 - [x] Materialverkauf beim Material Trader
@@ -18,7 +20,7 @@
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
 - [x] Crystal-Passiveffekte
-- [x] Crystal-Mastery + Upgrade-System
+- [x] Crystal-Mastery + Upgrade-System mit sauberem Max-Level-Cap
 - [x] Crystal-Fähigkeiten mit unterschiedlichen Effekten
 - [x] Servervalidiertes Combat
 - [x] Serverseitige Combat-Action-Whitelist
@@ -27,11 +29,14 @@
 - [x] Serverautorisierte kritische Treffer
 - [x] Serverautorisierter Dodge mit globalem ForceField-Schutz
 - [x] Serverseitige Ability-Cooldown-Anzeige im HUD
+- [x] Combat-Cooldowns werden erst nach erfolgreicher Schadensvalidierung verbraucht
 - [x] Damage Numbers + Cooldown-Feedback
 - [x] Modulare Combat-Hit-Flash- und Player-Hit-Reaction
 - [x] Gegner-Konfiguration und serverseitige einfache KI
 - [x] Hindernis-Steering + Pathfinding-Fallback
+- [x] Pathfinding-Rechenrate pro NPC gedrosselt
 - [x] Status-Effekte (Burn / Slow)
+- [x] Stacking-sichere Slow-Basisgeschwindigkeit
 - [x] Gegnertypen mit unterschiedlichen visuellen Stilen
 - [x] Gegnertypen mit speziellen Angriffen
 - [x] Gegner-HP-Balken
@@ -57,6 +62,7 @@
 - [x] Quest Journal
 - [x] Achievements + Titles
 - [x] Achievement Journal
+- [x] Deterministische Achievement-Reihenfolge
 - [x] Tägliche Bounty mit persistentem Fortschritt
 - [x] NPC-Dialoge mit servervalidierten Menü-Optionen
 - [x] NPC-Dialoge als zentraler Einstieg zu Quest/Crystal/Shop/Inventory/Crafting
@@ -74,7 +80,9 @@
 - [x] Modulare Welt-Themes
 - [x] Rojo-/default.project.json-Struktur für alle Erweiterungen
 - [x] GitHub-CI für JSON-, Rojo- und häufige Luau-Require-Pfad-Validierung
+- [x] GitHub-CI für Cross-File-Gameplay-Referenzen
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
+- [x] Duplicate Cooldown UI entfernt
 
 ## Nächste Systeme
 
