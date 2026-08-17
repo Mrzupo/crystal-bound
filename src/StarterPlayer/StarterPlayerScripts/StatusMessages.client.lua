@@ -14,7 +14,7 @@ local container = Instance.new("Frame")
 container.Name = "Container"
 container.AnchorPoint = Vector2.new(0.5, 0)
 container.Position = UDim2.new(0.5, 0, 0, 92)
-container.Size = UDim2.fromOffset(560, 210)
+container.Size = UDim2.fromOffset(560, 240)
 container.BackgroundTransparency = 1
 container.Parent = gui
 
@@ -28,12 +28,13 @@ layout.Parent = container
 local priorities = {
 	BossMessage = 1,
 	QuestMessage = 2,
-	LootMessage = 3,
-	CrystalMessage = 4,
-	DodgeMessage = 5,
-	PortalMessage = 6,
-	ShopMessage = 7,
-	AchievementMessage = 8,
+	BountyMessage = 3,
+	LootMessage = 4,
+	CrystalMessage = 5,
+	DodgeMessage = 6,
+	PortalMessage = 7,
+	ShopMessage = 8,
+	AchievementMessage = 9,
 	ProfileLoadFailed = 10,
 }
 
@@ -53,18 +54,13 @@ local function show(text, priority)
 	local targetPosition = label.Position
 	label.Position = UDim2.new(0, 0, 0, -8)
 	label.TextTransparency = 1
-	TweenService:Create(label, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = targetPosition,
-		TextTransparency = 0,
-	}):Play()
+	TweenService:Create(label, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = targetPosition, TextTransparency = 0 }):Play()
 
 	task.delay(2.8, function()
 		if not label.Parent then return end
 		local fade = TweenService:Create(label, TweenInfo.new(0.2), { TextTransparency = 1, BackgroundTransparency = 1 })
 		fade:Play()
-		fade.Completed:Connect(function()
-			if label.Parent then label:Destroy() end
-		end)
+		fade.Completed:Connect(function() if label.Parent then label:Destroy() end end)
 	end)
 end
 
@@ -80,6 +76,4 @@ local function bind(attribute)
 	changed()
 end
 
-for attribute in pairs(priorities) do
-	bind(attribute)
-end
+for attribute in pairs(priorities) do bind(attribute) end
