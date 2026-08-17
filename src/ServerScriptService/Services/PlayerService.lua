@@ -1,5 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SaveSystem = require(ReplicatedStorage.Modules.SaveSystem)
+local SafeProfileStore = require(ReplicatedStorage.Modules.SafeProfileStore)
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
@@ -36,7 +36,14 @@ function PlayerService.GetProfile(player) return PlayerService.Profiles[player] 
 
 function PlayerService.Load(player)
 	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
-	local profile = PlayerData.Reconcile(SaveSystem.Load(player))
+	local profile, reason = SafeProfileStore.Load(player)
+	if not profile then
+		player:SetAttribute("ProfileLoadFailed", reason or "Unable to load profile")
+		warn(("Crystal Bound: refusing to create a fresh profile for %s because loading failed: %s"):format(player.Name, tostring(reason)))
+		return nil, reason
+	end
+
+	profile = PlayerData.Reconcile(profile)
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
@@ -114,10 +121,14 @@ end
 
 function PlayerService.Save(player)
 	local profile = PlayerService.Profiles[player]; if not profile then return false end
-	PlayerService.Sync(player); return SaveSystem.Save(player, profile)
+	PlayerService.Sync(player)
+	return SafeProfileStore.Save(player, profile)
 end
+
 function PlayerService.Remove(player)
+	if not PlayerService.Profiles[player] then return end
 	PlayerService.Save(player)
+	SafeProfileStore.Release(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
 	PlayerService.Profiles[player] = nil
 end
