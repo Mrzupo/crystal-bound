@@ -12,17 +12,13 @@ local QuestService = require(script.Parent.QuestService)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local CombatModifierService = require(script.Parent.CombatModifierService)
+local DailyBountyService = require(script.Parent.DailyBountyService)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 local HitboxService = require(ReplicatedStorage.Modules.Combat.HitboxService)
 local CombatService = {}
 local cooldowns = {}
 
-local CRYSTAL_COLORS = {
-	EMBER = Color3.fromRGB(255, 90, 35),
-	TIDE = Color3.fromRGB(45, 150, 255),
-	GALE = Color3.fromRGB(170, 120, 255),
-}
-
+local CRYSTAL_COLORS = { EMBER = Color3.fromRGB(255, 90, 35), TIDE = Color3.fromRGB(45, 150, 255), GALE = Color3.fromRGB(170, 120, 255) }
 local VALID_ACTIONS = { Basic = true, Ability = true }
 
 local function getCharacter(instance)
@@ -46,31 +42,19 @@ local function emitCombatEffect(crystalId, targetModel, ability, critical)
 	local color = CRYSTAL_COLORS[crystalId] or CRYSTAL_COLORS.EMBER
 	local effect, duration = makeEffect(ability and "CrystalAbilityEffect" or "CrystalHitEffect", root.Position, ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2), color, 0.25)
 	effect.Shape = Enum.PartType.Ball
-	TweenService:Create(effect, TweenInfo.new(duration), { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }):Play()
-	Debris:AddItem(effect, duration + 0.05)
+	TweenService:Create(effect, TweenInfo.new(duration), { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }):Play(); Debris:AddItem(effect, duration + 0.05)
 	if critical then
 		local crit, critDuration = makeEffect("CriticalHit", root.Position + Vector3.new(0, 2, 0), Vector3.new(1.5, 1.5, 1.5), Color3.fromRGB(255, 230, 70), 0.35)
 		crit.Shape = Enum.PartType.Ball
-		TweenService:Create(crit, TweenInfo.new(critDuration), { Size = Vector3.new(6, 6, 6), Transparency = 1 }):Play()
-		Debris:AddItem(crit, critDuration + 0.05)
+		TweenService:Create(crit, TweenInfo.new(critDuration), { Size = Vector3.new(6, 6, 6), Transparency = 1 }):Play(); Debris:AddItem(crit, critDuration + 0.05)
 	end
 	if not ability then return end
 	if crystalId == "EMBER" then
-		local ring, ringDuration = makeEffect("EmberBurst", root.Position, Vector3.new(1, 0.6, 1), color, 0.35)
-		ring.Shape = Enum.PartType.Cylinder; ring.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, 0, math.rad(90))
-		TweenService:Create(ring, TweenInfo.new(ringDuration), { Size = Vector3.new(1, 12, 12), Transparency = 1 }):Play(); Debris:AddItem(ring, ringDuration + 0.05)
+		local ring, ringDuration = makeEffect("EmberBurst", root.Position, Vector3.new(1, 0.6, 1), color, 0.35); ring.Shape = Enum.PartType.Cylinder; ring.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, 0, math.rad(90)); TweenService:Create(ring, TweenInfo.new(ringDuration), { Size = Vector3.new(1, 12, 12), Transparency = 1 }):Play(); Debris:AddItem(ring, ringDuration + 0.05)
 	elseif crystalId == "TIDE" then
-		for index = 1, 3 do
-			local orb, orbDuration = makeEffect("TideOrb", root.Position + Vector3.new((index - 2) * 2.5, 1 + index * 0.25, 0), Vector3.new(1.2, 1.2, 1.2), color, 0.5)
-			orb.Shape = Enum.PartType.Ball
-			TweenService:Create(orb, TweenInfo.new(orbDuration), { Position = root.Position + Vector3.new((index - 2) * 4, 4 + index, 0), Transparency = 1 }):Play(); Debris:AddItem(orb, orbDuration + 0.05)
-		end
+		for index = 1, 3 do local orb, orbDuration = makeEffect("TideOrb", root.Position + Vector3.new((index - 2) * 2.5, 1 + index * 0.25, 0), Vector3.new(1.2, 1.2, 1.2), color, 0.5); orb.Shape = Enum.PartType.Ball; TweenService:Create(orb, TweenInfo.new(orbDuration), { Position = root.Position + Vector3.new((index - 2) * 4, 4 + index, 0), Transparency = 1 }):Play(); Debris:AddItem(orb, orbDuration + 0.05) end
 	elseif crystalId == "GALE" then
-		for index = 1, 2 do
-			local slash, slashDuration = makeEffect("GaleSlash", root.Position, Vector3.new(0.5, 7, 0.5), color, 0.3)
-			slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(25 * index))
-			TweenService:Create(slash, TweenInfo.new(slashDuration), { Size = Vector3.new(0.5, 11, 0.5), Transparency = 1 }):Play(); Debris:AddItem(slash, slashDuration + 0.05)
-		end
+		for index = 1, 2 do local slash, slashDuration = makeEffect("GaleSlash", root.Position, Vector3.new(0.5, 7, 0.5), color, 0.3); slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(25 * index)); TweenService:Create(slash, TweenInfo.new(slashDuration), { Size = Vector3.new(0.5, 11, 0.5), Transparency = 1 }):Play(); Debris:AddItem(slash, slashDuration + 0.05) end
 	end
 end
 
@@ -113,10 +97,7 @@ local function giveLoot(player, profile, targetModel, crystalId)
 	local chance = enemyConfig and tonumber(enemyConfig.DropChance) or 1
 	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
 	local added = InventoryService.AddItem(profile, itemId, 1)
-	if added > 0 then
-		player:SetAttribute("LootMessage", "Loot: " .. itemId)
-		return true
-	end
+	if added > 0 then player:SetAttribute("LootMessage", "Loot: " .. itemId); return true end
 	return false
 end
 
@@ -131,6 +112,7 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	EconomyService.AddMoney(profile, moneyGain); giveLoot(player, profile, targetModel, crystalId)
 	profile.Stats.EnemiesDefeated = (profile.Stats.EnemiesDefeated or 0) + 1
 	if enemyType == "AncientGolem" then profile.Stats.AncientGolemsDefeated = (profile.Stats.AncientGolemsDefeated or 0) + 1 elseif enemyType == "CrystalBat" then profile.Stats.CrystalBatsDefeated = (profile.Stats.CrystalBatsDefeated or 0) + 1 end
+	DailyBountyService.AddProgress(player, profile, enemyType, EconomyService, PlayerService)
 	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
 	advanceEnemyQuest(player, profile, enemyType)
 	if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
@@ -144,10 +126,7 @@ local function applyGaleSplash(player, centerModel, damage)
 	local profile = PlayerService.GetProfile(player)
 	for _, enemy in ipairs(HitboxService.GetEnemyModels(centerRoot.Position, 12, centerModel)) do
 		local humanoid = enemy:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			humanoid:TakeDamage(math.max(1, damage * 0.45))
-			if humanoid.Health <= 0 and profile then rewardDefeat(player, profile, enemy, "Ability", "GALE") end
-		end
+		if humanoid then humanoid:TakeDamage(math.max(1, damage * 0.45)); if humanoid.Health <= 0 and profile then rewardDefeat(player, profile, enemy, "Ability", "GALE") end end
 	end
 end
 
