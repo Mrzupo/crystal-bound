@@ -57,6 +57,7 @@
 - [x] Achievement Journal
 - [x] Tägliche Bounty mit persistentem Fortschritt
 - [x] NPC-Dialoge mit servervalidierten Menü-Optionen
+- [x] NPC-Dialoge als zentraler Einstieg zu Quest/Crystal/Shop/Inventory/Crafting
 - [x] HUD für Progression, Loot, Quests, Bounty und Crafting
 - [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge/Bounty/Crafting-Feedback
 - [x] Spieler-HP + Death/Respawn-Feedback
@@ -64,7 +65,7 @@
 - [x] Item-Raritäten
 - [x] Gegnerabhängige Drop-Chancen
 - [x] Mobile Touch Combat Controls mit Kamera-Ray-Zielauswahl
-- [x] Mobile Menu Controls
+- [x] Mobile Menu Controls inklusive Crafting
 - [x] Mobile Dodge-Control
 - [x] NPC-zu-Menü-Verknüpfung über Dialogsystem
 - [x] Welt-Dekoration für alle aktuellen Inseln
