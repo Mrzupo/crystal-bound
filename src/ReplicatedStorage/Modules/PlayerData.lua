@@ -54,7 +54,7 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 11,
+		Version = 12,
 		Level = 1,
 		Experience = 0,
 		Crystals = { Owned = { "EMBER" }, Equipped = "EMBER" },
@@ -65,6 +65,7 @@ function PlayerData.new()
 		ActiveQuests = {}, CompletedQuests = {}, QuestProgress = {},
 		UnlockedIslands = { "STARTER" },
 		Titles = {}, Achievements = {},
+		DailyBounty = { Date = "", EnemyType = "Emberling", Goal = 8, Progress = 0, RewardMoney = 120, Claimed = false },
 		SessionId = "",
 		SessionLockedAt = 0,
 	}
@@ -142,6 +143,15 @@ function PlayerData.Reconcile(data)
 
 	data.UnlockedIslands = normalizeList(data.UnlockedIslands)
 	if not table.find(data.UnlockedIslands, "STARTER") then table.insert(data.UnlockedIslands, "STARTER") end
+
+	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
+	data.DailyBounty.Date = type(data.DailyBounty.Date) == "string" and data.DailyBounty.Date or ""
+	data.DailyBounty.EnemyType = type(data.DailyBounty.EnemyType) == "string" and data.DailyBounty.EnemyType or defaults.DailyBounty.EnemyType
+	data.DailyBounty.Goal = clampInt(data.DailyBounty.Goal, 1, 100, defaults.DailyBounty.Goal)
+	data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, data.DailyBounty.Goal, 0)
+	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, 100000, defaults.DailyBounty.RewardMoney)
+	data.DailyBounty.Claimed = data.DailyBounty.Claimed == true
+
 	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
 	data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 2147483647, 0)
 
