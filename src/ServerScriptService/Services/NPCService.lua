@@ -178,7 +178,12 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local weldA = Instance.new("WeldConstraint"); weldA.Part0 = root; weldA.Part1 = body; weldA.Parent = root
 	local weldB = Instance.new("WeldConstraint"); weldB.Part0 = body; weldB.Part1 = head; weldB.Parent = body
 	model.PrimaryPart = root; attachHealthBar(model, humanoid, root)
-	humanoid.Died:Connect(function() if onDeath then onDeath(model, config) end end)
+	humanoid.Died:Connect(function()
+		if onDeath then onDeath(model, config) end
+		task.delay(1.5, function()
+			if model.Parent then model:Destroy() end
+		end)
+	end)
 	NPCService.StartEnemyAI(model)
 	return model
 end
