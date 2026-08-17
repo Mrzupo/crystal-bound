@@ -63,3 +63,36 @@ jobs:
                   continue
               json.loads(path.read_text(encoding="utf-8"))
               print(f"OK {path}")
+
+      - name: Validate common Luau require paths
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          root = Path("src")
+          problems = []
+
+          patterns = [
+              (re.compile(r'require\(game\.ReplicatedStorage\.Config\.([A-Za-z0-9_]+)\)'), "src/ReplicatedStorage/Config/{}.lua"),
+              (re.compile(r'require\(ReplicatedStorage\.Config\.([A-Za-z0-9_]+)\)'), "src/ReplicatedStorage/Config/{}.lua"),
+              (re.compile(r'require\(game\.ReplicatedStorage\.Modules\.([A-Za-z0-9_]+)\)'), "src/ReplicatedStorage/Modules/{}.lua"),
+              (re.compile(r'require\(ReplicatedStorage\.Modules\.([A-Za-z0-9_]+)\)'), "src/ReplicatedStorage/Modules/{}.lua"),
+              (re.compile(r'require\(script\.Parent\.Services\.([A-Za-z0-9_]+)\)'), "src/ServerScriptService/Services/{}.lua"),
+          ]
+
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              for pattern, template in patterns:
+                  for match in pattern.finditer(text):
+                      target = Path(template.format(match.group(1)))
+                      if not target.is_file():
+                          problems.append(f"{path}: missing require target {target}")
+
+          if problems:
+              print("Missing common require targets:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("Common Luau require targets validated.")
