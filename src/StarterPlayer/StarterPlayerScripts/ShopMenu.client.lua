@@ -58,10 +58,7 @@ local function ensureGui()
 	close.Font = Enum.Font.GothamBold
 	close.TextSize = 18
 	close.Parent = panel
-	close.Activated:Connect(function()
-		open = false
-		panel.Visible = false
-	end)
+	close.Activated:Connect(function() open = false; panel.Visible = false end)
 
 	local status = Instance.new("TextLabel")
 	status.Name = "Status"
@@ -109,9 +106,7 @@ local function ensureGui()
 		sell.Font = Enum.Font.GothamBold
 		sell.TextSize = 13
 		sell.Parent = row
-		sell.Activated:Connect(function()
-			inventoryRequest:FireServer("Sell", item.Id, 1)
-		end)
+		sell.Activated:Connect(function() inventoryRequest:FireServer("Sell", item.Id, 1) end)
 	end
 
 	local hint = Instance.new("TextLabel")
@@ -143,22 +138,23 @@ local function refresh()
 	end
 end
 
+local function openMenu()
+	open = true
+	panel.Visible = true
+	inventoryRequest:FireServer()
+	refresh()
+end
+
 inventoryChanged.OnClientEvent:Connect(function(data)
-	if type(data) == "table" then
-		inventory = data
-		refresh()
-	end
+	if type(data) == "table" then inventory = data; refresh() end
 end)
+
+player:GetAttributeChangedSignal("OpenShopMenu"):Connect(function() openMenu() end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.O then
-		open = not open
-		panel.Visible = open
-		if open then
-			inventoryRequest:FireServer()
-			refresh()
-		end
+		if open then open = false; panel.Visible = false else openMenu() end
 	end
 end)
 
