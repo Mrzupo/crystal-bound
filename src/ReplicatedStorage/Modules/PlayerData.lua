@@ -9,7 +9,7 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 6,
+		Version = 7,
 		Level = 1,
 		Experience = 0,
 		Crystals = { Owned = { "EMBER" }, Equipped = "EMBER" },
@@ -20,6 +20,8 @@ function PlayerData.new()
 		ActiveQuests = {}, CompletedQuests = {}, QuestProgress = {},
 		UnlockedIslands = { "STARTER" },
 		Titles = {}, Achievements = {},
+		SessionId = "",
+		SessionLockedAt = 0,
 	}
 end
 
@@ -39,8 +41,6 @@ function PlayerData.Reconcile(data)
 	end
 
 	merge(data, defaults)
-
-	-- Normalize legacy profiles without deleting progress.
 	data.Crystals = data.Crystals or clone(defaults.Crystals)
 	data.Crystals.Owned = type(data.Crystals.Owned) == "table" and data.Crystals.Owned or { "EMBER" }
 	data.Crystals.Equipped = type(data.Crystals.Equipped) == "string" and data.Crystals.Equipped or "EMBER"
@@ -53,9 +53,9 @@ function PlayerData.Reconcile(data)
 	data.CompletedQuests = type(data.CompletedQuests) == "table" and data.CompletedQuests or {}
 	data.QuestProgress = type(data.QuestProgress) == "table" and data.QuestProgress or {}
 	data.UnlockedIslands = type(data.UnlockedIslands) == "table" and data.UnlockedIslands or { "STARTER" }
+	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
+	data.SessionLockedAt = math.max(0, math.floor(tonumber(data.SessionLockedAt) or 0))
 
-	-- Version 3/4 profiles did not have mastery or achievement fields; the merge above supplies them.
-	-- Keep the original level, XP, money and inventory values untouched.
 	data.Version = defaults.Version
 	data.LegacyVersion = oldVersion
 	return data
