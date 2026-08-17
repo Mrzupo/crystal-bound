@@ -54,7 +54,7 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 10,
+		Version = 11,
 		Level = 1,
 		Experience = 0,
 		Crystals = { Owned = { "EMBER" }, Equipped = "EMBER" },
@@ -124,7 +124,9 @@ function PlayerData.Reconcile(data)
 	for _, questId in ipairs(data.CompletedQuests) do completedSet[questId] = true end
 	local filteredActive = {}
 	for _, questId in ipairs(data.ActiveQuests) do
-		if not completedSet[questId] then table.insert(filteredActive, questId) end
+		if not completedSet[questId] and #filteredActive == 0 then
+			table.insert(filteredActive, questId)
+		end
 	end
 	data.ActiveQuests = filteredActive
 
