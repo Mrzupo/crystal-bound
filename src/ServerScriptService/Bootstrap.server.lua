@@ -33,11 +33,13 @@ combatRemote.OnServerEvent:Connect(function(player, action, target)
 	CombatService.HandleRequest(player, action, target)
 end)
 
-local function makeDummy()
+local function spawnTrainingDummy()
 	local npcs = Workspace:FindFirstChild("NPCs") or Instance.new("Folder")
 	npcs.Name = "NPCs"
 	npcs.Parent = Workspace
-	if npcs:FindFirstChild("TrainingDummy") then return end
+
+	local old = npcs:FindFirstChild("TrainingDummy")
+	if old then old:Destroy() end
 
 	local model = Instance.new("Model")
 	model.Name = "TrainingDummy"
@@ -47,15 +49,14 @@ local function makeDummy()
 	root.Name = "HumanoidRootPart"
 	root.Size = Vector3.new(2, 2, 1)
 	root.Position = Vector3.new(0, 4, -12)
-	root.Anchored = false
 	root.Transparency = 1
+	root.CanCollide = true
 	root.Parent = model
 
 	local torso = Instance.new("Part")
 	torso.Name = "Torso"
 	torso.Size = Vector3.new(3, 4, 2)
 	torso.Position = Vector3.new(0, 5, -12)
-	torso.Anchored = false
 	torso.Parent = model
 
 	local head = Instance.new("Part")
@@ -63,7 +64,6 @@ local function makeDummy()
 	head.Shape = Enum.PartType.Ball
 	head.Size = Vector3.new(2, 2, 2)
 	head.Position = Vector3.new(0, 8, -12)
-	head.Anchored = false
 	head.Parent = model
 
 	local humanoid = Instance.new("Humanoid")
@@ -83,17 +83,14 @@ local function makeDummy()
 	model.PrimaryPart = root
 	humanoid.Died:Connect(function()
 		task.delay(3, function()
-			if model.Parent then
-				local current = model:FindFirstChildOfClass("Humanoid")
-				if current then
-					current.Health = current.MaxHealth
-				end
+			if npcs.Parent and not npcs:FindFirstChild("TrainingDummy") then
+				spawnTrainingDummy()
 			end
 		end)
 	end)
 end
 
-makeDummy()
+spawnTrainingDummy()
 
 Players.PlayerAdded:Connect(function(player)
 	PlayerService.Load(player)
