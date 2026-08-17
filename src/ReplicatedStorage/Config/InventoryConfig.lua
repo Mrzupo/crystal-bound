@@ -1,14 +1,15 @@
 local Items = {
-	EmberShard = { Id = "EmberShard", Name = "Ember Shard", Type = "Material", MaxStackSize = 99, SellPrice = 8 },
-	TidePearl = { Id = "TidePearl", Name = "Tide Pearl", Type = "Material", MaxStackSize = 99, SellPrice = 14 },
-	GaleFeather = { Id = "GaleFeather", Name = "Gale Feather", Type = "Material", MaxStackSize = 99, SellPrice = 22 },
-	GuardianCore = { Id = "GuardianCore", Name = "Guardian Core", Type = "BossMaterial", MaxStackSize = 10, SellPrice = 250 },
-	AncientShard = { Id = "AncientShard", Name = "Ancient Shard", Type = "Material", MaxStackSize = 99, SellPrice = 35 },
+	EmberShard = { Id = "EmberShard", Name = "Ember Shard", Type = "Material", Rarity = "Common", MaxStackSize = 99, SellPrice = 8 },
+	TidePearl = { Id = "TidePearl", Name = "Tide Pearl", Type = "Material", Rarity = "Uncommon", MaxStackSize = 99, SellPrice = 14 },
+	GaleFeather = { Id = "GaleFeather", Name = "Gale Feather", Type = "Material", Rarity = "Rare", MaxStackSize = 99, SellPrice = 22 },
+	GuardianCore = { Id = "GuardianCore", Name = "Guardian Core", Type = "BossMaterial", Rarity = "Legendary", MaxStackSize = 10, SellPrice = 250 },
+	AncientShard = { Id = "AncientShard", Name = "Ancient Shard", Type = "Material", Rarity = "Epic", MaxStackSize = 99, SellPrice = 35 },
 }
 
 local InventoryConfig = {
 	DefaultMaxStackSize = 99,
 	ItemTypes = { Material = "Material", BossMaterial = "BossMaterial" },
+	Rarities = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 },
 	Items = Items,
 }
 
