@@ -104,12 +104,20 @@ local function advanceEnemyQuest(player, profile, enemyType)
 	end
 end
 
-local function giveLoot(profile, targetModel, crystalId)
+local function giveLoot(player, profile, targetModel, crystalId)
 	local enemyType = targetModel:GetAttribute("EnemyType")
 	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
 	local itemId = enemyConfig and enemyConfig.Drop
 	if not itemId then itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId] end
-	return itemId and InventoryService.AddItem(profile, itemId, 1) or 0
+	if not itemId then return false end
+	local chance = enemyConfig and tonumber(enemyConfig.DropChance) or 1
+	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
+	local added = InventoryService.AddItem(profile, itemId, 1)
+	if added > 0 then
+		player:SetAttribute("LootMessage", "Loot: " .. itemId)
+		return true
+	end
+	return false
 end
 
 local function rewardDefeat(player, profile, targetModel, action, crystalId)
@@ -120,7 +128,7 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	local xpGain = enemyConfig and enemyConfig.XP or (action == "Ability" and 40 or 25)
 	local moneyGain = enemyConfig and enemyConfig.Money or (action == "Ability" and 20 or 10)
 	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
-	EconomyService.AddMoney(profile, moneyGain); giveLoot(profile, targetModel, crystalId)
+	EconomyService.AddMoney(profile, moneyGain); giveLoot(player, profile, targetModel, crystalId)
 	profile.Stats.EnemiesDefeated = (profile.Stats.EnemiesDefeated or 0) + 1
 	if enemyType == "AncientGolem" then profile.Stats.AncientGolemsDefeated = (profile.Stats.AncientGolemsDefeated or 0) + 1 elseif enemyType == "CrystalBat" then profile.Stats.CrystalBatsDefeated = (profile.Stats.CrystalBatsDefeated or 0) + 1 end
 	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
