@@ -2,6 +2,7 @@ local PathfindingService = game:GetService("PathfindingService")
 
 local AIPathService = {}
 local cache = setmetatable({}, { __mode = "k" })
+local RECOMPUTE_INTERVAL = 0.5
 
 local function keyFor(goal)
 	return string.format("%d:%d:%d", math.floor(goal.X / 4), math.floor(goal.Y / 4), math.floor(goal.Z / 4))
@@ -10,6 +11,7 @@ end
 function AIPathService.GetNextDirection(model, destination)
 	if not model or not model.PrimaryPart or typeof(destination) ~= "Vector3" then return nil end
 	local root = model.PrimaryPart
+	local now = os.clock()
 	local cacheEntry = cache[model]
 	local key = keyFor(destination)
 	if cacheEntry and cacheEntry.key == key and cacheEntry.waypointIndex and cacheEntry.waypoints[cacheEntry.waypointIndex] then
@@ -19,6 +21,9 @@ function AIPathService.GetNextDirection(model, destination)
 			waypoint = cacheEntry.waypoints[cacheEntry.waypointIndex]
 		end
 		if waypoint then return waypoint.Position - root.Position end
+	end
+	if cacheEntry and cacheEntry.key == key and (now - (cacheEntry.computedAt or 0)) < RECOMPUTE_INTERVAL then
+		return nil
 	end
 
 	local path = PathfindingService:CreatePath({
@@ -31,13 +36,16 @@ function AIPathService.GetNextDirection(model, destination)
 		path:ComputeAsync(root.Position, destination)
 	end)
 	if not ok or path.Status ~= Enum.PathStatus.Success then
-		cache[model] = nil
+		cache[model] = { key = key, waypoints = {}, waypointIndex = nil, computedAt = now }
 		return nil
 	end
 
 	local waypoints = path:GetWaypoints()
-	if #waypoints < 2 then return nil end
-	cache[model] = { key = key, waypoints = waypoints, waypointIndex = 2 }
+	if #waypoints < 2 then
+		cache[model] = { key = key, waypoints = {}, waypointIndex = nil, computedAt = now }
+		return nil
+	end
+	cache[model] = { key = key, waypoints = waypoints, waypointIndex = 2, computedAt = now }
 	local waypoint = waypoints[2]
 	if waypoint.Action == Enum.PathWaypointAction.Jump then
 		local humanoid = model:FindFirstChildOfClass("Humanoid")
