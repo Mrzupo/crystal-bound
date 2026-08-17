@@ -6,6 +6,8 @@ local PlayerService = require(script.Parent.Services.PlayerService)
 local CombatService = require(script.Parent.Services.CombatService)
 local QuestService = require(script.Parent.Services.QuestService)
 local CrystalService = require(script.Parent.Services.CrystalService)
+local InventoryService = require(script.Parent.Services.InventoryService)
+local EconomyService = require(script.Parent.Services.EconomyService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local NPCService = require(script.Parent.Services.NPCService)
@@ -51,10 +53,20 @@ remotes.QuestRequest.OnServerEvent:Connect(function(player, action, questId)
 	end
 end)
 
-remotes.InventoryRequest.OnServerEvent:Connect(function(player)
+remotes.InventoryRequest.OnServerEvent:Connect(function(player, action, itemId, amount)
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
-	remotes.InventoryChanged:FireClient(player, profile.Inventory)
+	if action == "Sell" and type(itemId) == "string" then
+		local ok, earned = EconomyService.SellItem(profile, itemId, amount or 1, InventoryService)
+		if ok then
+			PlayerService.Sync(player)
+			remotes.MoneyChanged:FireClient(player, profile.Money)
+			remotes.InventoryChanged:FireClient(player, profile.Inventory)
+			player:SetAttribute("ShopMessage", string.format("Sold %s for %d Money", itemId, earned))
+		end
+	else
+		remotes.InventoryChanged:FireClient(player, profile.Inventory)
+	end
 end)
 
 remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
@@ -110,7 +122,6 @@ end
 local function createIsland(islands, name, center, size)
 	local island = islands:FindFirstChild(name)
 	if island then return island end
-
 	island = Instance.new("Model")
 	island.Name = name
 	island.Parent = islands
@@ -130,7 +141,6 @@ local function createIsland(islands, name, center, size)
 	title.StudsOffset = Vector3.new(0, 12, 0)
 	title.AlwaysOnTop = true
 	title.Parent = ground
-
 	local text = Instance.new("TextLabel")
 	text.Size = UDim2.fromScale(1, 1)
 	text.BackgroundTransparency = 1
@@ -193,54 +203,55 @@ local function createPortal(island, name, fromPosition, destination, requiredLev
 	end)
 end
 
-local function spawnQuestGiver(npcs)
-	if npcs:FindFirstChild("CrystalKeeper") then return end
+local function spawnSimpleNPC(npcs, name, position, objectText, actionText, callback)
+	if npcs:FindFirstChild(name) then return end
 	local model = Instance.new("Model")
-	model.Name = "CrystalKeeper"
+	model.Name = name
 	model:SetAttribute("Interactable", true)
 	model.Parent = npcs
-
 	local body = Instance.new("Part")
 	body.Name = "Torso"
 	body.Size = Vector3.new(3, 4, 2)
-	body.Position = Vector3.new(12, 3, -2)
+	body.Position = position
 	body.Anchored = true
 	body.Parent = model
-
 	local head = Instance.new("Part")
 	head.Name = "Head"
 	head.Shape = Enum.PartType.Ball
 	head.Size = Vector3.new(2, 2, 2)
-	head.Position = Vector3.new(12, 6, -2)
+	head.Position = position + Vector3.new(0, 3, 0)
 	head.Anchored = true
 	head.Parent = model
-
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Quest"
-	prompt.ObjectText = "Crystal Keeper"
+	prompt.ActionText = actionText
+	prompt.ObjectText = objectText
 	prompt.MaxActivationDistance = 12
 	prompt.Parent = body
-	prompt.Triggered:Connect(function(player)
+	prompt.Triggered:Connect(callback)
+end
+
+local function spawnQuestGiver(npcs)
+	spawnSimpleNPC(npcs, "CrystalKeeper", Vector3.new(12, 3, -2), "Crystal Keeper", "Quest", function(player)
 		local profile = PlayerService.GetProfile(player)
 		if not profile then return end
 		local questToStart
-		if not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
-			questToStart = "FIRST_FIGHT"
-		elseif not QuestSystem.IsActive(profile, "CRYSTAL_POWER") and not QuestSystem.IsCompleted(profile, "CRYSTAL_POWER") then
-			questToStart = "CRYSTAL_POWER"
-		elseif profile.Level >= 3 and not QuestSystem.IsActive(profile, "HUNT_EMBERLINGS") and not QuestSystem.IsCompleted(profile, "HUNT_EMBERLINGS") then
-			questToStart = "HUNT_EMBERLINGS"
-		elseif profile.Level >= 6 and not QuestSystem.IsActive(profile, "TIDE_EXPEDITION") and not QuestSystem.IsCompleted(profile, "TIDE_EXPEDITION") then
-			questToStart = "TIDE_EXPEDITION"
-		elseif profile.Level >= 10 and not QuestSystem.IsActive(profile, "WIND_TRIAL") and not QuestSystem.IsCompleted(profile, "WIND_TRIAL") then
-			questToStart = "WIND_TRIAL"
-		end
+		if not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then questToStart = "FIRST_FIGHT"
+		elseif not QuestSystem.IsActive(profile, "CRYSTAL_POWER") and not QuestSystem.IsCompleted(profile, "CRYSTAL_POWER") then questToStart = "CRYSTAL_POWER"
+		elseif profile.Level >= 3 and not QuestSystem.IsActive(profile, "HUNT_EMBERLINGS") and not QuestSystem.IsCompleted(profile, "HUNT_EMBERLINGS") then questToStart = "HUNT_EMBERLINGS"
+		elseif profile.Level >= 6 and not QuestSystem.IsActive(profile, "TIDE_EXPEDITION") and not QuestSystem.IsCompleted(profile, "TIDE_EXPEDITION") then questToStart = "TIDE_EXPEDITION"
+		elseif profile.Level >= 10 and not QuestSystem.IsActive(profile, "WIND_TRIAL") and not QuestSystem.IsCompleted(profile, "WIND_TRIAL") then questToStart = "WIND_TRIAL" end
 		if questToStart then
 			QuestService.Start(player, profile, questToStart)
 			player:SetAttribute("QuestMessage", "Started: " .. QuestSystem.GetDefinition(questToStart).Name)
 		else
 			player:SetAttribute("QuestMessage", "No new quest available.")
 		end
+	end)
+end
+
+local function spawnTrader(npcs)
+	spawnSimpleNPC(npcs, "MaterialTrader", Vector3.new(20, 3, 10), "Material Trader", "Sell Loot", function(player)
+		player:SetAttribute("ShopMessage", "Open inventory controls to sell materials.")
 	end)
 end
 
@@ -260,6 +271,7 @@ createSpawn(spawnFolder)
 createPortal(starterIsland, "TidePortal", Vector3.new(52, 5, 0), Vector3.new(120, 4, 0), 4)
 createPortal(tideIsland, "StarterPortal", Vector3.new(118, 5, 0), Vector3.new(48, 4, 0), 1)
 spawnQuestGiver(npcs)
+spawnTrader(npcs)
 spawnEnemy(npcs, "TrainingDummy", Vector3.new(0, 1, -12), "TrainingDummy")
 spawnEnemy(npcs, "Emberling", Vector3.new(30, 1, -18), "EmberlingA")
 spawnEnemy(npcs, "Emberling", Vector3.new(-30, 1, -18), "EmberlingB")
@@ -275,25 +287,16 @@ local function initializePlayer(player)
 end
 
 Players.PlayerAdded:Connect(initializePlayer)
-for _, player in ipairs(Players:GetPlayers()) do
-	initializePlayer(player)
-end
-
-Players.PlayerRemoving:Connect(function(player)
-	PlayerService.Remove(player)
-end)
+for _, player in ipairs(Players:GetPlayers()) do initializePlayer(player) end
+Players.PlayerRemoving:Connect(function(player) PlayerService.Remove(player) end)
 
 task.spawn(function()
 	while true do
 		task.wait(AUTOSAVE_INTERVAL)
-		for _, player in ipairs(Players:GetPlayers()) do
-			PlayerService.Save(player)
-		end
+		for _, player in ipairs(Players:GetPlayers()) do PlayerService.Save(player) end
 	end
 end)
 
 game:BindToClose(function()
-	for _, player in ipairs(Players:GetPlayers()) do
-		PlayerService.Save(player)
-	end
+	for _, player in ipairs(Players:GetPlayers()) do PlayerService.Save(player) end
 end)
