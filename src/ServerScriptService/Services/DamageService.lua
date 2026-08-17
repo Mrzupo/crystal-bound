@@ -41,7 +41,17 @@ function DamageService.ProcessDamage(request)
 	end
 
 	local targetModel = request.Target:IsA("Player") and request.Target.Character or request.Target
-	local humanoid = targetModel and targetModel:FindFirstChildOfClass("Humanoid")
+	if not targetModel or not targetModel:IsA("Model") then
+		return DamageResult.new(false, 0, "Invalid target model")
+	end
+
+	local isEnemy = targetModel:GetAttribute("Enemy") == true
+	local isBoss = targetModel:GetAttribute("BossId") ~= nil
+	if not isEnemy and not isBoss then
+		return DamageResult.new(false, 0, "Target is not a combat enemy")
+	end
+
+	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then
 		return DamageResult.new(false, 0, "Target has no living humanoid")
 	end
