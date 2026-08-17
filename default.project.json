@@ -105,6 +105,7 @@
       },
       "Bootstrap": {"$path": "src/ServerScriptService/Bootstrap.server.lua"},
       "CombatCleanup": {"$path": "src/ServerScriptService/CombatCleanup.server.lua"},
+      "SessionHeartbeat": {"$path": "src/ServerScriptService/SessionHeartbeat.server.lua"},
       "DodgeRemote": {"$path": "src/ServerScriptService/DodgeRemote.server.lua"},
       "ShopRemote": {"$path": "src/ServerScriptService/ShopRemote.server.lua"},
       "UseItemRemote": {"$path": "src/ServerScriptService/UseItemRemote.server.lua"},
