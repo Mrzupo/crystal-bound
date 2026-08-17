@@ -19,6 +19,10 @@ function CrystalSystem.GetAbility(id)
 	return CrystalConfig.Abilities[id]
 end
 
+function CrystalSystem.GetPassive(id)
+	return CrystalConfig.Passives[id] or {}
+end
+
 function CrystalSystem.Owns(profile, id)
 	return type(profile.Crystals) == "table"
 		and type(profile.Crystals.Owned) == "table"
@@ -26,17 +30,13 @@ function CrystalSystem.Owns(profile, id)
 end
 
 function CrystalSystem.Unlock(profile, id)
-	if not CrystalSystem.Exists(id) or CrystalSystem.Owns(profile, id) then
-		return false
-	end
+	if not CrystalSystem.Exists(id) or CrystalSystem.Owns(profile, id) then return false end
 	table.insert(profile.Crystals.Owned, id)
 	return true
 end
 
 function CrystalSystem.Equip(profile, id)
-	if not CrystalSystem.Owns(profile, id) then
-		return false
-	end
+	if not CrystalSystem.Owns(profile, id) then return false end
 	profile.Crystals.Equipped = id
 	return true
 end
