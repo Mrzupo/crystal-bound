@@ -7,6 +7,11 @@ local COOLDOWN = 2.5
 local INVULNERABILITY = 0.45
 local BOOST = 42
 
+local function clearForceField(character)
+	local forceField = character and character:FindFirstChild("CrystalBoundDodgeForceField")
+	if forceField then forceField:Destroy() end
+end
+
 function DodgeService.TryDodge(player, direction)
 	if not player or not player:IsA("Player") then return false, "Invalid player" end
 	local character = player.Character
@@ -27,10 +32,20 @@ function DodgeService.TryDodge(player, direction)
 	player:SetAttribute("DodgeCooldownEnd", now + COOLDOWN)
 	player:SetAttribute("DodgeInvulnerable", true)
 	player:SetAttribute("DodgeMessage", "Dodge!")
+
+	clearForceField(character)
+	local forceField = Instance.new("ForceField")
+	forceField.Name = "CrystalBoundDodgeForceField"
+	forceField.Visible = false
+	forceField.Parent = character
+
 	root.AssemblyLinearVelocity = Vector3.new(flat.X * BOOST, root.AssemblyLinearVelocity.Y, flat.Z * BOOST)
 
 	task.delay(INVULNERABILITY, function()
-		if player.Parent then player:SetAttribute("DodgeInvulnerable", false) end
+		if player.Parent then
+			player:SetAttribute("DodgeInvulnerable", false)
+			if player.Character == character then clearForceField(character) end
+		end
 	end)
 	return true
 end
@@ -51,6 +66,7 @@ end
 
 function DodgeService.CleanupPlayer(player)
 	cooldowns[player] = nil
+	if player.Character then clearForceField(player.Character) end
 	if player.Parent then player:SetAttribute("DodgeInvulnerable", false) end
 end
 
