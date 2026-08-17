@@ -13,17 +13,24 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 3,
+		Version = 4,
 		Level = 1,
 		Experience = 0,
 		Crystals = {
 			Owned = { "EMBER" },
 			Equipped = "EMBER",
 		},
+		CrystalMastery = {
+			EMBER = { Level = 1, XP = 0 },
+			TIDE = { Level = 1, XP = 0 },
+			GALE = { Level = 1, XP = 0 },
+		},
 		Money = 100,
 		Stats = {
 			Damage = 10,
 			Health = 100,
+			EnemiesDefeated = 0,
+			BossesDefeated = 0,
 		},
 		Inventory = {},
 		ActiveQuests = {},
