@@ -9,49 +9,70 @@
 - [x] Geldsystem
 - [x] Inventar + Material-Loot
 - [x] Materialverkauf beim Material Trader
+- [x] Shop-/Trader-GUI
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
 - [x] Crystal-Passiveffekte
+- [x] Crystal-Mastery + Upgrade-System
 - [x] Crystal-Fähigkeiten mit unterschiedlichen Effekten
 - [x] Servervalidiertes Combat
-- [x] Gegner-Konfiguration und einfache KI
+- [x] Damage Numbers + Cooldown-Feedback
+- [x] Gegner-Konfiguration und serverseitige einfache KI
+- [x] Gegnertypen mit unterschiedlichen visuellen Stilen
+- [x] Gegnertypen mit speziellen Angriffen
+- [x] Gegner-HP-Balken
 - [x] Training Dummy
 - [x] Emberling
 - [x] Tidecrawler
 - [x] Galewisp
+- [x] Crystal Bat
+- [x] Ancient Golem
+- [x] Crystal Guardian Boss
 - [x] Starter Island
 - [x] Tide Island
 - [x] Wind Island
+- [x] Ancient Ruins
 - [x] Levelgesperrte Portale
 - [x] Questdefinitionen + Fortschritt
-- [x] Quest-Kette für Ember/Tide/Gale
+- [x] Servervalidierte Questvoraussetzungen
+- [x] Automatische Questkette bis Ancient Ruins
+- [x] Quest Journal
+- [x] Achievements + Titles
+- [x] Achievement Journal
 - [x] HUD für Progression, Loot und Quests
+- [x] Spieler-HP + Death/Respawn-Feedback
+- [x] Inventory-/Crystal-GUI
+- [x] Mobile Touch Combat Controls
+- [x] Mobile Menu Controls
+- [x] NPC-zu-Menü-Verknüpfung
+- [x] Welt-Dekoration für alle aktuellen Inseln
+- [x] Rojo-/default.project.json-Struktur für alle Erweiterungen
 
 ## Nächste Systeme
 
-- [ ] Inventarfenster mit Buttons statt Tastenkürzeln
-- [ ] Shop-/Trader-GUI mit Verkaufspreisen
-- [ ] Eigene VFX pro Kristallfähigkeit statt einfacher Effektkugeln
-- [ ] Animationen für Basic Attack und Abilities
-- [ ] echte Hitbox-/AoE-Implementierung statt Zielmodell-Raycast/Mouse-Target
-- [ ] weitere Gegnertypen und Bossgegner
-- [ ] NPC-Dialogsystem
-- [ ] weitere Inseln und Level-Gates
-- [ ] Crystal-Level, Upgrades und Ressourcen
+- [ ] echte Attack-/Ability-Animationen
+- [ ] echte Asset-basierte VFX/Particles statt prozeduraler Placeholder
+- [ ] echte Hitbox-/AoE-Systeme statt Mouse-/Model-Zielauswahl
+- [ ] bessere Gegner-Pathfinding-AI
+- [ ] Boss-Arena mit Mechaniken außerhalb von HP/Phase
+- [ ] NPC-Dialogsystem mit Entscheidungen
 - [ ] Item-Rarities und Drop-Chancen
-- [ ] Quest-Ketten mit Dialogen und Belohnungsauswahl
-- [ ] Session-Locking für DataStore
+- [ ] Kaufangebote im Shop neben dem Verkauf
+- [ ] Crafting
+- [ ] Status-Effekte
+- [ ] Blocken, Ausweichen und kritische Treffer
+- [ ] Session-Locking im DataStore vollständig live schalten
 - [ ] automatisierte Luau-Tests
-- [ ] Performance- und Sicherheitsprüfung im Multiplayer
+- [ ] Multiplayer-Performance- und Security-Test
+- [ ] echter Roblox-Studio-Playtest mit Output-/Runtime-Fehlerbehebung
 
 ## Später
 
-- [ ] Blocken, Ausweichen und kritische Treffer
-- [ ] Status-Effekte
 - [ ] PvP-Modus
-- [ ] Händler-/Shop-System erweitert um Kaufangebote
-- [ ] Crafting
 - [ ] Daily/Weekly Quests
-- [ ] Achievements und Titles
+- [ ] weitere Inseln
+- [ ] weitere Kristalle
+- [ ] weitere Bosse
+- [ ] umfangreicheres Shop-/Economy-System
 - [ ] Sounddesign
 - [ ] vollständige UI-Überarbeitung
