@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local DodgeService = require(script.Parent.Services.DodgeService)
 
 local NPCs = Workspace:WaitForChild("NPCs")
 local arena = Workspace:FindFirstChild("GuardianArena") or Instance.new("Folder")
@@ -93,7 +94,7 @@ local function applyHazardDamage()
 		if humanoid and humanoid.Health > 0 and root then
 			local offset = root.Position - center
 			if math.abs(offset.X) <= 23 and math.abs(offset.Z) <= 23 then
-				humanoid:TakeDamage(4)
+				DodgeService.ApplyDamage(player, humanoid, 4)
 			end
 		end
 	end
