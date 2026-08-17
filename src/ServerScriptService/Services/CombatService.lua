@@ -140,6 +140,9 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
 	advanceEnemyQuest(player, profile, enemyType)
 	if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
+	if levelsGained > 0 and #QuestService.GetActive(profile) == 0 then
+		QuestService.TryStartNext(player, profile)
+	end
 	if masteryLevels > 0 then player:SetAttribute("CrystalMessage", string.format("%s mastery reached Lv. %d", crystalId, masteryLevel)) end
 	fireProgress(player, levelsGained or 0, { Crystal = crystalId, Level = masteryLevel, XP = masteryXP })
 end
