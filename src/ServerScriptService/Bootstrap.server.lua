@@ -121,5 +121,5 @@ local function initializePlayer(player)
 	end
 	if not QuestSystem.IsActive(profile,"FIRST_FIGHT") and not QuestSystem.IsCompleted(profile,"FIRST_FIGHT") then QuestService.Start(player,profile,"FIRST_FIGHT") end
 end
-Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) PlayerService.Remove(player) end)
-task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Remove(player) end end end)
+Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); PlayerService.Remove(player) end)
+task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); PlayerService.Remove(player) end end end)
