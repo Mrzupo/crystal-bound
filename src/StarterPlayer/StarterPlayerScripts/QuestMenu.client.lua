@@ -6,9 +6,11 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local questRequest = remotes:WaitForChild("QuestRequest")
 local getQuestData = remotes:WaitForChild("GetQuestData")
+local getAvailableQuests = remotes:WaitForChild("GetAvailableQuests")
 
 local open = false
 local data = nil
+local available = {}
 
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -115,12 +117,8 @@ local function addRow(questId, definition, state, progress)
 		start.Parent = row
 		start.Activated:Connect(function()
 			questRequest:FireServer("Start", questId)
-			task.delay(0.15, function()
-				if open then
-					local ok, response = pcall(function() return getQuestData:InvokeServer() end)
-					if ok then data = response end
-					if data then refresh() end
-				end
+			task.delay(0.2, function()
+				if open then loadData() end
 			end)
 		end)
 	end
@@ -135,29 +133,28 @@ function refresh()
 	local defs = data.Definitions or {}
 	local activeSet = {}
 	local completedSet = {}
+	local availableSet = {}
 	for _, id in ipairs(active) do activeSet[id] = true end
 	for _, id in ipairs(completed) do completedSet[id] = true end
+	for _, id in ipairs(available) do availableSet[id] = true end
 
 	for id, definition in pairs(defs) do
-		if activeSet[id] then
-			addRow(id, definition, "active", progressData[id] or 0)
-		end
+		if activeSet[id] then addRow(id, definition, "active", progressData[id] or 0) end
 	end
 	for id, definition in pairs(defs) do
-		if not activeSet[id] and not completedSet[id] then
-			addRow(id, definition, "available", progressData[id] or 0)
-		end
+		if not activeSet[id] and not completedSet[id] and availableSet[id] then addRow(id, definition, "available", progressData[id] or 0) end
 	end
 	for id, definition in pairs(defs) do
-		if completedSet[id] then
-			addRow(id, definition, "completed", definition.Goal or 0)
-		end
+		if completedSet[id] then addRow(id, definition, "completed", definition.Goal or 0) end
 	end
 end
 
-local function loadData()
+function loadData()
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
-	if ok and response then data = response; refresh() end
+	if ok and response then data = response end
+	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
+	if okAvailable and type(responseAvailable) == "table" then available = responseAvailable else available = {} end
+	refresh()
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)
