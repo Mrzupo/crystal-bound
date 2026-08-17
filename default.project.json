@@ -97,6 +97,7 @@
       },
       "Bootstrap": { "$path": "src/ServerScriptService/Bootstrap.server.lua" },
       "WorldDecor": { "$path": "src/ServerScriptService/WorldDecor.server.lua" },
+      "WorldTheme": { "$path": "src/ServerScriptService/WorldTheme.server.lua" },
       "QuestAvailability": { "$path": "src/ServerScriptService/QuestAvailability.server.lua" },
       "NPCMenuBridge": { "$path": "src/ServerScriptService/NPCMenuBridge.server.lua" }
     },
