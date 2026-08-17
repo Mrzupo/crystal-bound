@@ -102,9 +102,7 @@ local function refresh()
 	end
 	local parts = {}
 	for itemId, amount in pairs(inventory) do
-		if tonumber(amount) and amount > 0 then
-			table.insert(parts, string.format("%s [%s]: %d", itemId, rarityByItem[itemId] or "Common", amount))
-		end
+		if tonumber(amount) and amount > 0 then table.insert(parts, string.format("%s [%s]: %d", itemId, rarityByItem[itemId] or "Common", amount)) end
 	end
 	table.sort(parts)
 	panel.Loot.Text = #parts > 0 and ("Loot / Items\n" .. table.concat(parts, "   |   ")) or "Loot / Items\nNo items collected."
@@ -121,6 +119,13 @@ end)
 for _, attribute in ipairs({ "EquippedCrystal", "CrystalMasteryLevel", "CrystalMasteryXP", "Level", "Owns_EMBER", "Owns_TIDE", "Owns_GALE" }) do
 	player:GetAttributeChangedSignal(attribute):Connect(refresh)
 end
+
+player:GetAttributeChangedSignal("OpenCrystalMenu"):Connect(function()
+	open = true
+	panel.Visible = true
+	inventoryRequest:FireServer()
+	refresh()
+end)
 
 local function openMenu()
 	open = true; panel.Visible = true; inventoryRequest:FireServer(); refresh()
