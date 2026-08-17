@@ -1,8 +1,8 @@
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local craftingRequest = remotes:WaitForChild("CraftingRequest")
 local inventoryRequest = remotes:WaitForChild("InventoryRequest")
@@ -68,7 +68,7 @@ local hint = Instance.new("TextLabel")
 hint.Position = UDim2.fromOffset(18, 230)
 hint.Size = UDim2.fromOffset(484, 40)
 hint.BackgroundTransparency = 1
-hint.Text = "C = Crafting öffnen/schließen"
+hint.Text = "B = Crafting öffnen/schließen"
 hint.Font = Enum.Font.Gotham
 hint.TextSize = 14
 hint.TextXAlignment = Enum.TextXAlignment.Right
@@ -96,7 +96,7 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
-	if input.KeyCode == Enum.KeyCode.C then
+	if input.KeyCode == Enum.KeyCode.B then
 		if open then open = false; panel.Visible = false else open = true; panel.Visible = true; inventoryRequest:FireServer(); refresh() end
 	end
 end)
