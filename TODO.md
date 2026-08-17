@@ -7,6 +7,7 @@
 - [x] Autosave alle 60 Sekunden
 - [x] Session-Locking mit Timeout und Release beim Server-Shutdown
 - [x] Sicherer Profil-Ladefehlerpfad ohne leeres Fallback-Profil
+- [x] Persistente Daten-Normalisierung für Zahlen, Kristalle, Inventar und Quests
 - [x] XP- und Levelsystem
 - [x] Geldsystem
 - [x] Inventar + Material-Loot
@@ -18,6 +19,8 @@
 - [x] Crystal-Mastery + Upgrade-System
 - [x] Crystal-Fähigkeiten mit unterschiedlichen Effekten
 - [x] Servervalidiertes Combat
+- [x] Serverseitige Combat-Action-Whitelist
+- [x] Serverseitige Enemy/Boss-Target-Whitelist
 - [x] Damage Numbers + Cooldown-Feedback
 - [x] Gegner-Konfiguration und serverseitige einfache KI
 - [x] Gegnertypen mit unterschiedlichen visuellen Stilen
@@ -42,19 +45,22 @@
 - [x] Achievements + Titles
 - [x] Achievement Journal
 - [x] HUD für Progression, Loot und Quests
+- [x] Gemeinsames Status-Message-HUD
 - [x] Spieler-HP + Death/Respawn-Feedback
 - [x] Inventory-/Crystal-GUI
-- [x] Mobile Touch Combat Controls
+- [x] Mobile Touch Combat Controls mit Kamera-Ray-Zielauswahl
 - [x] Mobile Menu Controls
 - [x] NPC-zu-Menü-Verknüpfung
 - [x] Welt-Dekoration für alle aktuellen Inseln
+- [x] Modulare Welt-Themes
 - [x] Rojo-/default.project.json-Struktur für alle Erweiterungen
+- [x] GitHub-CI für JSON- und Rojo-Dateipfad-Validierung
 
 ## Nächste Systeme
 
 - [ ] echte Attack-/Ability-Animationen
 - [ ] echte Asset-basierte VFX/Particles statt prozeduraler Placeholder
-- [ ] echte Hitbox-/AoE-Systeme statt Mouse-/Model-Zielauswahl
+- [ ] echte Hitbox-/AoE-Systeme statt Zielmodell-Raycast
 - [ ] bessere Gegner-Pathfinding-AI
 - [ ] Boss-Arena mit Mechaniken außerhalb von HP/Phase
 - [ ] NPC-Dialogsystem mit Entscheidungen
