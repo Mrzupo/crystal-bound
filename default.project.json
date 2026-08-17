@@ -104,7 +104,8 @@
         "AbilityCooldown": { "$path": "src/StarterPlayer/StarterPlayerScripts/AbilityCooldown.client.lua" },
         "PlayerHealth": { "$path": "src/StarterPlayer/StarterPlayerScripts/PlayerHealth.client.lua" },
         "InventoryMenu": { "$path": "src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua" },
-        "ShopMenu": { "$path": "src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua" }
+        "ShopMenu": { "$path": "src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua" },
+        "QuestMenu": { "$path": "src/StarterPlayer/StarterPlayerScripts/QuestMenu.client.lua" }
       }
     },
     "StarterGui": {
