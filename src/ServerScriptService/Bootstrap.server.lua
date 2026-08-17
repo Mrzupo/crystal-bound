@@ -11,6 +11,7 @@ local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local NPCService = require(script.Parent.Services.NPCService)
 
 local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
+local AUTOSAVE_INTERVAL = 60
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -137,7 +138,6 @@ local function createIsland(islands, name, center, size)
 	text.Font = Enum.Font.GothamBold
 	text.TextSize = 26
 	text.Parent = title
-
 	return island
 end
 
@@ -171,7 +171,7 @@ local function createPortal(island, name, fromPosition, destination, requiredLev
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
 	label.BackgroundTransparency = 1
-	label.Text = requiredLevel and ("Level " .. requiredLevel .. " required") or "Portal"
+	label.Text = "Level " .. tostring(requiredLevel or 1) .. " required"
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 18
 	label.Parent = gui
@@ -247,11 +247,8 @@ end
 local function spawnEnemy(npcs, typeId, position, uniqueName)
 	if npcs:FindFirstChild(uniqueName) then return end
 	NPCService.CreateEnemy(typeId, position, npcs, function(model, config)
-		local respawnTime = config.Respawn
-		task.delay(respawnTime, function()
-			if npcs.Parent then
-				spawnEnemy(npcs, typeId, position, uniqueName)
-			end
+		task.delay(config.Respawn, function()
+			if npcs.Parent then spawnEnemy(npcs, typeId, position, uniqueName) end
 		end)
 	end, uniqueName)
 end
@@ -262,7 +259,6 @@ local tideIsland = createIsland(islands, "TideIsland", Vector3.new(170, 0, 0), V
 createSpawn(spawnFolder)
 createPortal(starterIsland, "TidePortal", Vector3.new(52, 5, 0), Vector3.new(120, 4, 0), 4)
 createPortal(tideIsland, "StarterPortal", Vector3.new(118, 5, 0), Vector3.new(48, 4, 0), 1)
-
 spawnQuestGiver(npcs)
 spawnEnemy(npcs, "TrainingDummy", Vector3.new(0, 1, -12), "TrainingDummy")
 spawnEnemy(npcs, "Emberling", Vector3.new(30, 1, -18), "EmberlingA")
@@ -271,22 +267,29 @@ spawnEnemy(npcs, "Tidecrawler", Vector3.new(160, 1, -12), "TidecrawlerA")
 spawnEnemy(npcs, "Tidecrawler", Vector3.new(190, 1, 15), "TidecrawlerB")
 spawnEnemy(npcs, "Galewisp", Vector3.new(180, 1, 28), "GalewispA")
 
-Players.PlayerAdded:Connect(function(player)
-	local profile = PlayerService.Load(player)
-	if profile and not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
-		QuestService.Start(player, profile, "FIRST_FIGHT")
-	end
-end)
-
-for _, player in ipairs(Players:GetPlayers()) do
+local function initializePlayer(player)
 	local profile = PlayerService.Load(player)
 	if profile and not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
 		QuestService.Start(player, profile, "FIRST_FIGHT")
 	end
 end
 
+Players.PlayerAdded:Connect(initializePlayer)
+for _, player in ipairs(Players:GetPlayers()) do
+	initializePlayer(player)
+end
+
 Players.PlayerRemoving:Connect(function(player)
 	PlayerService.Remove(player)
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(AUTOSAVE_INTERVAL)
+		for _, player in ipairs(Players:GetPlayers()) do
+			PlayerService.Save(player)
+		end
+	end
 end)
 
 game:BindToClose(function()
