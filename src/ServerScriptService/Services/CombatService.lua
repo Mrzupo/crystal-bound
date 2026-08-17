@@ -15,6 +15,12 @@ local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 local CombatService = {}
 local cooldowns = {}
 
+local CRYSTAL_COLORS = {
+	EMBER = Color3.fromRGB(255, 90, 35),
+	TIDE = Color3.fromRGB(45, 150, 255),
+	GALE = Color3.fromRGB(170, 120, 255),
+}
+
 local function getCharacter(instance)
 	if instance:IsA("Player") then return instance.Character elseif instance:IsA("Model") then return instance end
 end
@@ -23,19 +29,57 @@ local function isPlayerTarget(target)
 	return target:IsA("Player") or (target:IsA("Model") and Players:GetPlayerFromCharacter(target) ~= nil)
 end
 
+local function makeEffect(name, position, size, color, duration)
+	local effect = Instance.new("Part")
+	effect.Name = name
+	effect.Anchored = true
+	effect.CanCollide = false
+	effect.CanQuery = false
+	effect.CanTouch = false
+	effect.Material = Enum.Material.Neon
+	effect.Color = color
+	effect.Transparency = 0.1
+	effect.Size = size
+	effect.CFrame = CFrame.new(position)
+	effect.Parent = workspace
+	return effect, duration or 0.3
+end
+
 local function emitCombatEffect(crystalId, targetModel, ability)
 	local root = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
 	if not root then return end
-	local effect = Instance.new("Part")
-	effect.Name = ability and "CrystalAbilityEffect" or "CrystalHitEffect"
-	effect.Anchored = true; effect.CanCollide = false; effect.CanQuery = false; effect.CanTouch = false
-	effect.Shape = Enum.PartType.Ball; effect.Material = Enum.Material.Neon
-	effect.Size = ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2)
-	effect.CFrame = root.CFrame; effect.Transparency = 0.15
-	effect.Color = crystalId == "EMBER" and Color3.fromRGB(255, 90, 35) or crystalId == "TIDE" and Color3.fromRGB(45, 150, 255) or Color3.fromRGB(170, 120, 255)
-	effect.Parent = workspace
-	TweenService:Create(effect, TweenInfo.new(0.2), { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }):Play()
-	Debris:AddItem(effect, 0.25)
+	local color = CRYSTAL_COLORS[crystalId] or CRYSTAL_COLORS.EMBER
+	local name = ability and "CrystalAbilityEffect" or "CrystalHitEffect"
+	local effect, duration = makeEffect(name, root.Position, ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2), color, 0.25)
+	effect.Shape = Enum.PartType.Ball
+	TweenService:Create(effect, TweenInfo.new(duration), {
+		Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4),
+		Transparency = 1,
+	}):Play()
+	Debris:AddItem(effect, duration + 0.05)
+
+	if not ability then return end
+	if crystalId == "EMBER" then
+		local ring, ringDuration = makeEffect("EmberBurst", root.Position, Vector3.new(1, 0.6, 1), color, 0.35)
+		ring.Shape = Enum.PartType.Cylinder
+		ring.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, 0, math.rad(90))
+		TweenService:Create(ring, TweenInfo.new(ringDuration), { Size = Vector3.new(1, 12, 12), Transparency = 1 }):Play()
+		Debris:AddItem(ring, ringDuration + 0.05)
+	elseif crystalId == "TIDE" then
+		for index = 1, 3 do
+			local orb, orbDuration = makeEffect("TideOrb", root.Position + Vector3.new((index - 2) * 2.5, 1 + index * 0.25, 0), Vector3.new(1.2, 1.2, 1.2), color, 0.5)
+			orb.Shape = Enum.PartType.Ball
+			TweenService:Create(orb, TweenInfo.new(orbDuration), { Position = root.Position + Vector3.new((index - 2) * 4, 4 + index, 0), Transparency = 1 }):Play()
+			Debris:AddItem(orb, orbDuration + 0.05)
+		end
+	elseif crystalId == "GALE" then
+		for index = 1, 2 do
+			local slash, slashDuration = makeEffect("GaleSlash", root.Position, Vector3.new(0.5, 7, 0.5), color, 0.3)
+			slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(25 * index))
+			TweenService:Create(slash, TweenInfo.new(slashDuration), { Size = Vector3.new(0.5, 11, 0.5), Transparency = 1 }):Play()
+			Debris:AddItem(slash, slashDuration + 0.05)
+		end
+	end
 end
 
 local function fireProgress(player, levelsGained, mastery)
