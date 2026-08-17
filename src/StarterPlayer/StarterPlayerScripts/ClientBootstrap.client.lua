@@ -15,6 +15,7 @@ local getQuestData = remotes:WaitForChild("GetQuestData")
 
 local inventory = {}
 local crystalOrder = { "EMBER", "TIDE", "GALE" }
+local sellOrder = { "EmberShard", "TidePearl", "GaleFeather" }
 local messageExpiresAt = 0
 
 local function getTargetFromMouse()
@@ -71,7 +72,7 @@ local function ensureHud()
 		local quest = Instance.new("TextLabel")
 		quest.Name = "Quest"
 		quest.Position = UDim2.fromOffset(16, 236)
-		quest.Size = UDim2.fromOffset(560, 130)
+		quest.Size = UDim2.fromOffset(600, 145)
 		quest.BackgroundTransparency = 0.15
 		quest.TextXAlignment = Enum.TextXAlignment.Left
 		quest.TextYAlignment = Enum.TextYAlignment.Top
@@ -85,7 +86,7 @@ local function ensureHud()
 		message.Name = "Message"
 		message.AnchorPoint = Vector2.new(0.5, 0)
 		message.Position = UDim2.new(0.5, 0, 0, 20)
-		message.Size = UDim2.fromOffset(520, 46)
+		message.Size = UDim2.fromOffset(560, 46)
 		message.BackgroundTransparency = 0.2
 		message.TextXAlignment = Enum.TextXAlignment.Center
 		message.Font = Enum.Font.GothamBold
@@ -97,11 +98,11 @@ local function ensureHud()
 		help.Name = "Help"
 		help.AnchorPoint = Vector2.new(0.5, 1)
 		help.Position = UDim2.new(0.5, 0, 1, -18)
-		help.Size = UDim2.fromOffset(900, 46)
+		help.Size = UDim2.fromOffset(1050, 50)
 		help.BackgroundTransparency = 0.25
-		help.Text = "Klick = Angriff    Q = Fähigkeit    Z/X/C = Kristall    E = Daten aktualisieren"
+		help.Text = "Klick = Angriff | Q = Fähigkeit | Z/X/C = Kristall | E = aktualisieren | 4/5/6 = je 1 Loot verkaufen"
 		help.Font = Enum.Font.GothamBold
-		help.TextSize = 17
+		help.TextSize = 16
 		help.Parent = gui
 	end
 	return panel.Stats, panel.Inventory, gui.Quest, gui.Message
@@ -117,16 +118,14 @@ end
 
 task.spawn(function()
 	while true do
-		if os.clock() >= messageExpiresAt then
-			messageLabel.Text = ""
-		end
+		if os.clock() >= messageExpiresAt then messageLabel.Text = "" end
 		task.wait(0.25)
 	end
 end)
 
 local function refreshInventory()
 	local parts = {}
-	for _, id in ipairs({ "EmberShard", "TidePearl", "GaleFeather" }) do
+	for _, id in ipairs(sellOrder) do
 		local amount = inventory[id] or 0
 		if amount > 0 then table.insert(parts, id .. ": " .. amount) end
 	end
@@ -142,7 +141,13 @@ local function refreshHud()
 		player:GetAttribute("EquippedCrystal") or "EMBER"
 	)
 	refreshInventory()
-	showMessage(player:GetAttribute("QuestMessage") or player:GetAttribute("CrystalMessage") or "")
+	showMessage(
+		player:GetAttribute("ShopMessage")
+		or player:GetAttribute("QuestMessage")
+		or player:GetAttribute("CrystalMessage")
+		or player:GetAttribute("PortalMessage")
+		or ""
+	)
 end
 
 local function refreshQuests()
@@ -163,7 +168,7 @@ local function refreshQuests()
 	questLabel.Text = table.concat(lines, "\n")
 end
 
-for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", "QuestMessage", "CrystalMessage", "QuestProgress" }) do
+for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", "QuestMessage", "CrystalMessage", "PortalMessage", "ShopMessage", "QuestProgress" }) do
 	player:GetAttributeChangedSignal(attribute):Connect(function()
 		refreshHud()
 		refreshQuests()
@@ -172,7 +177,11 @@ end
 
 xpChanged.OnClientEvent:Connect(function() refreshHud(); refreshQuests() end)
 moneyChanged.OnClientEvent:Connect(function() refreshHud(); refreshQuests() end)
-levelUp.OnClientEvent:Connect(function(level) refreshHud(); refreshQuests(); if level then showMessage("Level Up! Level " .. tostring(level)) end end)
+levelUp.OnClientEvent:Connect(function(level)
+	refreshHud()
+	refreshQuests()
+	if level then showMessage("Level Up! Level " .. tostring(level)) end
+end)
 inventoryChanged.OnClientEvent:Connect(function(data)
 	inventory = type(data) == "table" and data or {}
 	refreshHud()
@@ -201,6 +210,12 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	elseif input.KeyCode == Enum.KeyCode.E then
 		inventoryRequest:FireServer()
 		refreshQuests()
+	elseif input.KeyCode == Enum.KeyCode.Four then
+		inventoryRequest:FireServer("Sell", sellOrder[1], 1)
+	elseif input.KeyCode == Enum.KeyCode.Five then
+		inventoryRequest:FireServer("Sell", sellOrder[2], 1)
+	elseif input.KeyCode == Enum.KeyCode.Six then
+		inventoryRequest:FireServer("Sell", sellOrder[3], 1)
 	end
 end)
 
