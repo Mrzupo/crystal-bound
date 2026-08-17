@@ -51,10 +51,7 @@ local function ensureGui()
 	close.Font = Enum.Font.GothamBold
 	close.TextSize = 18
 	close.Parent = panel
-	close.Activated:Connect(function()
-		open = false
-		panel.Visible = false
-	end)
+	close.Activated:Connect(function() open = false; panel.Visible = false end)
 
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "List"
@@ -69,9 +66,7 @@ local function ensureGui()
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 8)
 	layout.Parent = list
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12)
-	end)
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12) end)
 	return gui
 end
 
@@ -80,9 +75,7 @@ local panel = gui.Panel
 local list = panel.List
 
 local function clearList()
-	for _, child in ipairs(list:GetChildren()) do
-		if child:IsA("Frame") then child:Destroy() end
-	end
+	for _, child in ipairs(list:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
 end
 
 local function addRow(questId, definition, state, progress)
@@ -117,9 +110,7 @@ local function addRow(questId, definition, state, progress)
 		start.Parent = row
 		start.Activated:Connect(function()
 			questRequest:FireServer("Start", questId)
-			task.delay(0.2, function()
-				if open then loadData() end
-			end)
+			task.delay(0.2, function() if open then loadData() end end)
 		end)
 	end
 end
@@ -131,22 +122,13 @@ function refresh()
 	local completed = data.Completed or {}
 	local progressData = data.Progress or {}
 	local defs = data.Definitions or {}
-	local activeSet = {}
-	local completedSet = {}
-	local availableSet = {}
+	local activeSet, completedSet, availableSet = {}, {}, {}
 	for _, id in ipairs(active) do activeSet[id] = true end
 	for _, id in ipairs(completed) do completedSet[id] = true end
 	for _, id in ipairs(available) do availableSet[id] = true end
-
-	for id, definition in pairs(defs) do
-		if activeSet[id] then addRow(id, definition, "active", progressData[id] or 0) end
-	end
-	for id, definition in pairs(defs) do
-		if not activeSet[id] and not completedSet[id] and availableSet[id] then addRow(id, definition, "available", progressData[id] or 0) end
-	end
-	for id, definition in pairs(defs) do
-		if completedSet[id] then addRow(id, definition, "completed", definition.Goal or 0) end
-	end
+	for id, definition in pairs(defs) do if activeSet[id] then addRow(id, definition, "active", progressData[id] or 0) end end
+	for id, definition in pairs(defs) do if not activeSet[id] and not completedSet[id] and availableSet[id] then addRow(id, definition, "available", progressData[id] or 0) end end
+	for id, definition in pairs(defs) do if completedSet[id] then addRow(id, definition, "completed", definition.Goal or 0) end end
 end
 
 function loadData()
@@ -157,12 +139,17 @@ function loadData()
 	refresh()
 end
 
+local function openMenu()
+	open = true
+	panel.Visible = true
+	loadData()
+end
+
+player:GetAttributeChangedSignal("OpenQuestMenu"):Connect(openMenu)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.J then
-		open = not open
-		panel.Visible = open
-		if open then loadData() end
+		if open then open = false; panel.Visible = false else openMenu() end
 	end
 end)
 
