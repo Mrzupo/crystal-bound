@@ -1,5 +1,3 @@
-local Debris = game:GetService("Debris")
-
 local StatusEffectService = {}
 local active = setmetatable({}, { __mode = "k" })
 
@@ -14,13 +12,14 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	duration = math.clamp(tonumber(duration) or 1, 0.1, 10)
 	local state = stateFor(humanoid)
 	local token = {}
+	if not state.BaseWalkSpeed then state.BaseWalkSpeed = humanoid.WalkSpeed end
 	state.Slow = token
-	local baseSpeed = humanoid.WalkSpeed
-	humanoid.WalkSpeed = math.max(6, baseSpeed * multiplier)
+	humanoid.WalkSpeed = math.max(6, state.BaseWalkSpeed * multiplier)
 	task.delay(duration, function()
 		if humanoid.Parent and humanoid.Health > 0 and state.Slow == token then
-			humanoid.WalkSpeed = baseSpeed
+			humanoid.WalkSpeed = state.BaseWalkSpeed or humanoid.WalkSpeed
 			state.Slow = nil
+			state.BaseWalkSpeed = nil
 		end
 	end)
 	return true
@@ -46,6 +45,11 @@ function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval)
 end
 
 function StatusEffectService.Clear(humanoid)
+	if not humanoid then return end
+	local state = active[humanoid]
+	if state and state.Slow and humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
+		humanoid.WalkSpeed = state.BaseWalkSpeed
+	end
 	active[humanoid] = nil
 end
 
