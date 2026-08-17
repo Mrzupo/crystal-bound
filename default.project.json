@@ -93,7 +93,8 @@
         "EconomyService": { "$path": "src/ServerScriptService/Services/EconomyService.lua" },
         "InventoryService": { "$path": "src/ServerScriptService/Services/InventoryService.lua" }
       },
-      "Bootstrap": { "$path": "src/ServerScriptService/Bootstrap.server.lua" }
+      "Bootstrap": { "$path": "src/ServerScriptService/Bootstrap.server.lua" },
+      "WorldDecor": { "$path": "src/ServerScriptService/WorldDecor.server.lua" }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
