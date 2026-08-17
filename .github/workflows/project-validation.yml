@@ -96,3 +96,44 @@ jobs:
               raise SystemExit(1)
 
           print("Common Luau require targets validated.")
+
+      - name: Validate cross-file gameplay references
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          root = Path("src")
+          inventory_text = (root / "ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
+          enemy_text = (root / "ReplicatedStorage/Config/EnemyConfig.lua").read_text(encoding="utf-8")
+          boss_text = (root / "ReplicatedStorage/Config/BossConfig.lua").read_text(encoding="utf-8")
+          quest_text = (root / "ReplicatedStorage/Modules/QuestSystem.lua").read_text(encoding="utf-8")
+          shop_text = (root / "ServerScriptService/Services/ShopService.lua").read_text(encoding="utf-8")
+          crafting_text = (root / "ServerScriptService/Services/CraftingService.lua").read_text(encoding="utf-8")
+
+          item_ids = set(re.findall(r'Id\s*=\s*"([A-Za-z0-9_]+)"', inventory_text))
+          enemy_types = set(re.findall(r'^\s*([A-Za-z0-9_]+)\s*=\s*\{', enemy_text, re.MULTILINE))
+          boss_types = set(re.findall(r'^\s*([A-Za-z0-9_]+)\s*=\s*\{', boss_text, re.MULTILINE))
+          enemy_drops = set(re.findall(r'Drop\s*=\s*"([A-Za-z0-9_]+)"', enemy_text))
+          boss_drops = set(re.findall(r'Drop\s*=\s*"([A-Za-z0-9_]+)"', boss_text))
+          quest_enemy_types = set(re.findall(r'EnemyType\s*=\s*"([A-Za-z0-9_]+)"', quest_text))
+          shop_items = set(re.findall(r'ItemId\s*=\s*"([A-Za-z0-9_]+)"', shop_text))
+          recipe_outputs = set(re.findall(r'Output\s*=\s*"([A-Za-z0-9_]+)"', crafting_text))
+          recipe_inputs = set(re.findall(r'([A-Za-z0-9_]+)\s*=\s*\d+', crafting_text.split('Inputs =', 1)[1]) if 'Inputs =' in crafting_text else [])
+
+          problems = []
+          for item in sorted(enemy_drops | boss_drops | shop_items | recipe_outputs | recipe_inputs):
+              if item not in item_ids:
+                  problems.append(f"Missing inventory item referenced by gameplay config: {item}")
+
+          for enemy in sorted(quest_enemy_types):
+              if enemy not in enemy_types and enemy not in boss_types:
+                  problems.append(f"Quest references unknown enemy/boss type: {enemy}")
+
+          if problems:
+              print("Cross-file gameplay reference problems:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("Cross-file gameplay references validated.")
