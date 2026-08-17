@@ -35,6 +35,15 @@ local Definitions = {
 		Money = 300,
 		EnemyType = "Tidecrawler",
 	},
+	WIND_TRIAL = {
+		Id = "WIND_TRIAL",
+		Name = "Trial of the Gale",
+		Description = "Defeat 3 Galewisps.",
+		Goal = 3,
+		XP = 800,
+		Money = 500,
+		EnemyType = "Galewisp",
+	},
 }
 
 function QuestSystem.GetDefinition(id)
