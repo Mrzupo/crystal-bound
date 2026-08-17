@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local gui
@@ -7,6 +8,8 @@ local barBack
 local barFill
 local valueLabel
 local deathLabel
+local lastHealth = nil
+local shakeTime = 0
 
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -72,6 +75,10 @@ local function ensureGui()
 	Instance.new("UICorner", deathLabel).CornerRadius = UDim.new(0, 10)
 end
 
+local function triggerShake(amount)
+	shakeTime = math.max(shakeTime, amount)
+end
+
 local function update()
 	ensureGui()
 	local health = math.max(0, tonumber(player:GetAttribute("Health")) or 0)
@@ -86,6 +93,10 @@ local function update()
 	else
 		deathLabel.Visible = false
 	end
+	if lastHealth ~= nil and health < lastHealth then
+		triggerShake(math.clamp((lastHealth - health) / maxHealth * 0.35, 0.04, 0.2))
+	end
+	lastHealth = health
 end
 
 for _, attribute in ipairs({ "Health", "MaxHealth", "DeathMessage" }) do
@@ -93,7 +104,21 @@ for _, attribute in ipairs({ "Health", "MaxHealth", "DeathMessage" }) do
 end
 
 player.CharacterAdded:Connect(function()
+	lastHealth = nil
 	task.delay(0.25, update)
+end)
+
+RunService.RenderStepped:Connect(function(deltaTime)
+	if shakeTime <= 0 then return end
+	local camera = workspace.CurrentCamera
+	if not camera then return end
+	shakeTime = math.max(0, shakeTime - deltaTime)
+	local strength = shakeTime * 0.5
+	camera.CFrame = camera.CFrame * CFrame.Angles(
+		(math.random() - 0.5) * strength,
+		(math.random() - 0.5) * strength,
+		(math.random() - 0.5) * strength
+	)
 end)
 
 ensureGui()
