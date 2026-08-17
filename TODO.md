@@ -26,7 +26,9 @@
 - [x] Serverseitige Distanz-/Hitbox-Prüfung
 - [x] Serverautorisierte kritische Treffer
 - [x] Serverautorisierter Dodge mit globalem ForceField-Schutz
+- [x] Serverseitige Ability-Cooldown-Anzeige im HUD
 - [x] Damage Numbers + Cooldown-Feedback
+- [x] Modulare Combat-Hit-Flash- und Player-Hit-Reaction
 - [x] Gegner-Konfiguration und serverseitige einfache KI
 - [x] Hindernis-Steering + Pathfinding-Fallback
 - [x] Status-Effekte (Burn / Slow)
@@ -83,7 +85,7 @@
 - [ ] automatisierte Luau-Tests
 - [ ] Multiplayer-Performance- und Security-Test
 - [ ] echter Roblox-Studio-Playtest mit Output-/Runtime-Fehlerbehebung
-- [ ] bessere Kampfanimationen und Hit-Reactions
+- [ ] echte Kampfanimationen und Hit-Reaction-Animationen
 
 ## Später
 
