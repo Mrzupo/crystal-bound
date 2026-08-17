@@ -4,18 +4,21 @@ local Items = {
 		Name = "Ember Shard",
 		Type = "Material",
 		MaxStackSize = 99,
+		SellPrice = 8,
 	},
 	TidePearl = {
 		Id = "TidePearl",
 		Name = "Tide Pearl",
 		Type = "Material",
 		MaxStackSize = 99,
+		SellPrice = 14,
 	},
 	GaleFeather = {
 		Id = "GaleFeather",
 		Name = "Gale Feather",
 		Type = "Material",
 		MaxStackSize = 99,
+		SellPrice = 22,
 	},
 }
 
