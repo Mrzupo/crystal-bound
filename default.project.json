@@ -96,7 +96,8 @@
       },
       "Bootstrap": { "$path": "src/ServerScriptService/Bootstrap.server.lua" },
       "WorldDecor": { "$path": "src/ServerScriptService/WorldDecor.server.lua" },
-      "QuestAvailability": { "$path": "src/ServerScriptService/QuestAvailability.server.lua" }
+      "QuestAvailability": { "$path": "src/ServerScriptService/QuestAvailability.server.lua" },
+      "NPCMenuBridge": { "$path": "src/ServerScriptService/NPCMenuBridge.server.lua" }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
