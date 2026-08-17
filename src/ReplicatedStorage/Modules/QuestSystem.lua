@@ -17,6 +17,24 @@ local Definitions = {
 		XP = 150,
 		Money = 75,
 	},
+	HUNT_EMBERLINGS = {
+		Id = "HUNT_EMBERLINGS",
+		Name = "Ashes in the Wind",
+		Description = "Defeat 3 Emberlings.",
+		Goal = 3,
+		XP = 300,
+		Money = 150,
+		EnemyType = "Emberling",
+	},
+	TIDE_EXPEDITION = {
+		Id = "TIDE_EXPEDITION",
+		Name = "Tide Expedition",
+		Description = "Defeat 3 Tidecrawlers.",
+		Goal = 3,
+		XP = 500,
+		Money = 300,
+		EnemyType = "Tidecrawler",
+	},
 }
 
 function QuestSystem.GetDefinition(id)
@@ -40,7 +58,23 @@ function QuestSystem.Start(profile, questId)
 		return false
 	end
 	table.insert(profile.ActiveQuests, questId)
+	profile.QuestProgress = profile.QuestProgress or {}
+	profile.QuestProgress[questId] = 0
 	return true
+end
+
+function QuestSystem.GetProgress(profile, questId)
+	return (profile.QuestProgress and profile.QuestProgress[questId]) or 0
+end
+
+function QuestSystem.Advance(profile, questId, amount)
+	local definition = Definitions[questId]
+	if not definition or not QuestSystem.IsActive(profile, questId) then
+		return false, 0, definition and definition.Goal or 0
+	end
+	profile.QuestProgress = profile.QuestProgress or {}
+	profile.QuestProgress[questId] = math.min(definition.Goal, QuestSystem.GetProgress(profile, questId) + math.max(0, amount or 1))
+	return profile.QuestProgress[questId] >= definition.Goal, profile.QuestProgress[questId], definition.Goal
 end
 
 function QuestSystem.Complete(profile, questId)
@@ -48,6 +82,8 @@ function QuestSystem.Complete(profile, questId)
 	if not index then return false end
 	table.remove(profile.ActiveQuests, index)
 	table.insert(profile.CompletedQuests, questId)
+	profile.QuestProgress = profile.QuestProgress or {}
+	profile.QuestProgress[questId] = 0
 	return true
 end
 
