@@ -11,6 +11,7 @@ local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local QuestService = require(script.Parent.QuestService)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
+local CombatModifierService = require(script.Parent.CombatModifierService)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 local HitboxService = require(ReplicatedStorage.Modules.Combat.HitboxService)
 local CombatService = {}
@@ -39,7 +40,7 @@ local function makeEffect(name, position, size, color, duration)
 	return effect, duration or 0.3
 end
 
-local function emitCombatEffect(crystalId, targetModel, ability)
+local function emitCombatEffect(crystalId, targetModel, ability, critical)
 	local root = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
 	if not root then return end
 	local color = CRYSTAL_COLORS[crystalId] or CRYSTAL_COLORS.EMBER
@@ -47,6 +48,12 @@ local function emitCombatEffect(crystalId, targetModel, ability)
 	effect.Shape = Enum.PartType.Ball
 	TweenService:Create(effect, TweenInfo.new(duration), { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }):Play()
 	Debris:AddItem(effect, duration + 0.05)
+	if critical then
+		local crit, critDuration = makeEffect("CriticalHit", root.Position + Vector3.new(0, 2, 0), Vector3.new(1.5, 1.5, 1.5), Color3.fromRGB(255, 230, 70), 0.35)
+		crit.Shape = Enum.PartType.Ball
+		TweenService:Create(crit, TweenInfo.new(critDuration), { Size = Vector3.new(6, 6, 6), Transparency = 1 }):Play()
+		Debris:AddItem(crit, critDuration + 0.05)
+	end
 	if not ability then return end
 	if crystalId == "EMBER" then
 		local ring, ringDuration = makeEffect("EmberBurst", root.Position, Vector3.new(1, 0.6, 1), color, 0.35)
@@ -159,10 +166,13 @@ function CombatService.HandleRequest(player, action, target)
 	local passive = CrystalSystem.GetPassive(crystalId); local mastery = CrystalMastery.GetBonuses(profile, crystalId)
 	local multiplier = math.max(0.1, tonumber(passive.DamageMultiplier) or 1) * mastery.DamageMultiplier
 	if action == "Ability" then multiplier *= mastery.AbilityDamageMultiplier end
+	local critical, criticalMultiplier = CombatModifierService.RollCritical(profile, crystalId)
+	multiplier *= criticalMultiplier
 	local damage = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier
 	targetModel:SetAttribute("LastAttackerUserId", player.UserId)
 	local result = DamageService.ProcessDamage({ Attacker = player, Target = targetModel, Amount = damage, Range = config.Range, DamageType = "Crystal" }); if not result.Success then return end
-	emitCombatEffect(crystalId, targetModel, action == "Ability")
+	emitCombatEffect(crystalId, targetModel, action == "Ability", critical)
+	if critical then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
 	if action == "Ability" then applyAbilitySpecial(player, profile, crystalId, targetModel, damage); completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
 	if humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
