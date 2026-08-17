@@ -1,22 +1,31 @@
 local QuestSystem = {}
 
 local Definitions = {
-	FIRST_FIGHT = { Id = "FIRST_FIGHT", Name = "First Trial", Description = "Defeat the Training Dummy.", Goal = 1, XP = 100, Money = 50 },
-	CRYSTAL_POWER = { Id = "CRYSTAL_POWER", Name = "Crystal Power", Description = "Use your equipped crystal ability once.", Goal = 1, XP = 150, Money = 75 },
-	HUNT_EMBERLINGS = { Id = "HUNT_EMBERLINGS", Name = "Ashes in the Wind", Description = "Defeat 3 Emberlings.", Goal = 3, XP = 300, Money = 150, EnemyType = "Emberling" },
-	TIDE_EXPEDITION = { Id = "TIDE_EXPEDITION", Name = "Tide Expedition", Description = "Defeat 3 Tidecrawlers.", Goal = 3, XP = 500, Money = 300, EnemyType = "Tidecrawler" },
-	WIND_TRIAL = { Id = "WIND_TRIAL", Name = "Trial of the Gale", Description = "Defeat 3 Galewisps.", Goal = 3, XP = 800, Money = 500, EnemyType = "Galewisp" },
-	GUARDIAN_TRIAL = { Id = "GUARDIAN_TRIAL", Name = "Guardian of the Crystals", Description = "Defeat the Crystal Guardian.", Goal = 1, XP = 2200, Money = 1500, EnemyType = "CrystalGuardian" },
-	GOLEM_HUNT = { Id = "GOLEM_HUNT", Name = "Stonebound", Description = "Defeat 3 Ancient Golems.", Goal = 3, XP = 900, Money = 600, EnemyType = "AncientGolem" },
-	BAT_HUNT = { Id = "BAT_HUNT", Name = "Shards in the Dark", Description = "Defeat 3 Crystal Bats.", Goal = 3, XP = 1000, Money = 700, EnemyType = "CrystalBat" },
+	FIRST_FIGHT = { Id = "FIRST_FIGHT", Name = "First Trial", Description = "Defeat the Training Dummy.", Goal = 1, XP = 100, Money = 50, MinLevel = 1 },
+	CRYSTAL_POWER = { Id = "CRYSTAL_POWER", Name = "Crystal Power", Description = "Use your equipped crystal ability once.", Goal = 1, XP = 150, Money = 75, MinLevel = 1, Requires = "FIRST_FIGHT" },
+	HUNT_EMBERLINGS = { Id = "HUNT_EMBERLINGS", Name = "Ashes in the Wind", Description = "Defeat 3 Emberlings.", Goal = 3, XP = 300, Money = 150, EnemyType = "Emberling", MinLevel = 3, Requires = "CRYSTAL_POWER" },
+	TIDE_EXPEDITION = { Id = "TIDE_EXPEDITION", Name = "Tide Expedition", Description = "Defeat 3 Tidecrawlers.", Goal = 3, XP = 500, Money = 300, EnemyType = "Tidecrawler", MinLevel = 6, Requires = "HUNT_EMBERLINGS" },
+	WIND_TRIAL = { Id = "WIND_TRIAL", Name = "Trial of the Gale", Description = "Defeat 3 Galewisps.", Goal = 3, XP = 800, Money = 500, EnemyType = "Galewisp", MinLevel = 10, Requires = "TIDE_EXPEDITION" },
+	GUARDIAN_TRIAL = { Id = "GUARDIAN_TRIAL", Name = "Guardian of the Crystals", Description = "Defeat the Crystal Guardian.", Goal = 1, XP = 2200, Money = 1500, EnemyType = "CrystalGuardian", MinLevel = 15, Requires = "WIND_TRIAL" },
+	GOLEM_HUNT = { Id = "GOLEM_HUNT", Name = "Stonebound", Description = "Defeat 3 Ancient Golems.", Goal = 3, XP = 900, Money = 600, EnemyType = "AncientGolem", MinLevel = 18, Requires = "GUARDIAN_TRIAL" },
+	BAT_HUNT = { Id = "BAT_HUNT", Name = "Shards in the Dark", Description = "Defeat 3 Crystal Bats.", Goal = 3, XP = 1000, Money = 700, EnemyType = "CrystalBat", MinLevel = 19, Requires = "GOLEM_HUNT" },
 }
 
 function QuestSystem.GetDefinition(id) return Definitions[id] end
 function QuestSystem.GetDefinitions() return Definitions end
 function QuestSystem.IsActive(profile, questId) return table.find(profile.ActiveQuests or {}, questId) ~= nil end
 function QuestSystem.IsCompleted(profile, questId) return table.find(profile.CompletedQuests or {}, questId) ~= nil end
+function QuestSystem.CanStart(profile, questId)
+	local definition = Definitions[questId]
+	if not definition then return false, "Unknown quest." end
+	if QuestSystem.IsActive(profile, questId) or QuestSystem.IsCompleted(profile, questId) then return false, "Quest already started or completed." end
+	if (profile.Level or 1) < (definition.MinLevel or 1) then return false, string.format("Reach level %d.", definition.MinLevel or 1) end
+	if definition.Requires and not QuestSystem.IsCompleted(profile, definition.Requires) then return false, "Complete the previous quest first." end
+	return true
+end
 function QuestSystem.Start(profile, questId)
-	if not Definitions[questId] or QuestSystem.IsActive(profile, questId) or QuestSystem.IsCompleted(profile, questId) then return false end
+	local allowed = QuestSystem.CanStart(profile, questId)
+	if not allowed then return false end
 	profile.ActiveQuests = profile.ActiveQuests or {}; profile.CompletedQuests = profile.CompletedQuests or {}; profile.QuestProgress = profile.QuestProgress or {}
 	table.insert(profile.ActiveQuests, questId); profile.QuestProgress[questId] = 0; return true
 end
@@ -30,7 +39,6 @@ function QuestSystem.Advance(profile, questId, amount)
 end
 function QuestSystem.Complete(profile, questId)
 	local index = table.find(profile.ActiveQuests or {}, questId); if not index then return false end
-	table.remove(profile.ActiveQuests, index); profile.CompletedQuests = profile.CompletedQuests or {}; profile.QuestProgress = profile.QuestProgress or {}
-	table.insert(profile.CompletedQuests, questId); profile.QuestProgress[questId] = 0; return true
+	table.remove(profile.ActiveQuests, index); profile.CompletedQuests = profile.CompletedQuests or {}; profile.QuestProgress = profile.QuestProgress or {}; table.insert(profile.CompletedQuests, questId); profile.QuestProgress[questId] = 0; return true
 end
 return QuestSystem
