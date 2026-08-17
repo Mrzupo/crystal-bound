@@ -5,6 +5,7 @@ local DamageService = require(script.Parent.DamageService)
 local PlayerService = require(script.Parent.PlayerService)
 local XPService = require(script.Parent.XPService)
 local EconomyService = require(script.Parent.EconomyService)
+local InventoryService = require(script.Parent.InventoryService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 
@@ -30,18 +31,32 @@ local function fireProgress(player, levelsGained, moneyChanged)
 	local xpChanged = remotes:FindFirstChild("XPChanged")
 	local levelUp = remotes:FindFirstChild("LevelUp")
 	local moneyRemote = remotes:FindFirstChild("MoneyChanged")
+	local inventoryRemote = remotes:FindFirstChild("InventoryChanged")
 	if xpChanged then xpChanged:FireClient(player, profile.Experience, profile.Level) end
 	if moneyRemote and moneyChanged then moneyRemote:FireClient(player, profile.Money) end
+	if inventoryRemote then inventoryRemote:FireClient(player, profile.Inventory) end
 	if levelUp and levelsGained > 0 then levelUp:FireClient(player, profile.Level) end
 end
 
-local function completeFirstFight(player, profile)
-	if not QuestSystem.IsActive(profile, "FIRST_FIGHT") or QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then return end
-	QuestSystem.Complete(profile, "FIRST_FIGHT")
-	XPService.AddXP(profile, 100)
-	EconomyService.AddMoney(profile, 50)
-	PlayerService.Sync(player)
-	player:SetAttribute("QuestMessage", "First Trial complete!")
+local function completeQuest(player, profile, questId, xp, money, message)
+	if QuestSystem.IsActive(profile, questId) and not QuestSystem.IsCompleted(profile, questId) then
+		QuestSystem.Complete(profile, questId)
+		XPService.AddXP(profile, xp)
+		EconomyService.AddMoney(profile, money)
+		player:SetAttribute("QuestMessage", message)
+	end
+end
+
+local function giveLoot(profile, crystalId)
+	local loot = ({
+		EMBER = "EmberShard",
+		TIDE = "TidePearl",
+		GALE = "GaleFeather",
+	})[crystalId]
+	if loot then
+		return InventoryService.AddItem(profile, loot, 1)
+	end
+	return 0
 end
 
 function CombatService.HandleRequest(player, action, target)
@@ -73,18 +88,19 @@ function CombatService.HandleRequest(player, action, target)
 
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health <= 0 then
-		local _, _, levelsGained = XPService.AddXP(profile, action == "Ability" and 40 or 25)
-		EconomyService.AddMoney(profile, action == "Ability" and 20 or 10)
+		local levelsGained = 0
+		local xpGain = action == "Ability" and 40 or 25
+		local moneyGain = action == "Ability" and 20 or 10
+		local _, _, gained = XPService.AddXP(profile, xpGain)
+		levelsGained = gained or 0
+		EconomyService.AddMoney(profile, moneyGain)
+		giveLoot(profile, crystalId)
 		fireProgress(player, levelsGained, true)
-		completeFirstFight(player, profile)
+		completeQuest(player, profile, "FIRST_FIGHT", 100, 50, "First Trial complete!")
 	end
 
-	if action == "Ability" and QuestSystem.IsActive(profile, "CRYSTAL_POWER") then
-		QuestSystem.Complete(profile, "CRYSTAL_POWER")
-		XPService.AddXP(profile, 150)
-		EconomyService.AddMoney(profile, 75)
-		PlayerService.Sync(player)
-		player:SetAttribute("QuestMessage", "Crystal Power complete!")
+	if action == "Ability" then
+		completeQuest(player, profile, "CRYSTAL_POWER", 150, 75, "Crystal Power complete!")
 	end
 end
 
