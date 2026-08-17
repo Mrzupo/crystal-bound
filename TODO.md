@@ -13,6 +13,7 @@
 - [x] Inventar + Material-Loot
 - [x] Materialverkauf beim Material Trader
 - [x] Kauf-Shop mit Health Potion
+- [x] Crafting mit Health-Potion-Rezept
 - [x] Servervalidierte Consumable-Nutzung
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
@@ -54,8 +55,9 @@
 - [x] Achievements + Titles
 - [x] Achievement Journal
 - [x] Tägliche Bounty mit persistentem Fortschritt
-- [x] HUD für Progression, Loot, Quests und Bounty
-- [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge/Bounty-Feedback
+- [x] NPC-Dialoge mit servervalidierten Menü-Optionen
+- [x] HUD für Progression, Loot, Quests, Bounty und Crafting
+- [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge/Bounty/Crafting-Feedback
 - [x] Spieler-HP + Death/Respawn-Feedback
 - [x] Inventory-/Crystal-GUI
 - [x] Item-Raritäten
@@ -74,7 +76,6 @@
 
 - [ ] echte Attack-/Ability-Animationen
 - [ ] echte Asset-basierte VFX/Particles statt prozeduraler Placeholder
-- [ ] NPC-Dialogsystem mit Entscheidungen
 - [ ] weitere Boss-Mechaniken außerhalb des Guardian-Phasen-Hazards
 - [ ] fortgeschrittenes Navigation-/Pathfinding-Tuning für komplexes Terrain
 - [ ] automatisierte Luau-Tests
