@@ -148,8 +148,6 @@ function CombatService.HandleRequest(player, action, target)
 	local targetModel = getCharacter(target); if not targetModel then return end
 	if not HitboxService.IsWithinRange(player, targetModel, config.Range) then return end
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid"); if not humanoid or humanoid.Health <= 0 then return end
-	cooldowns[player][action] = now + config.Cooldown
-	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
 	local passive = CrystalSystem.GetPassive(crystalId); local mastery = CrystalMastery.GetBonuses(profile, crystalId)
 	local multiplier = math.max(0.1, tonumber(passive.DamageMultiplier) or 1) * mastery.DamageMultiplier
 	if action == "Ability" then multiplier *= mastery.AbilityDamageMultiplier end
@@ -158,6 +156,8 @@ function CombatService.HandleRequest(player, action, target)
 	local damage = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier
 	targetModel:SetAttribute("LastAttackerUserId", player.UserId)
 	local result = DamageService.ProcessDamage({ Attacker = player, Target = targetModel, Amount = damage, Range = config.Range, DamageType = "Crystal" }); if not result.Success then return end
+	cooldowns[player][action] = now + config.Cooldown
+	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
 	emitCombatEffect(crystalId, targetModel, action == "Ability", critical)
 	if critical then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
 	if action == "Ability" then applyAbilitySpecial(player, profile, crystalId, targetModel, damage); completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
