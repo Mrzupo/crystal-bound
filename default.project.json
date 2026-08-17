@@ -100,7 +100,8 @@
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
-        "ClientBootstrap": { "$path": "src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua" }
+        "ClientBootstrap": { "$path": "src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua" },
+        "AbilityCooldown": { "$path": "src/StarterPlayer/StarterPlayerScripts/AbilityCooldown.client.lua" }
       }
     },
     "StarterGui": {
