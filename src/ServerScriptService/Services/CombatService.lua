@@ -28,7 +28,6 @@ end
 local function emitCombatEffect(crystalId, targetModel, ability)
 	local root = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
 	if not root then return end
-
 	local effect = Instance.new("Part")
 	effect.Name = ability and "CrystalAbilityEffect" or "CrystalHitEffect"
 	effect.Anchored = true
@@ -40,17 +39,14 @@ local function emitCombatEffect(crystalId, targetModel, ability)
 	effect.Size = ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2)
 	effect.CFrame = root.CFrame
 	effect.Transparency = 0.15
-
 	local color = crystalId == "EMBER" and Color3.fromRGB(255, 90, 35)
 		or crystalId == "TIDE" and Color3.fromRGB(45, 150, 255)
 		or Color3.fromRGB(170, 120, 255)
 	effect.Color = color
 	effect.Parent = workspace
-
-	local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	local goal = { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }
 	local TweenService = game:GetService("TweenService")
-	TweenService:Create(effect, tweenInfo, goal):Play()
+	local goal = { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }
+	TweenService:Create(effect, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal):Play()
 	Debris:AddItem(effect, 0.25)
 end
 
@@ -98,9 +94,7 @@ local function advanceEnemyQuest(player, profile, enemyType)
 		if definition.EnemyType == enemyType and QuestSystem.IsActive(profile, questId) then
 			local complete, progress, goal = QuestSystem.Advance(profile, questId, 1)
 			player:SetAttribute("QuestProgress", string.format("%s: %d/%d", definition.Name, progress, goal))
-			if complete then
-				completeQuest(player, profile, questId, definition.Name .. " complete!")
-			end
+			if complete then completeQuest(player, profile, questId, definition.Name .. " complete!") end
 		end
 	end
 end
@@ -109,9 +103,7 @@ local function giveLoot(profile, targetModel, crystalId)
 	local enemyType = targetModel:GetAttribute("EnemyType")
 	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
 	local itemId = enemyConfig and enemyConfig.Drop
-	if not itemId then
-		itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId]
-	end
+	if not itemId then itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId] end
 	if itemId then return InventoryService.AddItem(profile, itemId, 1) end
 	return 0
 end
@@ -120,7 +112,6 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	if targetModel:GetAttribute("Enemy") ~= true then return end
 	if targetModel:GetAttribute("DeathRewarded") == true then return end
 	targetModel:SetAttribute("DeathRewarded", true)
-
 	local enemyType = targetModel:GetAttribute("EnemyType")
 	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
 	local xpGain = enemyConfig and enemyConfig.XP or (action == "Ability" and 40 or 25)
@@ -129,9 +120,7 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	EconomyService.AddMoney(profile, moneyGain)
 	giveLoot(profile, targetModel, crystalId)
 	advanceEnemyQuest(player, profile, enemyType)
-	if targetModel.Name == "TrainingDummy" then
-		completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!")
-	end
+	if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
 	fireProgress(player, levelsGained or 0, true, true)
 end
 
@@ -144,33 +133,27 @@ function CombatService.HandleRequest(player, action, target)
 	local crystalId = profile.Crystals.Equipped
 	local config = action == "Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId)
 	if not config then return end
-
 	cooldowns[player] = cooldowns[player] or {}
 	local now = os.clock()
 	if now < (cooldowns[player][action] or 0) then return end
 	cooldowns[player][action] = now + config.Cooldown
 
 	local targetModel = getCharacter(target)
+	local passive = CrystalSystem.GetPassive(crystalId)
+	local multiplier = math.max(0.1, tonumber(passive.DamageMultiplier) or 1)
 	local request = {
 		Attacker = player,
 		Target = targetModel,
-		Amount = config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10),
+		Amount = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier,
 		Range = config.Range,
 		DamageType = "Crystal",
 	}
-
 	local result = DamageService.ProcessDamage(request)
 	if not result.Success or not targetModel then return end
 	emitCombatEffect(crystalId, targetModel, action == "Ability")
-
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid.Health <= 0 then
-		rewardDefeat(player, profile, targetModel, action, crystalId)
-	end
-
-	if action == "Ability" then
-		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
-	end
+	if humanoid and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
+	if action == "Ability" then completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
 end
 
 return CombatService
