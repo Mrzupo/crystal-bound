@@ -54,7 +54,7 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 9,
+		Version = 10,
 		Level = 1,
 		Experience = 0,
 		Crystals = { Owned = { "EMBER" }, Equipped = "EMBER" },
@@ -119,6 +119,15 @@ function PlayerData.Reconcile(data)
 	data.Inventory = normalizeInventory(data.Inventory)
 	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
 	data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)
+
+	local completedSet = {}
+	for _, questId in ipairs(data.CompletedQuests) do completedSet[questId] = true end
+	local filteredActive = {}
+	for _, questId in ipairs(data.ActiveQuests) do
+		if not completedSet[questId] then table.insert(filteredActive, questId) end
+	end
+	data.ActiveQuests = filteredActive
+
 	data.QuestProgress = type(data.QuestProgress) == "table" and data.QuestProgress or {}
 	local normalizedProgress = {}
 	for questId, progress in pairs(data.QuestProgress) do
