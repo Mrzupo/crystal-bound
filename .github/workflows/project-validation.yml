@@ -1,0 +1,65 @@
+name: Crystal Bound Project Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Rojo project mapping
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          root = Path(".")
+          project_path = root / "default.project.json"
+          data = json.loads(project_path.read_text(encoding="utf-8"))
+          tree = data.get("tree")
+
+          if not isinstance(tree, dict):
+              raise SystemExit("default.project.json: missing tree object")
+
+          referenced = []
+
+          def walk(node):
+              if not isinstance(node, dict):
+                  return
+              path = node.get("$path")
+              if isinstance(path, str):
+                  referenced.append(path)
+              for value in node.values():
+                  walk(value)
+
+          walk(tree)
+
+          missing = []
+          for path in referenced:
+              if not (root / path).is_file():
+                  missing.append(path)
+
+          if missing:
+              print("Missing files referenced by default.project.json:")
+              for path in missing:
+                  print(f" - {path}")
+              raise SystemExit(1)
+
+          print(f"Validated {len(referenced)} mapped files.")
+
+      - name: Validate JSON files
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          for path in Path(".").rglob("*.json"):
+              if ".git" in path.parts:
+                  continue
+              json.loads(path.read_text(encoding="utf-8"))
+              print(f"OK {path}")
