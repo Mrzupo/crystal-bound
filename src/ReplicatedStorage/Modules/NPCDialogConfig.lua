@@ -21,6 +21,7 @@ local NPCDialogConfig = {
 		Options = {
 			{ Id = "SHOP", Label = "Open Shop" },
 			{ Id = "INVENTORY", Label = "Open Inventory" },
+			{ Id = "CRAFT", Label = "Open Crafting" },
 		},
 	},
 }
