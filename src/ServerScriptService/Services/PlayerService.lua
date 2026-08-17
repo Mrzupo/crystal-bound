@@ -81,6 +81,9 @@ function PlayerService.Sync(player)
 	player:SetAttribute("MaxHealthBonus", (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus)
 	player:SetAttribute("CrystalMasteryLevel", mastery.Level)
 	player:SetAttribute("CrystalMasteryXP", mastery.XP)
+	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do
+		player:SetAttribute("Owns_" .. id, table.find(profile.Crystals.Owned or {}, id) ~= nil)
+	end
 	player:SetAttribute("EnemiesDefeated", (profile.Stats and profile.Stats.EnemiesDefeated) or 0)
 	player:SetAttribute("BossesDefeated", (profile.Stats and profile.Stats.BossesDefeated) or 0)
 	player:SetAttribute("AchievementCount", #(profile.Achievements or {}))
