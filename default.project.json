@@ -63,7 +63,7 @@
         "NPCRequest": {"$className": "RemoteEvent"},
         "InventoryRequest": {"$className": "RemoteEvent"},
         "CrystalChanged": {"$className": "RemoteEvent"},
-        "CrystalMasteryChanged": {"className": "RemoteEvent"},
+        "CrystalMasteryChanged": {"$className": "RemoteEvent"},
         "CrystalUpgradeRequest": {"$className": "RemoteEvent"},
         "DodgeRequest": {"$className": "RemoteEvent"},
         "ShopRequest": {"$className": "RemoteEvent"},
