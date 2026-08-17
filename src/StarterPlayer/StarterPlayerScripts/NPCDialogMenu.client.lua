@@ -56,7 +56,6 @@ options.Parent = panel
 
 local currentLines = {}
 local currentIndex = 1
-local currentNpc = nil
 
 local function clearOptions()
 	for _, child in ipairs(options:GetChildren()) do child:Destroy() end
@@ -71,7 +70,6 @@ end
 local function openDialog(npcId)
 	local data = dialogRequest:InvokeServer(npcId)
 	if not data then return end
-	currentNpc = npcId
 	currentLines = data.Lines or {}
 	currentIndex = 1
 	title.Text = data.Name or npcId
@@ -89,7 +87,8 @@ local function openDialog(npcId)
 			if option.Id == "QUEST" then player:SetAttribute("OpenQuestMenu", os.clock())
 			elseif option.Id == "CRYSTAL" then player:SetAttribute("OpenCrystalMenu", os.clock())
 			elseif option.Id == "SHOP" then player:SetAttribute("OpenShopMenu", os.clock())
-			elseif option.Id == "INVENTORY" then player:SetAttribute("OpenCrystalMenu", os.clock()) end
+			elseif option.Id == "INVENTORY" then player:SetAttribute("OpenCrystalMenu", os.clock())
+			elseif option.Id == "CRAFT" then player:SetAttribute("OpenCraftingMenu", os.clock()) end
 		end)
 	end
 	panel.Visible = true
