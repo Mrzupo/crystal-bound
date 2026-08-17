@@ -13,7 +13,7 @@
 - [x] Inventar + Material-Loot
 - [x] Materialverkauf beim Material Trader
 - [x] Kauf-Shop mit Health Potion
-- [x] Crafting mit Health-Potion-Rezept
+- [x] Crafting mit Health-Potion-Rezept und Stack-Kapazitätsprüfung
 - [x] Servervalidierte Consumable-Nutzung
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
@@ -25,7 +25,7 @@
 - [x] Serverseitige Enemy/Boss-Target-Whitelist
 - [x] Serverseitige Distanz-/Hitbox-Prüfung
 - [x] Serverautorisierte kritische Treffer
-- [x] Serverautorisierter Dodge mit Invulnerability-Fenster
+- [x] Serverautorisierter Dodge mit globalem ForceField-Schutz
 - [x] Damage Numbers + Cooldown-Feedback
 - [x] Gegner-Konfiguration und serverseitige einfache KI
 - [x] Hindernis-Steering + Pathfinding-Fallback
@@ -42,6 +42,7 @@
 - [x] Ancient Golem
 - [x] Crystal Guardian Boss
 - [x] Guardian-Arena mit Phase-2-Hazard
+- [x] Telegraphierte Phase-2-Bossattacke
 - [x] Starter Island
 - [x] Tide Island
 - [x] Wind Island
@@ -65,18 +66,18 @@
 - [x] Mobile Touch Combat Controls mit Kamera-Ray-Zielauswahl
 - [x] Mobile Menu Controls
 - [x] Mobile Dodge-Control
-- [x] NPC-zu-Menü-Verknüpfung
+- [x] NPC-zu-Menü-Verknüpfung über Dialogsystem
 - [x] Welt-Dekoration für alle aktuellen Inseln
 - [x] Modulare Welt-Themes
 - [x] Rojo-/default.project.json-Struktur für alle Erweiterungen
-- [x] GitHub-CI für JSON- und Rojo-Dateipfad-Validierung
+- [x] GitHub-CI für JSON-, Rojo- und häufige Luau-Require-Pfad-Validierung
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 
 ## Nächste Systeme
 
 - [ ] echte Attack-/Ability-Animationen
 - [ ] echte Asset-basierte VFX/Particles statt prozeduraler Placeholder
-- [ ] weitere Boss-Mechaniken außerhalb des Guardian-Phasen-Hazards
+- [ ] weitere Boss-Mechaniken außerhalb des Guardian-Phasen-Systems
 - [ ] fortgeschrittenes Navigation-/Pathfinding-Tuning für komplexes Terrain
 - [ ] automatisierte Luau-Tests
 - [ ] Multiplayer-Performance- und Security-Test
@@ -86,7 +87,7 @@
 ## Später
 
 - [ ] PvP-Modus
-- [ ] Daily/Weekly Quests
+- [ ] Weekly/Daily Quest-Varianten zusätzlich zur aktuellen Bounty
 - [ ] weitere Inseln
 - [ ] weitere Kristalle
 - [ ] weitere Bosse
