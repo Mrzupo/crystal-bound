@@ -11,6 +11,7 @@
         "CrystalSystem": { "$path": "src/ReplicatedStorage/Modules/CrystalSystem.lua" },
         "CrystalMastery": { "$path": "src/ReplicatedStorage/Modules/CrystalMastery.lua" },
         "QuestSystem": { "$path": "src/ReplicatedStorage/Modules/QuestSystem.lua" },
+        "AchievementSystem": { "$path": "src/ReplicatedStorage/Modules/AchievementSystem.lua" },
         "NPCSystem": { "$path": "src/ReplicatedStorage/Modules/NPCSystem.lua" },
         "InventorySystem": { "$path": "src/ReplicatedStorage/Modules/InventorySystem.lua" },
         "SaveSystem": { "$path": "src/ReplicatedStorage/Modules/SaveSystem.lua" },
