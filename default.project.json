@@ -121,7 +121,6 @@
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
         "ClientBootstrap": {"$path": "src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua"},
-        "AbilityCooldown": {"$path": "src/StarterPlayer/StarterPlayerScripts/AbilityCooldown.client.lua"},
         "CooldownAuthority": {"$path": "src/StarterPlayer/StarterPlayerScripts/CooldownAuthority.client.lua"},
         "PlayerHealth": {"$path": "src/StarterPlayer/StarterPlayerScripts/PlayerHealth.client.lua"},
         "InventoryMenu": {"$path": "src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua"},
