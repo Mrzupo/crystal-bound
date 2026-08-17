@@ -123,26 +123,35 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
 	local xpGain = enemyConfig and enemyConfig.XP or (action == "Ability" and 40 or 25)
 	local moneyGain = enemyConfig and enemyConfig.Money or (action == "Ability" and 20 or 10)
-	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
-	EconomyService.AddMoney(profile, moneyGain)
-	giveLoot(profile, targetModel, crystalId)
+	local isBoss = enemyType == "CrystalGuardian"
+
+	if not isBoss then
+		local _, _, levelsGained = XPService.AddXP(profile, xpGain)
+		EconomyService.AddMoney(profile, moneyGain)
+		giveLoot(profile, targetModel, crystalId)
+		profile.Stats = profile.Stats or {}
+		profile.Stats.EnemiesDefeated = (profile.Stats.EnemiesDefeated or 0) + 1
+		local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
+		advanceEnemyQuest(player, profile, enemyType)
+		if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
+		PlayerService.Sync(player)
+		if masteryLevels > 0 then player:SetAttribute("QuestMessage", crystalId .. " Mastery Lv. " .. masteryLevel) end
+		fireProgress(player, levelsGained or 0, true, true)
+		return
+	end
+
 	profile.Stats = profile.Stats or {}
 	profile.Stats.EnemiesDefeated = (profile.Stats.EnemiesDefeated or 0) + 1
-
-	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
+	profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
+	local masteryLevel, masteryXP = CrystalMastery.AddXP(profile, crystalId, math.max(25, math.floor(xpGain * 0.75)))
+	BossService.RewardDefeat(player, targetModel, EconomyService, XPService, PlayerService)
 	advanceEnemyQuest(player, profile, enemyType)
-	if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
-	if enemyType == "CrystalGuardian" then
-		profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
-		BossService.RewardDefeat(player, targetModel, EconomyService, XPService, PlayerService)
-		completeQuest(player, profile, "GUARDIAN_TRIAL", "Guardian Trial complete!")
-	end
-
+	completeQuest(player, profile, "GUARDIAN_TRIAL", "Guardian Trial complete!")
 	PlayerService.Sync(player)
-	if masteryLevels > 0 then
-		player:SetAttribute("QuestMessage", crystalId .. " Mastery Lv. " .. masteryLevel)
+	fireProgress(player, 0, true, true)
+	if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CrystalMasteryChanged") then
+		ReplicatedStorage.Remotes.CrystalMasteryChanged:FireClient(player, crystalId, masteryLevel, masteryXP)
 	end
-	fireProgress(player, levelsGained or 0, true, true)
 end
 
 local function applyGaleSplash(player, centerModel, damage)
