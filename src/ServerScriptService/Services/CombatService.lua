@@ -49,15 +49,10 @@ local function emitCombatEffect(crystalId, targetModel, ability)
 	local root = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
 	if not root then return end
 	local color = CRYSTAL_COLORS[crystalId] or CRYSTAL_COLORS.EMBER
-	local name = ability and "CrystalAbilityEffect" or "CrystalHitEffect"
-	local effect, duration = makeEffect(name, root.Position, ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2), color, 0.25)
+	local effect, duration = makeEffect(ability and "CrystalAbilityEffect" or "CrystalHitEffect", root.Position, ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2), color, 0.25)
 	effect.Shape = Enum.PartType.Ball
-	TweenService:Create(effect, TweenInfo.new(duration), {
-		Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4),
-		Transparency = 1,
-	}):Play()
+	TweenService:Create(effect, TweenInfo.new(duration), { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }):Play()
 	Debris:AddItem(effect, duration + 0.05)
-
 	if not ability then return end
 	if crystalId == "EMBER" then
 		local ring, ringDuration = makeEffect("EmberBurst", root.Position, Vector3.new(1, 0.6, 1), color, 0.35)
@@ -177,6 +172,7 @@ function CombatService.HandleRequest(player, action, target)
 	cooldowns[player] = cooldowns[player] or {}
 	local now = os.clock(); if now < (cooldowns[player][action] or 0) then return end
 	cooldowns[player][action] = now + config.Cooldown
+	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
 	local targetModel = getCharacter(target); if not targetModel then return end
 	local passive = CrystalSystem.GetPassive(crystalId); local mastery = CrystalMastery.GetBonuses(profile, crystalId)
 	local multiplier = math.max(0.1, tonumber(passive.DamageMultiplier) or 1) * mastery.DamageMultiplier
