@@ -3,7 +3,7 @@ local SaveSystem = require(ReplicatedStorage.Modules.SaveSystem)
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 
-local PlayerService = { Profiles = {} }
+local PlayerService = { Profiles = {}, CharacterConnections = {} }
 
 local function setupLeaderstats(player, profile)
 	local leaderstats = player:FindFirstChild("leaderstats") or Instance.new("Folder")
@@ -30,6 +30,14 @@ function PlayerService.Load(player)
 	local profile = PlayerData.Reconcile(SaveSystem.Load(player))
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
+	if PlayerService.CharacterConnections[player] then
+		PlayerService.CharacterConnections[player]:Disconnect()
+	end
+	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function()
+		task.defer(function()
+			if PlayerService.Profiles[player] then PlayerService.Sync(player) end
+		end)
+	end)
 	PlayerService.Sync(player)
 	return profile
 end
@@ -63,9 +71,7 @@ function PlayerService.Sync(player)
 		local maxHealth = 100 + (passive.MaxHealthBonus or 0)
 		local oldMax = humanoid.MaxHealth
 		humanoid.MaxHealth = maxHealth
-		if humanoid.Health > 0 and humanoid.Health == oldMax then
-			humanoid.Health = maxHealth
-		end
+		if humanoid.Health > 0 and humanoid.Health == oldMax then humanoid.Health = maxHealth end
 	end
 end
 
@@ -78,6 +84,10 @@ end
 
 function PlayerService.Remove(player)
 	PlayerService.Save(player)
+	if PlayerService.CharacterConnections[player] then
+		PlayerService.CharacterConnections[player]:Disconnect()
+		PlayerService.CharacterConnections[player] = nil
+	end
 	PlayerService.Profiles[player] = nil
 end
 
