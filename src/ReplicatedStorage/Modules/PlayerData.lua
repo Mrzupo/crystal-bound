@@ -1,4 +1,6 @@
 local PlayerData = {}
+local InventoryConfig = require(game.ReplicatedStorage.Config.InventoryConfig)
+local QuestSystem = require(script.Parent.QuestSystem)
 
 local VALID_CRYSTALS = {
 	EMBER = true,
@@ -33,9 +35,26 @@ local function normalizeList(list, validator)
 	return result
 end
 
+local function normalizeInventory(inventory)
+	local result = {}
+	if type(inventory) ~= "table" then return result end
+	for itemId, amount in pairs(inventory) do
+		if type(itemId) == "string" and InventoryConfig.GetItemConfig(itemId) then
+			local maxStack = InventoryConfig.GetMaxStackSize(itemId)
+			local normalized = clampInt(amount, 0, maxStack, 0)
+			if normalized > 0 then result[itemId] = normalized end
+		end
+	end
+	return result
+end
+
+local function isQuestId(value)
+	return type(value) == "string" and QuestSystem.GetDefinition(value) ~= nil
+end
+
 function PlayerData.new()
 	return {
-		Version = 8,
+		Version = 9,
 		Level = 1,
 		Experience = 0,
 		Crystals = { Owned = { "EMBER" }, Equipped = "EMBER" },
@@ -97,10 +116,19 @@ function PlayerData.Reconcile(data)
 
 	data.Titles = normalizeList(data.Titles)
 	data.Achievements = normalizeList(data.Achievements)
-	data.Inventory = type(data.Inventory) == "table" and data.Inventory or {}
-	data.ActiveQuests = normalizeList(data.ActiveQuests)
-	data.CompletedQuests = normalizeList(data.CompletedQuests)
+	data.Inventory = normalizeInventory(data.Inventory)
+	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
+	data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)
 	data.QuestProgress = type(data.QuestProgress) == "table" and data.QuestProgress or {}
+	local normalizedProgress = {}
+	for questId, progress in pairs(data.QuestProgress) do
+		if isQuestId(questId) then
+			local definition = QuestSystem.GetDefinition(questId)
+			normalizedProgress[questId] = math.clamp(clampInt(progress, 0, definition.Goal, 0), 0, definition.Goal)
+		end
+	end
+	data.QuestProgress = normalizedProgress
+
 	data.UnlockedIslands = normalizeList(data.UnlockedIslands)
 	if not table.find(data.UnlockedIslands, "STARTER") then table.insert(data.UnlockedIslands, "STARTER") end
 	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
