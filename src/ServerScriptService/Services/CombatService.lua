@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local Debris = game:GetService("Debris")
 
 local DamageService = require(script.Parent.DamageService)
 local PlayerService = require(script.Parent.PlayerService)
@@ -24,6 +25,35 @@ local function isPlayerTarget(target)
 	return target:IsA("Player") or (target:IsA("Model") and Players:GetPlayerFromCharacter(target) ~= nil)
 end
 
+local function emitCombatEffect(crystalId, targetModel, ability)
+	local root = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
+	if not root then return end
+
+	local effect = Instance.new("Part")
+	effect.Name = ability and "CrystalAbilityEffect" or "CrystalHitEffect"
+	effect.Anchored = true
+	effect.CanCollide = false
+	effect.CanQuery = false
+	effect.CanTouch = false
+	effect.Shape = Enum.PartType.Ball
+	effect.Material = Enum.Material.Neon
+	effect.Size = ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2)
+	effect.CFrame = root.CFrame
+	effect.Transparency = 0.15
+
+	local color = crystalId == "EMBER" and Color3.fromRGB(255, 90, 35)
+		or crystalId == "TIDE" and Color3.fromRGB(45, 150, 255)
+		or Color3.fromRGB(170, 120, 255)
+	effect.Color = color
+	effect.Parent = workspace
+
+	local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local goal = { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }
+	local TweenService = game:GetService("TweenService")
+	TweenService:Create(effect, tweenInfo, goal):Play()
+	Debris:AddItem(effect, 0.25)
+end
+
 local function fireProgress(player, levelsGained, moneyChanged, inventoryChanged)
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
@@ -40,6 +70,7 @@ local function startNextQuest(player, profile)
 	local candidates = {}
 	if profile.Level >= 3 then table.insert(candidates, "HUNT_EMBERLINGS") end
 	if profile.Level >= 6 then table.insert(candidates, "TIDE_EXPEDITION") end
+	if profile.Level >= 10 then table.insert(candidates, "WIND_TRIAL") end
 	for _, questId in ipairs(candidates) do
 		if not QuestSystem.IsActive(profile, questId) and not QuestSystem.IsCompleted(profile, questId) then
 			if QuestService.Start(player, profile, questId) then
@@ -81,9 +112,7 @@ local function giveLoot(profile, targetModel, crystalId)
 	if not itemId then
 		itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId]
 	end
-	if itemId then
-		return InventoryService.AddItem(profile, itemId, 1)
-	end
+	if itemId then return InventoryService.AddItem(profile, itemId, 1) end
 	return 0
 end
 
@@ -100,7 +129,6 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	EconomyService.AddMoney(profile, moneyGain)
 	giveLoot(profile, targetModel, crystalId)
 	advanceEnemyQuest(player, profile, enemyType)
-
 	if targetModel.Name == "TrainingDummy" then
 		completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!")
 	end
@@ -133,6 +161,7 @@ function CombatService.HandleRequest(player, action, target)
 
 	local result = DamageService.ProcessDamage(request)
 	if not result.Success or not targetModel then return end
+	emitCombatEffect(crystalId, targetModel, action == "Ability")
 
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health <= 0 then
