@@ -6,12 +6,11 @@ local PlayerService = require(script.Parent.Services.PlayerService)
 local CombatService = require(script.Parent.Services.CombatService)
 local QuestService = require(script.Parent.Services.QuestService)
 local CrystalService = require(script.Parent.Services.CrystalService)
-local InventoryService = require(script.Parent.Services.InventoryService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
+local NPCService = require(script.Parent.Services.NPCService)
 
 local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
-local crystals = { "EMBER", "TIDE", "GALE" }
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -28,7 +27,10 @@ local function ensureRemote(className, name)
 	return remote
 end
 
-for _, name in ipairs({ "CombatRequest", "QuestRequest", "NPCRequest", "InventoryRequest", "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged" }) do
+for _, name in ipairs({
+	"CombatRequest", "QuestRequest", "NPCRequest", "InventoryRequest",
+	"XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged",
+}) do
 	ensureRemote("RemoteEvent", name)
 end
 ensureRemote("RemoteFunction", "GetPlayerData")
@@ -81,45 +83,85 @@ end
 
 remotes.GetQuestData.OnServerInvoke = function(player)
 	local profile = PlayerService.GetProfile(player)
-	if not profile then return { Active = {}, Completed = {}, Definitions = QuestSystem.GetDefinitions() } end
-	return { Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Definitions = QuestSystem.GetDefinitions() }
-end
-
-local function ensureStarterMap()
-	local islands = Workspace:FindFirstChild("Islands") or Instance.new("Folder")
-	islands.Name = "Islands"
-	islands.Parent = Workspace
-	if islands:FindFirstChild("StarterIsland") then return end
-
-	local island = Instance.new("Model")
-	island.Name = "StarterIsland"
-	island.Parent = islands
-
-	local floor = Instance.new("Part")
-	floor.Name = "Ground"
-	floor.Size = Vector3.new(120, 2, 120)
-	floor.Position = Vector3.new(0, 0, 0)
-	floor.Anchored = true
-	floor.Parent = island
-
-	local spawnFolder = Workspace:FindFirstChild("Spawn") or Instance.new("Folder")
-	spawnFolder.Name = "Spawn"
-	spawnFolder.Parent = Workspace
-	if not spawnFolder:FindFirstChild("StarterSpawn") then
-		local spawn = Instance.new("SpawnLocation")
-		spawn.Name = "StarterSpawn"
-		spawn.Size = Vector3.new(8, 1, 8)
-		spawn.Position = Vector3.new(0, 2, 5)
-		spawn.Anchored = true
-		spawn.Neutral = true
-		spawn.Parent = spawnFolder
+	if not profile then
+		return { Active = {}, Completed = {}, Progress = {}, Definitions = QuestSystem.GetDefinitions() }
 	end
+	return {
+		Active = profile.ActiveQuests,
+		Completed = profile.CompletedQuests,
+		Progress = profile.QuestProgress,
+		Definitions = QuestSystem.GetDefinitions(),
+	}
 end
 
-local function spawnQuestGiver()
-	local npcs = Workspace:FindFirstChild("NPCs") or Instance.new("Folder")
-	npcs.Name = "NPCs"
-	npcs.Parent = Workspace
+local function ensureWorldFolders()
+	for _, name in ipairs({ "NPCs", "Islands", "Spawn" }) do
+		local folder = Workspace:FindFirstChild(name)
+		if not folder then
+			folder = Instance.new("Folder")
+			folder.Name = name
+			folder.Parent = Workspace
+		end
+	end
+	return Workspace.NPCs, Workspace.Islands, Workspace.Spawn
+end
+
+local function createIsland(islands, name, center, size)
+	local island = islands:FindFirstChild(name)
+	if island then return island end
+
+	island = Instance.new("Model")
+	island.Name = name
+	island.Parent = islands
+	island:SetAttribute("IslandId", name)
+
+	local ground = Instance.new("Part")
+	ground.Name = "Ground"
+	ground.Size = size
+	ground.Position = center
+	ground.Anchored = true
+	ground.Material = Enum.Material.Grass
+	ground.Parent = island
+
+	return island
+end
+
+local function createSpawn(spawnFolder)
+	if spawnFolder:FindFirstChild("StarterSpawn") then return end
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "StarterSpawn"
+	spawn.Size = Vector3.new(8, 1, 8)
+	spawn.Position = Vector3.new(0, 3, 8)
+	spawn.Anchored = true
+	spawn.Neutral = true
+	spawn.Parent = spawnFolder
+end
+
+local function createPortal(island, fromPosition, destination)
+	local portal = island:FindFirstChild("TidePortal")
+	if portal then return end
+
+	portal = Instance.new("Part")
+	portal.Name = "TidePortal"
+	portal.Size = Vector3.new(6, 8, 2)
+	portal.Position = fromPosition
+	portal.Anchored = true
+	portal.Material = Enum.Material.Neon
+	portal.Parent = island
+
+	local cooldown = {}
+	portal.Touched:Connect(function(hit)
+		local character = hit:FindFirstAncestorOfClass("Model")
+		local player = character and Players:GetPlayerFromCharacter(character)
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not player or not root or cooldown[player] then return end
+		cooldown[player] = true
+		root.CFrame = CFrame.new(destination)
+		task.delay(1, function() cooldown[player] = nil end)
+	end)
+end
+
+local function spawnQuestGiver(npcs)
 	if npcs:FindFirstChild("CrystalKeeper") then return end
 
 	local model = Instance.new("Model")
@@ -150,76 +192,61 @@ local function spawnQuestGiver()
 	prompt.Triggered:Connect(function(player)
 		local profile = PlayerService.GetProfile(player)
 		if not profile then return end
+
+		local questToStart
 		if not QuestSystem.IsActive(profile, "FIRST_FIGHT") and not QuestSystem.IsCompleted(profile, "FIRST_FIGHT") then
-			QuestService.Start(player, profile, "FIRST_FIGHT")
+			questToStart = "FIRST_FIGHT"
 		elseif not QuestSystem.IsActive(profile, "CRYSTAL_POWER") and not QuestSystem.IsCompleted(profile, "CRYSTAL_POWER") then
-			QuestService.Start(player, profile, "CRYSTAL_POWER")
+			questToStart = "CRYSTAL_POWER"
+		elseif profile.Level >= 3 and not QuestSystem.IsActive(profile, "HUNT_EMBERLINGS") and not QuestSystem.IsCompleted(profile, "HUNT_EMBERLINGS") then
+			questToStart = "HUNT_EMBERLINGS"
+		elseif profile.Level >= 6 and not QuestSystem.IsActive(profile, "TIDE_EXPEDITION") and not QuestSystem.IsCompleted(profile, "TIDE_EXPEDITION") then
+			questToStart = "TIDE_EXPEDITION"
 		end
-		player:SetAttribute("QuestMessage", "Quest updated!")
+
+		if questToStart then
+			QuestService.Start(player, profile, questToStart)
+			player:SetAttribute("QuestMessage", "Started: " .. QuestSystem.GetDefinition(questToStart).Name)
+		else
+			player:SetAttribute("QuestMessage", "No new quest available.")
+		end
 	end)
 end
 
-local function spawnTrainingDummy()
-	local npcs = Workspace:FindFirstChild("NPCs") or Instance.new("Folder")
-	npcs.Name = "NPCs"
-	npcs.Parent = Workspace
-	local old = npcs:FindFirstChild("TrainingDummy")
-	if old then old:Destroy() end
-
-	local model = Instance.new("Model")
-	model.Name = "TrainingDummy"
-	model.Parent = npcs
-	model:SetAttribute("Enemy", true)
-
-	local root = Instance.new("Part")
-	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2, 2, 1)
-	root.Position = Vector3.new(0, 4, -12)
-	root.Transparency = 1
-	root.Anchored = true
-	root.Parent = model
-
-	local torso = Instance.new("Part")
-	torso.Name = "Torso"
-	torso.Size = Vector3.new(3, 4, 2)
-	torso.Position = Vector3.new(0, 5, -12)
-	torso.Anchored = true
-	torso.Parent = model
-
-	local head = Instance.new("Part")
-	head.Name = "Head"
-	head.Shape = Enum.PartType.Ball
-	head.Size = Vector3.new(2, 2, 2)
-	head.Position = Vector3.new(0, 8, -12)
-	head.Anchored = true
-	head.Parent = model
-
-	local humanoid = Instance.new("Humanoid")
-	humanoid.MaxHealth = 100
-	humanoid.Health = 100
-	humanoid.DisplayName = "Training Dummy"
-	humanoid.Parent = model
-
-	local weld1 = Instance.new("WeldConstraint")
-	weld1.Part0 = root
-	weld1.Part1 = torso
-	weld1.Parent = root
-	local weld2 = Instance.new("WeldConstraint")
-	weld2.Part0 = torso
-	weld2.Part1 = head
-	weld2.Parent = torso
-	model.PrimaryPart = root
-
-	humanoid.Died:Connect(function()
-		task.delay(3, function()
-			if npcs.Parent and not npcs:FindFirstChild("TrainingDummy") then spawnTrainingDummy() end
+local function spawnEnemy(npcs, typeId, position)
+	NPCService.CreateEnemy(typeId, position, npcs, function(model, config)
+		local respawnTime = config.Respawn
+		task.delay(respawnTime, function()
+			if npcs.Parent then
+				spawnEnemy(npcs, typeId, position)
+			end
 		end)
 	end)
 end
 
-ensureStarterMap()
-spawnQuestGiver()
-spawnTrainingDummy()
+local npcs, islands, spawnFolder = ensureWorldFolders()
+local starterIsland = createIsland(islands, "StarterIsland", Vector3.new(0, 0, 0), Vector3.new(120, 2, 120))
+local tideIsland = createIsland(islands, "TideIsland", Vector3.new(170, 0, 0), Vector3.new(100, 2, 100))
+createSpawn(spawnFolder)
+createPortal(starterIsland, Vector3.new(52, 5, 0), Vector3.new(120, 4, 0))
+
+spawnQuestGiver(npcs)
+
+if not npcs:FindFirstChild("TrainingDummy") then
+	spawnEnemy(npcs, "TrainingDummy", Vector3.new(0, 1, -12))
+end
+if not npcs:FindFirstChild("Emberling") then
+	spawnEnemy(npcs, "Emberling", Vector3.new(30, 1, -18))
+end
+if not npcs:FindFirstChild("Tidecrawler") then
+	spawnEnemy(npcs, "Tidecrawler", Vector3.new(160, 1, -12))
+end
+if not npcs:FindFirstChild("Tidecrawler2") then
+	spawnEnemy(npcs, "Tidecrawler", Vector3.new(190, 1, 15))
+end
+if not npcs:FindFirstChild("Galewisp") then
+	spawnEnemy(npcs, "Galewisp", Vector3.new(180, 1, 28))
+end
 
 Players.PlayerAdded:Connect(function(player)
 	local profile = PlayerService.Load(player)
