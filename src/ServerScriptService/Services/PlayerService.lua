@@ -5,6 +5,7 @@ local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local AchievementService = require(script.Parent.AchievementService)
 local EconomyService = require(script.Parent.EconomyService)
+local BossService = require(script.Parent.BossService)
 
 local PlayerService = { Profiles = {}, CharacterConnections = {} }
 
@@ -12,12 +13,10 @@ local function setupLeaderstats(player, profile)
 	local leaderstats = player:FindFirstChild("leaderstats") or Instance.new("Folder")
 	leaderstats.Name = "leaderstats"
 	leaderstats.Parent = player
-
 	local level = leaderstats:FindFirstChild("Level") or Instance.new("IntValue")
 	level.Name = "Level"
 	level.Value = profile.Level
 	level.Parent = leaderstats
-
 	local money = leaderstats:FindFirstChild("Money") or Instance.new("IntValue")
 	money.Name = "Money"
 	money.Value = profile.Money
@@ -30,12 +29,11 @@ end
 
 function PlayerService.Load(player)
 	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
+	BossService.Bind()
 	local profile = PlayerData.Reconcile(SaveSystem.Load(player))
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
-	if PlayerService.CharacterConnections[player] then
-		PlayerService.CharacterConnections[player]:Disconnect()
-	end
+	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function()
 		task.defer(function()
 			if PlayerService.Profiles[player] then PlayerService.Sync(player) end
@@ -48,7 +46,6 @@ end
 function PlayerService.Sync(player)
 	local profile = PlayerService.Profiles[player]
 	if not profile then return end
-
 	local newAchievements = AchievementService.Check(profile)
 	for _, reward in ipairs(newAchievements) do
 		local definition = reward.Definition
@@ -78,6 +75,7 @@ function PlayerService.Sync(player)
 	player:SetAttribute("CrystalMasteryLevel", mastery.Level)
 	player:SetAttribute("CrystalMasteryXP", mastery.XP)
 	player:SetAttribute("Title", (profile.Titles and profile.Titles[#profile.Titles]) or "")
+	player:SetAttribute("AchievementCount", #(profile.Achievements or {}))
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
