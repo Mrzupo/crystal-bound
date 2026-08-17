@@ -4,40 +4,40 @@
 
 ### Added
 
-- Crystal Framework v1 mit `Modules/Crystal`.
-- `CrystalDefinitions` mit `EMBER`, `TIDE` und `GALE`.
-- `CrystalTypes` fuer zentrale Rarities und Elements.
-- `CrystalUtils` mit `Exists`, `GetDefinition` und `IsValid`.
-- `CrystalSystem` als Fassade ueber die neuen Crystal-Module.
-- Vollstaendiger serverseitiger `CrystalService`.
-- Crystal Ability Framework mit `BaseCrystal`, `AbilityRegistry` und `PassiveRegistry`.
-- Platzhalter-Methoden in `CrystalService`: `GetActiveAbility`, `CanUseAbility`, `ActivateAbility`, `DeactivateAbility`.
-- Damage Pipeline Framework mit `DamageRequest`, `DamageResult`, `DamageTypes` und `DamageValidators`.
-- `DamageService` mit `ValidateRequest`, `CanDamage`, `ProcessDamage` und `ApplyDamage`.
-- `PlayerData.Crystals` speichert nur `Owned` und `Equipped` IDs.
-- `InventoryService` als serverseitiges Inventarsystem.
-- `InventoryConfig` fuer Stackgroessen und Item-Metadaten.
-- `InventoryChanged` RemoteEvent fuer spaetere UI.
-- Stapelbare Items mit `itemId -> amount` Speicherung in `PlayerData.Inventory`.
-- Oeffentliche Inventory-Funktionen:
-  - `AddItem(player, itemId, amount)`
-  - `RemoveItem(player, itemId, amount)`
-  - `HasItem(player, itemId)`
-  - `GetInventory(player)`
-- Dokumentation fuer README, TESTING, TODO und DESIGN.
+- Vollständige `src`-Roblox-Struktur passend zu `default.project.json`.
+- PlayerData mit Versionierung, QuestProgress und Schema-Reconciliation.
+- SaveSystem mit DataStore-Retry und Autosave-Integration.
+- XP-, Level- und Economy-System.
+- Inventar mit Material-Loot und serverseitigem Verkauf.
+- Crystal Framework für `EMBER`, `TIDE` und `GALE`.
+- Crystal-Level-Freischaltungen und Ausrüstung.
+- Passive Crystal-Effekte: Schaden, Geschwindigkeit und MaxHealth.
+- Unterschiedliche aktive Crystal-Abilities.
+- Servervalidierte Damage Pipeline und Combat.
+- Temporäre Crystal-Hit-/Ability-VFX.
+- Training Dummy, Emberling, Tidecrawler und Galewisp.
+- Einfache serverseitige Gegner-KI mit Aggro und Angriff.
+- Starter Island, Tide Island und Wind Island.
+- Levelgesperrte Portale zwischen Inseln.
+- Crystal Keeper Quest-NPC.
+- Material Trader mit serverseitiger Entfernung aus dem Inventar und Geldgutschrift.
+- Quest-System mit persistentem Fortschritt und Quest-Kette bis zum Wind Trial.
+- HUD für Level, XP, Geld, Kristall, Loot, Quests und Statusmeldungen.
+- Crystal-Wechsel per `Z`, `X`, `C`.
+- Loot-Verkauf per `4`, `5`, `6` in der Nähe des Material Traders.
 
 ### Changed
 
-- Alte Kristall-Platzhalter wurden durch das modulare Crystal Framework v1 ersetzt.
-- Kristallbezogene Platzhalter-Remotes wurden aus der Rojo-Struktur entfernt.
-- `PlayerData.Inventory` wurde von einer Platzhalter-Liste auf eine Item-Map umgestellt.
-- `SaveSystem` normalisiert Inventardaten nach dem Laden.
-- `Bootstrap` laedt jetzt `InventoryService`.
+- `CrystalConfig` enthält jetzt Basic Attacks, Abilities und Passives.
+- `EnemyConfig` enthält Balancing für mehrere Gegnertypen.
+- `NPCService` verwaltet Gegnererstellung, eindeutige Namen und einfache KI.
+- `CombatService` verwendet gegnerspezifische XP-, Geld- und Lootwerte.
+- `PlayerService` wendet Crystal-Passives beim Spawn und nach Respawns erneut an.
+- `Bootstrap` initialisiert Welt, NPCs, Portale, Remotes und Autosave.
+- `TODO.md` wurde an den tatsächlichen Entwicklungsstand angepasst.
 
 ### Notes
 
-- Crystal Framework v1 implementiert keine Faehigkeiten, keinen Schaden, keine Animationen, keine VFX und keine UI.
-- Crystal Ability Framework stellt nur API, Registry und Lifecycle-Platzhalter bereit.
-- Damage Pipeline validiert nur und wendet keinen Schaden auf Humanoids oder Spielzustand an.
-- Das System ist fuer Kristalle, Materialien, Questitems, Shops und Haendler vorbereitet.
-- Es gibt noch keine Client-UI und keine Shop- oder Drop-Logik.
+- Die aktuellen VFX sind prozedural und benötigen noch keine externen Assets.
+- Animationen, ein vollständiges Inventarfenster, komplexere Hitboxen, Bosskämpfe, Session-Locking und automatisierte Luau-Tests sind noch offen.
+- Ein echter Play-Test in Roblox Studio ist weiterhin notwendig, weil diese Umgebung Roblox Studio nicht ausführen kann.
