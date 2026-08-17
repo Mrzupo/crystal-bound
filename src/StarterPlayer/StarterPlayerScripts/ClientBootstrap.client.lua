@@ -24,6 +24,7 @@ local sellOrder = { "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "A
 local messageExpiresAt = 0
 local cooldownEndsAt = 0
 local watchedHumanoids = {}
+local targetScanAccumulator = 0
 
 local function getTargetFromMouse()
 	local hit = player:GetMouse().Target
@@ -274,10 +275,13 @@ end
 local function refreshCooldown()
 	local remaining = math.max(0, cooldownEndsAt - os.clock())
 	local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
+	local ability = crystalConfig.Abilities[crystal]
 	if remaining > 0 then
 		cooldownLabel.Text = string.format("Q Ability: %.1fs", remaining)
+	elseif ability then
+		cooldownLabel.Text = string.format("Q Ability: READY  •  %s", ability.Name)
 	else
-		cooldownLabel.Text = string.format("Q Ability: READY  •  %s", crystalConfig.Abilities[crystal].Name)
+		cooldownLabel.Text = "Q Ability: READY"
 	end
 end
 
@@ -358,7 +362,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		if target then
 			combatRemote:FireServer("Ability", target)
 			local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
-			cooldownEndsAt = os.clock() + crystalConfig.Abilities[crystal].Cooldown
+			local ability = crystalConfig.Abilities[crystal]
+			if ability then cooldownEndsAt = os.clock() + ability.Cooldown end
 			refreshCooldown()
 		end
 	elseif input.KeyCode == Enum.KeyCode.Z then
@@ -377,10 +382,14 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	elseif input.KeyCode == Enum.KeyCode.U then crystalUpgradeRequest:FireServer(player:GetAttribute("EquippedCrystal") or "EMBER") end
 end)
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(deltaTime)
 	refreshBoss()
 	refreshCooldown()
-	scanCombatTargets()
+	targetScanAccumulator += deltaTime
+	if targetScanAccumulator >= 0.35 then
+		targetScanAccumulator = 0
+		scanCombatTargets()
+	end
 end)
 
 print("Crystal Bound client ready")
