@@ -13,7 +13,7 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 1,
+		Version = 2,
 		Level = 1,
 		Experience = 0,
 		Crystals = {
