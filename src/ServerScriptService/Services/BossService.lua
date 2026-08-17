@@ -11,14 +11,12 @@ local QuestService = require(script.Parent.QuestService)
 local BossService = { Bound = false }
 
 local function shockwave(center, radius, damage, ignoreModel)
-	local affectedPlayers = {}
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
 			humanoid:TakeDamage(math.max(0, damage))
-			affectedPlayers[player] = true
 		end
 	end
 
@@ -102,17 +100,35 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		while model.Parent and humanoid.Health > 0 do
 			local nearestPlayer, nearestDistance = nil, config.AggroRange
 			for _, player in ipairs(Players:GetPlayers()) do
-				local character = player.Character; local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid"); local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
-				if targetHumanoid and targetHumanoid.Health > 0 and targetRoot then local distance = (targetRoot.Position - root.Position).Magnitude; if distance < nearestDistance then nearestPlayer, nearestDistance = player, distance end end
+				local character = player.Character
+				local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+				local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
+				if targetHumanoid and targetHumanoid.Health > 0 and targetRoot then
+					local distance = (targetRoot.Position - root.Position).Magnitude
+					if distance < nearestDistance then nearestPlayer, nearestDistance = player, distance end
+				end
 			end
 			if nearestPlayer then
-				local character = nearestPlayer.Character; local targetRoot = character and character:FindFirstChild("HumanoidRootPart"); local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+				local character = nearestPlayer.Character
+				local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
+				local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if targetRoot and targetHumanoid then
-					local phase = humanoid.Health <= config.Health * 0.5 and 2 or 1; model:SetAttribute("BossPhase", phase)
-					if distance > config.AttackRange then end
-					if nearestDistance > config.AttackRange then local direction = targetRoot.Position - root.Position; if direction.Magnitude > 0.1 then local step = math.min(0.8, direction.Magnitude); model:PivotTo(CFrame.lookAt(root.Position + direction.Unit * step, targetRoot.Position)) end
-					elseif os.clock() >= nextAttack then nextAttack = os.clock() + (phase == 2 and 1.0 or config.AttackCooldown); targetHumanoid:TakeDamage(phase == 2 and math.floor(config.AttackDamage * 1.35) or config.AttackDamage) end
-					if os.clock() >= nextAbility and nearestDistance <= config.AbilityRadius * 1.5 then nextAbility = os.clock() + config.AbilityCooldown; shockwave(root.Position, config.AbilityRadius, config.AbilityDamage, model) end
+					local phase = humanoid.Health <= config.Health * 0.5 and 2 or 1
+					model:SetAttribute("BossPhase", phase)
+					if nearestDistance > config.AttackRange then
+						local direction = targetRoot.Position - root.Position
+						if direction.Magnitude > 0.1 then
+							local step = math.min(0.8, direction.Magnitude)
+							model:PivotTo(CFrame.lookAt(root.Position + direction.Unit * step, targetRoot.Position))
+						end
+					elseif os.clock() >= nextAttack then
+						nextAttack = os.clock() + (phase == 2 and 1.0 or config.AttackCooldown)
+						targetHumanoid:TakeDamage(phase == 2 and math.floor(config.AttackDamage * 1.35) or config.AttackDamage)
+					end
+					if os.clock() >= nextAbility and nearestDistance <= config.AbilityRadius * 1.5 then
+						nextAbility = os.clock() + config.AbilityCooldown
+						shockwave(root.Position, config.AbilityRadius, config.AbilityDamage, model)
+					end
 				end
 			end
 			task.wait(0.15)
