@@ -17,6 +17,21 @@ local function setupLeaderstats(player, profile)
 	money.Name = "Money"; money.Value = profile.Money; money.Parent = leaderstats
 end
 
+local function bindHumanoid(player, humanoid)
+	if not humanoid then return end
+	local function updateHealth()
+		player:SetAttribute("Health", math.max(0, humanoid.Health))
+		player:SetAttribute("MaxHealth", math.max(1, humanoid.MaxHealth))
+	end
+	humanoid.HealthChanged:Connect(updateHealth)
+	humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(updateHealth)
+	humanoid.Died:Connect(function()
+		player:SetAttribute("Health", 0)
+		player:SetAttribute("DeathMessage", "You were defeated. Respawning...")
+	end)
+	updateHealth()
+end
+
 function PlayerService.GetProfile(player) return PlayerService.Profiles[player] end
 
 function PlayerService.Load(player)
@@ -25,8 +40,17 @@ function PlayerService.Load(player)
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
-	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function() task.defer(function() if PlayerService.Profiles[player] then PlayerService.Sync(player) end end) end)
+	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+		task.defer(function()
+			if not PlayerService.Profiles[player] then return end
+			local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+			PlayerService.Sync(player)
+			bindHumanoid(player, humanoid)
+			player:SetAttribute("DeathMessage", "")
+		end)
+	end)
 	PlayerService.Sync(player)
+	if player.Character then bindHumanoid(player, player.Character:FindFirstChildOfClass("Humanoid")) end
 	return profile
 end
 
@@ -66,8 +90,11 @@ function PlayerService.Sync(player)
 	if humanoid then
 		humanoid.WalkSpeed = 16 + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
 		local maxHealth = 100 + (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus
-		local oldMax = humanoid.MaxHealth; humanoid.MaxHealth = maxHealth
-		if humanoid.Health > 0 and humanoid.Health == oldMax then humanoid.Health = maxHealth end
+		local oldMax = humanoid.MaxHealth
+		humanoid.MaxHealth = maxHealth
+		if humanoid.Health > 0 and (humanoid.Health == oldMax or humanoid.Health > maxHealth) then humanoid.Health = maxHealth end
+		player:SetAttribute("Health", math.max(0, humanoid.Health))
+		player:SetAttribute("MaxHealth", maxHealth)
 	end
 	local head = character and character:FindFirstChild("Head")
 	if head then
