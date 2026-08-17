@@ -26,6 +26,7 @@
 - [x] Gegnertypen mit unterschiedlichen visuellen Stilen
 - [x] Gegnertypen mit speziellen Angriffen
 - [x] Gegner-HP-Balken
+- [x] Sauberer Enemy-/Boss-Lifecycle mit Respawn-Cleanup
 - [x] Training Dummy
 - [x] Emberling
 - [x] Tidecrawler
@@ -41,6 +42,7 @@
 - [x] Questdefinitionen + Fortschritt
 - [x] Servervalidierte Questvoraussetzungen
 - [x] Automatische Questkette bis Ancient Ruins
+- [x] Automatischer Queststart nach erreichter Levelvoraussetzung
 - [x] Quest Journal
 - [x] Achievements + Titles
 - [x] Achievement Journal
@@ -55,6 +57,7 @@
 - [x] Modulare Welt-Themes
 - [x] Rojo-/default.project.json-Struktur für alle Erweiterungen
 - [x] GitHub-CI für JSON- und Rojo-Dateipfad-Validierung
+- [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 
 ## Nächste Systeme
 
