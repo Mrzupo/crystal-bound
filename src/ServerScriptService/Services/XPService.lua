@@ -30,7 +30,7 @@ function XPService.GetXP(profile)
 end
 
 function XPService.GetRequiredXP(profile)
-	return XPConfig.GetRequiredXP and XPConfig.GetRequiredXP(profile.Level) or XPConfig.GetRequiredXP(profile.Level)
+	return XPConfig.GetRequiredXP(profile.Level)
 end
 
 return XPService
