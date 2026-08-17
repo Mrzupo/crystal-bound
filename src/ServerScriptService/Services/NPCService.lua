@@ -3,6 +3,7 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
 local EnemyConfig = require(game.ReplicatedStorage.Config.EnemyConfig)
+local AIPathService = require(script.Parent.AIPathService)
 
 local NPCService = {}
 
@@ -45,6 +46,8 @@ local function steerAroundObstacle(model, desiredDirection)
 	params.FilterDescendantsInstances = { model }
 	params.IgnoreWater = true
 	if not Workspace:Raycast(origin, direction * 7, params) then return desiredDirection end
+	local pathDirection = AIPathService.GetNextDirection(model, origin + direction * math.min(desiredDirection.Magnitude, 24))
+	if pathDirection and pathDirection.Magnitude > 0.1 then return pathDirection end
 	local left = CFrame.Angles(0, math.rad(-55), 0):VectorToWorldSpace(direction)
 	if not Workspace:Raycast(origin, left * 7, params) then return left end
 	local right = CFrame.Angles(0, math.rad(55), 0):VectorToWorldSpace(direction)
@@ -181,6 +184,7 @@ function NPCService.StartEnemyAI(model)
 			end
 			task.wait(0.1)
 		end
+		AIPathService.Clear(model)
 	end)
 end
 
@@ -199,10 +203,9 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local weldB = Instance.new("WeldConstraint"); weldB.Part0 = body; weldB.Part1 = head; weldB.Parent = body
 	model.PrimaryPart = root; attachHealthBar(model, humanoid, root)
 	humanoid.Died:Connect(function()
+		AIPathService.Clear(model)
 		if onDeath then onDeath(model, config) end
-		task.delay(1.5, function()
-			if model.Parent then model:Destroy() end
-		end)
+		task.delay(1.5, function() if model.Parent then model:Destroy() end end)
 	end)
 	NPCService.StartEnemyAI(model)
 	return model
