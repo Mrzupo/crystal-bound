@@ -122,14 +122,28 @@ end
 function PlayerService.Save(player)
 	local profile = PlayerService.Profiles[player]; if not profile then return false end
 	PlayerService.Sync(player)
-	return SafeProfileStore.Save(player, profile)
+	local ok = SafeProfileStore.Save(player, profile)
+	player:SetAttribute("LastSaveOk", ok == true)
+	return ok
 end
 
 function PlayerService.Remove(player)
-	if not PlayerService.Profiles[player] then return end
-	PlayerService.Save(player)
+	if not PlayerService.Profiles[player] then return true end
+	local saved = PlayerService.Save(player)
+	if not saved then
+		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
+		if PlayerService.CharacterConnections[player] then
+			PlayerService.CharacterConnections[player]:Disconnect()
+			PlayerService.CharacterConnections[player] = nil
+		end
+		PlayerService.Profiles[player] = nil
+		return false
+	end
+
 	SafeProfileStore.Release(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
 	PlayerService.Profiles[player] = nil
+	return true
 end
+
 return PlayerService
