@@ -64,6 +64,7 @@
         "CrystalUpgradeRequest": { "$className": "RemoteEvent" },
         "GetPlayerData": { "$className": "RemoteFunction" },
         "GetQuestData": { "$className": "RemoteFunction" },
+        "GetAvailableQuests": { "$className": "RemoteFunction" },
         "XPChanged": { "$className": "RemoteEvent" },
         "LevelUp": { "$className": "RemoteEvent" },
         "MoneyChanged": { "$className": "RemoteEvent" },
@@ -94,7 +95,8 @@
         "InventoryService": { "$path": "src/ServerScriptService/Services/InventoryService.lua" }
       },
       "Bootstrap": { "$path": "src/ServerScriptService/Bootstrap.server.lua" },
-      "WorldDecor": { "$path": "src/ServerScriptService/WorldDecor.server.lua" }
+      "WorldDecor": { "$path": "src/ServerScriptService/WorldDecor.server.lua" },
+      "QuestAvailability": { "$path": "src/ServerScriptService/QuestAvailability.server.lua" }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
