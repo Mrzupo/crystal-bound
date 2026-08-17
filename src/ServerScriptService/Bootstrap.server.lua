@@ -33,6 +33,37 @@ combatRemote.OnServerEvent:Connect(function(player, action, target)
 	CombatService.HandleRequest(player, action, target)
 end)
 
+local function ensureStarterMap()
+	local islands = Workspace:FindFirstChild("Islands") or Instance.new("Folder")
+	islands.Name = "Islands"
+	islands.Parent = Workspace
+	if islands:FindFirstChild("StarterIsland") then return end
+
+	local island = Instance.new("Model")
+	island.Name = "StarterIsland"
+	island.Parent = islands
+
+	local floor = Instance.new("Part")
+	floor.Name = "Ground"
+	floor.Size = Vector3.new(120, 2, 120)
+	floor.Position = Vector3.new(0, 0, 0)
+	floor.Anchored = true
+	floor.Parent = island
+
+	local spawnFolder = Workspace:FindFirstChild("Spawn") or Instance.new("Folder")
+	spawnFolder.Name = "Spawn"
+	spawnFolder.Parent = Workspace
+	if not spawnFolder:FindFirstChild("StarterSpawn") then
+		local spawn = Instance.new("SpawnLocation")
+		spawn.Name = "StarterSpawn"
+		spawn.Size = Vector3.new(8, 1, 8)
+		spawn.Position = Vector3.new(0, 2, 5)
+		spawn.Anchored = true
+		spawn.Neutral = true
+		spawn.Parent = spawnFolder
+	end
+end
+
 local function spawnTrainingDummy()
 	local npcs = Workspace:FindFirstChild("NPCs") or Instance.new("Folder")
 	npcs.Name = "NPCs"
@@ -50,13 +81,14 @@ local function spawnTrainingDummy()
 	root.Size = Vector3.new(2, 2, 1)
 	root.Position = Vector3.new(0, 4, -12)
 	root.Transparency = 1
-	root.CanCollide = true
+	root.Anchored = true
 	root.Parent = model
 
 	local torso = Instance.new("Part")
 	torso.Name = "Torso"
 	torso.Size = Vector3.new(3, 4, 2)
 	torso.Position = Vector3.new(0, 5, -12)
+	torso.Anchored = true
 	torso.Parent = model
 
 	local head = Instance.new("Part")
@@ -64,11 +96,13 @@ local function spawnTrainingDummy()
 	head.Shape = Enum.PartType.Ball
 	head.Size = Vector3.new(2, 2, 2)
 	head.Position = Vector3.new(0, 8, -12)
+	head.Anchored = true
 	head.Parent = model
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.MaxHealth = 100
 	humanoid.Health = 100
+	humanoid.DisplayName = "Training Dummy"
 	humanoid.Parent = model
 
 	local weld1 = Instance.new("WeldConstraint")
@@ -90,6 +124,7 @@ local function spawnTrainingDummy()
 	end)
 end
 
+ensureStarterMap()
 spawnTrainingDummy()
 
 Players.PlayerAdded:Connect(function(player)
