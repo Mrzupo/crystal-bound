@@ -8,6 +8,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local InventoryService = require(script.Parent.InventoryService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
+local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 
 local CombatService = {}
 local cooldowns = {}
@@ -22,41 +23,71 @@ local function isPlayerTarget(target)
 	return target:IsA("Player") or (target:IsA("Model") and Players:GetPlayerFromCharacter(target) ~= nil)
 end
 
-local function fireProgress(player, levelsGained, moneyChanged)
+local function fireProgress(player, levelsGained, moneyChanged, inventoryChanged)
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
 	PlayerService.Sync(player)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if not remotes then return end
-	local xpChanged = remotes:FindFirstChild("XPChanged")
-	local levelUp = remotes:FindFirstChild("LevelUp")
-	local moneyRemote = remotes:FindFirstChild("MoneyChanged")
-	local inventoryRemote = remotes:FindFirstChild("InventoryChanged")
-	if xpChanged then xpChanged:FireClient(player, profile.Experience, profile.Level) end
-	if moneyRemote and moneyChanged then moneyRemote:FireClient(player, profile.Money) end
-	if inventoryRemote then inventoryRemote:FireClient(player, profile.Inventory) end
-	if levelUp and levelsGained > 0 then levelUp:FireClient(player, profile.Level) end
+	if remotes:FindFirstChild("XPChanged") then remotes.XPChanged:FireClient(player, profile.Experience, profile.Level) end
+	if moneyChanged and remotes:FindFirstChild("MoneyChanged") then remotes.MoneyChanged:FireClient(player, profile.Money) end
+	if inventoryChanged and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
+	if levelsGained > 0 and remotes:FindFirstChild("LevelUp") then remotes.LevelUp:FireClient(player, profile.Level) end
 end
 
-local function completeQuest(player, profile, questId, xp, money, message)
-	if QuestSystem.IsActive(profile, questId) and not QuestSystem.IsCompleted(profile, questId) then
-		QuestSystem.Complete(profile, questId)
-		XPService.AddXP(profile, xp)
-		EconomyService.AddMoney(profile, money)
-		player:SetAttribute("QuestMessage", message)
+local function completeQuest(player, profile, questId, message)
+	local definition = QuestSystem.GetDefinition(questId)
+	if not definition or not QuestSystem.IsActive(profile, questId) then return false end
+	if not QuestSystem.Complete(profile, questId) then return false end
+	XPService.AddXP(profile, definition.XP)
+	EconomyService.AddMoney(profile, definition.Money)
+	player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!"))
+	return true
+end
+
+local function advanceEnemyQuest(player, profile, enemyType)
+	for questId, definition in pairs(QuestSystem.GetDefinitions()) do
+		if definition.EnemyType == enemyType and QuestSystem.IsActive(profile, questId) then
+			local complete, progress, goal = QuestSystem.Advance(profile, questId, 1)
+			player:SetAttribute("QuestProgress", string.format("%s: %d/%d", definition.Name, progress, goal))
+			if complete then
+				completeQuest(player, profile, questId, definition.Name .. " complete!")
+			end
+		end
 	end
 end
 
-local function giveLoot(profile, crystalId)
-	local loot = ({
-		EMBER = "EmberShard",
-		TIDE = "TidePearl",
-		GALE = "GaleFeather",
-	})[crystalId]
-	if loot then
-		return InventoryService.AddItem(profile, loot, 1)
+local function giveLoot(profile, targetModel, crystalId)
+	local enemyType = targetModel:GetAttribute("EnemyType")
+	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
+	local itemId = enemyConfig and enemyConfig.Drop
+	if not itemId then
+		itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId]
+	end
+	if itemId then
+		return InventoryService.AddItem(profile, itemId, 1)
 	end
 	return 0
+end
+
+local function rewardDefeat(player, profile, targetModel, action, crystalId)
+	if targetModel:GetAttribute("Enemy") ~= true then return end
+	if targetModel:GetAttribute("DeathRewarded") == true then return end
+	targetModel:SetAttribute("DeathRewarded", true)
+
+	local enemyType = targetModel:GetAttribute("EnemyType")
+	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
+	local xpGain = enemyConfig and enemyConfig.XP or (action == "Ability" and 40 or 25)
+	local moneyGain = enemyConfig and enemyConfig.Money or (action == "Ability" and 20 or 10)
+	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
+	EconomyService.AddMoney(profile, moneyGain)
+	giveLoot(profile, targetModel, crystalId)
+	advanceEnemyQuest(player, profile, enemyType)
+
+	if targetModel.Name == "TrainingDummy" then
+		completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!")
+	end
+	fireProgress(player, levelsGained or 0, true, true)
 end
 
 function CombatService.HandleRequest(player, action, target)
@@ -88,19 +119,11 @@ function CombatService.HandleRequest(player, action, target)
 
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health <= 0 then
-		local levelsGained = 0
-		local xpGain = action == "Ability" and 40 or 25
-		local moneyGain = action == "Ability" and 20 or 10
-		local _, _, gained = XPService.AddXP(profile, xpGain)
-		levelsGained = gained or 0
-		EconomyService.AddMoney(profile, moneyGain)
-		giveLoot(profile, crystalId)
-		fireProgress(player, levelsGained, true)
-		completeQuest(player, profile, "FIRST_FIGHT", 100, 50, "First Trial complete!")
+		rewardDefeat(player, profile, targetModel, action, crystalId)
 	end
 
 	if action == "Ability" then
-		completeQuest(player, profile, "CRYSTAL_POWER", 150, 75, "Crystal Power complete!")
+		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
 	end
 end
 
