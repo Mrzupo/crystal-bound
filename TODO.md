@@ -5,6 +5,8 @@
 - [x] PlayerData + Schema-Reconciliation
 - [x] DataStore Save/Load + Retry
 - [x] Autosave alle 60 Sekunden
+- [x] Session-Locking mit Timeout und Release beim Server-Shutdown
+- [x] Sicherer Profil-Ladefehlerpfad ohne leeres Fallback-Profil
 - [x] XP- und Levelsystem
 - [x] Geldsystem
 - [x] Inventar + Material-Loot
@@ -61,7 +63,6 @@
 - [ ] Crafting
 - [ ] Status-Effekte
 - [ ] Blocken, Ausweichen und kritische Treffer
-- [ ] Session-Locking im DataStore vollständig live schalten
 - [ ] automatisierte Luau-Tests
 - [ ] Multiplayer-Performance- und Security-Test
 - [ ] echter Roblox-Studio-Playtest mit Output-/Runtime-Fehlerbehebung
