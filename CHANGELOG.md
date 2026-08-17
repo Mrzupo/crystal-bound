@@ -17,7 +17,9 @@
 - Passive Crystal-Effekte: Schaden, Geschwindigkeit und MaxHealth.
 - Unterschiedliche aktive Crystal-Abilities mit individuellen VFX.
 - Servervalidierte Damage-Pipeline und Combat.
+- Serverseitige Action-Whitelist und Enemy/Boss-Target-Whitelist.
 - Damage Numbers, Ability-Cooldown-Anzeige und Player-Damage-Feedback.
+- Gemeinsames Status-Message-HUD für Quest-, Shop-, Crystal-, Portal-, Achievement-, Boss- und Profilmeldungen.
 - Training Dummy, Emberling, Tidecrawler, Galewisp, Crystal Bat und Ancient Golem.
 - Gegnertyp-spezifische Visuals und Spezialangriffe.
 - Crystal Guardian mit Phase-System, funktionierender Spieler-Shockwave und Boss-Rewards.
@@ -39,10 +41,12 @@
 - `CrystalUpgradeConfig` steuert Mastery-Level, XP-Kosten und Ressourcen-Kosten.
 - `EnemyConfig` enthält Balancing für alle aktuellen Gegnertypen.
 - `NPCService` verwaltet Gegnererstellung, eindeutige Namen, Visual Styles, Health Bars, Leash-Verhalten und Spezialangriffe.
-- `CombatService` verwendet gegnerspezifische XP-, Geld-, Loot- und Masterywerte und markiert den letzten Boss-Angreifer korrekt.
-- `PlayerService` verwendet jetzt den sicheren Session-locked Profile Store und lehnt fehlgeschlagene Profileloads ab.
+- `CombatService` verwendet gegnerspezifische XP-, Geld-, Loot- und Masterywerte, markiert den letzten Boss-Angreifer korrekt und lehnt unbekannte Action-Strings ab.
+- `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu.
+- `PlayerService` verwendet jetzt den sicheren Session-locked Profile Store und gibt den Lock nur nach erfolgreichem finalem Save frei.
+- `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar und Questzustand während der Migration.
 - `QuestSystem` unterstützt servergeprüfte verfügbare Quests.
-- `WorldDecor` wurde auf alle vier aktuellen Inseln erweitert.
+- `WorldDecor` deckt alle vier aktuellen Inseln ab.
 - `default.project.json` wurde fortlaufend mit jeder neuen Server-/Client-Datei synchronisiert.
 - `TODO.md` wurde an den tatsächlichen Entwicklungsstand angepasst.
 
