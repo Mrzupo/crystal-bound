@@ -1,73 +1,25 @@
 local QuestSystem = {}
 
 local Definitions = {
-	FIRST_FIGHT = {
-		Id = "FIRST_FIGHT",
-		Name = "First Trial",
-		Description = "Defeat the Training Dummy.",
-		Goal = 1,
-		XP = 100,
-		Money = 50,
-	},
-	CRYSTAL_POWER = {
-		Id = "CRYSTAL_POWER",
-		Name = "Crystal Power",
-		Description = "Use your equipped crystal ability once.",
-		Goal = 1,
-		XP = 150,
-		Money = 75,
-	},
-	HUNT_EMBERLINGS = {
-		Id = "HUNT_EMBERLINGS",
-		Name = "Ashes in the Wind",
-		Description = "Defeat 3 Emberlings.",
-		Goal = 3,
-		XP = 300,
-		Money = 150,
-		EnemyType = "Emberling",
-	},
-	TIDE_EXPEDITION = {
-		Id = "TIDE_EXPEDITION",
-		Name = "Tide Expedition",
-		Description = "Defeat 3 Tidecrawlers.",
-		Goal = 3,
-		XP = 500,
-		Money = 300,
-		EnemyType = "Tidecrawler",
-	},
-	WIND_TRIAL = {
-		Id = "WIND_TRIAL",
-		Name = "Trial of the Gale",
-		Description = "Defeat 3 Galewisps.",
-		Goal = 3,
-		XP = 800,
-		Money = 500,
-		EnemyType = "Galewisp",
-	},
+	FIRST_FIGHT = { Id = "FIRST_FIGHT", Name = "First Trial", Description = "Defeat the Training Dummy.", Goal = 1, XP = 100, Money = 50 },
+	CRYSTAL_POWER = { Id = "CRYSTAL_POWER", Name = "Crystal Power", Description = "Use your equipped crystal ability once.", Goal = 1, XP = 150, Money = 75 },
+	HUNT_EMBERLINGS = { Id = "HUNT_EMBERLINGS", Name = "Ashes in the Wind", Description = "Defeat 3 Emberlings.", Goal = 3, XP = 300, Money = 150, EnemyType = "Emberling" },
+	TIDE_EXPEDITION = { Id = "TIDE_EXPEDITION", Name = "Tide Expedition", Description = "Defeat 3 Tidecrawlers.", Goal = 3, XP = 500, Money = 300, EnemyType = "Tidecrawler" },
+	WIND_TRIAL = { Id = "WIND_TRIAL", Name = "Trial of the Gale", Description = "Defeat 3 Galewisps.", Goal = 3, XP = 800, Money = 500, EnemyType = "Galewisp" },
+	GUARDIAN_TRIAL = { Id = "GUARDIAN_TRIAL", Name = "Guardian of the Crystals", Description = "Defeat the Crystal Guardian.", Goal = 1, XP = 2200, Money = 1500, EnemyType = "CrystalGuardian" },
 }
 
-function QuestSystem.GetDefinition(id)
-	return Definitions[id]
-end
-
-function QuestSystem.GetDefinitions()
-	return Definitions
-end
-
-function QuestSystem.IsActive(profile, questId)
-	return table.find(profile.ActiveQuests or {}, questId) ~= nil
-end
-
-function QuestSystem.IsCompleted(profile, questId)
-	return table.find(profile.CompletedQuests or {}, questId) ~= nil
-end
+function QuestSystem.GetDefinition(id) return Definitions[id] end
+function QuestSystem.GetDefinitions() return Definitions end
+function QuestSystem.IsActive(profile, questId) return table.find(profile.ActiveQuests or {}, questId) ~= nil end
+function QuestSystem.IsCompleted(profile, questId) return table.find(profile.CompletedQuests or {}, questId) ~= nil end
 
 function QuestSystem.Start(profile, questId)
-	if not Definitions[questId] or QuestSystem.IsActive(profile, questId) or QuestSystem.IsCompleted(profile, questId) then
-		return false
-	end
-	table.insert(profile.ActiveQuests, questId)
+	if not Definitions[questId] or QuestSystem.IsActive(profile, questId) or QuestSystem.IsCompleted(profile, questId) then return false end
+	profile.ActiveQuests = profile.ActiveQuests or {}
+	profile.CompletedQuests = profile.CompletedQuests or {}
 	profile.QuestProgress = profile.QuestProgress or {}
+	table.insert(profile.ActiveQuests, questId)
 	profile.QuestProgress[questId] = 0
 	return true
 end
@@ -78,9 +30,7 @@ end
 
 function QuestSystem.Advance(profile, questId, amount)
 	local definition = Definitions[questId]
-	if not definition or not QuestSystem.IsActive(profile, questId) then
-		return false, 0, definition and definition.Goal or 0
-	end
+	if not definition or not QuestSystem.IsActive(profile, questId) then return false, 0, definition and definition.Goal or 0 end
 	profile.QuestProgress = profile.QuestProgress or {}
 	profile.QuestProgress[questId] = math.min(definition.Goal, QuestSystem.GetProgress(profile, questId) + math.max(0, amount or 1))
 	return profile.QuestProgress[questId] >= definition.Goal, profile.QuestProgress[questId], definition.Goal
@@ -90,8 +40,9 @@ function QuestSystem.Complete(profile, questId)
 	local index = table.find(profile.ActiveQuests or {}, questId)
 	if not index then return false end
 	table.remove(profile.ActiveQuests, index)
-	table.insert(profile.CompletedQuests, questId)
+	profile.CompletedQuests = profile.CompletedQuests or {}
 	profile.QuestProgress = profile.QuestProgress or {}
+	table.insert(profile.CompletedQuests, questId)
 	profile.QuestProgress[questId] = 0
 	return true
 end
