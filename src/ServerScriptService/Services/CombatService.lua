@@ -194,4 +194,8 @@ function CombatService.HandleRequest(player, action, target)
 	if humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
 
+Players.PlayerRemoving:Connect(function(player)
+	cooldowns[player] = nil
+end)
+
 return CombatService
