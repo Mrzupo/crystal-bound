@@ -93,6 +93,29 @@ function SafeProfileStore.Save(player, profile)
 	return true, result
 end
 
+function SafeProfileStore.Refresh(player)
+	local key = tostring(player.UserId)
+	local refreshed = false
+	local ok, result = retry(function()
+		return store:UpdateAsync(key, function(current)
+			if type(current) ~= "table" then return current end
+			local lock = current.SessionLock
+			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID then
+				return current
+			end
+			lock.Timestamp = timestamp()
+			current.SessionLock = lock
+			refreshed = true
+			return current
+		end)
+	end)
+	if not ok then
+		warn(("Crystal Bound: session refresh failed for %s: %s"):format(player.Name, tostring(result)))
+		return false, result
+	end
+	return refreshed, refreshed and nil or "Profile lock lost"
+end
+
 function SafeProfileStore.Release(player)
 	local key = tostring(player.UserId)
 	local released = false
