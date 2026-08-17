@@ -6,6 +6,8 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local inventoryRequest = remotes:WaitForChild("InventoryRequest")
 local inventoryChanged = remotes:WaitForChild("InventoryChanged")
+local shopRequest = remotes:WaitForChild("ShopRequest")
+local useItemRequest = remotes:WaitForChild("UseItemRequest")
 
 local sellable = {
 	{ Id = "EmberShard", Name = "Ember Shard", Rarity = "Common", Price = 8 },
@@ -34,7 +36,7 @@ local function ensureGui()
 	panel.Name = "Panel"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(560, 430)
+	panel.Size = UDim2.fromOffset(600, 470)
 	panel.Visible = false
 	panel.BackgroundTransparency = 0.08
 	panel.Parent = gui
@@ -43,7 +45,7 @@ local function ensureGui()
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
 	title.Position = UDim2.fromOffset(18, 14)
-	title.Size = UDim2.fromOffset(450, 38)
+	title.Size = UDim2.fromOffset(500, 38)
 	title.BackgroundTransparency = 1
 	title.Text = "Material Trader"
 	title.Font = Enum.Font.GothamBold
@@ -53,7 +55,7 @@ local function ensureGui()
 
 	local close = Instance.new("TextButton")
 	close.Name = "Close"
-	close.Position = UDim2.fromOffset(500, 14)
+	close.Position = UDim2.fromOffset(540, 14)
 	close.Size = UDim2.fromOffset(42, 36)
 	close.Text = "X"
 	close.Font = Enum.Font.GothamBold
@@ -64,27 +66,66 @@ local function ensureGui()
 	local status = Instance.new("TextLabel")
 	status.Name = "Status"
 	status.Position = UDim2.fromOffset(18, 55)
-	status.Size = UDim2.fromOffset(524, 44)
+	status.Size = UDim2.fromOffset(564, 44)
 	status.BackgroundTransparency = 1
-	status.Text = "Stand near the Material Trader to sell loot."
+	status.Text = "Stand near the Material Trader to sell loot, or buy a Health Potion."
 	status.TextWrapped = true
 	status.TextXAlignment = Enum.TextXAlignment.Left
 	status.Font = Enum.Font.Gotham
 	status.TextSize = 14
 	status.Parent = panel
 
+	local potion = Instance.new("Frame")
+	potion.Name = "PotionOffer"
+	potion.Position = UDim2.fromOffset(18, 100)
+	potion.Size = UDim2.fromOffset(564, 54)
+	potion.BackgroundTransparency = 0.08
+	potion.Parent = panel
+	Instance.new("UICorner", potion).CornerRadius = UDim.new(0, 8)
+
+	local potionLabel = Instance.new("TextLabel")
+	potionLabel.Name = "Label"
+	potionLabel.Position = UDim2.fromOffset(12, 0)
+	potionLabel.Size = UDim2.fromOffset(350, 54)
+	potionLabel.BackgroundTransparency = 1
+	potionLabel.Text = "Health Potion  •  Uncommon  •  75 Money"
+	potionLabel.TextXAlignment = Enum.TextXAlignment.Left
+	potionLabel.Font = Enum.Font.GothamBold
+	potionLabel.TextSize = 14
+	potionLabel.Parent = potion
+
+	local buy = Instance.new("TextButton")
+	buy.Name = "Buy"
+	buy.Position = UDim2.fromOffset(390, 10)
+	buy.Size = UDim2.fromOffset(92, 34)
+	buy.Text = "BUY x1"
+	buy.Font = Enum.Font.GothamBold
+	buy.TextSize = 13
+	buy.Parent = potion
+	buy.Activated:Connect(function() shopRequest:FireServer("Buy", "HealthPotion", 1) end)
+
+	local use = Instance.new("TextButton")
+	use.Name = "Use"
+	use.Position = UDim2.fromOffset(488, 10)
+	use.Size = UDim2.fromOffset(62, 34)
+	use.Text = "USE"
+	use.Font = Enum.Font.GothamBold
+	use.TextSize = 12
+	use.Parent = potion
+	use.Activated:Connect(function() useItemRequest:FireServer("HealthPotion") end)
+
 	local list = Instance.new("Frame")
 	list.Name = "List"
-	list.Position = UDim2.fromOffset(18, 104)
-	list.Size = UDim2.fromOffset(524, 290)
+	list.Position = UDim2.fromOffset(18, 164)
+	list.Size = UDim2.fromOffset(564, 260)
 	list.BackgroundTransparency = 1
 	list.Parent = panel
 
 	for index, item in ipairs(sellable) do
 		local row = Instance.new("Frame")
 		row.Name = item.Id
-		row.Position = UDim2.fromOffset(0, (index - 1) * 54)
-		row.Size = UDim2.fromOffset(524, 48)
+		row.Position = UDim2.fromOffset(0, (index - 1) * 51)
+		row.Size = UDim2.fromOffset(564, 46)
 		row.BackgroundTransparency = 0.1
 		row.Parent = list
 		Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
@@ -92,7 +133,7 @@ local function ensureGui()
 		local label = Instance.new("TextLabel")
 		label.Name = "Label"
 		label.Position = UDim2.fromOffset(12, 0)
-		label.Size = UDim2.fromOffset(370, 48)
+		label.Size = UDim2.fromOffset(420, 46)
 		label.BackgroundTransparency = 1
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		label.Font = Enum.Font.GothamMedium
@@ -102,7 +143,7 @@ local function ensureGui()
 
 		local sell = Instance.new("TextButton")
 		sell.Name = "Sell"
-		sell.Position = UDim2.fromOffset(418, 8)
+		sell.Position = UDim2.fromOffset(458, 7)
 		sell.Size = UDim2.fromOffset(94, 32)
 		sell.Text = "SELL x1"
 		sell.Font = Enum.Font.GothamBold
@@ -113,10 +154,10 @@ local function ensureGui()
 
 	local hint = Instance.new("TextLabel")
 	hint.Name = "Hint"
-	hint.Position = UDim2.fromOffset(18, 398)
-	hint.Size = UDim2.fromOffset(524, 24)
+	hint.Position = UDim2.fromOffset(18, 432)
+	hint.Size = UDim2.fromOffset(564, 24)
 	hint.BackgroundTransparency = 1
-	hint.Text = "O = Händler öffnen/schließen"
+	hint.Text = "O = Händler   •   Health Potion kaufen/benutzen"
 	hint.Font = Enum.Font.Gotham
 	hint.TextSize = 13
 	hint.TextXAlignment = Enum.TextXAlignment.Right
@@ -140,6 +181,10 @@ local function refresh()
 			row.Sell.TextTransparency = amount > 0 and 0 or 0.5
 		end
 	end
+	local potionAmount = math.max(0, math.floor(tonumber(inventory.HealthPotion) or 0))
+	panel.PotionOffer.Label.Text = string.format("Health Potion  •  Uncommon  •  75 Money  •  Owned: %d", potionAmount)
+	panel.PotionOffer.Use.Active = potionAmount > 0
+	panel.PotionOffer.Use.TextTransparency = potionAmount > 0 and 0 or 0.5
 end
 
 local function openMenu()
@@ -159,6 +204,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.O then
 		if open then open = false; panel.Visible = false else openMenu() end
+	elseif input.KeyCode == Enum.KeyCode.P then
+		useItemRequest:FireServer("HealthPotion")
 	end
 end)
 
