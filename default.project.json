@@ -39,6 +39,7 @@
         "GameConfig": { "$path": "src/ReplicatedStorage/Config/GameConfig.lua" },
         "CrystalConfig": { "$path": "src/ReplicatedStorage/Config/CrystalConfig.lua" },
         "CrystalUpgradeConfig": { "$path": "src/ReplicatedStorage/Config/CrystalUpgradeConfig.lua" },
+        "WorldConfig": { "$path": "src/ReplicatedStorage/Config/WorldConfig.lua" },
         "BossConfig": { "$path": "src/ReplicatedStorage/Config/BossConfig.lua" },
         "EnemyConfig": { "$path": "src/ReplicatedStorage/Config/EnemyConfig.lua" },
         "XPConfig": { "$path": "src/ReplicatedStorage/Config/XPConfig.lua" },
