@@ -92,6 +92,7 @@
         "CrystalService": { "$path": "src/ServerScriptService/Services/CrystalService.lua" },
         "NPCService": { "$path": "src/ServerScriptService/Services/NPCService.lua" },
         "AIPathService": { "$path": "src/ServerScriptService/Services/AIPathService.lua" },
+        "StatusEffectService": { "$path": "src/ServerScriptService/Services/StatusEffectService.lua" },
         "BossService": { "$path": "src/ServerScriptService/Services/BossService.lua" },
         "XPService": { "$path": "src/ServerScriptService/Services/XPService.lua" },
         "EconomyService": { "$path": "src/ServerScriptService/Services/EconomyService.lua" },
