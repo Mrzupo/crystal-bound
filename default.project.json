@@ -21,7 +21,8 @@
           "DamageRequest": { "$path": "src/ReplicatedStorage/Modules/Combat/DamageRequest.lua" },
           "DamageResult": { "$path": "src/ReplicatedStorage/Modules/Combat/DamageResult.lua" },
           "DamageTypes": { "$path": "src/ReplicatedStorage/Modules/Combat/DamageTypes.lua" },
-          "DamageValidators": { "$path": "src/ReplicatedStorage/Modules/Combat/DamageValidators.lua" }
+          "DamageValidators": { "$path": "src/ReplicatedStorage/Modules/Combat/DamageValidators.lua" },
+          "HitboxService": { "$path": "src/ReplicatedStorage/Modules/Combat/HitboxService.lua" }
         },
         "Crystal": {
           "$className": "Folder",
