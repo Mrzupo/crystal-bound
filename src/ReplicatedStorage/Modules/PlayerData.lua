@@ -13,7 +13,7 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 2,
+		Version = 3,
 		Level = 1,
 		Experience = 0,
 		Crystals = {
@@ -28,6 +28,7 @@ function PlayerData.new()
 		Inventory = {},
 		ActiveQuests = {},
 		CompletedQuests = {},
+		QuestProgress = {},
 		UnlockedIslands = { "STARTER" },
 		Titles = {},
 	}
