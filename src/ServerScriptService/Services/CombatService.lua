@@ -21,6 +21,11 @@ local CRYSTAL_COLORS = {
 	GALE = Color3.fromRGB(170, 120, 255),
 }
 
+local VALID_ACTIONS = {
+	Basic = true,
+	Ability = true,
+}
+
 local function getCharacter(instance)
 	if instance:IsA("Player") then return instance.Character elseif instance:IsA("Model") then return instance end
 end
@@ -164,7 +169,7 @@ local function applyAbilitySpecial(player, profile, crystalId, targetModel, abil
 end
 
 function CombatService.HandleRequest(player, action, target)
-	if not player:IsA("Player") then return end
+	if not player:IsA("Player") or not VALID_ACTIONS[action] then return end
 	local profile = PlayerService.GetProfile(player); if not profile or not profile.Crystals then return end
 	if typeof(target) ~= "Instance" or target == player or isPlayerTarget(target) then return end
 	local crystalId = profile.Crystals.Equipped
