@@ -64,6 +64,7 @@
         "CrystalChanged": { "$className": "RemoteEvent" },
         "CrystalMasteryChanged": { "$className": "RemoteEvent" },
         "CrystalUpgradeRequest": { "$className": "RemoteEvent" },
+        "DodgeRequest": { "$className": "RemoteEvent" },
         "GetPlayerData": { "$className": "RemoteFunction" },
         "GetQuestData": { "$className": "RemoteFunction" },
         "GetAvailableQuests": { "$className": "RemoteFunction" },
@@ -93,6 +94,7 @@
         "NPCService": { "$path": "src/ServerScriptService/Services/NPCService.lua" },
         "AIPathService": { "$path": "src/ServerScriptService/Services/AIPathService.lua" },
         "StatusEffectService": { "$path": "src/ServerScriptService/Services/StatusEffectService.lua" },
+        "DodgeService": { "$path": "src/ServerScriptService/Services/DodgeService.lua" },
         "BossService": { "$path": "src/ServerScriptService/Services/BossService.lua" },
         "XPService": { "$path": "src/ServerScriptService/Services/XPService.lua" },
         "EconomyService": { "$path": "src/ServerScriptService/Services/EconomyService.lua" },
@@ -100,6 +102,7 @@
       },
       "Bootstrap": { "$path": "src/ServerScriptService/Bootstrap.server.lua" },
       "CombatCleanup": { "$path": "src/ServerScriptService/CombatCleanup.server.lua" },
+      "DodgeRemote": { "$path": "src/ServerScriptService/DodgeRemote.server.lua" },
       "BossArena": { "$path": "src/ServerScriptService/BossArena.server.lua" },
       "WorldDecor": { "$path": "src/ServerScriptService/WorldDecor.server.lua" },
       "WorldTheme": { "$path": "src/ServerScriptService/WorldTheme.server.lua" },
@@ -119,6 +122,7 @@
         "TouchControls": { "$path": "src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua" },
         "AchievementMenu": { "$path": "src/StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua" },
         "TouchMenus": { "$path": "src/StarterPlayer/StarterPlayerScripts/TouchMenus.client.lua" },
+        "DodgeControls": { "$path": "src/StarterPlayer/StarterPlayerScripts/DodgeControls.client.lua" },
         "StatusMessages": { "$path": "src/StarterPlayer/StarterPlayerScripts/StatusMessages.client.lua" }
       }
     },
