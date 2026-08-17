@@ -1,5 +1,4 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 local SaveSystem = require(ReplicatedStorage.Modules.SaveSystem)
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 
@@ -33,16 +32,14 @@ function PlayerService.Load(player)
 	local profile = PlayerData.Reconcile(SaveSystem.Load(player))
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
-	player:SetAttribute("Level", profile.Level)
-	player:SetAttribute("Experience", profile.Experience)
-	player:SetAttribute("Money", profile.Money)
-	player:SetAttribute("EquippedCrystal", profile.Crystals.Equipped)
+	PlayerService.Sync(player)
 	return profile
 end
 
 function PlayerService.Sync(player)
 	local profile = PlayerService.Profiles[player]
 	if not profile then return end
+
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
 		local level = leaderstats:FindFirstChild("Level")
@@ -50,6 +47,7 @@ function PlayerService.Sync(player)
 		if level then level.Value = profile.Level end
 		if money then money.Value = profile.Money end
 	end
+
 	player:SetAttribute("Level", profile.Level)
 	player:SetAttribute("Experience", profile.Experience)
 	player:SetAttribute("Money", profile.Money)
@@ -67,9 +65,5 @@ function PlayerService.Remove(player)
 	PlayerService.Save(player)
 	PlayerService.Profiles[player] = nil
 end
-
-Players.PlayerRemoving:Connect(function(player)
-	PlayerService.Remove(player)
-end)
 
 return PlayerService
