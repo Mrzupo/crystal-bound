@@ -7,6 +7,7 @@ local InventoryService = require(script.Parent.InventoryService)
 local EconomyService = require(script.Parent.EconomyService)
 local XPService = require(script.Parent.XPService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
+local QuestService = require(script.Parent.QuestService)
 local BossService = { Bound = false }
 
 local function shockwave(center, radius, damage, ignoreModel)
@@ -44,8 +45,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 	local nextAttack, nextAbility = 0, 0
 	task.spawn(function()
 		while model.Parent and humanoid.Health > 0 do
-			local nearestPlayer, nearestDistance
-			nearestDistance = config.AggroRange
+			local nearestPlayer, nearestDistance = nil, config.AggroRange
 			for _, player in ipairs(Players:GetPlayers()) do
 				local character = player.Character; local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid"); local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
 				if targetHumanoid and targetHumanoid.Health > 0 and targetRoot then
@@ -82,12 +82,15 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 			if profile then
 				XPService.AddXP(profile, config.XP); EconomyService.AddMoney(profile, config.Money); InventoryService.AddItem(profile, config.Drop, 1)
 				profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
+				local completedTrial = false
 				if QuestSystem.IsActive(profile, "GUARDIAN_TRIAL") then
 					QuestSystem.Complete(profile, "GUARDIAN_TRIAL")
 					XPService.AddXP(profile, 2200); EconomyService.AddMoney(profile, 1500)
+					completedTrial = true
 				end
 				PlayerService.Sync(player)
-				player:SetAttribute("BossMessage", "Crystal Guardian defeated! +" .. config.XP .. " XP and Guardian Core earned.")
+				if completedTrial then QuestService.TryStartNext(player, profile) end
+				player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
 				local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 				if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
 			end
