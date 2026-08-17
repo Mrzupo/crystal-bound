@@ -7,12 +7,13 @@
 - [x] Autosave alle 60 Sekunden
 - [x] Session-Locking mit Timeout und Release beim Server-Shutdown
 - [x] Sicherer Profil-Ladefehlerpfad ohne leeres Fallback-Profil
-- [x] Persistente Daten-Normalisierung für Zahlen, Kristalle, Inventar und Quests
+- [x] Persistente Daten-Normalisierung für Zahlen, Kristalle, Inventar, Quests und Daily Bounty
 - [x] XP- und Levelsystem
 - [x] Geldsystem
 - [x] Inventar + Material-Loot
 - [x] Materialverkauf beim Material Trader
-- [x] Shop-/Trader-GUI
+- [x] Kauf-Shop mit Health Potion
+- [x] Servervalidierte Consumable-Nutzung
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
 - [x] Crystal-Passiveffekte
@@ -52,8 +53,9 @@
 - [x] Quest Journal
 - [x] Achievements + Titles
 - [x] Achievement Journal
-- [x] HUD für Progression, Loot und Quests
-- [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge-Feedback
+- [x] Tägliche Bounty mit persistentem Fortschritt
+- [x] HUD für Progression, Loot, Quests und Bounty
+- [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge/Bounty-Feedback
 - [x] Spieler-HP + Death/Respawn-Feedback
 - [x] Inventory-/Crystal-GUI
 - [x] Item-Raritäten
@@ -72,8 +74,6 @@
 
 - [ ] echte Attack-/Ability-Animationen
 - [ ] echte Asset-basierte VFX/Particles statt prozeduraler Placeholder
-- [ ] Kaufangebote im Shop neben dem Verkauf
-- [ ] Crafting
 - [ ] NPC-Dialogsystem mit Entscheidungen
 - [ ] weitere Boss-Mechaniken außerhalb des Guardian-Phasen-Hazards
 - [ ] fortgeschrittenes Navigation-/Pathfinding-Tuning für komplexes Terrain
