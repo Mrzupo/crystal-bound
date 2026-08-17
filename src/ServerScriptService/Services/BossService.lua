@@ -147,7 +147,14 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 				local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
 			end
 		end
-		task.delay(config.Respawn, function() if parent.Parent then BossService.CreateGuardian(position, parent, uniqueName) end end)
+		task.delay(1.5, function()
+			if model.Parent then model:Destroy() end
+		end)
+		task.delay(config.Respawn + 1.5, function()
+			if parent.Parent and not parent:FindFirstChild(uniqueName or "CrystalGuardian") then
+				BossService.CreateGuardian(position, parent, uniqueName)
+			end
+		end)
 	end)
 	return model
 end
