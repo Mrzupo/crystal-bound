@@ -11,43 +11,90 @@ local Definitions = {
 	BAT_HUNT = { Id = "BAT_HUNT", Name = "Shards in the Dark", Description = "Defeat 3 Crystal Bats.", Goal = 3, XP = 1000, Money = 700, EnemyType = "CrystalBat", MinLevel = 19, Requires = "GOLEM_HUNT" },
 }
 
-function QuestSystem.GetDefinition(id) return Definitions[id] end
-function QuestSystem.GetDefinitions() return Definitions end
-function QuestSystem.IsActive(profile, questId) return table.find(profile.ActiveQuests or {}, questId) ~= nil end
-function QuestSystem.IsCompleted(profile, questId) return table.find(profile.CompletedQuests or {}, questId) ~= nil end
+function QuestSystem.GetDefinition(id)
+	return Definitions[id]
+end
+
+function QuestSystem.GetDefinitions()
+	return Definitions
+end
+
+function QuestSystem.IsActive(profile, questId)
+	return table.find(profile.ActiveQuests or {}, questId) ~= nil
+end
+
+function QuestSystem.IsCompleted(profile, questId)
+	return table.find(profile.CompletedQuests or {}, questId) ~= nil
+end
+
 function QuestSystem.CanStart(profile, questId)
 	local definition = Definitions[questId]
 	if not definition then return false, "Unknown quest." end
-	if QuestSystem.IsActive(profile, questId) or QuestSystem.IsCompleted(profile, questId) then return false, "Quest already started or completed." end
-	if (profile.Level or 1) < (definition.MinLevel or 1) then return false, string.format("Reach level %d.", definition.MinLevel or 1) end
-	if definition.Requires and not QuestSystem.IsCompleted(profile, definition.Requires) then return false, "Complete the previous quest first." end
+	if QuestSystem.IsActive(profile, questId) or QuestSystem.IsCompleted(profile, questId) then
+		return false, "Quest already started or completed."
+	end
+	if (profile.Level or 1) < (definition.MinLevel or 1) then
+		return false, string.format("Reach level %d.", definition.MinLevel or 1)
+	end
+	if definition.Requires and not QuestSystem.IsCompleted(profile, definition.Requires) then
+		return false, "Complete the previous quest first."
+	end
 	return true
 end
+
 function QuestSystem.GetAvailable(profile)
 	local available = {}
-	for id in pairs(Definitions) do
-		local allowed = QuestSystem.CanStart(profile, id)
-		if allowed then table.insert(available, id) end
+	for questId, definition in pairs(Definitions) do
+		local canStart = QuestSystem.CanStart(profile, questId)
+		if canStart then
+			table.insert(available, questId)
+		end
 	end
-	table.sort(available)
+	table.sort(available, function(a, b)
+		local left = Definitions[a]
+		local right = Definitions[b]
+		if left.MinLevel ~= right.MinLevel then
+			return (left.MinLevel or 1) < (right.MinLevel or 1)
+		end
+		return a < b
+	end)
 	return available
 end
+
 function QuestSystem.Start(profile, questId)
 	local allowed = QuestSystem.CanStart(profile, questId)
 	if not allowed then return false end
-	profile.ActiveQuests = profile.ActiveQuests or {}; profile.CompletedQuests = profile.CompletedQuests or {}; profile.QuestProgress = profile.QuestProgress or {}
-	table.insert(profile.ActiveQuests, questId); profile.QuestProgress[questId] = 0; return true
+	profile.ActiveQuests = profile.ActiveQuests or {}
+	profile.CompletedQuests = profile.CompletedQuests or {}
+	profile.QuestProgress = profile.QuestProgress or {}
+	table.insert(profile.ActiveQuests, questId)
+	profile.QuestProgress[questId] = 0
+	return true
 end
-function QuestSystem.GetProgress(profile, questId) return (profile.QuestProgress and profile.QuestProgress[questId]) or 0 end
+
+function QuestSystem.GetProgress(profile, questId)
+	return (profile.QuestProgress and profile.QuestProgress[questId]) or 0
+end
+
 function QuestSystem.Advance(profile, questId, amount)
 	local definition = Definitions[questId]
-	if not definition or not QuestSystem.IsActive(profile, questId) then return false, 0, definition and definition.Goal or 0 end
+	if not definition or not QuestSystem.IsActive(profile, questId) then
+		return false, 0, definition and definition.Goal or 0
+	end
 	profile.QuestProgress = profile.QuestProgress or {}
 	profile.QuestProgress[questId] = math.min(definition.Goal, QuestSystem.GetProgress(profile, questId) + math.max(0, amount or 1))
 	return profile.QuestProgress[questId] >= definition.Goal, profile.QuestProgress[questId], definition.Goal
 end
+
 function QuestSystem.Complete(profile, questId)
-	local index = table.find(profile.ActiveQuests or {}, questId); if not index then return false end
-	table.remove(profile.ActiveQuests, index); profile.CompletedQuests = profile.CompletedQuests or {}; profile.QuestProgress = profile.QuestProgress or {}; table.insert(profile.CompletedQuests, questId); profile.QuestProgress[questId] = 0; return true
+	local index = table.find(profile.ActiveQuests or {}, questId)
+	if not index then return false end
+	table.remove(profile.ActiveQuests, index)
+	profile.CompletedQuests = profile.CompletedQuests or {}
+	profile.QuestProgress = profile.QuestProgress or {}
+	table.insert(profile.CompletedQuests, questId)
+	profile.QuestProgress[questId] = 0
+	return true
 end
+
 return QuestSystem
