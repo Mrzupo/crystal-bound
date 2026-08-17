@@ -4,6 +4,7 @@ local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
+local DailyBountyService = require(script.Parent.DailyBountyService)
 
 local PlayerService = { Profiles = {}, CharacterConnections = {} }
 
@@ -68,6 +69,7 @@ function PlayerService.Sync(player)
 		profile.Money = math.min(1000000, (profile.Money or 0) + (definition.RewardMoney or 0))
 		player:SetAttribute("AchievementMessage", "Achievement unlocked: " .. definition.Name)
 	end
+	local bounty = DailyBountyService.Refresh(profile)
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
 		local level = leaderstats:FindFirstChild("Level"); local money = leaderstats:FindFirstChild("Money")
@@ -92,6 +94,11 @@ function PlayerService.Sync(player)
 	player:SetAttribute("BossesDefeated", (profile.Stats and profile.Stats.BossesDefeated) or 0)
 	player:SetAttribute("AchievementCount", #(profile.Achievements or {}))
 	player:SetAttribute("Title", title)
+	player:SetAttribute("DailyBountyEnemy", bounty.EnemyType)
+	player:SetAttribute("DailyBountyProgress", bounty.Progress)
+	player:SetAttribute("DailyBountyGoal", bounty.Goal)
+	player:SetAttribute("DailyBountyReward", bounty.RewardMoney)
+	player:SetAttribute("DailyBountyClaimed", bounty.Claimed)
 
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do
