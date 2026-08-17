@@ -11,11 +11,11 @@ local moneyChanged = remotes:WaitForChild("MoneyChanged")
 local inventoryChanged = remotes:WaitForChild("InventoryChanged")
 local inventoryRequest = remotes:WaitForChild("InventoryRequest")
 local crystalChanged = remotes:WaitForChild("CrystalChanged")
-local questRemote = remotes:WaitForChild("QuestRequest")
 local getQuestData = remotes:WaitForChild("GetQuestData")
 
 local inventory = {}
 local crystalOrder = { "EMBER", "TIDE", "GALE" }
+local messageExpiresAt = 0
 
 local function getTargetFromMouse()
 	local hit = player:GetMouse().Target
@@ -39,7 +39,7 @@ local function ensureHud()
 		panel = Instance.new("Frame")
 		panel.Name = "Info"
 		panel.Position = UDim2.fromOffset(16, 16)
-		panel.Size = UDim2.fromOffset(360, 210)
+		panel.Size = UDim2.fromOffset(380, 220)
 		panel.BackgroundTransparency = 0.15
 		panel.Parent = gui
 		Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
@@ -47,7 +47,7 @@ local function ensureHud()
 		local stats = Instance.new("TextLabel")
 		stats.Name = "Stats"
 		stats.Position = UDim2.fromOffset(12, 10)
-		stats.Size = UDim2.fromOffset(336, 110)
+		stats.Size = UDim2.fromOffset(356, 106)
 		stats.BackgroundTransparency = 1
 		stats.TextXAlignment = Enum.TextXAlignment.Left
 		stats.TextYAlignment = Enum.TextYAlignment.Top
@@ -58,8 +58,8 @@ local function ensureHud()
 
 		local inv = Instance.new("TextLabel")
 		inv.Name = "Inventory"
-		inv.Position = UDim2.fromOffset(12, 120)
-		inv.Size = UDim2.fromOffset(336, 70)
+		inv.Position = UDim2.fromOffset(12, 118)
+		inv.Size = UDim2.fromOffset(356, 82)
 		inv.BackgroundTransparency = 1
 		inv.TextXAlignment = Enum.TextXAlignment.Left
 		inv.TextYAlignment = Enum.TextYAlignment.Top
@@ -70,8 +70,8 @@ local function ensureHud()
 
 		local quest = Instance.new("TextLabel")
 		quest.Name = "Quest"
-		quest.Position = UDim2.fromOffset(16, 235)
-		quest.Size = UDim2.fromOffset(500, 115)
+		quest.Position = UDim2.fromOffset(16, 236)
+		quest.Size = UDim2.fromOffset(560, 130)
 		quest.BackgroundTransparency = 0.15
 		quest.TextXAlignment = Enum.TextXAlignment.Left
 		quest.TextYAlignment = Enum.TextYAlignment.Top
@@ -81,21 +81,48 @@ local function ensureHud()
 		quest.Parent = gui
 		Instance.new("UICorner", quest).CornerRadius = UDim.new(0, 10)
 
+		local message = Instance.new("TextLabel")
+		message.Name = "Message"
+		message.AnchorPoint = Vector2.new(0.5, 0)
+		message.Position = UDim2.new(0.5, 0, 0, 20)
+		message.Size = UDim2.fromOffset(520, 46)
+		message.BackgroundTransparency = 0.2
+		message.TextXAlignment = Enum.TextXAlignment.Center
+		message.Font = Enum.Font.GothamBold
+		message.TextSize = 18
+		message.Parent = gui
+		Instance.new("UICorner", message).CornerRadius = UDim.new(0, 10)
+
 		local help = Instance.new("TextLabel")
 		help.Name = "Help"
 		help.AnchorPoint = Vector2.new(0.5, 1)
 		help.Position = UDim2.new(0.5, 0, 1, -18)
-		help.Size = UDim2.fromOffset(820, 46)
+		help.Size = UDim2.fromOffset(900, 46)
 		help.BackgroundTransparency = 0.25
-		help.Text = "Klick = Angriff    Q = Fähigkeit    Z/X/C = Kristall wechseln    E = Inventar + Quests"
+		help.Text = "Klick = Angriff    Q = Fähigkeit    Z/X/C = Kristall    E = Daten aktualisieren"
 		help.Font = Enum.Font.GothamBold
 		help.TextSize = 17
 		help.Parent = gui
 	end
-	return panel.Stats, panel.Inventory, gui.Quest
+	return panel.Stats, panel.Inventory, gui.Quest, gui.Message
 end
 
-local statsLabel, inventoryLabel, questLabel = ensureHud()
+local statsLabel, inventoryLabel, questLabel, messageLabel = ensureHud()
+
+local function showMessage(text)
+	if type(text) ~= "string" or text == "" then return end
+	messageLabel.Text = text
+	messageExpiresAt = os.clock() + 4
+end
+
+task.spawn(function()
+	while true do
+		if os.clock() >= messageExpiresAt then
+			messageLabel.Text = ""
+		end
+		task.wait(0.25)
+	end
+end)
 
 local function refreshInventory()
 	local parts = {}
@@ -115,6 +142,7 @@ local function refreshHud()
 		player:GetAttribute("EquippedCrystal") or "EMBER"
 	)
 	refreshInventory()
+	showMessage(player:GetAttribute("QuestMessage") or player:GetAttribute("CrystalMessage") or "")
 end
 
 local function refreshQuests()
@@ -126,13 +154,16 @@ local function refreshQuests()
 	else
 		for _, id in ipairs(data.Active) do
 			local definition = data.Definitions[id]
-			if definition then table.insert(lines, "• " .. definition.Name .. ": " .. definition.Description) end
+			local progress = data.Progress and data.Progress[id] or 0
+			if definition then
+				table.insert(lines, string.format("• %s: %s (%d/%d)", definition.Name, definition.Description, progress, definition.Goal))
+			end
 		end
 	end
 	questLabel.Text = table.concat(lines, "\n")
 end
 
-for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", "QuestMessage", "CrystalMessage" }) do
+for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", "QuestMessage", "CrystalMessage", "QuestProgress" }) do
 	player:GetAttributeChangedSignal(attribute):Connect(function()
 		refreshHud()
 		refreshQuests()
@@ -141,7 +172,7 @@ end
 
 xpChanged.OnClientEvent:Connect(function() refreshHud(); refreshQuests() end)
 moneyChanged.OnClientEvent:Connect(function() refreshHud(); refreshQuests() end)
-levelUp.OnClientEvent:Connect(function() refreshHud(); refreshQuests() end)
+levelUp.OnClientEvent:Connect(function(level) refreshHud(); refreshQuests(); if level then showMessage("Level Up! Level " .. tostring(level)) end end)
 inventoryChanged.OnClientEvent:Connect(function(data)
 	inventory = type(data) == "table" and data or {}
 	refreshHud()
@@ -150,8 +181,6 @@ end)
 refreshHud()
 refreshQuests()
 inventoryRequest:FireServer()
-
-player:GetAttributeChangedSignal("EquippedCrystal"):Connect(refreshHud)
 
 player:GetMouse().Button1Down:Connect(function()
 	local target = getTargetFromMouse()
@@ -171,11 +200,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		crystalChanged:FireServer(crystalOrder[3])
 	elseif input.KeyCode == Enum.KeyCode.E then
 		inventoryRequest:FireServer()
-		refreshQuests()
-	elseif input.KeyCode == Enum.KeyCode.One then
-		questRemote:FireServer("Start", "FIRST_FIGHT")
-	elseif input.KeyCode == Enum.KeyCode.Two then
-		questRemote:FireServer("Start", "CRYSTAL_POWER")
 		refreshQuests()
 	end
 end)
