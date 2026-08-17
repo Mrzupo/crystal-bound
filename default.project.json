@@ -63,7 +63,7 @@
         "NPCRequest": {"$className": "RemoteEvent"},
         "InventoryRequest": {"$className": "RemoteEvent"},
         "CrystalChanged": {"$className": "RemoteEvent"},
-        "CrystalMasteryChanged": {"$className": "RemoteEvent"},
+        "CrystalMasteryChanged": {"className": "RemoteEvent"},
         "CrystalUpgradeRequest": {"$className": "RemoteEvent"},
         "DodgeRequest": {"$className": "RemoteEvent"},
         "ShopRequest": {"$className": "RemoteEvent"},
@@ -78,13 +78,7 @@
         "MoneyChanged": {"$className": "RemoteEvent"},
         "InventoryChanged": {"$className": "RemoteEvent"}
       },
-      "Assets": {
-        "$className": "Folder",
-        "Animations": {"$className": "Folder"},
-        "Sounds": {"$className": "Folder"},
-        "Particles": {"$className": "Folder"},
-        "Icons": {"$className": "Folder"}
-      }
+      "Assets": {"$className": "Folder", "Animations": {"$className": "Folder"}, "Sounds": {"$className": "Folder"}, "Particles": {"$className": "Folder"}, "Icons": {"$className": "Folder"}}
     },
     "ServerScriptService": {
       "$className": "ServerScriptService",
@@ -128,6 +122,7 @@
       "StarterPlayerScripts": {
         "ClientBootstrap": {"$path": "src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua"},
         "AbilityCooldown": {"$path": "src/StarterPlayer/StarterPlayerScripts/AbilityCooldown.client.lua"},
+        "CooldownAuthority": {"$path": "src/StarterPlayer/StarterPlayerScripts/CooldownAuthority.client.lua"},
         "PlayerHealth": {"$path": "src/StarterPlayer/StarterPlayerScripts/PlayerHealth.client.lua"},
         "InventoryMenu": {"$path": "src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua"},
         "ShopMenu": {"$path": "src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua"},
@@ -143,15 +138,7 @@
         "StatusMessages": {"$path": "src/StarterPlayer/StarterPlayerScripts/StatusMessages.client.lua"}
       }
     },
-    "StarterGui": {
-      "$className": "StarterGui",
-      "MainUI": {"$className": "ScreenGui", "ResetOnSpawn": false, "IgnoreGuiInset": true}
-    },
-    "Workspace": {
-      "$className": "Workspace",
-      "NPCs": {"$className": "Folder"},
-      "Islands": {"$className": "Folder"},
-      "Spawn": {"$className": "Folder"}
-    }
+    "StarterGui": {"$className": "StarterGui", "MainUI": {"$className": "ScreenGui", "ResetOnSpawn": false, "IgnoreGuiInset": true}},
+    "Workspace": {"$className": "Workspace", "NPCs": {"$className": "Folder"}, "Islands": {"$className": "Folder"}, "Spawn": {"$className": "Folder"}}
   }
 }
