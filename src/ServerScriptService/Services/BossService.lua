@@ -11,16 +11,30 @@ local QuestService = require(script.Parent.QuestService)
 local BossService = { Bound = false }
 
 local function shockwave(center, radius, damage, ignoreModel)
+	local affectedPlayers = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
+			humanoid:TakeDamage(math.max(0, damage))
+			affectedPlayers[player] = true
+		end
+	end
+
 	local folder = workspace:FindFirstChild("NPCs")
 	if folder then
 		for _, child in ipairs(folder:GetChildren()) do
-			if child ~= ignoreModel then
+			if child ~= ignoreModel and child:GetAttribute("Enemy") == true and not child:GetAttribute("BossId") then
 				local humanoid = child:FindFirstChildOfClass("Humanoid")
 				local root = child:FindFirstChild("HumanoidRootPart") or child.PrimaryPart
-				if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then humanoid:TakeDamage(damage) end
+				if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
+					humanoid:TakeDamage(damage)
+				end
 			end
 		end
 	end
+
 	local effect = Instance.new("Part")
 	effect.Anchored = true; effect.CanCollide = false; effect.CanTouch = false; effect.CanQuery = false
 	effect.Shape = Enum.PartType.Cylinder; effect.Size = Vector3.new(1, radius * 2, radius * 2)
@@ -95,6 +109,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 				local character = nearestPlayer.Character; local targetRoot = character and character:FindFirstChild("HumanoidRootPart"); local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if targetRoot and targetHumanoid then
 					local phase = humanoid.Health <= config.Health * 0.5 and 2 or 1; model:SetAttribute("BossPhase", phase)
+					if distance > config.AttackRange then end
 					if nearestDistance > config.AttackRange then local direction = targetRoot.Position - root.Position; if direction.Magnitude > 0.1 then local step = math.min(0.8, direction.Magnitude); model:PivotTo(CFrame.lookAt(root.Position + direction.Unit * step, targetRoot.Position)) end
 					elseif os.clock() >= nextAttack then nextAttack = os.clock() + (phase == 2 and 1.0 or config.AttackCooldown); targetHumanoid:TakeDamage(phase == 2 and math.floor(config.AttackDamage * 1.35) or config.AttackDamage) end
 					if os.clock() >= nextAbility and nearestDistance <= config.AbilityRadius * 1.5 then nextAbility = os.clock() + config.AbilityCooldown; shockwave(root.Position, config.AbilityRadius, config.AbilityDamage, model) end
