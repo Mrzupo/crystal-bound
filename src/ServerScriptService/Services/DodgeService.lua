@@ -35,6 +35,20 @@ function DodgeService.TryDodge(player, direction)
 	return true
 end
 
+function DodgeService.IsInvulnerable(player)
+	return player and player:IsA("Player") and player:GetAttribute("DodgeInvulnerable") == true
+end
+
+function DodgeService.ApplyDamage(player, humanoid, amount)
+	if not player or not humanoid or humanoid.Health <= 0 then return false end
+	if DodgeService.IsInvulnerable(player) then
+		player:SetAttribute("DodgeMessage", "Dodged!")
+		return false
+	end
+	humanoid:TakeDamage(math.max(0, tonumber(amount) or 0))
+	return true
+end
+
 function DodgeService.CleanupPlayer(player)
 	cooldowns[player] = nil
 	if player.Parent then player:SetAttribute("DodgeInvulnerable", false) end
