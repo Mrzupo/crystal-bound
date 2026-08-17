@@ -22,19 +22,13 @@ end
 
 local function addCrystalCluster(island, position)
 	for index = 1, 3 do
-		local crystal = addPart(
-			island,
-			"AncientCrystal",
-			Vector3.new(1.5 + index * 0.3, 4 + index, 1.5 + index * 0.3),
-			position + Vector3.new((index - 2) * 2, 2.5 + index * 0.5, 0),
-			Enum.Material.Neon
-		)
+		local crystal = addPart(island, "AncientCrystal", Vector3.new(1.5 + index * 0.3, 4 + index, 1.5 + index * 0.3), position + Vector3.new((index - 2) * 2, 2.5 + index * 0.5, 0), Enum.Material.Neon)
 		crystal.Shape = Enum.PartType.Wedge
 		crystal.Orientation = Vector3.new(0, index * 35, 0)
 	end
 end
 
-local ancient = islands:FindFirstChild("AncientRuins")
+local ancient = islands:WaitForChild("AncientRuins", 30)
 if ancient and not ancient:FindFirstChild("DecorReady") then
 	for _, data in ipairs({
 		{ Vector3.new(460, 1, -35), 10 },
@@ -52,13 +46,9 @@ if ancient and not ancient:FindFirstChild("DecorReady") then
 	marker.Parent = ancient
 end
 
-local wind = islands:FindFirstChild("WindIsland")
+local wind = islands:WaitForChild("WindIsland", 30)
 if wind and not wind:FindFirstChild("WindDecorReady") then
-	for _, position in ipairs({
-		Vector3.new(300, 1, 35),
-		Vector3.new(365, 1, 35),
-		Vector3.new(315, 1, -35),
-	}) do
+	for _, position in ipairs({ Vector3.new(300, 1, 35), Vector3.new(365, 1, 35), Vector3.new(315, 1, -35) }) do
 		local rock = addPart(wind, "WindRock", Vector3.new(7, 4, 7), position, Enum.Material.Slate)
 		rock.Orientation = Vector3.new(0, math.random(0, 180), math.random(-10, 10))
 	end
