@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-
 local EnemyConfig = require(game.ReplicatedStorage.Config.EnemyConfig)
 
 local NPCService = {}
@@ -122,9 +121,8 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	weldB.Parent = body
 
 	model.PrimaryPart = root
-	root.Anchored = false
-	body.Anchored = false
-	head.Anchored = false
+	-- Enemies are moved deterministically by server-side PivotTo AI.
+	-- Keeping the parts anchored prevents physics from fighting the movement.
 
 	humanoid.Died:Connect(function()
 		if onDeath then onDeath(model, config) end
