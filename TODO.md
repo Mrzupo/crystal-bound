@@ -21,8 +21,13 @@
 - [x] Servervalidiertes Combat
 - [x] Serverseitige Combat-Action-Whitelist
 - [x] Serverseitige Enemy/Boss-Target-Whitelist
+- [x] Serverseitige Distanz-/Hitbox-Prüfung
+- [x] Serverautorisierte kritische Treffer
+- [x] Serverautorisierter Dodge mit Invulnerability-Fenster
 - [x] Damage Numbers + Cooldown-Feedback
 - [x] Gegner-Konfiguration und serverseitige einfache KI
+- [x] Hindernis-Steering + Pathfinding-Fallback
+- [x] Status-Effekte (Burn / Slow)
 - [x] Gegnertypen mit unterschiedlichen visuellen Stilen
 - [x] Gegnertypen mit speziellen Angriffen
 - [x] Gegner-HP-Balken
@@ -34,6 +39,7 @@
 - [x] Crystal Bat
 - [x] Ancient Golem
 - [x] Crystal Guardian Boss
+- [x] Guardian-Arena mit Phase-2-Hazard
 - [x] Starter Island
 - [x] Tide Island
 - [x] Wind Island
@@ -47,11 +53,14 @@
 - [x] Achievements + Titles
 - [x] Achievement Journal
 - [x] HUD für Progression, Loot und Quests
-- [x] Gemeinsames Status-Message-HUD
+- [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge-Feedback
 - [x] Spieler-HP + Death/Respawn-Feedback
 - [x] Inventory-/Crystal-GUI
+- [x] Item-Raritäten
+- [x] Gegnerabhängige Drop-Chancen
 - [x] Mobile Touch Combat Controls mit Kamera-Ray-Zielauswahl
 - [x] Mobile Menu Controls
+- [x] Mobile Dodge-Control
 - [x] NPC-zu-Menü-Verknüpfung
 - [x] Welt-Dekoration für alle aktuellen Inseln
 - [x] Modulare Welt-Themes
@@ -63,18 +72,15 @@
 
 - [ ] echte Attack-/Ability-Animationen
 - [ ] echte Asset-basierte VFX/Particles statt prozeduraler Placeholder
-- [ ] echte Hitbox-/AoE-Systeme statt Zielmodell-Raycast
-- [ ] bessere Gegner-Pathfinding-AI
-- [ ] Boss-Arena mit Mechaniken außerhalb von HP/Phase
-- [ ] NPC-Dialogsystem mit Entscheidungen
-- [ ] Item-Rarities und Drop-Chancen
 - [ ] Kaufangebote im Shop neben dem Verkauf
 - [ ] Crafting
-- [ ] Status-Effekte
-- [ ] Blocken, Ausweichen und kritische Treffer
+- [ ] NPC-Dialogsystem mit Entscheidungen
+- [ ] weitere Boss-Mechaniken außerhalb des Guardian-Phasen-Hazards
+- [ ] fortgeschrittenes Navigation-/Pathfinding-Tuning für komplexes Terrain
 - [ ] automatisierte Luau-Tests
 - [ ] Multiplayer-Performance- und Security-Test
 - [ ] echter Roblox-Studio-Playtest mit Output-/Runtime-Fehlerbehebung
+- [ ] bessere Kampfanimationen und Hit-Reactions
 
 ## Später
 
