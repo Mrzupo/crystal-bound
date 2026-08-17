@@ -9,4 +9,9 @@ return {
 		TIDE = { Name = "Tidal Pulse", Damage = 22, Range = 18, Cooldown = 4 },
 		GALE = { Name = "Gale Strike", Damage = 24, Range = 24, Cooldown = 3 },
 	},
+	Passives = {
+		EMBER = { DamageMultiplier = 1.15, WalkSpeedBonus = 0, MaxHealthBonus = 0 },
+		TIDE = { DamageMultiplier = 1.0, WalkSpeedBonus = 0, MaxHealthBonus = 25 },
+		GALE = { DamageMultiplier = 1.0, WalkSpeedBonus = 4, MaxHealthBonus = 0 },
+	},
 }
