@@ -10,6 +10,10 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 
+local function openByAttribute(attributeName)
+	player:SetAttribute(attributeName, os.clock())
+end
+
 local function toggle(screenGuiName)
 	local target = player.PlayerGui:FindFirstChild(screenGuiName)
 	if not target then return end
@@ -17,7 +21,7 @@ local function toggle(screenGuiName)
 	if panel then panel.Visible = not panel.Visible end
 end
 
-local function makeButton(name, text, index, targetGui)
+local function makeButton(name, text, index, targetGui, attributeName)
 	local button = Instance.new("TextButton")
 	button.Name = name
 	button.Position = UDim2.fromOffset(18 + (index - 1) * 82, 68)
@@ -28,18 +32,25 @@ local function makeButton(name, text, index, targetGui)
 	button.TextSize = 12
 	button.Parent = gui
 	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
-	button.Activated:Connect(function() toggle(targetGui) end)
+	button.Activated:Connect(function()
+		if attributeName then
+			openByAttribute(attributeName)
+		else
+			toggle(targetGui)
+		end
+	end)
 end
 
-makeButton("Inventory", "Items", 1, "CrystalMenu")
-makeButton("Quests", "Quests", 2, "QuestMenu")
-makeButton("Shop", "Shop", 3, "ShopMenu")
-makeButton("Achievements", "Goals", 4, "AchievementMenu")
+makeButton("Inventory", "Items", 1, "CrystalMenu", "OpenCrystalMenu")
+makeButton("Quests", "Quests", 2, "QuestMenu", "OpenQuestMenu")
+makeButton("Shop", "Shop", 3, "ShopMenu", "OpenShopMenu")
+makeButton("Achievements", "Goals", 4, "AchievementMenu", nil)
+makeButton("Crafting", "Craft", 5, "CraftingMenu", "OpenCraftingMenu")
 
 local hint = Instance.new("TextLabel")
 hint.Name = "Hint"
 hint.Position = UDim2.fromOffset(18, 110)
-hint.Size = UDim2.fromOffset(310, 26)
+hint.Size = UDim2.fromOffset(420, 26)
 hint.BackgroundTransparency = 1
 hint.Text = "Tap a menu button above"
 hint.Font = Enum.Font.Gotham
