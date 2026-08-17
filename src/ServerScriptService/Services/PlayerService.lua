@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SaveSystem = require(ReplicatedStorage.Modules.SaveSystem)
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
+local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 
 local PlayerService = { Profiles = {} }
 
@@ -25,10 +26,7 @@ function PlayerService.GetProfile(player)
 end
 
 function PlayerService.Load(player)
-	if PlayerService.Profiles[player] then
-		return PlayerService.Profiles[player]
-	end
-
+	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
 	local profile = PlayerData.Reconcile(SaveSystem.Load(player))
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
@@ -48,10 +46,27 @@ function PlayerService.Sync(player)
 		if money then money.Value = profile.Money end
 	end
 
+	local crystalId = profile.Crystals.Equipped
+	local passive = CrystalSystem.GetPassive(crystalId)
 	player:SetAttribute("Level", profile.Level)
 	player:SetAttribute("Experience", profile.Experience)
 	player:SetAttribute("Money", profile.Money)
-	player:SetAttribute("EquippedCrystal", profile.Crystals.Equipped)
+	player:SetAttribute("EquippedCrystal", crystalId)
+	player:SetAttribute("DamageMultiplier", passive.DamageMultiplier or 1)
+	player:SetAttribute("WalkSpeedBonus", passive.WalkSpeedBonus or 0)
+	player:SetAttribute("MaxHealthBonus", passive.MaxHealthBonus or 0)
+
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = 16 + (passive.WalkSpeedBonus or 0)
+		local maxHealth = 100 + (passive.MaxHealthBonus or 0)
+		local oldMax = humanoid.MaxHealth
+		humanoid.MaxHealth = maxHealth
+		if humanoid.Health > 0 and humanoid.Health == oldMax then
+			humanoid.Health = maxHealth
+		end
+	end
 end
 
 function PlayerService.Save(player)
