@@ -10,6 +10,7 @@ local InventoryService = require(script.Parent.Services.InventoryService)
 local EconomyService = require(script.Parent.Services.EconomyService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
+local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local NPCService = require(script.Parent.Services.NPCService)
 
 local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
@@ -33,6 +34,7 @@ end
 for _, name in ipairs({
 	"CombatRequest", "QuestRequest", "NPCRequest", "InventoryRequest",
 	"XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged",
+	"CrystalMasteryChanged", "CrystalUpgradeRequest",
 }) do
 	ensureRemote("RemoteEvent", name)
 end
@@ -57,7 +59,8 @@ remotes.InventoryRequest.OnServerEvent:Connect(function(player, action, itemId, 
 	if action == "Sell" and type(itemId) == "string" then
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local trader = Workspace.NPCs:FindFirstChild("MaterialTrader")
+		local npcFolder = Workspace:FindFirstChild("NPCs")
+		local trader = npcFolder and npcFolder:FindFirstChild("MaterialTrader")
 		local traderRoot = trader and (trader.PrimaryPart or trader:FindFirstChild("Torso"))
 		if not root or not traderRoot or (root.Position - traderRoot.Position).Magnitude > 14 then
 			player:SetAttribute("ShopMessage", "You need to be near the Material Trader.")
@@ -89,13 +92,49 @@ remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
 	if not CrystalService.OwnsCrystal(profile, crystalId) then CrystalService.UnlockCrystal(profile, crystalId) end
 	if CrystalService.EquipCrystal(profile, crystalId) then
 		PlayerService.Sync(player)
+		local mastery = CrystalMastery.Get(profile, crystalId)
 		player:SetAttribute("CrystalMessage", crystalId .. " equipped")
 		remotes.XPChanged:FireClient(player, profile.Experience, profile.Level)
+		remotes.CrystalMasteryChanged:FireClient(player, crystalId, mastery.Level, mastery.XP)
 	end
 end)
 
+remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
+	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
+	local profile = PlayerService.GetProfile(player)
+	if not profile or not CrystalService.OwnsCrystal(profile, crystalId) then return end
+	local mastery = CrystalMastery.Get(profile, crystalId)
+	local cost = CrystalMastery.GetUpgradeCost(profile, crystalId)
+	if mastery.Level >= 10 then
+		player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed.")
+		return
+	end
+	for itemId, amount in pairs(cost) do
+		if not InventoryService.HasItem(profile, itemId, amount) then
+			player:SetAttribute("CrystalMessage", string.format("Need %d %s to upgrade.", amount, itemId))
+			return
+		end
+	end
+	for itemId, amount in pairs(cost) do InventoryService.RemoveItem(profile, itemId, amount) end
+	mastery.Level += 1
+	mastery.XP = 0
+	PlayerService.Sync(player)
+	remotes.InventoryChanged:FireClient(player, profile.Inventory)
+	remotes.CrystalMasteryChanged:FireClient(player, crystalId, mastery.Level, mastery.XP)
+	player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, mastery.Level))
+end)
+
 remotes.GetPlayerData.OnServerInvoke = function(player)
-	return PlayerService.GetProfile(player)
+	local profile = PlayerService.GetProfile(player)
+	if not profile then return nil end
+	return {
+		Level = profile.Level,
+		Experience = profile.Experience,
+		Money = profile.Money,
+		Crystals = profile.Crystals,
+		CrystalMastery = profile.CrystalMastery,
+		Inventory = profile.Inventory,
+	}
 end
 
 remotes.GetQuestData.OnServerInvoke = function(player)
@@ -245,13 +284,13 @@ end
 
 local function spawnTrader(npcs)
 	spawnSimpleNPC(npcs, "MaterialTrader", Vector3.new(20, 3, 10), "Material Trader", "Sell Loot", function(player)
-		player:SetAttribute("ShopMessage", "Near the trader: 4/5/6 sells one material.")
+		player:SetAttribute("ShopMessage", "Sell materials with 4/5/6. Upgrade the equipped crystal with U.")
 	end)
 end
 
 local function spawnEnemy(npcs, typeId, position, uniqueName)
 	if npcs:FindFirstChild(uniqueName) then return end
-	NPCService.CreateEnemy(typeId, position, npcs, function(model, config)
+	NPCService.CreateEnemy(typeId, position, npcs, function(_, config)
 		task.delay(config.Respawn, function()
 			if npcs.Parent then spawnEnemy(npcs, typeId, position, uniqueName) end
 		end)
