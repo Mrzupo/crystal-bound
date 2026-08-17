@@ -124,6 +124,35 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	fireProgress(player, levelsGained or 0, true, true)
 end
 
+local function applyGaleSplash(player, centerModel, damage)
+	local centerRoot = centerModel:FindFirstChild("HumanoidRootPart") or centerModel.PrimaryPart
+	if not centerRoot then return end
+	local folder = workspace:FindFirstChild("NPCs")
+	if not folder then return end
+	for _, enemy in ipairs(folder:GetChildren()) do
+		if enemy ~= centerModel and enemy:IsA("Model") and enemy:GetAttribute("Enemy") == true then
+			local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+			local root = enemy:FindFirstChild("HumanoidRootPart") or enemy.PrimaryPart
+			if humanoid and humanoid.Health > 0 and root and (root.Position - centerRoot.Position).Magnitude <= 12 then
+				humanoid:TakeDamage(math.max(1, damage * 0.45))
+			end
+		end
+	end
+end
+
+local function applyAbilitySpecial(player, profile, crystalId, targetModel, abilityDamage)
+	if crystalId == "TIDE" then
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.Health > 0 then
+			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 30)
+			player:SetAttribute("QuestMessage", "Tidal Pulse restored health.")
+		end
+	elseif crystalId == "GALE" then
+		applyGaleSplash(player, targetModel, abilityDamage)
+	end
+end
+
 function CombatService.HandleRequest(player, action, target)
 	if not player:IsA("Player") then return end
 	local profile = PlayerService.GetProfile(player)
@@ -141,19 +170,25 @@ function CombatService.HandleRequest(player, action, target)
 	local targetModel = getCharacter(target)
 	local passive = CrystalSystem.GetPassive(crystalId)
 	local multiplier = math.max(0.1, tonumber(passive.DamageMultiplier) or 1)
+	local damage = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier
 	local request = {
 		Attacker = player,
 		Target = targetModel,
-		Amount = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier,
+		Amount = damage,
 		Range = config.Range,
 		DamageType = "Crystal",
 	}
 	local result = DamageService.ProcessDamage(request)
 	if not result.Success or not targetModel then return end
 	emitCombatEffect(crystalId, targetModel, action == "Ability")
+
+	if action == "Ability" then
+		applyAbilitySpecial(player, profile, crystalId, targetModel, damage)
+		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
+	end
+
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
-	if action == "Ability" then completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
 end
 
 return CombatService
