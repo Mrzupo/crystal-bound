@@ -23,6 +23,15 @@ function QuestSystem.CanStart(profile, questId)
 	if definition.Requires and not QuestSystem.IsCompleted(profile, definition.Requires) then return false, "Complete the previous quest first." end
 	return true
 end
+function QuestSystem.GetAvailable(profile)
+	local available = {}
+	for id in pairs(Definitions) do
+		local allowed = QuestSystem.CanStart(profile, id)
+		if allowed then table.insert(available, id) end
+	end
+	table.sort(available)
+	return available
+end
 function QuestSystem.Start(profile, questId)
 	local allowed = QuestSystem.CanStart(profile, questId)
 	if not allowed then return false end
