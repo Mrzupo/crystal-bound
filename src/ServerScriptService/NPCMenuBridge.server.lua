@@ -9,8 +9,10 @@ local function bindPrompt(prompt)
 	prompt.Triggered:Connect(function(player)
 		if model.Name == "CrystalKeeper" then
 			player:SetAttribute("OpenQuestMenu", os.clock())
+			player:SetAttribute("OpenNPCDialog", "CrystalKeeper")
 		elseif model.Name == "MaterialTrader" then
 			player:SetAttribute("OpenShopMenu", os.clock())
+			player:SetAttribute("OpenNPCDialog", "MaterialTrader")
 		end
 	end)
 end
@@ -22,4 +24,5 @@ folder.DescendantAdded:Connect(bindPrompt)
 Players.PlayerRemoving:Connect(function(player)
 	player:SetAttribute("OpenQuestMenu", nil)
 	player:SetAttribute("OpenShopMenu", nil)
+	player:SetAttribute("OpenNPCDialog", nil)
 end)
