@@ -53,7 +53,7 @@ function NPCService.StartEnemyAI(model)
 				local targetHumanoid = character:FindFirstChildOfClass("Humanoid")
 				if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
 					if distance > config.AttackRange then
-						local direction = (targetRoot.Position - root.Position)
+						local direction = targetRoot.Position - root.Position
 						if direction.Magnitude > 0.1 then
 							local step = math.min(0.9, direction.Magnitude)
 							local nextPosition = root.Position + direction.Unit * step
@@ -70,14 +70,17 @@ function NPCService.StartEnemyAI(model)
 	end)
 end
 
-function NPCService.CreateEnemy(typeId, position, parent, onDeath)
+function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local config = EnemyConfig.Get(typeId)
 	local model = Instance.new("Model")
-	model.Name = config.DisplayName:gsub("%s+", "")
+	model.Name = uniqueName or config.DisplayName:gsub("%s+", "")
 	model:SetAttribute("Enemy", true)
 	model:SetAttribute("EnemyType", typeId)
 	model:SetAttribute("RewardXP", config.XP)
 	model:SetAttribute("RewardMoney", config.Money)
+	model:SetAttribute("SpawnX", position.X)
+	model:SetAttribute("SpawnY", position.Y)
+	model:SetAttribute("SpawnZ", position.Z)
 	model.Parent = parent
 
 	local root = Instance.new("Part")
@@ -124,7 +127,6 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath)
 	head.Anchored = false
 
 	humanoid.Died:Connect(function()
-		model:SetAttribute("DeathRewarded", false)
 		if onDeath then onDeath(model, config) end
 	end)
 
