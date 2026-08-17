@@ -3,7 +3,8 @@ local SaveSystem = require(ReplicatedStorage.Modules.SaveSystem)
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
-local BossService = require(script.Parent.BossService)
+local AchievementService = require(script.Parent.AchievementService)
+local EconomyService = require(script.Parent.EconomyService)
 
 local PlayerService = { Profiles = {}, CharacterConnections = {} }
 
@@ -29,7 +30,6 @@ end
 
 function PlayerService.Load(player)
 	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
-	BossService.Bind()
 	local profile = PlayerData.Reconcile(SaveSystem.Load(player))
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
@@ -48,6 +48,13 @@ end
 function PlayerService.Sync(player)
 	local profile = PlayerService.Profiles[player]
 	if not profile then return end
+
+	local newAchievements = AchievementService.Check(profile)
+	for _, reward in ipairs(newAchievements) do
+		local definition = reward.Definition
+		EconomyService.AddMoney(profile, definition.RewardMoney or 0)
+		player:SetAttribute("AchievementMessage", "Achievement unlocked: " .. definition.Name)
+	end
 
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
@@ -70,6 +77,7 @@ function PlayerService.Sync(player)
 	player:SetAttribute("MaxHealthBonus", (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus)
 	player:SetAttribute("CrystalMasteryLevel", mastery.Level)
 	player:SetAttribute("CrystalMasteryXP", mastery.XP)
+	player:SetAttribute("Title", (profile.Titles and profile.Titles[#profile.Titles]) or "")
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
