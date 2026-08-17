@@ -14,7 +14,7 @@ local container = Instance.new("Frame")
 container.Name = "Container"
 container.AnchorPoint = Vector2.new(0.5, 0)
 container.Position = UDim2.new(0.5, 0, 0, 92)
-container.Size = UDim2.fromOffset(560, 240)
+container.Size = UDim2.fromOffset(560, 260)
 container.BackgroundTransparency = 1
 container.Parent = gui
 
@@ -29,13 +29,14 @@ local priorities = {
 	BossMessage = 1,
 	QuestMessage = 2,
 	BountyMessage = 3,
-	LootMessage = 4,
-	CrystalMessage = 5,
-	DodgeMessage = 6,
-	PortalMessage = 7,
-	ShopMessage = 8,
-	AchievementMessage = 9,
-	ProfileLoadFailed = 10,
+	CraftingMessage = 4,
+	LootMessage = 5,
+	CrystalMessage = 6,
+	DodgeMessage = 7,
+	PortalMessage = 8,
+	ShopMessage = 9,
+	AchievementMessage = 10,
+	ProfileLoadFailed = 11,
 }
 
 local function show(text, priority)
