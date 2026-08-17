@@ -3,9 +3,57 @@ local SaveSystem = require(ReplicatedStorage.Modules.SaveSystem)
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
-local AchievementService = require(script.Parent.AchievementService)
 local EconomyService = require(script.Parent.EconomyService)
 local BossService = require(script.Parent.BossService)
+
+local AchievementDefinitions = {
+	FIRST_BLOOD = { Name = "First Blood", RewardMoney = 50, Title = "Fighter" },
+	CRYSTAL_KEEPER = { Name = "Crystal Keeper", RewardMoney = 250, Title = "Crystal Keeper" },
+	MASTER_OF_ONE = { Name = "Master of One", RewardMoney = 750, Title = "Crystal Master" },
+	GUARDIAN_SLAYER = { Name = "Guardian Slayer", RewardMoney = 2500, Title = "Guardian Slayer" },
+	LEVEL_20 = { Name = "Veteran", RewardMoney = 1000, Title = "Veteran" },
+}
+
+local function hasAchievement(profile, id)
+	return table.find(profile.Achievements or {}, id) ~= nil
+end
+
+local function unlockAchievement(profile, id)
+	if hasAchievement(profile, id) or not AchievementDefinitions[id] then return nil end
+	profile.Achievements = profile.Achievements or {}
+	profile.Titles = profile.Titles or {}
+	table.insert(profile.Achievements, id)
+	local definition = AchievementDefinitions[id]
+	if definition.Title and not table.find(profile.Titles, definition.Title) then
+		table.insert(profile.Titles, definition.Title)
+	end
+	return definition
+end
+
+local function checkAchievements(profile)
+	local unlocked = {}
+	profile.Stats = profile.Stats or {}
+	local owned = profile.Crystals and profile.Crystals.Owned or {}
+	local allCrystals = table.find(owned, "EMBER") and table.find(owned, "TIDE") and table.find(owned, "GALE")
+	local mastery = profile.CrystalMastery or {}
+	local masteryTen = (mastery.EMBER and mastery.EMBER.Level >= 10)
+		or (mastery.TIDE and mastery.TIDE.Level >= 10)
+		or (mastery.GALE and mastery.GALE.Level >= 10)
+	local checks = {
+		FIRST_BLOOD = (profile.Stats.EnemiesDefeated or 0) >= 1,
+		CRYSTAL_KEEPER = allCrystals,
+		MASTER_OF_ONE = masteryTen,
+		GUARDIAN_SLAYER = (profile.Stats.BossesDefeated or 0) >= 1,
+		LEVEL_20 = profile.Level >= 20,
+	}
+	for id, condition in pairs(checks) do
+		if condition then
+			local definition = unlockAchievement(profile, id)
+			if definition then table.insert(unlocked, definition) end
+		end
+	end
+	return unlocked
+end
 
 local PlayerService = { Profiles = {}, CharacterConnections = {} }
 
@@ -68,9 +116,9 @@ end
 function PlayerService.Sync(player)
 	local profile = PlayerService.Profiles[player]
 	if not profile then return end
-	local newAchievements = AchievementService.Check(profile)
-	for _, reward in ipairs(newAchievements) do
-		local definition = reward.Definition
+
+	local unlocked = checkAchievements(profile)
+	for _, definition in ipairs(unlocked) do
 		EconomyService.AddMoney(profile, definition.RewardMoney or 0)
 		player:SetAttribute("AchievementMessage", "Achievement unlocked: " .. definition.Name)
 	end
