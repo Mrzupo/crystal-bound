@@ -7,7 +7,8 @@ local Definitions = {
 	TIDE_EXPEDITION = { Id = "TIDE_EXPEDITION", Name = "Tide Expedition", Description = "Defeat 3 Tidecrawlers.", Goal = 3, XP = 500, Money = 300, EnemyType = "Tidecrawler" },
 	WIND_TRIAL = { Id = "WIND_TRIAL", Name = "Trial of the Gale", Description = "Defeat 3 Galewisps.", Goal = 3, XP = 800, Money = 500, EnemyType = "Galewisp" },
 	GUARDIAN_TRIAL = { Id = "GUARDIAN_TRIAL", Name = "Guardian of the Crystals", Description = "Defeat the Crystal Guardian.", Goal = 1, XP = 2200, Money = 1500, EnemyType = "CrystalGuardian" },
-	ANCIENT_HUNT = { Id = "ANCIENT_HUNT", Name = "Echoes of the Ancients", Description = "Defeat 3 Ancient Golems and 3 Crystal Bats.", Goal = 6, XP = 1600, Money = 1000, EnemyType = "AncientRuins" },
+	GOLEM_HUNT = { Id = "GOLEM_HUNT", Name = "Stonebound", Description = "Defeat 3 Ancient Golems.", Goal = 3, XP = 900, Money = 600, EnemyType = "AncientGolem" },
+	BAT_HUNT = { Id = "BAT_HUNT", Name = "Shards in the Dark", Description = "Defeat 3 Crystal Bats.", Goal = 3, XP = 1000, Money = 700, EnemyType = "CrystalBat" },
 }
 
 function QuestSystem.GetDefinition(id) return Definitions[id] end
