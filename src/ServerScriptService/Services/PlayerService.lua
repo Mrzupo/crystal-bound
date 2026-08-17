@@ -110,9 +110,16 @@ function PlayerService.Sync(player)
 	if humanoid then
 		humanoid.WalkSpeed = 16 + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
 		local maxHealth = 100 + (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus
-		local oldMax = humanoid.MaxHealth
+		local oldMax = math.max(1, humanoid.MaxHealth)
+		local oldHealth = humanoid.Health
 		humanoid.MaxHealth = maxHealth
-		if humanoid.Health > 0 and (humanoid.Health == oldMax or humanoid.Health > maxHealth) then humanoid.Health = maxHealth end
+		if oldHealth > 0 then
+			if oldMax ~= maxHealth then
+				humanoid.Health = math.clamp((oldHealth / oldMax) * maxHealth, 1, maxHealth)
+			elseif oldHealth > maxHealth then
+				humanoid.Health = maxHealth
+			end
+		end
 		player:SetAttribute("Health", math.max(0, humanoid.Health))
 		player:SetAttribute("MaxHealth", maxHealth)
 	end
