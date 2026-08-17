@@ -7,12 +7,8 @@ local function bindPrompt(prompt)
 	local model = prompt:FindFirstAncestorOfClass("Model")
 	if not model then return end
 	prompt.Triggered:Connect(function(player)
-		if model.Name == "CrystalKeeper" then
-			player:SetAttribute("OpenQuestMenu", os.clock())
-			player:SetAttribute("OpenNPCDialog", "CrystalKeeper")
-		elseif model.Name == "MaterialTrader" then
-			player:SetAttribute("OpenShopMenu", os.clock())
-			player:SetAttribute("OpenNPCDialog", "MaterialTrader")
+		if model.Name == "CrystalKeeper" or model.Name == "MaterialTrader" then
+			player:SetAttribute("OpenNPCDialog", model.Name)
 		end
 	end)
 end
@@ -24,5 +20,7 @@ folder.DescendantAdded:Connect(bindPrompt)
 Players.PlayerRemoving:Connect(function(player)
 	player:SetAttribute("OpenQuestMenu", nil)
 	player:SetAttribute("OpenShopMenu", nil)
+	player:SetAttribute("OpenCrystalMenu", nil)
+	player:SetAttribute("OpenCraftingMenu", nil)
 	player:SetAttribute("OpenNPCDialog", nil)
 end)
