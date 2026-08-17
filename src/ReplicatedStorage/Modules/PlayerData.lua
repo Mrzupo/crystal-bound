@@ -8,6 +8,14 @@ local VALID_CRYSTALS = {
 	GALE = true,
 }
 
+local VALID_BOUNTY_ENEMIES = {
+	Emberling = true,
+	Tidecrawler = true,
+	Galewisp = true,
+	CrystalBat = true,
+	AncientGolem = true,
+}
+
 local function clone(value)
 	if type(value) ~= "table" then return value end
 	local result = {}
@@ -146,7 +154,9 @@ function PlayerData.Reconcile(data)
 
 	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
 	data.DailyBounty.Date = type(data.DailyBounty.Date) == "string" and data.DailyBounty.Date or ""
-	data.DailyBounty.EnemyType = type(data.DailyBounty.EnemyType) == "string" and data.DailyBounty.EnemyType or defaults.DailyBounty.EnemyType
+	if not VALID_BOUNTY_ENEMIES[data.DailyBounty.EnemyType] then
+		data.DailyBounty.EnemyType = defaults.DailyBounty.EnemyType
+	end
 	data.DailyBounty.Goal = clampInt(data.DailyBounty.Goal, 1, 100, defaults.DailyBounty.Goal)
 	data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, data.DailyBounty.Goal, 0)
 	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, 100000, defaults.DailyBounty.RewardMoney)
