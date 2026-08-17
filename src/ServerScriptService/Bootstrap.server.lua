@@ -48,21 +48,29 @@ end)
 remotes.QuestRequest.OnServerEvent:Connect(function(player, action, questId)
 	local profile = PlayerService.GetProfile(player)
 	if not profile or type(questId) ~= "string" then return end
-	if action == "Start" then
-		QuestService.Start(player, profile, questId)
-	end
+	if action == "Start" then QuestService.Start(player, profile, questId) end
 end)
 
 remotes.InventoryRequest.OnServerEvent:Connect(function(player, action, itemId, amount)
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
 	if action == "Sell" and type(itemId) == "string" then
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local trader = Workspace.NPCs:FindFirstChild("MaterialTrader")
+		local traderRoot = trader and (trader.PrimaryPart or trader:FindFirstChild("Torso"))
+		if not root or not traderRoot or (root.Position - traderRoot.Position).Magnitude > 14 then
+			player:SetAttribute("ShopMessage", "You need to be near the Material Trader.")
+			return
+		end
 		local ok, earned = EconomyService.SellItem(profile, itemId, amount or 1, InventoryService)
 		if ok then
 			PlayerService.Sync(player)
 			remotes.MoneyChanged:FireClient(player, profile.Money)
 			remotes.InventoryChanged:FireClient(player, profile.Inventory)
 			player:SetAttribute("ShopMessage", string.format("Sold %s for %d Money", itemId, earned))
+		else
+			player:SetAttribute("ShopMessage", "You do not have that item.")
 		end
 	else
 		remotes.InventoryChanged:FireClient(player, profile.Inventory)
@@ -73,16 +81,12 @@ remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
-
 	local requiredLevel = crystalRequirements[crystalId] or math.huge
 	if profile.Level < requiredLevel then
 		player:SetAttribute("CrystalMessage", string.format("%s unlocks at level %d", crystalId, requiredLevel))
 		return
 	end
-
-	if not CrystalService.OwnsCrystal(profile, crystalId) then
-		CrystalService.UnlockCrystal(profile, crystalId)
-	end
+	if not CrystalService.OwnsCrystal(profile, crystalId) then CrystalService.UnlockCrystal(profile, crystalId) end
 	if CrystalService.EquipCrystal(profile, crystalId) then
 		PlayerService.Sync(player)
 		player:SetAttribute("CrystalMessage", crystalId .. " equipped")
@@ -96,15 +100,8 @@ end
 
 remotes.GetQuestData.OnServerInvoke = function(player)
 	local profile = PlayerService.GetProfile(player)
-	if not profile then
-		return { Active = {}, Completed = {}, Progress = {}, Definitions = QuestSystem.GetDefinitions() }
-	end
-	return {
-		Active = profile.ActiveQuests,
-		Completed = profile.CompletedQuests,
-		Progress = profile.QuestProgress,
-		Definitions = QuestSystem.GetDefinitions(),
-	}
+	if not profile then return { Active = {}, Completed = {}, Progress = {}, Definitions = QuestSystem.GetDefinitions() } end
+	return { Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Progress = profile.QuestProgress, Definitions = QuestSystem.GetDefinitions() }
 end
 
 local function ensureWorldFolders()
@@ -126,15 +123,13 @@ local function createIsland(islands, name, center, size)
 	island.Name = name
 	island.Parent = islands
 	island:SetAttribute("IslandId", name)
-
 	local ground = Instance.new("Part")
 	ground.Name = "Ground"
 	ground.Size = size
 	ground.Position = center
 	ground.Anchored = true
-	ground.Material = Enum.Material.Grass
+	ground.Material = name == "WindIsland" and Enum.Material.Slate or Enum.Material.Grass
 	ground.Parent = island
-
 	local title = Instance.new("BillboardGui")
 	title.Name = "IslandTitle"
 	title.Size = UDim2.fromOffset(240, 60)
@@ -172,7 +167,6 @@ local function createPortal(island, name, fromPosition, destination, requiredLev
 	portal.Material = Enum.Material.Neon
 	portal.Parent = island
 	portal:SetAttribute("RequiredLevel", requiredLevel or 1)
-
 	local gui = Instance.new("BillboardGui")
 	gui.Size = UDim2.fromOffset(260, 60)
 	gui.StudsOffset = Vector3.new(0, 6, 0)
@@ -185,7 +179,6 @@ local function createPortal(island, name, fromPosition, destination, requiredLev
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 18
 	label.Parent = gui
-
 	local cooldown = {}
 	portal.Touched:Connect(function(hit)
 		local character = hit:FindFirstAncestorOfClass("Model")
@@ -222,6 +215,7 @@ local function spawnSimpleNPC(npcs, name, position, objectText, actionText, call
 	head.Position = position + Vector3.new(0, 3, 0)
 	head.Anchored = true
 	head.Parent = model
+	model.PrimaryPart = body
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = actionText
 	prompt.ObjectText = objectText
@@ -251,7 +245,7 @@ end
 
 local function spawnTrader(npcs)
 	spawnSimpleNPC(npcs, "MaterialTrader", Vector3.new(20, 3, 10), "Material Trader", "Sell Loot", function(player)
-		player:SetAttribute("ShopMessage", "Open inventory controls to sell materials.")
+		player:SetAttribute("ShopMessage", "Near the trader: 4/5/6 sells one material.")
 	end)
 end
 
@@ -267,9 +261,12 @@ end
 local npcs, islands, spawnFolder = ensureWorldFolders()
 local starterIsland = createIsland(islands, "StarterIsland", Vector3.new(0, 0, 0), Vector3.new(120, 2, 120))
 local tideIsland = createIsland(islands, "TideIsland", Vector3.new(170, 0, 0), Vector3.new(100, 2, 100))
+local windIsland = createIsland(islands, "WindIsland", Vector3.new(330, 0, 0), Vector3.new(110, 2, 110))
 createSpawn(spawnFolder)
 createPortal(starterIsland, "TidePortal", Vector3.new(52, 5, 0), Vector3.new(120, 4, 0), 4)
 createPortal(tideIsland, "StarterPortal", Vector3.new(118, 5, 0), Vector3.new(48, 4, 0), 1)
+createPortal(tideIsland, "WindPortal", Vector3.new(218, 5, 0), Vector3.new(280, 4, 0), 10)
+createPortal(windIsland, "TideReturnPortal", Vector3.new(278, 5, 0), Vector3.new(210, 4, 0), 1)
 spawnQuestGiver(npcs)
 spawnTrader(npcs)
 spawnEnemy(npcs, "TrainingDummy", Vector3.new(0, 1, -12), "TrainingDummy")
@@ -277,7 +274,9 @@ spawnEnemy(npcs, "Emberling", Vector3.new(30, 1, -18), "EmberlingA")
 spawnEnemy(npcs, "Emberling", Vector3.new(-30, 1, -18), "EmberlingB")
 spawnEnemy(npcs, "Tidecrawler", Vector3.new(160, 1, -12), "TidecrawlerA")
 spawnEnemy(npcs, "Tidecrawler", Vector3.new(190, 1, 15), "TidecrawlerB")
-spawnEnemy(npcs, "Galewisp", Vector3.new(180, 1, 28), "GalewispA")
+spawnEnemy(npcs, "Galewisp", Vector3.new(300, 1, -18), "GalewispA")
+spawnEnemy(npcs, "Galewisp", Vector3.new(340, 1, 20), "GalewispB")
+spawnEnemy(npcs, "Galewisp", Vector3.new(370, 1, -10), "GalewispC")
 
 local function initializePlayer(player)
 	local profile = PlayerService.Load(player)
