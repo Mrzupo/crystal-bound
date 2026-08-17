@@ -7,12 +7,14 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local inventoryRequest = remotes:WaitForChild("InventoryRequest")
 local crystalChanged = remotes:WaitForChild("CrystalChanged")
 local crystalUpgradeRequest = remotes:WaitForChild("CrystalUpgradeRequest")
+local useItemRequest = remotes:WaitForChild("UseItemRequest")
 local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local upgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 
 local crystals = { "EMBER", "TIDE", "GALE" }
 local unlockLevels = { EMBER = 1, TIDE = 3, GALE = 5 }
 local crystalLabels = { EMBER = "Ember", TIDE = "Tide", GALE = "Gale" }
+local rarityByItem = { EmberShard = "Common", TidePearl = "Uncommon", GaleFeather = "Rare", AncientShard = "Epic", GuardianCore = "Legendary", HealthPotion = "Uncommon" }
 local inventory = {}
 local open = false
 
@@ -24,7 +26,7 @@ local function ensureGui()
 	gui.Name = "CrystalMenu"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.Parent = playerGui
 
 	local panel = Instance.new("Frame")
-	panel.Name = "Panel"; panel.AnchorPoint = Vector2.new(0.5, 0.5); panel.Position = UDim2.fromScale(0.5, 0.5); panel.Size = UDim2.fromOffset(700, 500); panel.BackgroundTransparency = 0.08; panel.Visible = false; panel.Parent = gui
+	panel.Name = "Panel"; panel.AnchorPoint = Vector2.new(0.5, 0.5); panel.Position = UDim2.fromScale(0.5, 0.5); panel.Size = UDim2.fromOffset(700, 540); panel.BackgroundTransparency = 0.08; panel.Visible = false; panel.Parent = gui
 	Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 14)
 
 	local title = Instance.new("TextLabel")
@@ -47,14 +49,24 @@ local function ensureGui()
 	end
 
 	local loot = Instance.new("TextLabel")
-	loot.Name = "Loot"; loot.Position = UDim2.fromOffset(20, 280); loot.Size = UDim2.fromOffset(660, 100); loot.BackgroundTransparency = 1; loot.TextXAlignment = Enum.TextXAlignment.Left; loot.TextYAlignment = Enum.TextYAlignment.Top; loot.TextWrapped = true; loot.Font = Enum.Font.Gotham; loot.TextSize = 14; loot.Parent = panel
+	loot.Name = "Loot"; loot.Position = UDim2.fromOffset(20, 280); loot.Size = UDim2.fromOffset(660, 130); loot.BackgroundTransparency = 1; loot.TextXAlignment = Enum.TextXAlignment.Left; loot.TextYAlignment = Enum.TextYAlignment.Top; loot.TextWrapped = true; loot.Font = Enum.Font.Gotham; loot.TextSize = 14; loot.Parent = panel
+
+	local potion = Instance.new("TextButton")
+	potion.Name = "Potion"
+	potion.Position = UDim2.fromOffset(20, 416)
+	potion.Size = UDim2.fromOffset(300, 42)
+	potion.Text = "Use Health Potion (P)"
+	potion.Font = Enum.Font.GothamBold
+	potion.TextSize = 14
+	potion.Parent = panel
+	potion.Activated:Connect(function() useItemRequest:FireServer("HealthPotion") end)
 
 	local upgrade = Instance.new("TextButton")
-	upgrade.Name = "Upgrade"; upgrade.Position = UDim2.fromOffset(20, 392); upgrade.Size = UDim2.fromOffset(330, 42); upgrade.Text = "Upgrade Equipped Crystal"; upgrade.Font = Enum.Font.GothamBold; upgrade.TextSize = 15; upgrade.Parent = panel
+	upgrade.Name = "Upgrade"; upgrade.Position = UDim2.fromOffset(340, 416); upgrade.Size = UDim2.fromOffset(340, 42); upgrade.Text = "Upgrade Equipped Crystal"; upgrade.Font = Enum.Font.GothamBold; upgrade.TextSize = 15; upgrade.Parent = panel
 	upgrade.Activated:Connect(function() crystalUpgradeRequest:FireServer(player:GetAttribute("EquippedCrystal") or "EMBER") end)
 
 	local hint = Instance.new("TextLabel")
-	hint.Name = "Hint"; hint.Position = UDim2.fromOffset(370, 392); hint.Size = UDim2.fromOffset(310, 42); hint.BackgroundTransparency = 1; hint.Text = "I = öffnen/schließen"; hint.Font = Enum.Font.Gotham; hint.TextSize = 14; hint.TextXAlignment = Enum.TextXAlignment.Right; hint.Parent = panel
+	hint.Name = "Hint"; hint.Position = UDim2.fromOffset(20, 462); hint.Size = UDim2.fromOffset(660, 42); hint.BackgroundTransparency = 1; hint.Text = "I = öffnen/schließen  •  P = Potion benutzen"; hint.Font = Enum.Font.Gotham; hint.TextSize = 14; hint.TextXAlignment = Enum.TextXAlignment.Right; hint.Parent = panel
 	return gui
 end
 
@@ -89,9 +101,17 @@ local function refresh()
 		end
 	end
 	local parts = {}
-	for itemId, amount in pairs(inventory) do if tonumber(amount) and amount > 0 then table.insert(parts, string.format("%s: %d", itemId, amount)) end end
+	for itemId, amount in pairs(inventory) do
+		if tonumber(amount) and amount > 0 then
+			table.insert(parts, string.format("%s [%s]: %d", itemId, rarityByItem[itemId] or "Common", amount))
+		end
+	end
 	table.sort(parts)
-	panel.Loot.Text = #parts > 0 and ("Loot\n" .. table.concat(parts, "   |   ")) or "Loot\nNo materials collected."
+	panel.Loot.Text = #parts > 0 and ("Loot / Items\n" .. table.concat(parts, "   |   ")) or "Loot / Items\nNo items collected."
+	local potionAmount = tonumber(inventory.HealthPotion) or 0
+	panel.Potion.Text = string.format("Use Health Potion (P)  •  Owned: %d", potionAmount)
+	panel.Potion.Active = potionAmount > 0
+	panel.Potion.TextTransparency = potionAmount > 0 and 0 or 0.5
 end
 
 inventoryRequest.OnClientEvent:Connect(function(data)
@@ -110,6 +130,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.I then
 		if open then open = false; panel.Visible = false else openMenu() end
+	elseif input.KeyCode == Enum.KeyCode.P then
+		useItemRequest:FireServer("HealthPotion")
 	end
 end)
 
