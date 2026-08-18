@@ -16,10 +16,15 @@ jobs:
           from pathlib import Path
           economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
           player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/EconomyService.lua").read_text(encoding="utf-8")
           required = ("StartingMoney = 100", "MinMoney = 0", "MaxMoney = 1000000000")
           for marker in required:
               if marker not in economy:
                   raise SystemExit(f"EconomyConfig missing {marker}")
           if "Money = EconomyConfig.StartingMoney" not in player_data:
               raise SystemExit("PlayerData must consume EconomyConfig.StartingMoney")
-          print("Economy config contract validated.")
+          if "function nonNegativeInteger" not in service:
+              raise SystemExit("EconomyService must enforce integer-only money transaction amounts")
+          if "amount % 1 ~= 0" not in service:
+              raise SystemExit("EconomyService must reject fractional money amounts")
+          print("Economy config and integer transaction contract validated.")
