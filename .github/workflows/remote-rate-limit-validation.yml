@@ -1,0 +1,46 @@
+name: Crystal Bound Remote Rate Limit Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-remote-rate-limits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate critical remote gates
+        shell: python
+        run: |
+          from pathlib import Path
+
+          required = {
+              "src/ServerScriptService/ShopRemote.server.lua": ["REQUEST_INTERVAL", "nextRequest"],
+              "src/ServerScriptService/CraftingRemote.server.lua": ["REQUEST_INTERVAL", "NEXT_REQUEST"],
+              "src/ServerScriptService/UseItemRemote.server.lua": ["USE_INTERVAL", "NEXT_USE"],
+              "src/ServerScriptService/DodgeRemote.server.lua": ["REQUEST_INTERVAL", "nextRequest"],
+              "src/ServerScriptService/QuestAvailability.server.lua": ["REQUEST_INTERVAL", "nextRequest"],
+              "src/ServerScriptService/NPCDialogRemote.server.lua": ["REQUEST_INTERVAL", "nextRequest"],
+          }
+
+          problems = []
+          for relative, markers in required.items():
+              path = Path(relative)
+              if not path.is_file():
+                  problems.append(f"Missing remote file: {relative}")
+                  continue
+              text = path.read_text(encoding="utf-8")
+              for marker in markers:
+                  if marker not in text:
+                      problems.append(f"{relative} is missing rate-limit marker: {marker}")
+
+          if problems:
+              print("Remote rate-limit validation problems:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("Critical remote rate-limit contracts validated.")
