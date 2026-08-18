@@ -1,0 +1,22 @@
+name: Damage type contract
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require explicit known damage types
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/ReplicatedStorage/Modules/Combat/DamageValidators.lua')
+          text = path.read_text()
+          assert 'type(value) ~= "string"' in text
+          assert 'isKnownDamageType(request.DamageType)' in text
+          assert 'DamageTypes.Environmental' in text
+          print('Damage type validator contract OK')
+          PY
