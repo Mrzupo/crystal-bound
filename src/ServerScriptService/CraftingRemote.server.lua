@@ -8,6 +8,9 @@ local remote = remotes:FindFirstChild("CraftingRequest") or Instance.new("Remote
 remote.Name = "CraftingRequest"
 remote.Parent = remotes
 
+local NEXT_REQUEST = {}
+local REQUEST_INTERVAL = 0.15
+
 local function isNearTrader(player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -19,6 +22,10 @@ end
 
 remote.OnServerEvent:Connect(function(player, action, outputId, amount)
 	if action ~= "Craft" then return end
+	local now = os.clock()
+	if now < (NEXT_REQUEST[player] or 0) then return end
+	NEXT_REQUEST[player] = now + REQUEST_INTERVAL
+
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
 	if not isNearTrader(player) then
