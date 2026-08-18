@@ -17,7 +17,9 @@ local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 local HitboxService = require(ReplicatedStorage.Modules.Combat.HitboxService)
 local CombatService = {}
 local cooldowns = {}
+local nextRequest = {}
 
+local REQUEST_INTERVAL = 0.03
 local CRYSTAL_COLORS = { EMBER = Color3.fromRGB(255, 90, 35), TIDE = Color3.fromRGB(45, 150, 255), GALE = Color3.fromRGB(170, 120, 255) }
 local VALID_ACTIONS = { Basic = true, Ability = true }
 
@@ -135,12 +137,15 @@ end
 
 function CombatService.HandleRequest(player, action, target)
 	if not player:IsA("Player") or not VALID_ACTIONS[action] then return end
+	local requestNow = os.clock()
+	if requestNow < (nextRequest[player] or 0) then return end
+	nextRequest[player] = requestNow + REQUEST_INTERVAL
 	local profile = PlayerService.GetProfile(player); if not profile or not profile.Crystals then return end
 	if typeof(target) ~= "Instance" or target == player or isPlayerTarget(target) then return end
 	local crystalId = profile.Crystals.Equipped
 	local config = action == "Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId); if not config then return end
 	cooldowns[player] = cooldowns[player] or {}
-	local now = os.clock(); if now < (cooldowns[player][action] or 0) then return end
+	local now = requestNow; if now < (cooldowns[player][action] or 0) then return end
 	local targetModel = getCharacter(target); if not targetModel then return end
 	if not HitboxService.IsWithinRange(player, targetModel, config.Range) then return end
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid"); if not humanoid or humanoid.Health <= 0 then return end
@@ -166,6 +171,7 @@ end
 
 function CombatService.CleanupPlayer(player)
 	cooldowns[player] = nil
+	nextRequest[player] = nil
 end
 
 return CombatService
