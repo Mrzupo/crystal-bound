@@ -24,6 +24,6 @@ jobs:
               text = Path(path).read_text(encoding="utf-8")
               if "InteractionConfig" not in text:
                   raise SystemExit(f"{path} must consume shared InteractionConfig")
-          if "NPC_INTERACTION_RANGE" not in config:
+          if "NPCInteractionRange" not in config:
               raise SystemExit("InteractionConfig must define NPC interaction range")
           print("InteractionConfig contract validated.")
