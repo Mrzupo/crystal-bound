@@ -16,8 +16,7 @@
         "NPCDialogConfig": {"$path": "src/ReplicatedStorage/Modules/NPCDialogConfig.lua"},
         "NPCSystem": {"$path": "src/ReplicatedStorage/Modules/NPCSystem.lua"},
         "InventorySystem": {"$path": "src/ReplicatedStorage/Modules/InventorySystem.lua"},
-        "Combat": {"$className": "Folder", "DamageRequest": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageRequest.lua"}, "DamageResult": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageResult.lua"}, "DamageTypes": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageTypes.lua"}, "DamageValidators": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageValidators.lua"}, "HitboxService": {"$path": "src/ReplicatedStorage/Modules/Combat/HitboxService.lua"}},
-        "Crystal": {"$className": "Folder", "CrystalDefinitions": {"$path": "src/ReplicatedStorage/Modules/Crystal/CrystalDefinitions.lua"}, "CrystalTypes": {"$path": "src/ReplicatedStorage/Modules/Crystal/CrystalTypes.lua"}, "CrystalUtils": {"$path": "src/ReplicatedStorage/Modules/Crystal/CrystalUtils.lua"}, "Abilities": {"$className": "Folder", "BaseCrystal": {"$path": "src/ReplicatedStorage/Modules/Crystal/Abilities/BaseCrystal.lua"}, "AbilityRegistry": {"$path": "src/ReplicatedStorage/Modules/Crystal/Abilities/AbilityRegistry.lua"}, "PassiveRegistry": {"$path": "src/ReplicatedStorage/Modules/Crystal/Abilities/PassiveRegistry.lua"}}}
+        "Combat": {"$className": "Folder", "DamageRequest": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageRequest.lua"}, "DamageResult": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageResult.lua"}, "DamageTypes": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageTypes.lua"}, "DamageValidators": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageValidators.lua"}, "HitboxService": {"$path": "src/ReplicatedStorage/Modules/Combat/HitboxService.lua"}}
       },
       "Config": {
         "$className": "Folder",
