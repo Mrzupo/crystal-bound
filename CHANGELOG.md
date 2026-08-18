@@ -6,8 +6,8 @@
 
 - Vollständige `src`-Roblox-Struktur passend zu `default.project.json`.
 - PlayerData mit Versionierung, QuestProgress, Crystal-Mastery, Achievements und Schema-Reconciliation.
-- Sicherer Profil-Speicher mit Session-Lock, Timeout und Release beim Server-Shutdown.
-- Sicherer Fehlerpfad bei DataStore-Ladefehlern; kein leeres Fallback-Profil wird mehr gespeichert.
+- Sicherer Profil-Speicher mit Session-Lock, Timeout, Heartbeat und Release beim Server-Shutdown.
+- Sicherer Fehlerpfad bei DataStore-Ladefehlern; kein leeres Fallback-Profil bei Fehlern oder beschädigten Stored Values.
 - DataStore Save/Load mit Retry und Autosave-Integration.
 - XP-, Level- und Economy-System.
 - Inventar mit Material-Loot und serverseitigem Verkauf.
@@ -30,7 +30,7 @@
 - Starter Island, Tide Island, Wind Island und Ancient Ruins.
 - Levelgesperrte Portale und prozedurale Welt-Dekoration.
 - Crystal Keeper Quest-NPC und Material Trader.
-- Servervalidierte NPC-Dialoge mit Menüoptionen.
+- Servervalidierte NPC-Dialoge mit Menüoptionen und Rate-Limit.
 - Quest-System mit persistentem Fortschritt, servervalidierten Voraussetzungen und automatischer Quest-Kette bis zu den Ancient Ruins.
 - Daily Bounty mit persistentem Tagesfortschritt und Geldbelohnung.
 - Quest Journal, Achievement System mit Titles und Achievement Journal.
@@ -49,11 +49,16 @@
 - `NPCService` verwaltet Gegnererstellung, eindeutige Namen, Visual Styles, Health Bars, Leash-Verhalten, Pathfinding-Fallback und Spezialangriffe.
 - `CombatService` verwendet gegnerspezifische XP-, Geld-, Loot- und Masterywerte, markiert den letzten Boss-Angreifer korrekt, validiert Reichweite serverseitig und verarbeitet Krits, Bounty und Drop-Chancen.
 - `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu und respektiert Dodge-Invulnerability.
-- `DodgeService` schützt das komplette Character-Schadensfenster zentral über ein temporäres ForceField.
+- `DodgeService` schützt das komplette Character-Schadensfenster zentral über ein temporäres ForceField und räumt Player-State beim Verlassen auf.
 - `BossArena` leitet Phasen-Hazard-Schaden über `DodgeService`.
-- `PlayerService` verwendet den sicheren Session-locked Profile Store und synchronisiert Daily-Bounty-/Progressionsattribute.
-- `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand und Daily-Bounty-Daten während der Migration.
-- `CraftingRemote` und `ShopRemote` verlangen jetzt die nötige Nähe zum Material Trader.
+- `BossTelegraph` bricht verzögerte Boss-Angriffe ab, wenn der Guardian während des Telegraphs verschwindet oder stirbt.
+- `AIPathService` nutzt einen Weak-Key-Cache, gedrosselte Pfadberechnung und verarbeitet Jump-Waypoints auch beim Erreichen gespeicherter Waypoints.
+- `PlayerService` verwendet den sicheren Session-locked Profile Store, schützt Save/Remove vor Race Conditions und synchronisiert Daily-Bounty-/Progressionsattribute.
+- `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand, Session-Lock und Daily-Bounty-Daten während der Migration.
+- `CraftingRemote` und `ShopRemote` verlangen jetzt die nötige Nähe zum Material Trader und räumen Request-State beim Player-Leave auf.
+- `StatusEffectService` erhält aktives Slow bei Player-Syncs und stellt nach Ablauf die aktuelle Crystal-/Mastery-WalkSpeed wieder her.
+- `EconomyService`, `InventoryService`, `XPService` und `CrystalMastery` filtern nicht-endliche Eingabewerte und schützen Limits serverseitig.
+- `StatusMessages` erlaubt wiederholt auftretende identische Meldungen nach Ablauf des aktuellen Anzeigefensters.
 - `WorldDecor` und `WorldTheme` decken alle vier aktuellen Inseln ab.
 - `default.project.json` wurde fortlaufend mit jeder neuen Server-/Client-Datei synchronisiert.
 - `TODO.md` wurde an den tatsächlichen Entwicklungsstand angepasst.
