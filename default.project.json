@@ -59,7 +59,6 @@
         "$className": "Folder",
         "CombatRequest": {"$className": "RemoteEvent"},
         "QuestRequest": {"$className": "RemoteEvent"},
-        "NPCRequest": {"$className": "RemoteEvent"},
         "InventoryRequest": {"$className": "RemoteEvent"},
         "CrystalChanged": {"$className": "RemoteEvent"},
         "CrystalMasteryChanged": {"$className": "RemoteEvent"},
