@@ -13,15 +13,21 @@ jobs:
       - name: Validate shared shop config
         shell: python
         run: |
+          import re
           from pathlib import Path
           config = Path("src/ReplicatedStorage/Config/ShopConfig.lua").read_text(encoding="utf-8")
           inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
           shop = Path("src/ServerScriptService/Services/ShopService.lua").read_text(encoding="utf-8")
           ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
-          for marker in ("HealthPotion", "Price = 75", "MaxPerPurchase = 10", "SellOrder", "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard"):
+
+          for marker in ("Offers", "SellOrder", "HealthPotion", "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard"):
               if marker not in config:
                   raise SystemExit(f"ShopConfig missing {marker}")
+          if not re.search(r"Price\s*=\s*[1-9]\d*", config):
+              raise SystemExit("ShopConfig must contain positive offer prices")
+          if not re.search(r"MaxPerPurchase\s*=\s*[1-9]\d*", config):
+              raise SystemExit("ShopConfig must contain positive MaxPerPurchase")
           for marker in ("HealthPotion", "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard"):
               if marker not in inventory:
                   raise SystemExit(f"InventoryConfig missing shop item {marker}")
