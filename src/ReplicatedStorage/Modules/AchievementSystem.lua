@@ -3,10 +3,12 @@ local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConf
 
 local AchievementSystem = {}
 
+local masteryMaxLevel = math.max(1, math.floor(tonumber(CrystalUpgradeConfig.MaxLevel) or 10))
+
 local Definitions = {
 	FIRST_BLOOD = { Name = "First Blood", Requirement = "Defeat your first enemy.", RewardMoney = 50, Title = "Fighter" },
 	CRYSTAL_KEEPER = { Name = "Crystal Keeper", Requirement = "Own Ember, Tide and Gale.", RewardMoney = 250, Title = "Crystal Keeper" },
-	MASTER_OF_ONE = { Name = "Master of One", Requirement = "Reach mastery level 10 with one crystal.", RewardMoney = 750, Title = "Crystal Master" },
+	MASTER_OF_ONE = { Name = "Master of One", Requirement = string.format("Reach mastery level %d with one crystal.", masteryMaxLevel), RewardMoney = 750, Title = "Crystal Master" },
 	GUARDIAN_SLAYER = { Name = "Guardian Slayer", Requirement = "Defeat the Crystal Guardian.", RewardMoney = 2500, Title = "Guardian Slayer" },
 	ANCIENT_EXPLORER = { Name = "Ancient Explorer", Requirement = "Defeat an Ancient Golem and a Crystal Bat.", RewardMoney = 1500, Title = "Ruins Explorer" },
 	LEVEL_20 = { Name = "Veteran", Requirement = "Reach level 20.", RewardMoney = 1000, Title = "Veteran" },
@@ -72,7 +74,6 @@ function AchievementSystem.Check(profile)
 	profile.Titles = validTitles
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	local mastery = profile.CrystalMastery or {}
-	local masteryMaxLevel = math.max(1, math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel, 10)))
 	local ancient = (finiteNumber(profile.Stats.AncientGolemsDefeated, 0) > 0) and (finiteNumber(profile.Stats.CrystalBatsDefeated, 0) > 0)
 	local checks = {
 		FIRST_BLOOD = finiteNumber(profile.Stats.EnemiesDefeated, 0) >= 1,
