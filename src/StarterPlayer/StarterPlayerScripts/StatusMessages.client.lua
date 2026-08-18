@@ -50,7 +50,7 @@ local function trimOldMessages()
 	end
 	if #labels < MAX_VISIBLE then return end
 	table.sort(labels, function(a, b)
-		return a.LayoutOrder > b.LayoutOrder
+		return a.LayoutOrder < b.LayoutOrder
 	end)
 	for index = MAX_VISIBLE, #labels do
 		local label = labels[index]
