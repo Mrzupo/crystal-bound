@@ -6,10 +6,15 @@ local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
 local DailyBountyService = require(script.Parent.DailyBountyService)
 local EconomyService = require(script.Parent.EconomyService)
+local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 
 local PlayerService = { Profiles = {}, CharacterConnections = {}, HumanoidConnections = {}, Operations = {} }
 local OPERATION_TIMEOUT = 10
 local DEFAULT_CRYSTAL = "EMBER"
+local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
+local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
+local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier) or 0.2, 0.01, 1)
+local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
 
 local function setupLeaderstats(player, profile)
 	local leaderstats = player:FindFirstChild("leaderstats") or Instance.new("Folder")
@@ -167,13 +172,13 @@ function PlayerService.Sync(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		local baseWalkSpeed = 16 + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
+		local baseWalkSpeed = BASE_WALK_SPEED + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
 		local slowMultiplier = tonumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"))
 		if type(slowMultiplier) == "number" and slowMultiplier == slowMultiplier and slowMultiplier ~= math.huge and slowMultiplier ~= -math.huge then
-			slowMultiplier = math.clamp(slowMultiplier, 0.2, 1)
-			humanoid.WalkSpeed = math.max(6, baseWalkSpeed * slowMultiplier)
+			slowMultiplier = math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
+			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * slowMultiplier)
 		else
-			humanoid.WalkSpeed = baseWalkSpeed
+			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed)
 		end
 		local maxHealth = 100 + (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus
 		local oldMax = math.max(1, humanoid.MaxHealth)
