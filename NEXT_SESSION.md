@@ -43,13 +43,17 @@ The current master design context is authoritative: Crystal Bound is an original
 - `CombatService` has a small request-rate guard in addition to action cooldowns.
 - GALE splash damage goes through `DamageService.ProcessDamage()` rather than bypassing the central damage validator.
 - Guardian shockwave NPC damage now also goes through `DamageService.ProcessDamage()` instead of a direct `Humanoid:TakeDamage()` path.
-- `DamageService` now accepts only Player or server-marked Enemy/Boss models as attackers.
+- Burn damage now goes through `DamageService.ProcessDamage()` for NPC targets instead of bypassing the central damage validator.
+- `DamageService` now accepts only living Player or server-marked living Enemy/Boss models as attackers.
 - `DamageValidators` now rejects unknown `DamageType` values.
 - Central damage types now explicitly include `CrystalAbilitySplash` and `BossShockwave`.
+- `DamageService` returns the actually applied HP delta instead of the requested amount.
+- `DamageService` tracks the last valid attacker in server-only weak state so Guardian rewards do not depend on NPC presentation attributes.
+- `BossService` uses the server-only damage attribution state for Guardian rewards and clears it on defeat.
 - Server-side procedural Combat VFX were removed from `CombatService`; the server no longer creates transient VFX Parts/Tweens for crystal hits.
 - Added a dedicated `CombatFeedback` RemoteEvent for server-confirmed hit presentation.
-- `CombatService` fires `CombatFeedback` only after `DamageService.ProcessDamage()` succeeds and includes the verified target, attacker id, action, crystal id, critical state and applied damage amount.
-- Dodge results with zero applied damage no longer produce confirmed-hit feedback.
+- `CombatService` fires `CombatFeedback` only after `DamageService.ProcessDamage()` succeeds with applied damage and includes the verified target, attacker id, action, crystal id, critical state and applied damage amount.
+- Dodge results with zero applied damage no longer produce confirmed-hit feedback or CRITICAL HIT messaging.
 - `CombatPresentation.client.lua` consumes only the server-confirmed `CombatFeedback` event for damage numbers, hit flashes, impact visuals and crystal-specific ability accents.
 - Confirmed-hit presentation is locally culled beyond 220 studs.
 - NPC-side `LastHitCrystal` / `LastHitCritical` / `LastAttackerUserId` presentation attributes are no longer used by the combat presentation path.
@@ -64,6 +68,8 @@ The current master design context is authoritative: Crystal Bound is an original
 - VFX playback has a small local presentation guard to avoid excessive local burst/sound allocation during input spam.
 - Wired Basic/Q presentation animation + VFX on PC and mobile before the existing `CombatRequest`; these effects are cosmetic only.
 - Registered the animation/VFX controllers, presentation config, asset folders and `CombatFeedback` remote mapping in `default.project.json`.
+- `GetAvailableQuests` already has a dedicated 0.2-second RemoteFunction guard with PlayerRemoving cleanup.
+- `QuestRequest` remains owned by the single Bootstrap handler; do not add a second handler.
 
 ## Animation/VFX status
 The animation architecture is in place, but the actual `Animation` objects and published IDs are still absent. The configured asset names are intentionally ready for future authored assets:
@@ -90,7 +96,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - Actual Roblox animation and sound assets are not available yet.
 
 ## Exact next steps
-1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua`, `BossService.lua` and final Rojo mapping.
+1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua`, `BossService.lua`, `StatusEffectService.lua` and final Rojo mapping.
 2. Validate the combat-presentation and damage-path CI contracts after subsequent changes.
 3. Add the actual authored `Animation`/`Sound` objects under the configured asset names.
 4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire them into the asset folders or IDs.
