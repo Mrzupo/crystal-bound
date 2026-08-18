@@ -1,0 +1,26 @@
+name: Root Legacy Cleanup Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-root-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject obsolete root runtime files
+        shell: python
+        run: |
+          from pathlib import Path
+          forbidden = [
+              "Bootstrap.server.lua",
+              "Constants.lua",
+              "Enums.lua",
+              "Utility.lua",
+          ]
+          present = [name for name in forbidden if Path(name).exists()]
+          if present:
+              raise SystemExit("Obsolete root runtime files present: " + ", ".join(present))
+          print("Root legacy cleanup contract validated.")
