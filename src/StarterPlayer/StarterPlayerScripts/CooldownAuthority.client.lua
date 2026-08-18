@@ -1,5 +1,4 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
@@ -25,6 +24,12 @@ local function refresh()
 	end
 end
 
-RunService:BindToRenderStep("CrystalBoundCooldownAuthority", Enum.RenderPriority.Last.Value, refresh)
 player:GetAttributeChangedSignal("AbilityCooldownEnd"):Connect(refresh)
 player:GetAttributeChangedSignal("EquippedCrystal"):Connect(refresh)
+
+task.spawn(function()
+	while player.Parent do
+		refresh()
+		task.wait(0.05)
+	end
+end)
