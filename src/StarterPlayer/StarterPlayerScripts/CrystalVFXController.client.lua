@@ -5,6 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local animationConfig = require(ReplicatedStorage.Config.CrystalAnimationConfig)
+local assets = ReplicatedStorage:FindFirstChild("Assets")
+local soundAssets = assets and assets:FindFirstChild("Sounds")
 
 local VFX = {}
 
@@ -49,21 +51,31 @@ local function makeBurst(position, crystalId, scale)
 end
 
 local function playSound(root, definition)
-	local soundId = definition and definition.SoundId
-	if type(soundId) ~= "string" or soundId == "" or not root then return end
+	if not root or not definition then return end
 
-	local normalized = soundId:match("^rbxassetid://") and soundId
-		or (soundId:match("^%d+$") and ("rbxassetid://" .. soundId) or nil)
-	if not normalized then return end
+	local sound
+	if soundAssets and type(definition.SoundAssetName) == "string" and definition.SoundAssetName ~= "" then
+		local source = soundAssets:FindFirstChild(definition.SoundAssetName)
+		if source and source:IsA("Sound") then
+			sound = source:Clone()
+		end
+	end
 
-	local sound = Instance.new("Sound")
+	if not sound then
+		local soundId = definition.SoundId
+		local normalized = type(soundId) == "string" and (soundId:match("^rbxassetid://") and soundId
+			or (soundId:match("^%d+$") and ("rbxassetid://" .. soundId) or nil))
+		if not normalized then return end
+		sound = Instance.new("Sound")
+		sound.SoundId = normalized
+	end
+
 	sound.Name = "CrystalBoundAbilitySound"
-	sound.SoundId = normalized
 	sound.Volume = math.clamp(tonumber(definition.SoundVolume) or 0.5, 0, 1)
 	sound.RollOffMaxDistance = 70
 	sound.Parent = root
 	sound:Play()
-	Debris:AddItem(sound, 4)
+	Debris:AddItem(sound, math.max(2, sound.TimeLength > 0 and sound.TimeLength + 0.5 or 4))
 end
 
 function VFX.Play(action, crystalId)
