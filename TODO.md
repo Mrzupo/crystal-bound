@@ -38,6 +38,10 @@
 - [x] Combat-Cooldowns werden erst nach erfolgreicher Schadensvalidierung verbraucht
 - [x] Damage Numbers + Cooldown-Feedback
 - [x] Modulare Combat-Hit-Flash- und Player-Hit-Reaction
+- [x] Serverseitig bestätigtes CombatFeedback für Crystal-Hits
+- [x] Clientseitige Crystal-spezifische Impact-/Ability-Presentation
+- [x] Serverseitige Crystal-VFX aus CombatService entfernt
+- [x] GALE-Splash über zentrale DamageService-Validierung
 - [x] Gegner-Konfiguration und serverseitige einfache KI
 - [x] Hindernis-Steering + Pathfinding-Fallback
 - [x] Pathfinding-Rechenrate pro NPC gedrosselt
@@ -94,10 +98,12 @@
 - [x] GitHub-CI für Cross-File-Gameplay-Referenzen
 - [x] GitHub-CI für Remote-Referenzen
 - [x] GitHub-CI für Balancing-Invarianten
+- [x] GitHub-CI für Combat-Presentation-Grenze und fehlende clientseitige TakeDamage-Pfade
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 - [x] Duplicate Cooldown UI entfernt
 - [x] Clientseitige Animation-Controller-Architektur für Basic/Ability vorbereitet
 - [x] Animation-Konfiguration pro Kristall getrennt von Gameplay-Konfiguration
+- [x] Mobile und PC teilen denselben lokalen Animation/VFX-Presentation-Contract
 
 ## Nächste Systeme
 
