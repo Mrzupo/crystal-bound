@@ -12,20 +12,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Crystal presentation asset names
+      - name: Validate Crystal presentation asset contract
         shell: python
         run: |
           from pathlib import Path
+          import re
 
           text = Path("src/ReplicatedStorage/Config/CrystalAnimationConfig.lua").read_text(encoding="utf-8")
           required = [
-              "EMBER_Basic", "EMBER_FlameBurst",
-              "TIDE_Basic", "TIDE_TidalPulse",
-              "GALE_Basic", "GALE_GaleStrike",
+              ("EMBER", "Basic", "EMBER_Basic"),
+              ("EMBER", "Ability", "EMBER_FlameBurst"),
+              ("TIDE", "Basic", "TIDE_Basic"),
+              ("TIDE", "Ability", "TIDE_TidalPulse"),
+              ("GALE", "Basic", "GALE_Basic"),
+              ("GALE", "Ability", "GALE_GaleStrike"),
           ]
-          problems = [name for name in required if name not in text]
-          if problems:
-              for problem in problems:
-                  print(f" - missing presentation asset name: {problem}")
-              raise SystemExit(1)
+
+          for crystal, action, asset_name in required:
+              block = rf"{crystal}\s*=\s*\{{(.*?)\n\s*\}},\n\s*\w+\s*=|"
+              if asset_name not in text:
+                  raise SystemExit(f"missing presentation asset name: {asset_name}")
+              if f"SoundAssetName = \"{asset_name}\"" not in text:
+                  raise SystemExit(f"missing sound asset name: {asset_name}")
+
+          for field in ("PlaybackSpeed", "FadeTime", "VFXScale", "VFXOffset", "SoundVolume"):
+              if field not in text:
+                  raise SystemExit(f"missing presentation field: {field}")
+
+          numeric_patterns = {
+              "PlaybackSpeed": r"PlaybackSpeed\s*=\s*([0-9.]+)",
+              "FadeTime": r"FadeTime\s*=\s*([0-9.]+)",
+              "VFXScale": r"VFXScale\s*=\s*([0-9.]+)",
+              "VFXOffset": r"VFXOffset\s*=\s*([0-9.]+)",
+              "SoundVolume": r"SoundVolume\s*=\s*([0-9.]+)",
+          }
+          for field, pattern in numeric_patterns.items():
+              values = [float(v) for v in re.findall(pattern, text)]
+              if len(values) != 6:
+                  raise SystemExit(f"expected 6 {field} values, found {len(values)}")
+              if any(v < 0 for v in values):
+                  raise SystemExit(f"negative {field} value found")
+
           print("Crystal presentation asset contract validated.")
