@@ -1,0 +1,31 @@
+name: Crystal Presentation Asset Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-presentation-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Crystal presentation asset names
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Config/CrystalAnimationConfig.lua").read_text(encoding="utf-8")
+          required = [
+              "EMBER_Basic", "EMBER_FlameBurst",
+              "TIDE_Basic", "TIDE_TidalPulse",
+              "GALE_Basic", "GALE_GaleStrike",
+          ]
+          problems = [name for name in required if name not in text]
+          if problems:
+              for problem in problems:
+                  print(f" - missing presentation asset name: {problem}")
+              raise SystemExit(1)
+          print("Crystal presentation asset contract validated.")
