@@ -9,18 +9,27 @@ local function stateFor(humanoid)
 	return active[humanoid]
 end
 
+local function getCurrentBaseWalkSpeed(humanoid, fallback)
+	local character = humanoid and humanoid.Parent
+	local player = character and Players:GetPlayerFromCharacter(character)
+	if player then
+		return 16 + math.max(0, tonumber(player:GetAttribute("WalkSpeedBonus")) or 0)
+	end
+	return fallback or humanoid.WalkSpeed
+end
+
 function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	if not humanoid or humanoid.Health <= 0 then return false end
 	multiplier = math.clamp(tonumber(multiplier) or 0.8, 0.2, 1)
 	duration = math.clamp(tonumber(duration) or 1, 0.1, 10)
 	local state = stateFor(humanoid)
 	local token = {}
-	if not state.BaseWalkSpeed then state.BaseWalkSpeed = humanoid.WalkSpeed end
+	if not state.BaseWalkSpeed then state.BaseWalkSpeed = getCurrentBaseWalkSpeed(humanoid) end
 	state.Slow = token
 	humanoid.WalkSpeed = math.max(6, state.BaseWalkSpeed * multiplier)
 	task.delay(duration, function()
 		if humanoid.Parent and humanoid.Health > 0 and state.Slow == token then
-			humanoid.WalkSpeed = state.BaseWalkSpeed or humanoid.WalkSpeed
+			humanoid.WalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
 			state.Slow = nil
 			state.BaseWalkSpeed = nil
 		end
@@ -57,7 +66,7 @@ function StatusEffectService.Clear(humanoid)
 	if not humanoid then return end
 	local state = active[humanoid]
 	if state and state.Slow and humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
-		humanoid.WalkSpeed = state.BaseWalkSpeed
+		humanoid.WalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
 	end
 	active[humanoid] = nil
 end
