@@ -9,15 +9,27 @@ local function finiteNumber(value)
 	return number
 end
 
+local function normalizedLevel(profile)
+	return math.clamp(math.floor(finiteNumber(profile.Level) or 1), 1, XPConfig.MaxLevel)
+end
+
+local function normalizedXP(profile)
+	return math.clamp(math.floor(finiteNumber(profile.Experience) or 0), 0, 1000000000)
+end
+
 function XPService.AddXP(profile, amount)
+	local level = normalizedLevel(profile)
+	local experience = normalizedXP(profile)
 	amount = math.max(0, finiteNumber(amount) or 0)
 	local levelsGained = 0
-	if profile.Level >= XPConfig.MaxLevel then
+	if level >= XPConfig.MaxLevel then
+		profile.Level = XPConfig.MaxLevel
 		profile.Experience = 0
 		return profile.Level, profile.Experience, levelsGained
 	end
 
-	profile.Experience = math.min(1000000000, profile.Experience + amount)
+	profile.Level = level
+	profile.Experience = math.min(1000000000, experience + amount)
 
 	while profile.Level < XPConfig.MaxLevel do
 		local required = XPConfig.GetRequiredXP(profile.Level)
@@ -30,21 +42,31 @@ function XPService.AddXP(profile, amount)
 	end
 
 	if profile.Level >= XPConfig.MaxLevel then
+		profile.Level = XPConfig.MaxLevel
 		profile.Experience = 0
 	end
 	return profile.Level, profile.Experience, levelsGained
 end
 
 function XPService.GetLevel(profile)
-	return profile.Level
+	local level = normalizedLevel(profile)
+	profile.Level = level
+	if level >= XPConfig.MaxLevel then profile.Experience = 0 end
+	return level
 end
 
 function XPService.GetXP(profile)
-	return profile.Experience
+	local xp = normalizedXP(profile)
+	profile.Experience = xp
+	if normalizedLevel(profile) >= XPConfig.MaxLevel then
+		profile.Experience = 0
+		return 0
+	end
+	return xp
 end
 
 function XPService.GetRequiredXP(profile)
-	return XPConfig.GetRequiredXP(profile.Level)
+	return XPConfig.GetRequiredXP(normalizedLevel(profile))
 end
 
 return XPService
