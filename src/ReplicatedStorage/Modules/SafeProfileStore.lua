@@ -48,7 +48,8 @@ function SafeProfileStore.Load(player)
 
 			local data = type(current) == "table" and current or PlayerData.new()
 			local lock = type(data.SessionLock) == "table" and data.SessionLock or nil
-			local age = lock and (timestamp() - (tonumber(lock.Timestamp) or 0)) or math.huge
+			local lockTimestamp = lock and tonumber(lock.Timestamp) or nil
+			local age = lockTimestamp and math.max(0, timestamp() - lockTimestamp) or math.huge
 			local sameServer = lock and lock.JobId == SESSION_ID
 
 			if lock and not sameServer and age < SESSION_TIMEOUT then
