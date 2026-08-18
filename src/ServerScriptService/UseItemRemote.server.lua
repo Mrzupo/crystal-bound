@@ -8,8 +8,15 @@ local remote = remotes:FindFirstChild("UseItemRequest") or Instance.new("RemoteE
 remote.Name = "UseItemRequest"
 remote.Parent = remotes
 
+local NEXT_USE = {}
+local USE_INTERVAL = 0.2
+
 remote.OnServerEvent:Connect(function(player, itemId)
 	if itemId ~= "HealthPotion" then return end
+	local now = os.clock()
+	if now < (NEXT_USE[player] or 0) then return end
+	NEXT_USE[player] = now + USE_INTERVAL
+
 	local profile = PlayerService.GetProfile(player)
 	if not profile or not InventoryService.HasItem(profile, itemId, 1) then
 		player:SetAttribute("ShopMessage", "You do not have a Health Potion.")
@@ -21,7 +28,10 @@ remote.OnServerEvent:Connect(function(player, itemId)
 		player:SetAttribute("ShopMessage", "You cannot use a Health Potion right now.")
 		return
 	end
-	InventoryService.RemoveItem(profile, itemId, 1)
+	if not InventoryService.RemoveItem(profile, itemId, 1) then
+		player:SetAttribute("ShopMessage", "Unable to consume Health Potion safely.")
+		return
+	end
 	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 60)
 	PlayerService.Sync(player)
 	remotes.InventoryChanged:FireClient(player, profile.Inventory)
@@ -29,5 +39,6 @@ remote.OnServerEvent:Connect(function(player, itemId)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
+	NEXT_USE[player] = nil
 	player:SetAttribute("UsingPotion", false)
 end)
