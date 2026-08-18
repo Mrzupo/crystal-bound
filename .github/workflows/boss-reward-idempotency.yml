@@ -1,0 +1,26 @@
+name: Boss Reward Idempotency
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-boss-reward-order:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate boss reward guard
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/BossService.lua").read_text(encoding="utf-8")
+          guard = 'if model:GetAttribute("Rewarded") then return end'
+          marker = 'model:SetAttribute("Rewarded", true)'
+          xp = 'XPService.AddXP(profile, config.XP)'
+          money = 'EconomyService.AddMoney(profile, config.Money)'
+          if guard not in text or marker not in text:
+              raise SystemExit("Missing boss Rewarded guard")
+          if text.index(marker) > text.index(xp) or text.index(marker) > text.index(money):
+              raise SystemExit("Boss Rewarded flag is set after reward mutation")
+          print("Boss reward idempotency validated.")
