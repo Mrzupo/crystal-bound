@@ -1,0 +1,29 @@
+name: Movement Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-movement-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate centralized movement speed config
+        shell: python
+        run: |
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
+          for path in [
+              "src/ServerScriptService/Services/PlayerService.lua",
+              "src/ServerScriptService/Services/StatusEffectService.lua",
+              "src/ServerScriptService/StatusSpeedGuardV2.server.lua",
+          ]:
+              text = Path(path).read_text(encoding="utf-8")
+              if "MovementConfig" not in text:
+                  raise SystemExit(f"{path} must consume shared MovementConfig")
+          for marker in ("BaseWalkSpeed =", "MinWalkSpeed =", "MinSlowMultiplier =", "MaxSlowMultiplier ="):
+              if marker not in config:
+                  raise SystemExit(f"MovementConfig missing {marker}")
+          print("MovementConfig contract validated.")
