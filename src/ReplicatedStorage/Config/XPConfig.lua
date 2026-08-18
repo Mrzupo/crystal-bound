@@ -1,5 +1,6 @@
 local XPConfig = {
 	MaxLevel = 100,
+	MaxExperience = 1000000000,
 	BaseXP = 100,
 	Growth = 1.25,
 }
