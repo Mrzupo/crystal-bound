@@ -1,0 +1,23 @@
+name: Combat Reward Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate no implicit loot for non-dropping enemies
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          enemy = Path('src/ReplicatedStorage/Config/EnemyConfig.lua').read_text(encoding='utf-8')
+          combat = Path('src/ServerScriptService/Services/CombatService.lua').read_text(encoding='utf-8')
+          if 'TrainingDummy = ' not in enemy or 'Drop = nil' not in enemy:
+              raise SystemExit('TrainingDummy must remain explicitly non-dropping')
+          if 'if not itemId and not enemyConfig then' not in combat:
+              raise SystemExit('CombatService must not assign fallback loot to configured non-dropping enemies')
+          print('Combat reward contract validated.')
+          PY
