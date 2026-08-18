@@ -1,7 +1,10 @@
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
+local animationConfig = require(ReplicatedStorage.Config.CrystalAnimationConfig)
 
 local VFX = {}
 
@@ -30,24 +33,47 @@ local function makeBurst(position, crystalId, scale)
 	part.Size = Vector3.new(scale, scale, scale)
 	part.CFrame = CFrame.new(position)
 	part.Parent = workspace
-	Debris:AddItem(part, 0.18)
+	Debris:AddItem(part, 0.22)
 
-	local tweenService = game:GetService("TweenService")
-	tweenService:Create(part, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+	TweenService:Create(part, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Size = Vector3.new(scale * 3.2, scale * 3.2, scale * 3.2),
 		Transparency = 1,
 	}):Play()
 end
 
-function VFX.Play(action, crystalId)
-	if action ~= "Basic" and action ~= "Ability" then return end
-	local root = getRoot()
+local function playSound(root, definition)
+	local soundId = definition and definition.SoundId
+	if type(soundId) ~= "string" or soundId == "" then return end
 	if not root then return end
 
+	local sound = Instance.new("Sound")
+	sound.Name = "CrystalBoundAbilitySound"
+	sound.SoundId = soundId:match("^rbxassetid://") and soundId or (soundId:match("^%d+$") and ("rbxassetid://" .. soundId) or "")
+	if sound.SoundId == "" then
+		sound:Destroy()
+		return
+	end
+	sound.Volume = math.clamp(tonumber(definition.SoundVolume) or 0.5, 0, 1)
+	sound.RollOffMaxDistance = 70
+	sound.Parent = root
+	sound:Play()
+	Debris:AddItem(sound, 4)
+end
+
+function VFX.Play(action, crystalId)
+	if action ~= "Basic" and action ~= "Ability" then return false end
+	local root = getRoot()
+	if not root then return false end
+
+	local crystal = animationConfig[crystalId] or animationConfig.EMBER
+	local definition = crystal and crystal[action]
 	local forward = root.CFrame.LookVector
-	local offset = action == "Ability" and 4.5 or 3
-	local scale = action == "Ability" and 0.7 or 0.38
+	local offset = tonumber(definition and definition.VFXOffset) or (action == "Ability" and 4.5 or 3)
+	local scale = tonumber(definition and definition.VFXScale) or (action == "Ability" and 0.7 or 0.38)
+
 	makeBurst(root.Position + forward * offset + Vector3.new(0, 0.8, 0), crystalId, scale)
+	playSound(root, definition)
+	return true
 end
 
 return VFX
