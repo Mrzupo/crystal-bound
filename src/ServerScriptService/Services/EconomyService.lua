@@ -13,8 +13,11 @@ end
 function EconomyService.AddMoney(profile, amount)
 	amount = finiteNumber(amount) or 0
 	amount = math.max(0, amount)
-	profile.Money = math.clamp(profile.Money + amount, Config.MinMoney, Config.MaxMoney)
-	return profile.Money
+	local before = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
+	profile.Money = before
+	local nextMoney = math.clamp(before + amount, Config.MinMoney, Config.MaxMoney)
+	profile.Money = nextMoney
+	return nextMoney, nextMoney - before
 end
 
 function EconomyService.RemoveMoney(profile, amount)
@@ -47,9 +50,9 @@ function EconomyService.SellItem(profile, itemId, amount, InventoryService)
 	if price <= 0 or not InventoryService.HasItem(profile, itemId, amount) then
 		return false, 0
 	end
-	if not InventoryService.RemoveItem(profile, itemId, amount) then return false, 0 end
-	local earned = price * amount
-	EconomyService.AddMoney(profile, earned)
+	if InventoryService.RemoveItem(profile, itemId, amount) ~= true then return false, 0 end
+	local requestedEarned = price * amount
+	local _, earned = EconomyService.AddMoney(profile, requestedEarned)
 	return true, earned
 end
 
