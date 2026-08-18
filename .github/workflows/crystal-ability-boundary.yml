@@ -1,0 +1,42 @@
+name: Crystal Bound Ability Boundary Audit
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-crystal-ability-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate server ability service boundary
+        shell: python
+        run: |
+          from pathlib import Path
+
+          combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          ability = Path("src/ServerScriptService/Services/CrystalAbilityService.lua")
+          rojo = Path("default.project.json").read_text(encoding="utf-8")
+
+          problems = []
+          if not ability.is_file():
+              problems.append("CrystalAbilityService.lua is missing")
+          if "CrystalAbilityService" not in combat:
+              problems.append("CombatService must depend on CrystalAbilityService")
+          if "function CrystalAbilityService.Execute" not in ability.read_text(encoding="utf-8"):
+              problems.append("CrystalAbilityService.Execute is missing")
+          for marker in ("CrystalAbilityService":):
+              if marker not in rojo:
+                  problems.append("CrystalAbilityService is missing from default.project.json")
+          if "if crystalId == \"TIDE\"" in combat or "elseif crystalId == \"GALE\"" in combat:
+              problems.append("Crystal-specific special branches must live in CrystalAbilityService")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("Crystal ability service boundary validated.")
