@@ -40,6 +40,7 @@
 - Mobile Touch Controls mit echter Kamera-/Touch-Zielauswahl.
 - Mobile Dodge-, Inventory-, Quest-, Shop- und Achievement-Steuerung.
 - GitHub-CI zur JSON-, Rojo-Dateipfad-, Remote-, Gameplay-, Profil-Migrations-, `TakeDamage()`- und Balancing-Validierung.
+- GitHub-CI zur Prüfung der Damage-Path-Grenzen für Boss, Combat, DamageService, StatusEffects und Dodge.
 - CI-Regel zur eindeutigen `OnServerInvoke`-Besitzerschaft von Player-/Quest-Data-RemoteFunctions.
 - Dedicated `CombatFeedback` RemoteEvent für serverbestätigte Crystal-Hit-Presentation.
 - Clientseitige Crystal-Animation-, VFX- und Combat-Presentation-Layer für PC und Mobile.
@@ -50,6 +51,8 @@
 - `CrystalConfig` enthält Basic Attacks, Abilities und Passives.
 - `CrystalUpgradeConfig` steuert Mastery-Level, XP-Kosten und Ressourcen-Kosten.
 - `CrystalAnimationConfig` enthält ausschließlich Präsentationswerte für Animation/VFX/Sound und keine Gameplay-Authority.
+- `DamageTypes` kennt jetzt explizit `CrystalAbilitySplash` und `BossShockwave`.
+- `DamageValidators` lehnen unbekannte DamageType-Werte ab.
 - `EnemyConfig` enthält Balancing, Spezialwerte und Drop-Chancen für alle aktuellen Gegnertypen.
 - `NPCService` verwaltet Gegnererstellung, eindeutige Namen, Visual Styles, Health Bars, Leash-Verhalten, Pathfinding-Fallback und Spezialangriffe.
 - `NPCService` leitet normale und spezielle Spieler-Schäden jetzt über `DodgeService` und begrenzt Spezialangriffe auf sinnvolle Nahkampfreichweiten.
@@ -57,8 +60,10 @@
 - `CombatService` erzeugt keine serverseitigen kosmetischen Crystal-VFX mehr; bestätigte Treffer werden über `CombatFeedback` an Clients gemeldet.
 - `CombatService` leitet GALE-Splash-Schaden ebenfalls über `DamageService.ProcessDamage()`.
 - `CombatService` sendet für bestätigte Primär- und Splash-Hits den angewendeten Schaden, Crystal, Action und Critical-State als Presentation-Daten an Clients; diese Daten verändern keine Gameplay-Entscheidungen clientseitig.
-- `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu, respektiert Dodge-Invulnerability und validiert Range/Amount finite-sicher.
-- `DamageValidators` weist nicht-endliche Schadenswerte explizit ab.
+- `CombatService` meldet keine Dodges als bestätigte Treffer, wenn `DamageService` null Amount zurückgibt.
+- `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu, validiert außerdem den Angreifer als Player oder servermarkiertes Enemy/Boss-Modell und validiert Range/Amount finite-sicher.
+- `DamageValidators` weist nicht-endliche Schadenswerte und unbekannte DamageType-Werte explizit ab.
+- `BossService` routet Guardian-Shockwave-Schaden gegen NPCs über `DamageService` statt direkt `Humanoid:TakeDamage()` aufzurufen.
 - `DodgeService` schützt das komplette Character-Schadensfenster zentral über ein temporäres ForceField, validiert Bewegungs-/Schadenswerte finite-sicher und setzt Dodge-State bei Respawn zurück.
 - `StatusEffectService` verhindert Slow/Burn während eines aktiven Dodge-Fensters und erhält aktives Slow bei Player-Syncs.
 - `StatusSpeedGuardV2` hält aktive Slow-Effekte nach Crystal-/Mastery-Syncs stabil.
@@ -78,6 +83,7 @@
 - `CrystalAnimationController.client.lua` behandelt Character-Generationswechsel, stale Tracks und lokale Playback-Begrenzung.
 - `CrystalVFXController.client.lua` besitzt lokale Presentation-Gates und optionale Sound-Hooks.
 - `CombatPresentation.client.lua` wartet nicht mehr auf mutable NPC-Hit-Attributes, sondern verarbeitet ausschließlich das serverbestätigte `CombatFeedback`-Event.
+- `CombatPresentation.client.lua` verwirft lokal Präsentations-Spam oberhalb eines kleinen Event-Budgets und ignoriert Effekte außerhalb von 220 Studs.
 - `TODO.md` wurde an den tatsächlichen Entwicklungsstand angepasst.
 
 ### Notes
