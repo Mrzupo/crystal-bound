@@ -47,8 +47,12 @@ function CrystalMastery.AddXP(profile, crystalId, amount)
 		mastery.XP = 0
 		return mastery.Level, mastery.XP, 0
 	end
+	local safeAmount = finiteNumber(amount)
+	if safeAmount == nil or safeAmount < 0 or safeAmount % 1 ~= 0 then
+		return mastery.Level, mastery.XP, 0
+	end
 	local maxExperience = math.max(0, math.floor(finiteNumber(Config.MaxExperience) or 100000000))
-	mastery.XP = math.min(maxExperience, mastery.XP + math.max(0, math.floor(finiteNumber(amount) or 0)))
+	mastery.XP = math.min(maxExperience, mastery.XP + safeAmount)
 	local levels = 0
 	while mastery.Level < Config.MaxLevel do
 		local required = CrystalMastery.GetRequiredXP(mastery.Level)
@@ -82,7 +86,7 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	local multiplier = math.max(1, mastery.Level)
 	for itemId, amount in pairs(base) do
 		local safeAmount = finiteNumber(amount)
-		if type(itemId) ~= "string" or not safeAmount or safeAmount <= 0 then
+		if type(itemId) ~= "string" or not safeAmount or safeAmount <= 0 or safeAmount % 1 ~= 0 then
 			return nil
 		end
 		cost[itemId] = math.floor(safeAmount) * multiplier
