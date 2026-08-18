@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DodgeService = require(script.Parent.DodgeService)
+local DamageService = require(script.Parent.DamageService)
 
 local StatusEffectService = {}
 local active = setmetatable({}, { __mode = "k" })
@@ -62,7 +64,13 @@ function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval)
 			if player then
 				DodgeService.ApplyDamage(player, humanoid, damagePerTick)
 			else
-				humanoid:TakeDamage(damagePerTick)
+				DamageService.ProcessDamage({
+					Attacker = character,
+					Target = character,
+					Amount = damagePerTick,
+					Range = 1000,
+					DamageType = "Environmental",
+				})
 			end
 		end
 		if state.Burn == token then state.Burn = nil end
