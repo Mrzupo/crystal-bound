@@ -102,16 +102,4 @@ playerGui.ChildAdded:Connect(function(child)
 	end
 end)
 
-task.spawn(function()
-	while player.Parent do
-		task.wait(1)
-		if player.Parent then
-			local label = getQuestLabel()
-			if label and (label.Text == "" or label.Text == "Quest: ") then
-				if cachedData then present(cachedData) else fetchNow(false) end
-			end
-		end
-	end
-end)
-
 fetchNow(true)
