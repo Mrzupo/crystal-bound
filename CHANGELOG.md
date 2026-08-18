@@ -39,7 +39,7 @@
 - Shop-GUI mit Verkauf und Kaufangebot.
 - Mobile Touch Controls mit echter Kamera-/Touch-Zielauswahl.
 - Mobile Dodge-, Inventory-, Quest-, Shop- und Achievement-Steuerung.
-- GitHub-CI zur JSON-, Rojo-Dateipfad-, Remote-, Gameplay- und Balancing-Validierung.
+- GitHub-CI zur JSON-, Rojo-Dateipfad-, Remote-, Gameplay-, Profil-Migrations- und Balancing-Validierung.
 - Serverseitiger Rate-Limiter für PlayerData-/QuestData-RemoteFunctions.
 
 ### Changed
@@ -60,7 +60,7 @@
 - `AIPathService` nutzt einen Weak-Key-Cache, gedrosselte Pfadberechnung und verarbeitet Jump-Waypoints auch beim Erreichen gespeicherter Waypoints.
 - `PlayerService` verwendet den sicheren Session-locked Profile Store, schützt Save/Remove vor Race Conditions und synchronisiert Daily-Bounty-/Progressionsattribute.
 - `SafeProfileStore` nutzt Profil-Snapshots beim Save und verweigert beschädigte DataStore-Werte statt sie mit frischen Daten zu überschreiben.
-- `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand, Session-Lock, Daily-Bounty, Achievements und Titles während der Migration.
+- `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand, Session-Lock, Daily-Bounty, Achievements, Titles und `UnlockedIslands` während der Migration.
 - `CraftingRemote` und `ShopRemote` verlangen die nötige Nähe zum Material Trader und räumen Request-State beim Player-Leave auf.
 - `EconomyService`, `InventoryService`, `XPService` und `CrystalMastery` filtern nicht-endliche Eingabewerte und schützen Limits serverseitig.
 - `StatusMessages` erlaubt wiederholt auftretende identische Meldungen nach Ablauf des aktuellen Anzeigefensters.
