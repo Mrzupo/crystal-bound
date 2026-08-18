@@ -1,0 +1,32 @@
+name: World Config Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-world-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate world and portal gates
+        shell: python
+        run: |
+          from pathlib import Path
+          world = Path("src/ReplicatedStorage/Config/WorldConfig.lua").read_text(encoding="utf-8")
+          boot = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          markers = [
+              ("TIDE world level", "TIDE = { Name = \"Tide Island\", Level = 4", world),
+              ("WIND world level", "WIND = { Name = \"Wind Island\", Level = 10", world),
+              ("ANCIENT world level", "ANCIENT = { Name = \"Ancient Ruins\", Level = 15", world),
+              ("TIDE portal gate", "\"TidePortal\"", boot),
+              ("WIND portal gate", "\"WindPortal\"", boot),
+              ("ANCIENT portal gate", "\"AncientPortal\"", boot),
+          ]
+          failures = [name for name, marker, text in markers if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("World config contract validated.")
