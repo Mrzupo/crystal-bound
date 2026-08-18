@@ -1,0 +1,29 @@
+name: Player Health Connection Lifecycle
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate player humanoid connection lifecycle
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          required = [
+              "HumanoidConnections",
+              "cleanupHumanoidConnections",
+              "PlayerService.HumanoidConnections[player] = connections",
+              "PlayerService.HumanoidConnections[player] = nil",
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise SystemExit(f"PlayerService missing lifecycle marker: {marker}")
+          if "HumanoidConnections = {}" in text and "Weak" not in text:
+              print("Player health connections are explicitly managed by cleanup, not weak-keyed; this is allowed.")
+          print("Player humanoid connection lifecycle validated.")
