@@ -5,6 +5,36 @@ local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local watched = {}
 
+local function createDamageNumber(model, amount, critical)
+	local root = model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
+	if not root then return end
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "DamageNumber"
+	gui.Size = UDim2.fromOffset(120, 42)
+	gui.StudsOffset = Vector3.new(math.random(-10, 10) / 10, 3.5, 0)
+	gui.AlwaysOnTop = true
+	gui.Adornee = root
+	gui.Parent = root
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = (critical and "CRIT " or "-") .. tostring(math.max(1, math.floor(amount + 0.5)))
+	label.Font = Enum.Font.GothamBlack
+	label.TextSize = critical and 22 or 18
+	label.TextStrokeTransparency = 0.35
+	label.Parent = gui
+
+	local start = gui.StudsOffset
+	TweenService:Create(gui, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		StudsOffset = start + Vector3.new(0, 2.2, 0),
+	}):Play()
+	TweenService:Create(label, TweenInfo.new(0.45), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	task.delay(0.48, function()
+		if gui.Parent then gui:Destroy() end
+	end)
+end
+
 local function flashTarget(model, critical)
 	if not model or not model.Parent then return end
 	local old = model:FindFirstChild("CrystalBoundHitFlash")
@@ -56,7 +86,10 @@ local function watchHumanoid(humanoid)
 		if newHealth < lastHealth then
 			local model = humanoid.Parent
 			if model and model:GetAttribute("Enemy") == true then
-				flashTarget(model, model:GetAttribute("BossId") ~= nil)
+				local amount = lastHealth - newHealth
+				local critical = model:GetAttribute("LastHitCritical") == true
+				createDamageNumber(model, amount, critical)
+				flashTarget(model, model:GetAttribute("BossId") ~= nil or critical)
 			elseif model == player.Character then
 				shakePlayer()
 			end
@@ -91,7 +124,7 @@ player.CharacterAdded:Connect(function(character)
 end)
 
 scan()
-	task.spawn(function()
+task.spawn(function()
 	while true do
 		scan()
 		task.wait(0.4)
