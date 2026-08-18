@@ -85,4 +85,15 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	return cost
 end
 
+function CrystalMastery.Upgrade(profile, crystalId)
+	crystalId = normalizeCrystalId(crystalId)
+	local mastery = ensure(profile, crystalId)
+	if mastery.Level >= Config.MaxLevel then
+		return false, mastery.Level
+	end
+	mastery.Level += 1
+	mastery.XP = 0
+	return true, mastery.Level
+end
+
 return CrystalMastery
