@@ -121,7 +121,7 @@ function PlayerData.Reconcile(data)
 	merge(data, defaults)
 
 	data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)
-	data.Experience = clampInt(data.Experience, 0, 1000000000, defaults.Experience)
+	data.Experience = clampInt(data.Experience, 0, XPConfig.MaxExperience, defaults.Experience)
 	if data.Level >= XPConfig.MaxLevel then data.Experience = 0 end
 	data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)
 
