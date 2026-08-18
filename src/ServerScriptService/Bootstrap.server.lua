@@ -41,6 +41,10 @@ remotes.CombatRequest.OnServerEvent:Connect(function(player, action, target) Com
 remotes.QuestRequest.OnServerEvent:Connect(function(player, action, questId)
 	local profile = PlayerService.GetProfile(player)
 	if profile and action == "Start" and type(questId) == "string" then
+		if not isNearNPC(player, "CrystalKeeper") then
+			player:SetAttribute("QuestMessage", "Talk to the Crystal Keeper to start a quest.")
+			return
+		end
 		local started, reason = QuestSystem.CanStart(profile, questId)
 		if started then QuestService.Start(player, profile, questId) else player:SetAttribute("QuestMessage", reason or "Quest cannot be started.") end
 	end
@@ -101,12 +105,8 @@ local function spawnSimpleNPC(npcs,name,position,objectText,actionText,callback)
 	local head=Instance.new("Part"); head.Name="Head"; head.Shape=Enum.PartType.Ball; head.Size=Vector3.new(2,2,2); head.Position=position+Vector3.new(0,3,0); head.Anchored=true; head.Parent=model
 	model.PrimaryPart=body; local prompt=Instance.new("ProximityPrompt"); prompt.ActionText=actionText; prompt.ObjectText=objectText; prompt.MaxActivationDistance=12; prompt.Parent=body; prompt.Triggered:Connect(callback)
 end
-local function spawnQuestGiver(npcs)
-	spawnSimpleNPC(npcs,"CrystalKeeper",Vector3.new(12,3,-2),"Crystal Keeper","Talk",function() end)
-end
-local function spawnTrader(npcs)
-	spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end)
-end
+local function spawnQuestGiver(npcs) spawnSimpleNPC(npcs,"CrystalKeeper",Vector3.new(12,3,-2),"Crystal Keeper","Talk",function() end) end
+local function spawnTrader(npcs) spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end) end
 local function spawnEnemy(npcs,typeId,position,uniqueName) if npcs:FindFirstChild(uniqueName) then return end; NPCService.CreateEnemy(typeId,position,npcs,function(_,config) task.delay(config.Respawn,function() if npcs.Parent then spawnEnemy(npcs,typeId,position,uniqueName) end end) end,uniqueName) end
 local npcs,islands,spawnFolder=ensureWorldFolders(); local starterIsland=createIsland(islands,"StarterIsland",Vector3.new(0,0,0),Vector3.new(120,2,120)); local tideIsland=createIsland(islands,"TideIsland",Vector3.new(170,0,0),Vector3.new(100,2,100)); local windIsland=createIsland(islands,"WindIsland",Vector3.new(330,0,0),Vector3.new(110,2,110)); local ancientIsland=createIsland(islands,"AncientRuins",Vector3.new(500,0,0),Vector3.new(130,2,130))
 createSpawn(spawnFolder); createPortal(starterIsland,"TidePortal",Vector3.new(52,5,0),Vector3.new(120,4,0),4); createPortal(tideIsland,"StarterPortal",Vector3.new(118,5,0),Vector3.new(48,4,0),1); createPortal(tideIsland,"WindPortal",Vector3.new(218,5,0),Vector3.new(280,4,0),10); createPortal(windIsland,"TideReturnPortal",Vector3.new(278,5,0),Vector3.new(210,4,0),1); createPortal(windIsland,"AncientPortal",Vector3.new(390,5,0),Vector3.new(440,4,0),15); createPortal(ancientIsland,"WindReturnPortal",Vector3.new(440,5,50),Vector3.new(380,4,0),1)
