@@ -1,6 +1,12 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 
 local ENFORCEMENT_INTERVAL = 0.25
+local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
+local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
+local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier) or 0.2, 0.01, 1)
+local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
 local connections = setmetatable({}, { __mode = "k" })
 
 local function refresh(player)
@@ -10,8 +16,8 @@ local function refresh(player)
 	if not humanoid or humanoid.Health <= 0 then return end
 	local slow = tonumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"))
 	if not slow or slow <= 0 then return end
-	local base = 16 + math.max(0, tonumber(player:GetAttribute("WalkSpeedBonus")) or 0)
-	humanoid.WalkSpeed = math.max(6, base * math.clamp(slow, 0.2, 1))
+	local base = BASE_WALK_SPEED + math.max(0, tonumber(player:GetAttribute("WalkSpeedBonus")) or 0)
+	humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, base * math.clamp(slow, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
 end
 
 local function cleanup(player)
