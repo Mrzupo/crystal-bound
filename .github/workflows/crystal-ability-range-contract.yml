@@ -1,0 +1,26 @@
+name: Crystal Ability Range Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate configured Gale splash range
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          service = Path('src/ServerScriptService/Services/CrystalAbilityService.lua').read_text(encoding='utf-8')
+          config = Path('src/ReplicatedStorage/Config/CrystalConfig.lua').read_text(encoding='utf-8')
+          if 'GetEnemyModels(centerRoot.Position, safeRange, targetModel)' not in service:
+              raise SystemExit('Gale ability must use the configured safeRange for splash hit detection')
+          if 'GALE = { Damage = 24, Range = 24' not in config:
+              raise SystemExit('CrystalConfig must define Gale ability Range')
+          if 'GetEnemyModels(centerRoot.Position, 12, targetModel)' in service:
+              raise SystemExit('Gale ability must not hardcode a 12-stud splash radius')
+          print('Crystal ability range contract validated.')
+          PY
