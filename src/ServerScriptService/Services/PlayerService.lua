@@ -9,6 +9,7 @@ local DailyBountyService = require(script.Parent.DailyBountyService)
 
 local PlayerService = { Profiles = {}, CharacterConnections = {}, Operations = {} }
 local OPERATION_TIMEOUT = 10
+local DEFAULT_CRYSTAL = "EMBER"
 
 local function setupLeaderstats(player, profile)
 	local leaderstats = player:FindFirstChild("leaderstats") or Instance.new("Folder")
@@ -123,7 +124,10 @@ function PlayerService.Sync(player)
 		local level = leaderstats:FindFirstChild("Level"); local money = leaderstats:FindFirstChild("Money")
 		if level then level.Value = profile.Level end; if money then money.Value = profile.Money end
 	end
-	local crystalId = profile.Crystals.Equipped
+	local crystalId = CrystalSystem.GetEquipped(profile) or DEFAULT_CRYSTAL
+	if profile.Crystals.Equipped ~= crystalId then
+		profile.Crystals.Equipped = crystalId
+	end
 	local passive = CrystalSystem.GetPassive(crystalId)
 	local mastery = CrystalMastery.Get(profile, crystalId)
 	local masteryBonuses = CrystalMastery.GetBonuses(profile, crystalId)
