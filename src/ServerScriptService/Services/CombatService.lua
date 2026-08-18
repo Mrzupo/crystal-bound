@@ -21,6 +21,12 @@ local nextRequest = setmetatable({}, { __mode = "k" })
 local REQUEST_INTERVAL = 0.03
 local VALID_ACTIONS = { Basic = true, Ability = true }
 
+local function finiteNumber(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
+
 local function getCharacter(instance)
 	if instance:IsA("Player") then return instance.Character end
 	if instance:IsA("Model") then return instance end
@@ -32,10 +38,8 @@ local function isPlayerTarget(target)
 end
 
 local function fireCombatFeedback(targetModel, attacker, action, crystalId, critical, amount)
-	local numericAmount = tonumber(amount)
-	if not numericAmount or numericAmount <= 0 or numericAmount ~= numericAmount or numericAmount == math.huge or numericAmount == -math.huge then
-		return
-	end
+	local numericAmount = finiteNumber(amount)
+	if not numericAmount or numericAmount <= 0 then return end
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	local feedback = remotes and remotes:FindFirstChild("CombatFeedback")
 	if not feedback or not feedback:IsA("RemoteEvent") then return end
@@ -73,9 +77,7 @@ local function advanceAbilityQuest(player, profile)
 	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return end
 	local complete, progress, goal = QuestSystem.Advance(profile, "CRYSTAL_POWER", 1)
 	player:SetAttribute("QuestProgress", string.format("Crystal Power: %d/%d", progress, goal))
-	if complete then
-		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
-	end
+	if complete then completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
 end
 
 local function giveLoot(player, profile, targetModel, crystalId)
@@ -84,7 +86,7 @@ local function giveLoot(player, profile, targetModel, crystalId)
 	local itemId = enemyConfig and enemyConfig.Drop
 	if not itemId then itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId] end
 	if not itemId then return false end
-	local chance = math.clamp(tonumber(enemyConfig and enemyConfig.DropChance) or 1, 0, 1)
+	local chance = math.clamp(finiteNumber(enemyConfig and enemyConfig.DropChance) or 1, 0, 1)
 	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
 	local added = InventoryService.AddItem(profile, itemId, 1)
 	if added > 0 then
@@ -105,14 +107,14 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
 	EconomyService.AddMoney(profile, moneyGain)
 	giveLoot(player, profile, targetModel, crystalId)
-	profile.Stats.EnemiesDefeated = (profile.Stats.EnemiesDefeated or 0) + 1
+	profile.Stats.EnemiesDefeated = (finiteNumber(profile.Stats.EnemiesDefeated) or 0) + 1
 	if enemyType == "AncientGolem" then
-		profile.Stats.AncientGolemsDefeated = (profile.Stats.AncientGolemsDefeated or 0) + 1
+		profile.Stats.AncientGolemsDefeated = (finiteNumber(profile.Stats.AncientGolemsDefeated) or 0) + 1
 	elseif enemyType == "CrystalBat" then
-		profile.Stats.CrystalBatsDefeated = (profile.Stats.CrystalBatsDefeated or 0) + 1
+		profile.Stats.CrystalBatsDefeated = (finiteNumber(profile.Stats.CrystalBatsDefeated) or 0) + 1
 	end
 	DailyBountyService.AddProgress(player, profile, enemyType, EconomyService, PlayerService)
-	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
+	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor((finiteNumber(xpGain) or 0) * 0.5)))
 	advanceEnemyQuest(player, profile, enemyType)
 	if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
 	if levelsGained > 0 and #QuestService.GetActive(profile) == 0 then QuestService.TryStartNext(player, profile) end
@@ -145,11 +147,12 @@ function CombatService.HandleRequest(player, action, target)
 
 	local passive = CrystalSystem.GetPassive(crystalId)
 	local mastery = CrystalMastery.GetBonuses(profile, crystalId)
-	local multiplier = math.max(0.1, tonumber(passive.DamageMultiplier) or 1) * mastery.DamageMultiplier
+	local multiplier = math.max(0.1, finiteNumber(passive.DamageMultiplier) or 1) * mastery.DamageMultiplier
 	if action == "Ability" then multiplier *= mastery.AbilityDamageMultiplier end
 	local critical, criticalMultiplier = CombatModifierService.RollCritical(profile, crystalId)
 	multiplier *= criticalMultiplier
-	local damage = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier
+	local baseStatsDamage = math.max(0, finiteNumber(profile.Stats and profile.Stats.Damage) or 0)
+	local damage = (config.Damage + math.max(0, baseStatsDamage - 10)) * multiplier
 
 	local result = DamageService.ProcessDamage({
 		Attacker = player,
