@@ -56,9 +56,18 @@ function EconomyService.SellItem(profile, itemId, amount, InventoryService)
 	if price <= 0 or not InventoryService.HasItem(profile, itemId, amount) then
 		return false, 0
 	end
-	if InventoryService.RemoveItem(profile, itemId, amount) ~= true then return false, 0 end
+
+	if not InventoryService.RemoveItem(profile, itemId, amount) then
+		return false, 0
+	end
+
 	local requestedEarned = price * amount
 	local _, earned = EconomyService.AddMoney(profile, requestedEarned)
+	if earned < requestedEarned then
+		InventoryService.AddItem(profile, itemId, amount)
+		return false, 0
+	end
+
 	return true, earned
 end
 
