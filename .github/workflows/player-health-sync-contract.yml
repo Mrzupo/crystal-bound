@@ -1,0 +1,28 @@
+name: Player Health Sync Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server-owned health attributes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
+          required = [
+              'player:SetAttribute("Health"',
+              'player:SetAttribute("MaxHealth"',
+              'humanoid.HealthChanged:Connect(updateHealth)',
+              'humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(updateHealth)',
+              'humanoid.Died:Connect(function()',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing player health sync contract: ' + ', '.join(missing))
+          print('Player health sync contract validated.')
+          PY
