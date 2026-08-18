@@ -1,0 +1,35 @@
+name: Client Presentation Authority Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-client-presentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate CombatPresentation is cosmetic only
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/StarterPlayer/StarterPlayerScripts/CombatPresentation.client.lua")
+          text = path.read_text(encoding="utf-8")
+          forbidden = [
+              ":TakeDamage(",
+              "InventoryService",
+              "EconomyService",
+              "XPService",
+              "PlayerService.GetProfile",
+              "FireServer(\"Combat",
+          ]
+          problems = [needle for needle in forbidden if needle in text]
+          if problems:
+              for problem in problems:
+                  print(f" - forbidden gameplay authority reference: {problem}")
+              raise SystemExit(1)
+          print("CombatPresentation authority boundary validated.")
