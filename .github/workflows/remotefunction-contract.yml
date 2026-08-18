@@ -1,0 +1,42 @@
+name: RemoteFunction Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate RemoteFunction ownership and limits
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = list(Path('src/ServerScriptService').rglob('*.server.lua'))
+          text = '\n'.join(p.read_text(encoding='utf-8') for p in files)
+          required = [
+              'NPCDialogRequest',
+              'GetAvailableQuests',
+              'GetPlayerData',
+              'GetQuestData',
+          ]
+          for remote in required:
+              if remote not in text:
+                  raise SystemExit(f'missing RemoteFunction reference: {remote}')
+          handlers = {
+              'NPCDialogRequest': 'NPCDialogRemote.server.lua',
+              'GetAvailableQuests': 'QuestAvailability.server.lua',
+              'GetPlayerData': 'Bootstrap.server.lua',
+              'GetQuestData': 'Bootstrap.server.lua',
+          }
+          for remote, owner in handlers.items():
+              body = Path('src/ServerScriptService').joinpath(owner).read_text(encoding='utf-8')
+              if 'OnServerInvoke' not in body:
+                  raise SystemExit(f'{owner}: missing OnServerInvoke')
+          assert 'REQUEST_INTERVAL = 0.2' in Path('src/ServerScriptService/NPCDialogRemote.server.lua').read_text(encoding='utf-8')
+          assert 'REQUEST_INTERVAL = 0.2' in Path('src/ServerScriptService/QuestAvailability.server.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          assert 'GET_PLAYER_DATA_INTERVAL' in bootstrap
+          assert 'GET_QUEST_DATA_INTERVAL' in bootstrap
+          PY
