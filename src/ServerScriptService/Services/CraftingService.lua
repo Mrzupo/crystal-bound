@@ -1,15 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
+local CraftingConfig = require(ReplicatedStorage.Config.CraftingConfig)
 
 local CraftingService = {}
-
-local Recipes = {
-	HealthPotion = {
-		Output = "HealthPotion",
-		Amount = 1,
-		Inputs = { EmberShard = 2, TidePearl = 1 },
-	},
-}
+local Recipes = CraftingConfig.Recipes
 
 local function finiteNumber(value)
 	local number = tonumber(value)
@@ -32,10 +26,14 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 
 	local currentRaw = profile.Inventory and profile.Inventory[recipe.Output] or 0
 	local currentOutput = math.max(0, math.floor(finiteNumber(currentRaw) or 0))
-	local outputAmount = recipe.Amount * amount
+	local outputAmount = math.max(1, math.floor(finiteNumber(recipe.Amount) or 1)) * amount
 	local maxStack = InventoryConfig.GetMaxStackSize(recipe.Output)
 	if currentOutput + outputAmount > maxStack then
 		return false, string.format("Not enough inventory space for %dx %s.", outputAmount, recipe.Output)
+	end
+
+	if type(recipe.Inputs) ~= "table" or next(recipe.Inputs) == nil then
+		return false, "Crafting recipe has no valid inputs."
 	end
 
 	local consumed = {}
