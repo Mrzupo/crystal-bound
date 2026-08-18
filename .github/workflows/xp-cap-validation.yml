@@ -1,0 +1,28 @@
+name: XP Cap Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-xp-cap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared XP cap
+        shell: python
+        run: |
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
+          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          if "MaxExperience = 1000000000" not in config:
+              raise SystemExit("XPConfig must define MaxExperience")
+          if "XPConfig.MaxExperience" not in service:
+              raise SystemExit("XPService must consume XPConfig.MaxExperience")
+          if "XPConfig.MaxExperience" not in player_data:
+              raise SystemExit("PlayerData must consume XPConfig.MaxExperience")
+          if "math.min(1000000000" in service or "0, 1000000000" in player_data:
+              raise SystemExit("XP cap must not be hardcoded outside XPConfig")
+          print("XP cap contract validated.")
