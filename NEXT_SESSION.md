@@ -35,6 +35,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - World decoration/themes
 - GitHub CI for Rojo mapping, JSON, require paths, gameplay references, remote references, profile migration IDs, balancing invariants and reviewed direct `TakeDamage()` paths
 - CI guard ensuring `RemoteFunction.OnServerInvoke` ownership is unique
+- CI guard ensuring critical RemoteEvent server ownership is unique
 - Repo-wide direct damage audit that permits `Humanoid:TakeDamage()` only inside `DamageService`
 - CI audit enforcing server-only `CombatFeedback` publication
 
@@ -55,6 +56,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - `DamageService` returns the actually applied HP delta instead of the requested amount.
 - `DamageService` tracks the last valid attacker in server-only weak state; player attackers are stored by immutable UserId so a player death during a boss defeat race does not erase attribution.
 - `BossService` uses the server-only damage attribution state for Guardian rewards and clears it on defeat.
+- `CrystalSystem` now defensively rejects invalid IDs and malformed `profile.Crystals` data instead of throwing.
 - Server-side procedural Crystal Combat VFX were removed from `CombatService`; the server no longer creates transient VFX Parts/Tweens for crystal hits.
 - Added a dedicated `CombatFeedback` RemoteEvent for server-confirmed hit presentation.
 - `CombatService` fires `CombatFeedback` only after `DamageService.ProcessDamage()` succeeds with applied damage and includes the verified target, attacker id, action, crystal id, critical state and applied damage amount.
@@ -78,6 +80,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - `GetAvailableQuests` already has a dedicated 0.2-second RemoteFunction guard with PlayerRemoving cleanup.
 - `QuestRequest` remains owned by the single Bootstrap handler; do not add a second handler.
 - Shop, Crafting, Consumable and NPC dialog remotes have explicit request limits and the relevant server-side ownership/distance checks.
+- Added `remote-event-ownership-validation.yml` to ensure critical RemoteEvents have exactly one server-side handler.
 
 ## Animation/VFX status
 The animation architecture is in place, but the actual `Animation` objects and published IDs are still absent. The configured asset names are intentionally ready for future authored assets:
@@ -105,7 +108,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 
 ## Exact next steps
 1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua`, `BossService.lua`, `StatusEffectService.lua` and final Rojo mapping.
-2. Validate the combat-presentation, damage-path, direct-damage and feedback-authority CI contracts after subsequent changes.
+2. Validate the combat-presentation, damage-path, direct-damage, feedback-authority and RemoteEvent-ownership CI contracts after subsequent changes.
 3. Add the actual authored `Animation`/`Sound` objects under the configured asset names.
 4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire them into the asset folders or IDs.
 5. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
@@ -128,6 +131,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - `NEXT_SESSION.md`
 - `.github/workflows/project-validation.yml`
 - `.github/workflows/remote-handler-validation.yml`
+- `.github/workflows/remote-event-ownership-validation.yml`
 - `.github/workflows/combat-presentation-validation.yml`
 - `.github/workflows/damage-path-validation.yml`
 - `.github/workflows/direct-damage-audit.yml`
@@ -141,6 +145,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - `src/ServerScriptService/Services/PlayerService.lua`
 - `src/ServerScriptService/CombatFeedbackRemote.server.lua`
 - `src/ReplicatedStorage/Modules/PlayerData.lua`
+- `src/ReplicatedStorage/Modules/CrystalSystem.lua`
 - `src/ReplicatedStorage/Config/CrystalConfig.lua`
 - `src/ReplicatedStorage/Config/CrystalAnimationConfig.lua`
 - `src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua`
