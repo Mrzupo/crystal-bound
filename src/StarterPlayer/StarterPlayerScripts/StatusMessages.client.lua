@@ -72,6 +72,9 @@ local function bind(attribute)
 		if type(value) ~= "string" or value == "" or value == last then return end
 		last = value
 		show(value, priorities[attribute])
+		task.delay(2.9, function()
+			if last == value then last = "" end
+		end)
 	end
 	player:GetAttributeChangedSignal(attribute):Connect(changed)
 	changed()
