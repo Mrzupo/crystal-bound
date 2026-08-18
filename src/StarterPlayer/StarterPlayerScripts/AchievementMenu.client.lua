@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local getPlayerData = remotes:WaitForChild("GetPlayerData")
+local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
 local open = false
 local gui
 local panel
@@ -68,15 +69,8 @@ local function refresh()
 	for _, child in ipairs(panel.List:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
 	local unlocked = {}
 	for _, id in ipairs(data.Achievements or {}) do unlocked[id] = true end
-	local definitions = {
-		{ id = "FIRST_BLOOD", name = "First Blood", text = "Defeat your first enemy." },
-		{ id = "CRYSTAL_KEEPER", name = "Crystal Keeper", text = "Own Ember, Tide and Gale." },
-		{ id = "MASTER_OF_ONE", name = "Master of One", text = "Reach mastery level 10 with one crystal." },
-		{ id = "GUARDIAN_SLAYER", name = "Guardian Slayer", text = "Defeat the Crystal Guardian." },
-		{ id = "ANCIENT_EXPLORER", name = "Ancient Explorer", text = "Defeat an Ancient Golem and a Crystal Bat." },
-		{ id = "LEVEL_20", name = "Veteran", text = "Reach level 20." },
-	}
-	for _, definition in ipairs(definitions) do
+
+	for _, definition in ipairs(AchievementSystem.GetOrdered()) do
 		local row = Instance.new("Frame")
 		row.Size = UDim2.fromOffset(560, 64)
 		row.BackgroundTransparency = 0.08
@@ -91,7 +85,7 @@ local function refresh()
 		label.TextWrapped = true
 		label.Font = Enum.Font.GothamMedium
 		label.TextSize = 14
-		label.Text = string.format("%s  •  %s\n%s", unlocked[definition.id] and "UNLOCKED" or "LOCKED", definition.name, definition.text)
+		label.Text = string.format("%s  •  %s\n%s\nReward: %d Money%s", unlocked[definition.Id] and "UNLOCKED" or "LOCKED", definition.Name, definition.Requirement, definition.RewardMoney or 0, definition.Title and (" • Title: " .. definition.Title) or "")
 		label.Parent = row
 	end
 end
