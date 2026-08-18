@@ -20,7 +20,7 @@ end
 function InventoryService.AddItem(profile, itemId, amount)
 	if not InventoryService.IsValidItem(itemId) then return 0 end
 	amount = normalizeAmount(amount, 1)
-	profile.Inventory = profile.Inventory or {}
+	profile.Inventory = type(profile.Inventory) == "table" and profile.Inventory or {}
 	local currentRaw = finiteNumber(profile.Inventory[itemId]) or 0
 	local current = math.max(0, math.floor(currentRaw))
 	local nextAmount = math.min(Config.GetMaxStackSize(itemId), current + amount)
@@ -32,7 +32,7 @@ end
 function InventoryService.RemoveItem(profile, itemId, amount)
 	if not InventoryService.IsValidItem(itemId) then return false end
 	amount = normalizeAmount(amount, 1)
-	profile.Inventory = profile.Inventory or {}
+	profile.Inventory = type(profile.Inventory) == "table" and profile.Inventory or {}
 	local currentRaw = finiteNumber(profile.Inventory[itemId]) or 0
 	local current = math.max(0, math.floor(currentRaw))
 	if current < amount then return false end
@@ -43,11 +43,12 @@ end
 function InventoryService.HasItem(profile, itemId, amount)
 	if not InventoryService.IsValidItem(itemId) then return false end
 	amount = normalizeAmount(amount, 1)
-	return (profile.Inventory and (finiteNumber(profile.Inventory[itemId]) or 0) or 0) >= amount
+	if type(profile.Inventory) ~= "table" then return false end
+	return (finiteNumber(profile.Inventory[itemId]) or 0) >= amount
 end
 
 function InventoryService.GetInventory(profile)
-	profile.Inventory = profile.Inventory or {}
+	if type(profile.Inventory) ~= "table" then profile.Inventory = {} end
 	return profile.Inventory
 end
 
