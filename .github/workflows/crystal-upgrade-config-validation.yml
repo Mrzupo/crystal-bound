@@ -1,0 +1,26 @@
+name: Crystal Upgrade Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-upgrade-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Crystal mastery costs
+        shell: python
+        run: |
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/CrystalUpgradeConfig.lua").read_text(encoding="utf-8")
+          required = {
+              "EMBER": "EmberShard",
+              "TIDE": "TidePearl",
+              "GALE": "GaleFeather",
+          }
+          for crystal, item in required.items():
+              if crystal not in config or item not in config:
+                  raise SystemExit(f"Missing mastery cost definition for {crystal}: {item}")
+          print("Crystal upgrade config validated.")
