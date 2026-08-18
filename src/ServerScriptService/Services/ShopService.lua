@@ -29,8 +29,8 @@ function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyServi
 	if type(offer.ItemId) ~= "string" or offer.ItemId ~= itemId or not InventoryConfig.GetItemConfig(itemId) then
 		return false, "Shop offer is invalid."
 	end
-	local price = finiteNumber(offer.Price)
-	if not price or price <= 0 then return false, "Shop offer is invalid." end
+	local price = positiveInteger(offer.Price)
+	if not price then return false, "Shop offer is invalid." end
 	amount = positiveInteger(amount)
 	if not amount then return false, "Purchase amount must be a positive integer." end
 	local maxPerPurchase = positiveInteger(offer.MaxPerPurchase) or 1
