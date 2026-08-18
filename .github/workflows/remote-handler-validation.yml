@@ -1,0 +1,43 @@
+name: Crystal Bound Remote Handler Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-remote-handlers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure unique RemoteFunction handlers
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src")
+          targets = {
+              "GetPlayerData": "GetPlayerData.OnServerInvoke",
+              "GetQuestData": "GetQuestData.OnServerInvoke",
+          }
+          counts = {key: [] for key in targets}
+
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              for key, marker in targets.items():
+                  if marker in text:
+                      counts[key].append(str(path))
+
+          problems = []
+          for key, paths in counts.items():
+              if len(paths) != 1:
+                  problems.append(f"{key} must have exactly one OnServerInvoke owner; found {len(paths)}: {paths}")
+
+          if problems:
+              for problem in problems:
+                  print(problem)
+              raise SystemExit(1)
+
+          print("RemoteFunction handler ownership validated.")
