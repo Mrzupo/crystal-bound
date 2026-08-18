@@ -1,0 +1,48 @@
+name: Local Require Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-local-requires:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate script-relative require paths
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          root = Path("src")
+          pattern = re.compile(r"require\(script((?:\.Parent|\.[A-Za-z_][A-Za-z0-9_]*)+)\)")
+          problems = []
+
+          def resolve(source, chain):
+              current = source.parent
+              parts = chain.split(".")[1:]
+              for part in parts:
+                  if part == "Parent":
+                      current = current.parent
+                  else:
+                      current = current / part
+              return current
+
+          for source in root.rglob("*.lua"):
+              text = source.read_text(encoding="utf-8")
+              for match in pattern.finditer(text):
+                  candidate = resolve(source, match.group(1))
+                  candidates = [candidate]
+                  if candidate.suffix == "":
+                      candidates.append(candidate.with_suffix(".lua"))
+                  if not any(path.is_file() for path in candidates):
+                      problems.append(f"{source}: missing local require target for {match.group(0)}")
+
+          if problems:
+              print("Missing local require targets:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Local require validation passed.")
