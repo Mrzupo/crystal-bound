@@ -98,6 +98,7 @@ local function giveLoot(player, profile, targetModel, crystalId)
 	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
 	local added = InventoryService.AddItem(profile, itemId, 1)
 	if added > 0 then player:SetAttribute("LootMessage", "Loot: " .. itemId); return true end
+	player:SetAttribute("LootMessage", "Inventory full: " .. itemId)
 	return false
 end
 
@@ -159,6 +160,9 @@ function CombatService.HandleRequest(player, action, target)
 	local result = DamageService.ProcessDamage({ Attacker = player, Target = targetModel, Amount = damage, Range = config.Range, DamageType = "Crystal" }); if not result.Success then return end
 	cooldowns[player][action] = now + config.Cooldown
 	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
+	task.delay(0.2, function()
+		if targetModel.Parent then targetModel:SetAttribute("LastHitCritical", false) end
+	end)
 	emitCombatEffect(crystalId, targetModel, action == "Ability", critical)
 	if critical then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
 	if action == "Ability" then applyAbilitySpecial(player, profile, crystalId, targetModel, damage); completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
