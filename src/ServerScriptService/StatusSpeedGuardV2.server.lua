@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 
+local ENFORCEMENT_INTERVAL = 0.25
+
 local function refresh(player)
 	if not player.Parent then return end
 	local character = player.Character
@@ -26,3 +28,16 @@ end
 
 Players.PlayerAdded:Connect(bind)
 for _, player in ipairs(Players:GetPlayers()) do bind(player) end
+
+task.spawn(function()
+	while true do
+		task.wait(ENFORCEMENT_INTERVAL)
+		for _, player in ipairs(Players:GetPlayers()) do
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil then
+				refresh(player)
+			end
+		end
+	end
+end)
