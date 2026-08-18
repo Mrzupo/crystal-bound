@@ -10,9 +10,9 @@ local QuestService = require(script.Parent.QuestService)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local CombatModifierService = require(script.Parent.CombatModifierService)
+local CrystalAbilityService = require(script.Parent.CrystalAbilityService)
 local DailyBountyService = require(script.Parent.DailyBountyService)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
-local HitboxService = require(ReplicatedStorage.Modules.Combat.HitboxService)
 
 local CombatService = {}
 local cooldowns = {}
@@ -120,43 +120,6 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	fireProgress(player, levelsGained or 0, { Crystal = crystalId, Level = masteryLevel, XP = masteryXP })
 end
 
-local function applyGaleSplash(player, centerModel, damage, range)
-	local centerRoot = centerModel:FindFirstChild("HumanoidRootPart") or centerModel.PrimaryPart
-	if not centerRoot then return end
-	local profile = PlayerService.GetProfile(player)
-	for _, enemy in ipairs(HitboxService.GetEnemyModels(centerRoot.Position, 12, centerModel)) do
-		local humanoid = enemy:FindFirstChildOfClass("Humanoid")
-		if humanoid and humanoid.Health > 0 then
-			local result = DamageService.ProcessDamage({
-				Attacker = player,
-				Target = enemy,
-				Amount = math.max(1, damage * 0.45),
-				Range = range,
-				DamageType = "CrystalAbilitySplash",
-			})
-			if result.Success then
-				fireCombatFeedback(enemy, player, "Ability", "GALE", false, result.Amount)
-				if humanoid.Health <= 0 and profile then
-					rewardDefeat(player, profile, enemy, "Ability", "GALE")
-				end
-			end
-		end
-	end
-end
-
-local function applyAbilitySpecial(player, profile, crystalId, targetModel, abilityDamage, abilityRange)
-	if crystalId == "TIDE" then
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid and humanoid.Health > 0 then
-			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 30)
-			player:SetAttribute("CrystalMessage", "Tidal Pulse restored health.")
-		end
-	elseif crystalId == "GALE" then
-		applyGaleSplash(player, targetModel, abilityDamage, abilityRange)
-	end
-end
-
 function CombatService.HandleRequest(player, action, target)
 	if not player:IsA("Player") or not VALID_ACTIONS[action] then return end
 	local requestNow = os.clock()
@@ -177,8 +140,6 @@ function CombatService.HandleRequest(player, action, target)
 
 	local targetModel = getCharacter(target)
 	if not targetModel then return end
-	if not HitboxService.IsWithinRange(player, targetModel, config.Range) then return end
-
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
 
@@ -205,7 +166,12 @@ function CombatService.HandleRequest(player, action, target)
 
 	if critical and result.Amount > 0 then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
 	if action == "Ability" then
-		applyAbilitySpecial(player, profile, crystalId, targetModel, damage, config.Range)
+		local abilityResult = CrystalAbilityService.Execute(player, profile, crystalId, targetModel, damage, config.Range)
+		if abilityResult.Message then player:SetAttribute("CrystalMessage", abilityResult.Message) end
+		for _, hit in ipairs(abilityResult.Hits or {}) do
+			fireCombatFeedback(hit.Target, player, "Ability", crystalId, false, hit.Amount)
+			if hit.Defeated then rewardDefeat(player, profile, hit.Target, "Ability", crystalId) end
+		end
 		advanceAbilityQuest(player, profile)
 	end
 	if result.Amount > 0 and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
