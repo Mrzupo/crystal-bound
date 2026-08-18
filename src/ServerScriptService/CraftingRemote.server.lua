@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local PlayerService = require(script.Parent.Services.PlayerService)
 local InventoryService = require(script.Parent.Services.InventoryService)
 local CraftingService = require(script.Parent.Services.CraftingService)
+local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local remote = remotes:FindFirstChild("CraftingRequest") or Instance.new("RemoteEvent")
@@ -11,6 +12,7 @@ remote.Parent = remotes
 
 local NEXT_REQUEST = setmetatable({}, { __mode = "k" })
 local REQUEST_INTERVAL = 0.15
+local NPC_INTERACTION_RANGE = math.max(1, tonumber(InteractionConfig.NPCInteractionRange) or 14)
 
 local function isNearTrader(player)
 	local character = player.Character
@@ -18,7 +20,7 @@ local function isNearTrader(player)
 	local folder = workspace:FindFirstChild("NPCs")
 	local trader = folder and folder:FindFirstChild("MaterialTrader")
 	local traderRoot = trader and (trader.PrimaryPart or trader:FindFirstChild("Torso"))
-	return root and traderRoot and (root.Position - traderRoot.Position).Magnitude <= 14
+	return root and traderRoot and (root.Position - traderRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
 remote.OnServerEvent:Connect(function(player, action, outputId, amount)
