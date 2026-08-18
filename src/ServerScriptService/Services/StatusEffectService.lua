@@ -1,3 +1,6 @@
+local Players = game:GetService("Players")
+local DodgeService = require(script.Parent.DodgeService)
+
 local StatusEffectService = {}
 local active = setmetatable({}, { __mode = "k" })
 
@@ -37,7 +40,13 @@ function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval)
 		for _ = 1, ticks do
 			task.wait(interval)
 			if not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token then break end
-			humanoid:TakeDamage(damagePerTick)
+			local character = humanoid.Parent
+			local player = character and Players:GetPlayerFromCharacter(character)
+			if player then
+				DodgeService.ApplyDamage(player, humanoid, damagePerTick)
+			else
+				humanoid:TakeDamage(damagePerTick)
+			end
 		end
 		if state.Burn == token then state.Burn = nil end
 	end)
