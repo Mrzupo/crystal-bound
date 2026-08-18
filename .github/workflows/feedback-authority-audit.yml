@@ -1,0 +1,47 @@
+name: Crystal Bound Feedback Authority Audit
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  audit-feedback-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate CombatFeedback is server-published only
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src")
+          client_violations = []
+          server_fire_count = 0
+          server_receive_count = 0
+
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              relative = str(path)
+
+              if "CombatFeedback" in text and ":FireServer(" in text:
+                  client_violations.append(relative)
+
+              if relative.startswith("src/ServerScriptService/"):
+                  server_fire_count += text.count("CombatFeedback:FireAllClients(")
+                  server_receive_count += text.count("CombatFeedback.OnServerEvent")
+
+          if client_violations:
+              print("Client code must never submit CombatFeedback:")
+              for path in sorted(set(client_violations)):
+                  print(f" - {path}")
+              raise SystemExit(1)
+
+          if server_fire_count <= 0:
+              raise SystemExit("Server CombatFeedback publisher is missing")
+          if server_receive_count != 0:
+              raise SystemExit("CombatFeedback must not have a server receive handler")
+
+          print("CombatFeedback authority contract validated.")
