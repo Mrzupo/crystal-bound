@@ -198,7 +198,21 @@ local function refreshQuests()
 	if not ok or type(result) ~= "table" then return end
 	local gui = ensureHud()
 	local quest = gui:FindFirstChild("Quest")
-	if quest then quest.Text = result.Text or "" end
+	if not quest then return end
+
+	local active = type(result.Active) == "table" and result.Active or {}
+	local activeQuestId = active[1]
+	if type(activeQuestId) ~= "string" then
+		quest.Text = "Quest: none active"
+		return
+	end
+	local definitions = type(result.Definitions) == "table" and result.Definitions or {}
+	local definition = definitions[activeQuestId]
+	local progressTable = type(result.Progress) == "table" and result.Progress or {}
+	local progress = math.max(0, math.floor(tonumber(progressTable[activeQuestId]) or 0))
+	local goal = definition and math.max(1, math.floor(tonumber(definition.Goal) or 1)) or math.max(1, progress)
+	local name = definition and definition.Name or activeQuestId
+	quest.Text = string.format("Quest: %s  •  %d/%d", name, progress, goal)
 end
 
 local function scheduleQuestRefresh()
