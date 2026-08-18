@@ -81,9 +81,30 @@ end
 function DodgeService.CleanupPlayer(player)
 	cooldowns[player] = nil
 	if player.Character then clearForceField(player.Character) end
-	if player.Parent then player:SetAttribute("DodgeInvulnerable", false) end
+	if player.Parent then
+		player:SetAttribute("DodgeInvulnerable", false)
+		player:SetAttribute("DodgeCooldownEnd", 0)
+	end
 end
 
+local function resetForRespawn(player)
+	cooldowns[player] = 0
+	if player.Parent then
+		player:SetAttribute("DodgeInvulnerable", false)
+		player:SetAttribute("DodgeCooldownEnd", 0)
+	end
+	if player.Character then clearForceField(player.Character) end
+end
+
+local function bindPlayer(player)
+	player.CharacterAdded:Connect(function()
+		resetForRespawn(player)
+	end)
+	if player.Character then resetForRespawn(player) end
+end
+
+Players.PlayerAdded:Connect(bindPlayer)
+for _, player in ipairs(Players:GetPlayers()) do bindPlayer(player) end
 Players.PlayerRemoving:Connect(function(player)
 	DodgeService.CleanupPlayer(player)
 end)
