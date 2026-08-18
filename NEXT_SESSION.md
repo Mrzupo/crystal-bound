@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **417 commits ahead, 13 commits behind** `main`.
+- Current compare: **420+ commits ahead, 13 commits behind** `main` (verify exact count with GitHub compare).
 - `main` has not been merged/overwritten.
 
 ## Current state
@@ -52,10 +52,14 @@ The current master design context is authoritative: Crystal Bound is an original
 - Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs for EMBER/TIDE/GALE.
 - Added `CrystalAnimationController.client.lua`, which owns client-side `Animator`/`AnimationTrack` loading, priority, fade and playback.
 - Wired Basic click and Q Ability input through `CrystalAnimationController` before the existing `CombatRequest`; server validation and damage authority were not changed.
-- Registered the new animation config/controller in `default.project.json`.
+- Added `CrystalVFXController.client.lua` for lightweight crystal-specific local combat bursts.
+- Wired Basic/Q presentation VFX before the existing `CombatRequest`; these effects are cosmetic only and do not report hits or damage to the server.
+- Registered the VFX controller in `default.project.json`.
 
-## Animation status
-The animation architecture is now in place, but the asset IDs are intentionally empty until real Roblox animations are published. Therefore this is **not yet a claim of real in-game attack animations**. The controller safely no-ops when an ID is missing.
+## Animation/VFX status
+The animation architecture is in place, but the asset IDs are intentionally empty until real Roblox animations are published. Therefore this is **not yet a claim of real in-game attack animations**. The controller safely no-ops when an ID is missing.
+
+The current VFX layer is also deliberately placeholder-level: it provides immediate crystal identity without pretending to be final asset-based particles. Replace it later with authored ParticleEmitters/Trails/Sounds under `ReplicatedStorage.Assets`.
 
 Next presentation task is to create/publish the actual EMBER Basic + Flame Burst animations first, then TIDE and GALE. Keep asset IDs out of `CombatService` and never let animation timing determine server damage authority.
 
@@ -69,18 +73,17 @@ Next presentation task is to create/publish the actual EMBER Basic + Flame Burst
 ## Known limitations
 - No real Roblox Studio runtime/playtest has been executed in this environment.
 - No Luau interpreter is available here, so Luau syntax has only been statically/structurally reviewed, not executed.
-- GitHub Actions must be checked on the actual latest commit before claiming CI is green; the current head has not been verified as CI-green in this session.
+- The latest commit has no reported combined status/workflow run available through the connected GitHub status endpoints in this session; do not call that CI-green.
 - `src/ServerScriptService/StatusSpeedGuard.server.lua` may still physically exist as a legacy file, but it is not referenced by `default.project.json`.
 - Actual Roblox animation asset IDs are not available yet.
 
 ## Exact next steps
-1. Verify the latest branch commit and CI status.
-2. Audit `CrystalAnimationController.client.lua` and the Rojo mapping for syntax/reference issues.
-3. Create the first real EMBER attack/ability animation assets and wire their published IDs into `CrystalAnimationConfig.lua`.
+1. Audit the new `CrystalVFXController.client.lua` and final Rojo mapping.
+2. Add authored asset folders/lookup contracts for crystal VFX and sounds without moving gameplay authority client-side.
+3. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire their IDs into `CrystalAnimationConfig.lua`.
 4. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
-5. Add crystal-specific client VFX/audio presentation after EMBER animation playback is stable.
-6. Repeat the same presentation contract for TIDE and GALE.
-7. Then prepare the first Roblox Studio runtime/playtest and record actual combat/animation issues.
+5. Repeat the same presentation contract for TIDE and GALE.
+6. Prepare the first Roblox Studio runtime/playtest and record actual combat/animation issues.
 
 ## Do not do
 - Do not merge this branch into `main` yet.
@@ -105,4 +108,5 @@ Next presentation task is to create/publish the actual EMBER Basic + Flame Burst
 - `src/ReplicatedStorage/Config/CrystalAnimationConfig.lua`
 - `src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua`
 - `src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua`
+- `src/StarterPlayer/StarterPlayerScripts/CrystalVFXController.client.lua`
 - `src/StarterPlayer/StarterPlayerScripts/CooldownAuthority.client.lua`
