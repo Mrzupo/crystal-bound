@@ -39,16 +39,18 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Shop, Crafting and Health Potion transactions validate before mutation and protect their mutation paths with server rate limits; Crafting and Shop roll back failed final mutations.
 - Economy sell accounting now reports the **actual** Money delta after MaxMoney clamping rather than the requested sale value.
 - Daily Bounty completion messages now report the **actual** Money delta after MaxMoney clamping.
+- `EconomyService.RemoveMoney()`, `CanAfford()` and `GetMoney()` now defensively normalize corrupted Money values before arithmetic.
 - `StatusSpeedGuardV2` now tracks and disconnects per-player event connections on Leave/Respawn, removing a connection leak.
 - Persistence reconciliation clamps Level/XP/Money/Inventory/Crystal ownership/mastery/quest state, while `SafeProfileStore` atomically claims and refreshes `SessionLock` ownership.
 - SessionLock age now clamps future timestamps to avoid clock-skew extending a lock incorrectly.
 - `SafeProfileStore.Save()` now snapshots the live profile **inside** the `UpdateAsync` callback, preventing stale pre-yield profile snapshots from overwriting mutations that occur during a DataStore save.
-- Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts.
+- Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts; Achievement reward money is paid once during `PlayerService.Sync()` when a new achievement is unlocked.
 - `QuestHUDPresenter.client.lua` presents server-structured quest state and is now event-driven rather than polling once per second; `QuestMenu` has a local load debounce.
 - `StatusMessages.client.lua` now preserves high-priority messages when the HUD overflows.
-- `default.project.json` now identifies the DataModel as `Crystal Bound` and no longer maps removed legacy Crystal registry/definition modules.
+- `default.project.json` now identifies the DataModel as `Crystal Bound` and no longer maps removed legacy Crystal registry/definition modules or root-level legacy runtime stubs.
 - `CrystalAnimationConfig` has a complete six-entry presentation contract for EMBER/TIDE/GALE Basic/Ability actions, with asset/sound names and bounded presentation fields protected by CI.
 - Unreferenced legacy Crystal modules (`CrystalDefinitions`, `CrystalTypes`, `CrystalUtils`, `BaseCrystal`, `AbilityRegistry`, `PassiveRegistry`) were removed; `CrystalAbilityService` is the active server ability layer.
+- Obsolete root runtime stubs (`Bootstrap.server.lua`, `Constants.lua`, `Enums.lua`, `Utility.lua`) were removed because the project is now driven by the Rojo `src/` tree.
 - WorldDecor/WorldTheme are one-shot/idempotent initialization scripts; portal level gates are protected by a WorldConfig/Bootstrap contract.
 - Enemy death cleanup, AI termination, status cleanup and respawn callback behavior are protected by a dedicated lifecycle contract.
 - The legacy `StatusSpeedGuard.server.lua` duplicate was removed; `StatusSpeedGuardV2.server.lua` is the sole runtime implementation.
@@ -64,7 +66,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Critical RemoteFunctions have unique `OnServerInvoke` ownership and server rate limits.
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
-- Quest completion, reward idempotency, persistence session locks, persistence save-snapshot timing, status-effect bounds, Dodge bounds, PvE damage range, explicit damage types, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync, project identity, presentation assets and legacy Crystal cleanup are protected by dedicated CI workflows.
+- Quest completion, reward idempotency, persistence session locks, persistence save-snapshot timing, status-effect bounds, Dodge bounds, PvE damage range, explicit damage types, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync, project identity, presentation assets, legacy Crystal cleanup and root legacy cleanup are protected by dedicated CI workflows.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
