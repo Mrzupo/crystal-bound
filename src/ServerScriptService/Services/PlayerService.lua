@@ -7,7 +7,7 @@ local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
 local DailyBountyService = require(script.Parent.DailyBountyService)
 local EconomyService = require(script.Parent.EconomyService)
 
-local PlayerService = { Profiles = {}, CharacterConnections = {}, Operations = {} }
+local PlayerService = { Profiles = {}, CharacterConnections = {}, HumanoidConnections = {}, Operations = {} }
 local OPERATION_TIMEOUT = 10
 local DEFAULT_CRYSTAL = "EMBER"
 
@@ -21,18 +21,33 @@ local function setupLeaderstats(player, profile)
 	money.Name = "Money"; money.Value = profile.Money; money.Parent = leaderstats
 end
 
+local function cleanupHumanoidConnections(player)
+	local connections = PlayerService.HumanoidConnections[player]
+	if not connections then return end
+	for _, connection in ipairs(connections) do
+		if connection.Connected then connection:Disconnect() end
+	end
+	PlayerService.HumanoidConnections[player] = nil
+end
+
 local function bindHumanoid(player, humanoid)
+	cleanupHumanoidConnections(player)
 	if not humanoid then return end
+	local connections = {}
+	PlayerService.HumanoidConnections[player] = connections
 	local function updateHealth()
+		if not player.Parent or not humanoid.Parent then return end
 		player:SetAttribute("Health", math.max(0, humanoid.Health))
 		player:SetAttribute("MaxHealth", math.max(1, humanoid.MaxHealth))
 	end
-	humanoid.HealthChanged:Connect(updateHealth)
-	humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(updateHealth)
-	humanoid.Died:Connect(function()
-		player:SetAttribute("Health", 0)
-		player:SetAttribute("DeathMessage", "You were defeated. Respawning...")
-	end)
+	table.insert(connections, humanoid.HealthChanged:Connect(updateHealth))
+	table.insert(connections, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(updateHealth))
+	table.insert(connections, humanoid.Died:Connect(function()
+		if player.Parent then
+			player:SetAttribute("Health", 0)
+			player:SetAttribute("DeathMessage", "You were defeated. Respawning...")
+		end
+	end))
 	updateHealth()
 end
 
@@ -90,6 +105,7 @@ function PlayerService.Load(player)
 	profile = PlayerData.Reconcile(profile)
 	PlayerService.Profiles[player] = profile
 	setupLeaderstats(player, profile)
+	cleanupHumanoidConnections(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
 		task.defer(function()
@@ -198,6 +214,7 @@ function PlayerService.Remove(player)
 	if not saved then
 		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
 		if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
+		cleanupHumanoidConnections(player)
 		PlayerService.Profiles[player] = nil
 		releaseOperation(player)
 		return false
@@ -205,6 +222,7 @@ function PlayerService.Remove(player)
 
 	SafeProfileStore.Release(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
+	cleanupHumanoidConnections(player)
 	PlayerService.Profiles[player] = nil
 	releaseOperation(player)
 	return true
