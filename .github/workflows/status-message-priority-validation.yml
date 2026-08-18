@@ -1,0 +1,22 @@
+name: Status Message Priority Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate message eviction keeps important priorities
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/StarterPlayer/StarterPlayerScripts/StatusMessages.client.lua').read_text(encoding='utf-8')
+          if 'return a.LayoutOrder < b.LayoutOrder' not in text:
+              raise SystemExit('status messages must evict lower-priority messages first')
+          for marker in ['BossMessage = 1', 'QuestMessage = 2', 'ProfileLoadFailed = 11']:
+              if marker not in text:
+                  raise SystemExit(f'missing priority marker: {marker}')
+          print('Status message priority contract validated.')
