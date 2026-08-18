@@ -1,0 +1,22 @@
+name: Quest Active State Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate single-active-quest contract
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ReplicatedStorage/Modules/QuestSystem.lua").read_text(encoding="utf-8")
+          if "#(profile.ActiveQuests or {}) > 0" not in text:
+              raise SystemExit("QuestSystem must reject starting a second active quest")
+          if "Finish your active quest first." not in text:
+              raise SystemExit("QuestSystem must expose the active-quest rejection message")
+          print("Single-active-quest contract validated.")
