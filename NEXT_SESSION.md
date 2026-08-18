@@ -41,9 +41,13 @@ The current master design context is authoritative: Crystal Bound is an original
 
 ## Important recent fixes
 - `PlayerData` whitelists valid Titles and `UnlockedIslands` during reconciliation.
+- `PlayerData.Reconcile()` now strips unknown crystal mastery keys instead of persisting phantom crystal data.
+- Invalid equipped-crystal data is normalized to `EMBER`.
 - `HitboxService` rejects invalid/negative/non-finite radius values.
 - `CombatModifierService` finite-safely normalizes mastery level before critical calculation.
 - `CombatService` has a small request-rate guard in addition to action cooldowns.
+- `QuestRequest` now has a dedicated weak-key rate-limit gate in its single Bootstrap handler.
+- `CRYSTAL_POWER` quest progression is now advanced with `QuestSystem.Advance()` on a real Ability use and only completes when its goal is reached; it is no longer blindly completed on every Ability hit.
 - GALE splash damage goes through `DamageService.ProcessDamage()` rather than bypassing the central damage validator.
 - Guardian shockwave NPC damage now also goes through `DamageService.ProcessDamage()` instead of a direct `Humanoid:TakeDamage()` path.
 - Burn damage now goes through `DamageService.ProcessDamage()` for NPC targets instead of bypassing the central damage validator.
@@ -69,6 +73,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - Added `direct-damage-audit.yml` to reject any direct `Humanoid:TakeDamage()` call outside `DamageService` across the whole `src` tree.
 - Added `feedback-authority-audit.yml` to ensure `CombatFeedback` is server-published only and has no server receive handler.
 - `ClientBootstrap.client.lua` throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
+- `CooldownAuthority.client.lua` now polls the UI at 0.25 s while idle and 0.1 s only during an active ability cooldown, instead of a permanent 0.05 s loop.
 - Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs, asset names, VFX values and sound asset names for EMBER/TIDE/GALE.
 - `CrystalAnimationController.client.lua` loads authored `Animation` objects from `ReplicatedStorage.Assets.Animations` by configured `AssetName` and safely falls back to `AnimationId`.
 - `CrystalVFXController.client.lua` loads authored `Sound` objects from `ReplicatedStorage.Assets.Sounds` by configured `SoundAssetName` and safely falls back to `SoundId`.
@@ -136,6 +141,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - `.github/workflows/damage-path-validation.yml`
 - `.github/workflows/direct-damage-audit.yml`
 - `.github/workflows/feedback-authority-audit.yml`
+- `.github/workflows/remote-rate-limit-validation.yml`
 - `src/ServerScriptService/Bootstrap.server.lua`
 - `src/ServerScriptService/Services/CombatService.lua`
 - `src/ServerScriptService/Services/DamageService.lua`
@@ -146,6 +152,8 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - `src/ServerScriptService/CombatFeedbackRemote.server.lua`
 - `src/ReplicatedStorage/Modules/PlayerData.lua`
 - `src/ReplicatedStorage/Modules/CrystalSystem.lua`
+- `src/ReplicatedStorage/Modules/CrystalMastery.lua`
+- `src/ReplicatedStorage/Modules/QuestSystem.lua`
 - `src/ReplicatedStorage/Config/CrystalConfig.lua`
 - `src/ReplicatedStorage/Config/CrystalAnimationConfig.lua`
 - `src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua`
