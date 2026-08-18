@@ -84,7 +84,9 @@ local function giveLoot(player, profile, targetModel, crystalId)
 	local enemyType = targetModel:GetAttribute("EnemyType")
 	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
 	local itemId = enemyConfig and enemyConfig.Drop
-	if not itemId then itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId] end
+	if not itemId and not enemyConfig then
+		itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId]
+	end
 	if not itemId then return false end
 	local chance = math.clamp(finiteNumber(enemyConfig and enemyConfig.DropChance) or 1, 0, 1)
 	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
