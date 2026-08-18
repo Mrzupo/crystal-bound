@@ -42,6 +42,8 @@
 - [x] Clientseitige Crystal-spezifische Impact-/Ability-Presentation
 - [x] Serverseitige Crystal-VFX aus CombatService entfernt
 - [x] GALE-Splash über zentrale DamageService-Validierung
+- [x] Distanz-Culling für entfernte serverbestätigte Combat-Effects
+- [x] Asset-Lookup-Contract für Animationen und Sounds unter ReplicatedStorage.Assets
 - [x] Gegner-Konfiguration und serverseitige einfache KI
 - [x] Hindernis-Steering + Pathfinding-Fallback
 - [x] Pathfinding-Rechenrate pro NPC gedrosselt
