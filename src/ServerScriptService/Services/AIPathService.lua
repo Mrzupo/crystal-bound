@@ -8,6 +8,12 @@ local function keyFor(goal)
 	return string.format("%d:%d:%d", math.floor(goal.X / 4), math.floor(goal.Y / 4), math.floor(goal.Z / 4))
 end
 
+local function applyWaypointAction(model, waypoint)
+	if not model or not waypoint or waypoint.Action ~= Enum.PathWaypointAction.Jump then return end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if humanoid then humanoid.Jump = true end
+end
+
 function AIPathService.GetNextDirection(model, destination)
 	if not model or not model.PrimaryPart or typeof(destination) ~= "Vector3" then return nil end
 	local root = model.PrimaryPart
@@ -20,7 +26,10 @@ function AIPathService.GetNextDirection(model, destination)
 			cacheEntry.waypointIndex += 1
 			waypoint = cacheEntry.waypoints[cacheEntry.waypointIndex]
 		end
-		if waypoint then return waypoint.Position - root.Position end
+		if waypoint then
+			applyWaypointAction(model, waypoint)
+			return waypoint.Position - root.Position
+		end
 	end
 	if cacheEntry and cacheEntry.key == key and (now - (cacheEntry.computedAt or 0)) < RECOMPUTE_INTERVAL then
 		return nil
@@ -47,10 +56,7 @@ function AIPathService.GetNextDirection(model, destination)
 	end
 	cache[model] = { key = key, waypoints = waypoints, waypointIndex = 2, computedAt = now }
 	local waypoint = waypoints[2]
-	if waypoint.Action == Enum.PathWaypointAction.Jump then
-		local humanoid = model:FindFirstChildOfClass("Humanoid")
-		if humanoid then humanoid.Jump = true end
-	end
+	applyWaypointAction(model, waypoint)
 	return waypoint.Position - root.Position
 end
 
