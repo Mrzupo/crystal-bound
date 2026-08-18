@@ -70,12 +70,7 @@ local function fireProgress(player, levelsGained, mastery)
 end
 
 local function completeQuest(player, profile, questId, message)
-	local definition = QuestSystem.GetDefinition(questId)
-	if not definition or not QuestSystem.IsActive(profile, questId) then return false end
-	if not QuestSystem.Complete(profile, questId) then return false end
-	XPService.AddXP(profile, definition.XP); EconomyService.AddMoney(profile, definition.Money); PlayerService.Sync(player)
-	player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!")); QuestService.TryStartNext(player, profile)
-	return true
+	return QuestService.Complete(player, profile, questId, message)
 end
 
 local function advanceEnemyQuest(player, profile, enemyType)
