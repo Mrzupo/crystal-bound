@@ -1,0 +1,23 @@
+name: Rarity Lore Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate official rarity ladder and Ancient semantics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
+          required = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Divine']
+          for rarity in required:
+              if rarity not in text:
+                  raise SystemExit(f'missing rarity: {rarity}')
+          if 'Ancient =' in text or 'Rarity = "Ancient"' in text:
+              raise SystemExit('Ancient must not be represented as a rarity')
+          PY
