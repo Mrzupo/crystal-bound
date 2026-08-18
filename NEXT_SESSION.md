@@ -34,25 +34,28 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `CrystalAbilityService` defensively validates player/target instances plus finite/clamped damage and range inputs before executing server abilities.
 - Status effects have bounded Slow/Burn duration, tick count, damage and interval; tokenized callbacks prevent stale effect cleanup from cancelling newer effects.
 - Dodge validates finite vectors, resets on respawn, cleans state on leave and routes actual damage through `DamageService`.
-- Shop and Crafting transactions validate before mutation and roll back consumed resources or money when the final mutation fails.
+- Shop, Crafting and Health Potion transactions validate before mutation and protect their mutation paths with server rate limits; Crafting and Shop roll back failed final mutations.
 - Persistence reconciliation clamps Level/XP/Money/Inventory/Crystal ownership/mastery/quest state, while `SafeProfileStore` atomically claims and refreshes `SessionLock` ownership.
 - Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts.
-- `QuestHUDPresenter.client.lua` presents server-structured quest state and reasserts the HUD state after the legacy Bootstrap quest refresh path; `QuestMenu` has a local load debounce.
+- `QuestHUDPresenter.client.lua` presents server-structured quest state and is now event-driven rather than polling once per second; `QuestMenu` has a local load debounce.
 - `default.project.json` now identifies the DataModel as `Crystal Bound` and includes all current controllers/services/assets.
 - `InventoryConfig` now defines the official `Common → Uncommon → Rare → Epic → Legendary → Mythic → Divine` rarity ladder; `Ancient` remains outside rarity semantics.
-- Studio testing is documented in `STUDIO_PLAYTEST.md`.
+- WorldDecor/WorldTheme are one-shot/idempotent initialization scripts; portal level gates are protected by a WorldConfig/Bootstrap contract.
+- Enemy death cleanup, AI termination, status cleanup and respawn callback behavior are protected by a dedicated lifecycle contract.
+- The legacy `StatusSpeedGuard.server.lua` duplicate was removed; `StatusSpeedGuardV2.server.lua` is the sole runtime implementation.
+- Studio testing is documented in `STUDIO_PLAYTEST.md` and now covers Consumables, World initialization, Boss Phase 2 and Enemy lifecycle regressions.
 
 ## Security / authority contracts
 - `DamageService` is the only direct `Humanoid:TakeDamage()` path in `src`.
 - `DamageService` validates attackers, targets, damage types, amount, range and dodge state.
 - `DamageService` returns actual applied HP delta.
 - Server-only weak-state attacker attribution uses immutable UserIds for player attackers.
-- Environmental damage is the only attacker-less damage type.
+- Environmental damage is the only attacker-less damage type; its explicit bypass is protected by CI.
 - `CombatFeedback` is server-published only.
 - Critical RemoteFunctions have unique `OnServerInvoke` ownership and server rate limits.
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
-- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config, progression config, rarity semantics and project identity are protected by dedicated CI workflows.
+- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle and project identity are protected by dedicated CI workflows.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
@@ -60,7 +63,6 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Current GitHub Actions status may have no run yet for the latest commit; do not call CI green without a verified run.
 - Actual authored Roblox Animation/Sound assets are still absent.
 - Presentation VFX are still placeholder-level.
-- `StatusSpeedGuard.server.lua` may physically exist but is not referenced by Rojo.
 - `ClientBootstrap` was recently simplified while fixing the Guardian model-name lookup; the HUD layout should be reviewed during Studio playtest.
 
 ## Exact next steps
