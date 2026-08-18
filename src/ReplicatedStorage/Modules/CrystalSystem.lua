@@ -44,7 +44,9 @@ end
 
 function CrystalSystem.Unlock(profile, id)
 	if not CrystalSystem.Exists(id) or not validProfileCrystals(profile) or CrystalSystem.Owns(profile, id) then return false end
-	profile.Crystals.Owned = profile.Crystals.Owned or {}
+	if type(profile.Crystals.Owned) ~= "table" then
+		profile.Crystals.Owned = {}
+	end
 	table.insert(profile.Crystals.Owned, id)
 	return true
 end
