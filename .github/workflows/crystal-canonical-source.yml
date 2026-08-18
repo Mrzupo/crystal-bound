@@ -1,0 +1,29 @@
+name: Crystal Canonical Source Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-crystal-canonical-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical Crystal config usage
+        shell: python
+        run: |
+          from pathlib import Path
+
+          required = {
+              Path("src/ReplicatedStorage/Modules/CrystalSystem.lua"),
+              Path("src/ReplicatedStorage/Modules/CrystalMastery.lua"),
+          }
+          for path in required:
+              text = path.read_text(encoding="utf-8")
+              if "CrystalConfig" not in text:
+                  raise SystemExit(f"{path} must depend on canonical CrystalConfig")
+              for forbidden in ("CrystalDefinitions", "CrystalTypes", "CrystalUtils", "AbilityRegistry", "PassiveRegistry"):
+                  if forbidden in text:
+                      raise SystemExit(f"{path} still references legacy Crystal module: {forbidden}")
+          print("Crystal canonical source contract validated.")
