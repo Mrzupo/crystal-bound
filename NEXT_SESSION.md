@@ -39,6 +39,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `StatusSpeedGuardV2` now tracks and disconnects per-player event connections on Leave/Respawn, removing a connection leak.
 - Persistence reconciliation clamps Level/XP/Money/Inventory/Crystal ownership/mastery/quest state, while `SafeProfileStore` atomically claims and refreshes `SessionLock` ownership.
 - SessionLock age now clamps future timestamps to avoid clock-skew extending a lock incorrectly.
+- `SafeProfileStore.Save()` now snapshots the live profile **inside** the `UpdateAsync` callback, preventing stale pre-yield profile snapshots from overwriting mutations that occur during a DataStore save.
 - Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts.
 - `QuestHUDPresenter.client.lua` presents server-structured quest state and is now event-driven rather than polling once per second; `QuestMenu` has a local load debounce.
 - `StatusMessages.client.lua` now preserves high-priority messages when the HUD overflows.
@@ -60,6 +61,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
 - Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync and project identity are protected by dedicated CI workflows.
+- Persistence save-snapshot timing is protected by `persistence-save-snapshot-contract.yml`.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
