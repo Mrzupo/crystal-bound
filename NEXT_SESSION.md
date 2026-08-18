@@ -46,8 +46,9 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts.
 - `QuestHUDPresenter.client.lua` presents server-structured quest state and is now event-driven rather than polling once per second; `QuestMenu` has a local load debounce.
 - `StatusMessages.client.lua` now preserves high-priority messages when the HUD overflows.
-- `default.project.json` now identifies the DataModel as `Crystal Bound` and includes all current controllers/services/assets.
-- `InventoryConfig` now defines the official `Common → Uncommon → Rare → Epic → Legendary → Mythic → Divine` rarity ladder; `Ancient` remains outside rarity semantics.
+- `default.project.json` now identifies the DataModel as `Crystal Bound` and no longer maps removed legacy Crystal registry/definition modules.
+- `CrystalAnimationConfig` has a complete six-entry presentation contract for EMBER/TIDE/GALE Basic/Ability actions, with asset/sound names and bounded presentation fields protected by CI.
+- Unreferenced legacy Crystal modules (`CrystalDefinitions`, `CrystalTypes`, `CrystalUtils`, `BaseCrystal`, `AbilityRegistry`, `PassiveRegistry`) were removed; `CrystalAbilityService` is the active server ability layer.
 - WorldDecor/WorldTheme are one-shot/idempotent initialization scripts; portal level gates are protected by a WorldConfig/Bootstrap contract.
 - Enemy death cleanup, AI termination, status cleanup and respawn callback behavior are protected by a dedicated lifecycle contract.
 - The legacy `StatusSpeedGuard.server.lua` duplicate was removed; `StatusSpeedGuardV2.server.lua` is the sole runtime implementation.
@@ -63,7 +64,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Critical RemoteFunctions have unique `OnServerInvoke` ownership and server rate limits.
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
-- Quest completion, reward idempotency, persistence session locks, persistence save-snapshot timing, status-effect bounds, Dodge bounds, PvE damage range, explicit damage types, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync and project identity are protected by dedicated CI workflows.
+- Quest completion, reward idempotency, persistence session locks, persistence save-snapshot timing, status-effect bounds, Dodge bounds, PvE damage range, explicit damage types, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync, project identity, presentation assets and legacy Crystal cleanup are protected by dedicated CI workflows.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
