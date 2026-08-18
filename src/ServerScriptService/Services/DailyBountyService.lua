@@ -43,8 +43,8 @@ function DailyBountyService.AddProgress(player, profile, enemyType, EconomyServi
 	bounty.Progress = math.min(bounty.Goal, bounty.Progress + 1)
 	if bounty.Progress >= bounty.Goal then
 		bounty.Claimed = true
-		EconomyService.AddMoney(profile, bounty.RewardMoney)
-		player:SetAttribute("BountyMessage", string.format("Daily Bounty complete! +%d Money", bounty.RewardMoney))
+		local _, earned = EconomyService.AddMoney(profile, bounty.RewardMoney)
+		player:SetAttribute("BountyMessage", string.format("Daily Bounty complete! +%d Money", earned or 0))
 		PlayerService.Sync(player)
 		return true
 	end
