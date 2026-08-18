@@ -1,12 +1,8 @@
-local DailyBountyService = {}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BountyConfig = require(ReplicatedStorage.Config.DailyBountyConfig)
 
-local GOALS = {
-	{ EnemyType = "Emberling", Goal = 8, RewardMoney = 120 },
-	{ EnemyType = "Tidecrawler", Goal = 6, RewardMoney = 180 },
-	{ EnemyType = "Galewisp", Goal = 5, RewardMoney = 250 },
-	{ EnemyType = "CrystalBat", Goal = 4, RewardMoney = 320 },
-	{ EnemyType = "AncientGolem", Goal = 2, RewardMoney = 450 },
-}
+local DailyBountyService = {}
+local GOALS = BountyConfig.Goals
 
 local function utcDate()
 	return os.date("!%Y-%m-%d")
@@ -15,6 +11,7 @@ end
 local function indexForDate(date)
 	local total = 0
 	for index = 1, #date do total += string.byte(date, index) end
+	if #GOALS == 0 then return nil end
 	return (total % #GOALS) + 1
 end
 
@@ -22,7 +19,9 @@ function DailyBountyService.Refresh(profile)
 	profile.DailyBounty = type(profile.DailyBounty) == "table" and profile.DailyBounty or {}
 	local date = utcDate()
 	if profile.DailyBounty.Date ~= date then
-		local definition = GOALS[indexForDate(date)]
+		local index = indexForDate(date)
+		local definition = index and GOALS[index]
+		if not definition then return profile.DailyBounty end
 		profile.DailyBounty = {
 			Date = date,
 			EnemyType = definition.EnemyType,
