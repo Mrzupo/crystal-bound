@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local DamageService = require(script.Parent.DamageService)
 local HitboxService = require(ReplicatedStorage.Modules.Combat.HitboxService)
 
@@ -20,7 +21,9 @@ local function executeTide(player)
 		return { Message = nil, Hits = {} }
 	end
 
-	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 30)
+	local abilityConfig = CrystalConfig.Abilities.TIDE or {}
+	local healAmount = math.max(0, safePositive(abilityConfig.HealAmount, 0))
+	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + healAmount)
 	return {
 		Message = "Tidal Pulse restored health.",
 		Hits = {},
