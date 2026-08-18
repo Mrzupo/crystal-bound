@@ -18,6 +18,10 @@ local VALID_BOUNTY_ENEMIES = {
 	AncientGolem = true,
 }
 
+local function isFiniteNumber(value)
+	return type(value) == "number" and value == value and value < math.huge and value > -math.huge
+end
+
 local function clone(value)
 	if type(value) ~= "table" then return value end
 	local result = {}
@@ -27,7 +31,7 @@ end
 
 local function clampInt(value, minimum, maximum, fallback)
 	local number = tonumber(value)
-	if not number then return fallback end
+	if not isFiniteNumber(number) then return fallback end
 	number = math.floor(number)
 	return math.clamp(number, minimum, maximum)
 end
@@ -160,7 +164,7 @@ function PlayerData.Reconcile(data)
 	if not VALID_BOUNTY_ENEMIES[data.DailyBounty.EnemyType] then data.DailyBounty.EnemyType = defaults.DailyBounty.EnemyType end
 	data.DailyBounty.Goal = clampInt(data.DailyBounty.Goal, 1, 100, defaults.DailyBounty.Goal)
 	data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, data.DailyBounty.Goal, 0)
-	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, 100000, defaults.DailyBounty.RewardMoney)
+	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, EconomyConfig.MaxMoney, defaults.DailyBounty.RewardMoney)
 	data.DailyBounty.Claimed = data.DailyBounty.Claimed == true
 
 	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
