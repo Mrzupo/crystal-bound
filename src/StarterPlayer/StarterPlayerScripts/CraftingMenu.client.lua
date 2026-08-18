@@ -14,7 +14,7 @@ local inventory = {}
 local open = false
 local recipeId = "HealthPotion"
 local recipe = craftingConfig.Recipes[recipeId]
-local outputItem = inventoryConfig.GetItemConfig(recipe.Output)
+local outputItem = recipe and inventoryConfig.GetItemConfig(recipe.Output) or nil
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CraftingMenu"
@@ -72,7 +72,7 @@ local hint = Instance.new("TextLabel")
 hint.Position = UDim2.fromOffset(18, 230)
 hint.Size = UDim2.fromOffset(484, 40)
 hint.BackgroundTransparency = 1
-hint.Text = "B = Crafting öffnen/schließen"
+hint.Text = "K = Crafting öffnen/schließen"
 hint.Font = Enum.Font.Gotham
 hint.TextSize = 14
 hint.TextXAlignment = Enum.TextXAlignment.Right
@@ -80,7 +80,7 @@ hint.Parent = panel
 
 local function formatInputs()
 	local lines = {}
-	for itemId, amount in pairs(recipe.Inputs or {}) do
+	for itemId, amount in pairs((recipe and recipe.Inputs) or {}) do
 		local config = inventoryConfig.GetItemConfig(itemId)
 		table.insert(lines, string.format("%d %s", amount, config and config.Name or itemId))
 	end
@@ -122,7 +122,7 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
-	if input.KeyCode == Enum.KeyCode.B then
+	if input.KeyCode == Enum.KeyCode.K then
 		if open then open = false; panel.Visible = false else open = true; panel.Visible = true; inventoryRequest:FireServer(); refresh() end
 	end
 end)
