@@ -1,0 +1,21 @@
+name: PvE damage range contract
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require explicit attacker range in DodgeService
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/ServerScriptService/Services/DodgeService.lua')
+          text = path.read_text()
+          assert 'if attacker and (not range or tonumber(range) <= 0) then return false end' in text
+          assert 'Range = range' in text
+          print('PvE damage range contract OK')
+          PY
