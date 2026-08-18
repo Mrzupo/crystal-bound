@@ -12,13 +12,13 @@ if not remote then
 end
 
 local REQUEST_INTERVAL = 0.2
-local nextRequest = {}
+local nextRequest = setmetatable({}, { __mode = "k" })
 
 remote.OnServerInvoke = function(player)
-	if not player or not player:IsA("Player") then return {} end
+	if not player or not player:IsA("Player") then return nil end
 	local now = os.clock()
 	if now < (nextRequest[player] or 0) then
-		return {}
+		return nil
 	end
 	nextRequest[player] = now + REQUEST_INTERVAL
 	local profile = PlayerService.GetProfile(player)
