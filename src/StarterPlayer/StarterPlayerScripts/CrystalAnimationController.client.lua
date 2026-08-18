@@ -62,11 +62,13 @@ end
 local function getAnimator(character)
 	local currentHumanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not currentHumanoid then return nil, nil end
+
 	local currentAnimator = currentHumanoid:FindFirstChildOfClass("Animator")
 	if not currentAnimator then
-		currentAnimator = Instance.new("Animator")
-		currentAnimator.Parent = currentHumanoid
+		currentAnimator = currentHumanoid:WaitForChild("Animator", 5)
 	end
+	if not currentAnimator then return nil, nil end
+
 	return currentHumanoid, currentAnimator
 end
 
@@ -116,17 +118,19 @@ local function attachCharacter(character)
 	animator = nil
 
 	local function tryAttach()
-		if localGeneration ~= generation or not character.Parent then return end
+		if localGeneration ~= generation or not character.Parent then return false end
 		local currentHumanoid, currentAnimator = getAnimator(character)
 		if currentHumanoid and currentAnimator then
 			humanoid = currentHumanoid
 			animator = currentAnimator
+			return true
 		end
+		return false
 	end
 
-	tryAttach()
-	if not humanoid then
+	if not tryAttach() then
 		task.spawn(function()
+			if localGeneration ~= generation or not character.Parent then return end
 			local currentHumanoid = character:WaitForChild("Humanoid", 5)
 			if not currentHumanoid or localGeneration ~= generation then return end
 			tryAttach()
