@@ -30,10 +30,15 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `crystal-config-validation.yml` protects the required UnlockLevels/BasicAttack/Abilities/Passives contract.
 - `progression-boundary.yml` protects AchievementSystem checking, Daily Bounty one-time claiming, Enemy reward guards and Boss reward guards.
 - `crystal-ability-boundary.yml` protects the server CrystalAbilityService boundary.
+- `pve-attacker-context-validation.yml` now protects NPC/Boss/status-effect attacker context.
+- NPC normal attacks and special attacks now carry the concrete NPC as attacker, use `Physical` damage and pass their real attack range; Emberling burn ticks preserve the NPC attacker context.
+- Guardian normal attacks and telegraphs now preserve the Guardian attacker and use `Physical` / `BossShockwave` damage types with explicit ranges.
 - AnimationController clears stale tracks on character generation changes and uses CrystalConfig cooldowns for local animation throttling.
 - VFXController uses authored Sound assets when available, with safe ID fallbacks and short-lived cosmetic parts.
-- Guardian BossBar work remains throttled to 0.1 s.
+- Guardian BossBar work remains throttled to 0.1 s and currently resolves the server-spawned `CrystalGuardian` model name.
 - Cooldown UI remains idle-throttled (0.25 s idle / 0.1 s active).
+- `feedback-remote-direction-validation.yml` protects `CombatFeedback` as server-to-client only.
+- `client-presentation-authority-validation.yml` protects client combat presentation from gameplay authority references.
 
 ## Security / authority contracts
 - `DamageService` is the only direct `Humanoid:TakeDamage()` path in `src`.
@@ -53,10 +58,11 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Actual authored Roblox Animation/Sound assets are still absent.
 - Presentation VFX are still placeholder-level.
 - `StatusSpeedGuard.server.lua` may physically exist but is not referenced by Rojo.
+- `ClientBootstrap` was recently simplified while fixing the Guardian model-name lookup; combat/input/remote behavior remains present, but the HUD layout differs from the older parent version and should be reviewed during Studio playtest.
 
 ## Exact next steps
 1. Continue static auditing of `CrystalAnimationController`, `CrystalVFXController`, `CombatPresentation`, `CombatService`, `CrystalAbilityService`, `BossService`, `StatusEffectService`, `NPCService` and `default.project.json`.
-2. Verify `crystal-ability-boundary.yml`, `crystal-config-validation.yml`, `progression-boundary.yml` plus all existing combat/damage/feedback/remote CI contracts after further edits.
+2. Verify `crystal-ability-boundary.yml`, `crystal-config-validation.yml`, `progression-boundary.yml`, `pve-attacker-context-validation.yml` plus all existing combat/damage/feedback/remote CI contracts after further edits.
 3. Add authored Animation/Sound objects under the configured asset names.
 4. Build the first real EMBER Basic + Flame Burst assets, then repeat for TIDE and GALE.
 5. Keep animation markers presentation-only; never make them gameplay authority.
