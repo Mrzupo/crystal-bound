@@ -10,7 +10,15 @@ local Items = {
 local InventoryConfig = {
 	DefaultMaxStackSize = 99,
 	ItemTypes = { Material = "Material", BossMaterial = "BossMaterial", Consumable = "Consumable" },
-	Rarities = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 },
+	Rarities = {
+		Common = 1,
+		Uncommon = 2,
+		Rare = 3,
+		Epic = 4,
+		Legendary = 5,
+		Mythic = 6,
+		Divine = 7,
+	},
 	Items = Items,
 }
 
