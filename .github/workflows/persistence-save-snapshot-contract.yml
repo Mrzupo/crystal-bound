@@ -1,0 +1,24 @@
+name: Persistence Save Snapshot Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate callback-time profile snapshot
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path('src/ReplicatedStorage/Modules/SafeProfileStore.lua').read_text(encoding='utf-8')
+          save_block = source.split('function SafeProfileStore.Save', 1)[1].split('function SafeProfileStore.Refresh', 1)[0]
+          if 'local payload = PlayerData.Reconcile(clone(profile))' not in save_block:
+              raise SystemExit('Save must snapshot the current profile inside UpdateAsync callback')
+          prefix = save_block.split('local ok, result = retry', 1)[0]
+          if 'local payload = PlayerData.Reconcile(clone(profile))' in prefix:
+              raise SystemExit('Save contains a stale pre-callback payload snapshot')
+          print('Persistence save snapshot contract validated.')
+          PY
