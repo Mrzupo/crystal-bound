@@ -1,0 +1,31 @@
+name: Transaction Atomicity
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-transactions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shop and crafting rollback paths
+        shell: python
+        run: |
+          from pathlib import Path
+          shop = Path("src/ServerScriptService/Services/ShopService.lua").read_text(encoding="utf-8")
+          craft = Path("src/ServerScriptService/Services/CraftingService.lua").read_text(encoding="utf-8")
+          checks = [
+              ("shop refunds failed inventory add", "EconomyService.AddMoney(profile, total)", shop),
+              ("shop verifies amount added", "if added ~= amount then", shop),
+              ("craft rolls back consumed inputs", "for rollbackId, rollbackAmount in pairs(consumed) do", craft),
+              ("craft verifies output amount", "if added ~= outputAmount then", craft),
+              ("craft validates capacity before consume", "if currentOutput + outputAmount > maxStack then", craft),
+          ]
+          failures = [name for name, marker, text in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Transaction atomicity contract validated.")
