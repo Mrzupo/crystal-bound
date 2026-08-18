@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 
 local ENFORCEMENT_INTERVAL = 0.25
+local connections = setmetatable({}, { __mode = "k" })
 
 local function refresh(player)
 	if not player.Parent then return end
@@ -13,20 +14,34 @@ local function refresh(player)
 	humanoid.WalkSpeed = math.max(6, base * math.clamp(slow, 0.2, 1))
 end
 
+local function cleanup(player)
+	local playerConnections = connections[player]
+	if not playerConnections then return end
+	for _, connection in ipairs(playerConnections) do
+		if connection.Connected then connection:Disconnect() end
+	end
+	connections[player] = nil
+end
+
 local function bind(player)
+	cleanup(player)
+	local playerConnections = {}
+	connections[player] = playerConnections
+
 	local function deferredRefresh()
 		task.defer(function() refresh(player) end)
 	end
 
-	player:GetAttributeChangedSignal("WalkSpeedBonus"):Connect(deferredRefresh)
-	player:GetAttributeChangedSignal("EquippedCrystal"):Connect(deferredRefresh)
-	player:GetAttributeChangedSignal("CrystalMasteryLevel"):Connect(deferredRefresh)
-	player.CharacterAdded:Connect(function()
+	table.insert(playerConnections, player:GetAttributeChangedSignal("WalkSpeedBonus"):Connect(deferredRefresh))
+	table.insert(playerConnections, player:GetAttributeChangedSignal("EquippedCrystal"):Connect(deferredRefresh))
+	table.insert(playerConnections, player:GetAttributeChangedSignal("CrystalMasteryLevel"):Connect(deferredRefresh))
+	table.insert(playerConnections, player.CharacterAdded:Connect(function()
 		task.defer(function() refresh(player) end)
-	end)
+	end))
 end
 
 Players.PlayerAdded:Connect(bind)
+Players.PlayerRemoving:Connect(cleanup)
 for _, player in ipairs(Players:GetPlayers()) do bind(player) end
 
 task.spawn(function()
@@ -40,4 +55,4 @@ task.spawn(function()
 			end
 		end
 	end
-end)
+end
