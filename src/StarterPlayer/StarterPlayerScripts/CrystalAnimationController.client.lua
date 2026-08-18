@@ -9,6 +9,8 @@ local tracks = {}
 local humanoid
 local animator
 local characterConnection
+local characterAncestryConnection
+local generation = 0
 
 local function normalizeAnimationId(value)
 	if type(value) ~= "string" or value == "" then return nil end
@@ -31,6 +33,17 @@ local function clearTracks()
 	table.clear(tracks)
 end
 
+local function disconnectCharacterSignals()
+	if characterConnection then
+		characterConnection:Disconnect()
+		characterConnection = nil
+	end
+	if characterAncestryConnection then
+		characterAncestryConnection:Disconnect()
+		characterAncestryConnection = nil
+	end
+end
+
 local function getAnimator(character)
 	local currentHumanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not currentHumanoid then return nil, nil end
@@ -50,7 +63,8 @@ local function loadTrack(crystalId, action)
 
 	local key = crystalId .. ":" .. action
 	local cached = tracks[key]
-	if cached then return cached, definition end
+	if cached and cached.Parent then return cached, definition end
+	tracks[key] = nil
 
 	local animation = Instance.new("Animation")
 	animation.Name = "CrystalBound_" .. key:gsub(":", "_")
@@ -67,14 +81,53 @@ local function loadTrack(crystalId, action)
 	return track, definition
 end
 
-function Controller.Initialize()
-	if characterConnection then characterConnection:Disconnect() end
+local function attachCharacter(character)
+	generation += 1
+	local localGeneration = generation
 	clearTracks()
-	humanoid, animator = getAnimator(player.Character)
-	characterConnection = player.CharacterAdded:Connect(function(character)
-		clearTracks()
-		humanoid, animator = getAnimator(character)
+	humanoid = nil
+	animator = nil
+
+	local function tryAttach()
+		if localGeneration ~= generation or not character.Parent then return end
+		local currentHumanoid, currentAnimator = getAnimator(character)
+		if currentHumanoid and currentAnimator then
+			humanoid = currentHumanoid
+			animator = currentAnimator
+		end
+	end
+
+	tryAttach()
+	if not humanoid then
+		task.spawn(function()
+			local currentHumanoid = character:WaitForChild("Humanoid", 5)
+			if not currentHumanoid or localGeneration ~= generation then return end
+			tryAttach()
+		end)
+	end
+
+	if characterAncestryConnection then characterAncestryConnection:Disconnect() end
+	characterAncestryConnection = character.AncestryChanged:Connect(function(_, parent)
+		if parent == nil and localGeneration == generation then
+			clearTracks()
+			humanoid = nil
+			animator = nil
+		end
 	end)
+end
+
+function Controller.Initialize()
+	disconnectCharacterSignals()
+	generation += 1
+	clearTracks()
+	humanoid = nil
+	animator = nil
+
+	if player.Character then
+		attachCharacter(player.Character)
+	end
+
+	characterConnection = player.CharacterAdded:Connect(attachCharacter)
 end
 
 function Controller.Play(action, crystalId)
@@ -83,23 +136,23 @@ function Controller.Play(action, crystalId)
 	if not animator or not humanoid or humanoid.Health <= 0 then return false end
 
 	local track, definition = loadTrack(crystalId, action)
-	if not track then return false end
+	if not track or not definition then return false end
 
 	for _, other in pairs(tracks) do
 		if other ~= track and other.IsPlaying then
-			stopTrack(other, definition.FadeTime)
+			stopTrack(other, tonumber(definition.FadeTime) or 0.08)
 		end
 	end
 
-	track:Play(definition.FadeTime, 1, definition.PlaybackSpeed or 1)
+	local fadeTime = math.max(0, tonumber(definition.FadeTime) or 0.08)
+	local playbackSpeed = math.max(0.05, tonumber(definition.PlaybackSpeed) or 1)
+	track:Play(fadeTime, 1, playbackSpeed)
 	return true
 end
 
 function Controller.Destroy()
-	if characterConnection then
-		characterConnection:Disconnect()
-		characterConnection = nil
-	end
+	generation += 1
+	disconnectCharacterSignals()
 	clearTracks()
 	humanoid = nil
 	animator = nil
