@@ -223,6 +223,7 @@ function NPCService.StartEnemyAI(model)
 		local leashDistance = math.max(config.AggroRange * 1.8, 50)
 		local specialConfig = type(config.Special) == "table" and config.Special or {}
 		local specialCooldown = math.max(0.25, tonumber(specialConfig.Cooldown) or 6)
+		local specialRange = math.max(0, tonumber(specialConfig.Range) or 0)
 		while model.Parent and humanoid.Health > 0 do
 			local character, distance = getNearestPlayer(root.Position, config.AggroRange)
 			if character then
@@ -244,7 +245,7 @@ function NPCService.StartEnemyAI(model)
 						nextAttack = os.clock() + math.max(0.25, config.AttackCooldown)
 						damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage, model, "Physical", config.AttackRange)
 					end
-					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" and distance <= math.max(config.AttackRange * 2, 10) then
+					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" and specialRange > 0 and distance <= specialRange then
 						nextSpecial = os.clock() + specialCooldown
 						specialAttack(typeId, model, character, targetHumanoid, targetRoot, root)
 					end
