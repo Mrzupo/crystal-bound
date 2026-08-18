@@ -22,7 +22,7 @@ jobs:
               "src/ServerScriptService/Services/BossService.lua": False,
               "src/ServerScriptService/Services/DamageService.lua": True,
               "src/ServerScriptService/Services/StatusEffectService.lua": False,
-              "src/ServerScriptService/Services/DodgeService.lua": True,
+              "src/ServerScriptService/Services/DodgeService.lua": False,
           }
 
           problems = []
