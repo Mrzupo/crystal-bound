@@ -42,6 +42,12 @@
 - [x] Clientseitige Crystal-spezifische Impact-/Ability-Presentation
 - [x] Serverseitige Crystal-VFX aus CombatService entfernt
 - [x] GALE-Splash über zentrale DamageService-Validierung
+- [x] Guardian-Shockwave gegen NPCs über zentralen DamageService abgesichert
+- [x] Burn-Ticks gegen NPCs über zentralen DamageService abgesichert
+- [x] Environmental-Damage als expliziter, attacker-loser DamageType definiert
+- [x] DamageService akzeptiert nur gültige Player-/Enemy-Angreifer oder explizites Environmental-Damage
+- [x] DamageService gibt tatsächlich angewendeten HP-Schaden statt angeforderten Schaden zurück
+- [x] Dodge-/Zero-Damage-Pfade erzeugen keine falschen CombatFeedback-/Crit-Meldungen
 - [x] Distanz-Culling für entfernte serverbestätigte Combat-Effects
 - [x] Asset-Lookup-Contract für Animationen und Sounds unter ReplicatedStorage.Assets
 - [x] Gegner-Konfiguration und serverseitige einfache KI
@@ -101,6 +107,7 @@
 - [x] GitHub-CI für Remote-Referenzen
 - [x] GitHub-CI für Balancing-Invarianten
 - [x] GitHub-CI für Combat-Presentation-Grenze und fehlende clientseitige TakeDamage-Pfade
+- [x] GitHub-CI für zentralisierte Damage-Pfade und Environmental-Damage-Contract
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 - [x] Duplicate Cooldown UI entfernt
 - [x] Clientseitige Animation-Controller-Architektur für Basic/Ability vorbereitet
