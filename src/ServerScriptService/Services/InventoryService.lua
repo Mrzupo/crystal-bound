@@ -9,9 +9,7 @@ end
 
 local function normalizePositiveAmount(amount)
 	local value = finiteNumber(amount)
-	if value == nil then return nil end
-	value = math.floor(value)
-	if value <= 0 then return nil end
+	if value == nil or value <= 0 or value % 1 ~= 0 then return nil end
 	return value
 end
 
