@@ -2,12 +2,12 @@ local PlayerData = {}
 local InventoryConfig = require(game.ReplicatedStorage.Config.InventoryConfig)
 local EconomyConfig = require(game.ReplicatedStorage.Config.EconomyConfig)
 local XPConfig = require(game.ReplicatedStorage.Config.XPConfig)
+local CrystalConfig = require(game.ReplicatedStorage.Config.CrystalConfig)
 local CrystalUpgradeConfig = require(game.ReplicatedStorage.Config.CrystalUpgradeConfig)
+local WorldConfig = require(game.ReplicatedStorage.Config.WorldConfig)
 local AchievementSystem = require(script.Parent.AchievementSystem)
 local QuestSystem = require(script.Parent.QuestSystem)
 
-local VALID_CRYSTALS = { EMBER = true, TIDE = true, GALE = true }
-local VALID_ISLANDS = { STARTER = true, TIDE = true, WIND = true, ANCIENT = true }
 local VALID_BOUNTY_ENEMIES = {
 	Emberling = true,
 	Tidecrawler = true,
@@ -75,6 +75,14 @@ local function titleMatchesAchievement(title, unlocked)
 	return false
 end
 
+local function isCrystalId(value)
+	return type(value) == "string" and CrystalConfig.UnlockLevels[value] ~= nil
+end
+
+local function isIslandId(value)
+	return type(value) == "string" and WorldConfig.Islands[value] ~= nil
+end
+
 function PlayerData.new()
 	return {
 		Version = 13,
@@ -118,13 +126,13 @@ function PlayerData.Reconcile(data)
 	data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)
 
 	data.Crystals = type(data.Crystals) == "table" and data.Crystals or clone(defaults.Crystals)
-	data.Crystals.Owned = normalizeList(data.Crystals.Owned, function(id) return VALID_CRYSTALS[id] end)
+	data.Crystals.Owned = normalizeList(data.Crystals.Owned, isCrystalId)
 	if not table.find(data.Crystals.Owned, "EMBER") then table.insert(data.Crystals.Owned, "EMBER") end
-	if not VALID_CRYSTALS[data.Crystals.Equipped] or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then data.Crystals.Equipped = "EMBER" end
+	if not isCrystalId(data.Crystals.Equipped) or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then data.Crystals.Equipped = "EMBER" end
 
 	local sourceMastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or {}
 	local normalizedMastery = {}
-	for crystalId in pairs(VALID_CRYSTALS) do
+	for crystalId in pairs(CrystalConfig.UnlockLevels) do
 		local source = type(sourceMastery[crystalId]) == "table" and sourceMastery[crystalId] or {}
 		local mastery = {
 			Level = clampInt(source.Level, 1, masteryMaxLevel, 1),
@@ -169,8 +177,8 @@ function PlayerData.Reconcile(data)
 	end
 	data.QuestProgress = normalizedProgress
 
-	data.UnlockedIslands = normalizeList(data.UnlockedIslands, function(islandId) return VALID_ISLANDS[islandId] end)
-	if not table.find(data.UnlockedIslands, "STARTER") then table.insert(data.UnlockedIslands, "STARTER") end
+	data.UnlockedIslands = normalizeList(data.UnlockedIslands, isIslandId)
+	if not table.find(data.UnlockedIslands, "STARTER") and WorldConfig.Islands.STARTER then table.insert(data.UnlockedIslands, "STARTER") end
 
 	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
 	data.DailyBounty.Date = type(data.DailyBounty.Date) == "string" and data.DailyBounty.Date or ""
