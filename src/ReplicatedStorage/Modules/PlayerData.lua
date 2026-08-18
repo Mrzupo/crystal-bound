@@ -5,16 +5,9 @@ local XPConfig = require(game.ReplicatedStorage.Config.XPConfig)
 local CrystalConfig = require(game.ReplicatedStorage.Config.CrystalConfig)
 local CrystalUpgradeConfig = require(game.ReplicatedStorage.Config.CrystalUpgradeConfig)
 local WorldConfig = require(game.ReplicatedStorage.Config.WorldConfig)
+local DailyBountyConfig = require(game.ReplicatedStorage.Config.DailyBountyConfig)
 local AchievementSystem = require(game.ReplicatedStorage.Modules.AchievementSystem)
 local QuestSystem = require(game.ReplicatedStorage.Modules.QuestSystem)
-
-local VALID_BOUNTY_ENEMIES = {
-	Emberling = true,
-	Tidecrawler = true,
-	Galewisp = true,
-	CrystalBat = true,
-	AncientGolem = true,
-}
 
 local function isFiniteNumber(value)
 	return type(value) == "number" and value == value and value < math.huge and value > -math.huge
@@ -83,6 +76,29 @@ local function isIslandId(value)
 	return type(value) == "string" and WorldConfig.Islands[value] ~= nil
 end
 
+local function isBountyEnemy(value)
+	if type(value) ~= "string" or type(DailyBountyConfig.Goals) ~= "table" then return false end
+	for _, definition in ipairs(DailyBountyConfig.Goals) do
+		if type(definition) == "table" and definition.EnemyType == value then return true end
+	end
+	return false
+end
+
+local function getDefaultBounty()
+	local definition = type(DailyBountyConfig.Goals) == "table" and DailyBountyConfig.Goals[1]
+	if type(definition) ~= "table" then
+		return { Date = "", EnemyType = "", Goal = 1, Progress = 0, RewardMoney = 0, Claimed = false }
+	end
+	return {
+		Date = "",
+		EnemyType = definition.EnemyType,
+		Goal = math.max(1, math.floor(tonumber(definition.Goal) or 1)),
+		Progress = 0,
+		RewardMoney = math.max(0, math.floor(tonumber(definition.RewardMoney) or 0)),
+		Claimed = false,
+	}
+end
+
 function PlayerData.new()
 	return {
 		Version = 13,
@@ -96,7 +112,7 @@ function PlayerData.new()
 		ActiveQuests = {}, CompletedQuests = {}, QuestProgress = {},
 		UnlockedIslands = { "STARTER" },
 		Titles = {}, Achievements = {},
-		DailyBounty = { Date = "", EnemyType = "Emberling", Goal = 8, Progress = 0, RewardMoney = 120, Claimed = false },
+		DailyBounty = getDefaultBounty(),
 		SessionId = "",
 		SessionLockedAt = 0,
 		SessionLock = nil,
@@ -183,7 +199,7 @@ function PlayerData.Reconcile(data)
 
 	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
 	data.DailyBounty.Date = type(data.DailyBounty.Date) == "string" and data.DailyBounty.Date or ""
-	if not VALID_BOUNTY_ENEMIES[data.DailyBounty.EnemyType] then data.DailyBounty.EnemyType = defaults.DailyBounty.EnemyType end
+	if not isBountyEnemy(data.DailyBounty.EnemyType) then data.DailyBounty.EnemyType = defaults.DailyBounty.EnemyType end
 	data.DailyBounty.Goal = clampInt(data.DailyBounty.Goal, 1, 100, defaults.DailyBounty.Goal)
 	data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, data.DailyBounty.Goal, 0)
 	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, EconomyConfig.MaxMoney, defaults.DailyBounty.RewardMoney)
