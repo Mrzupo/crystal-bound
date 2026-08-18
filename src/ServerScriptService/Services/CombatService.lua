@@ -155,9 +155,9 @@ function CombatService.HandleRequest(player, action, target)
 	local critical, criticalMultiplier = CombatModifierService.RollCritical(profile, crystalId)
 	multiplier *= criticalMultiplier
 	local damage = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier
+	local result = DamageService.ProcessDamage({ Attacker = player, Target = targetModel, Amount = damage, Range = config.Range, DamageType = "Crystal" }); if not result.Success then return end
 	targetModel:SetAttribute("LastAttackerUserId", player.UserId)
 	targetModel:SetAttribute("LastHitCritical", critical == true)
-	local result = DamageService.ProcessDamage({ Attacker = player, Target = targetModel, Amount = damage, Range = config.Range, DamageType = "Crystal" }); if not result.Success then return end
 	cooldowns[player][action] = now + config.Cooldown
 	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
 	task.delay(0.2, function()
