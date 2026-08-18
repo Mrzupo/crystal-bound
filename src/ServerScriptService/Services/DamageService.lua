@@ -50,6 +50,16 @@ local function rememberAttacker(targetModel, attacker)
 	end
 end
 
+local function isValidTarget(target)
+	if not target or not target:IsA("Instance") or not target:IsDescendantOf(workspace) then return false end
+	local targetModel = target:IsA("Player") and target.Character or target
+	if not targetModel or not targetModel:IsA("Model") then return false end
+	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return false end
+	if Players:GetPlayerFromCharacter(targetModel) then return true end
+	return targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil
+end
+
 function DamageService.ValidateRequest(request)
 	if not Validators.IsValid(request) then return false end
 	if typeof(request.Target) ~= "Instance" then return false end
@@ -61,7 +71,7 @@ end
 
 function DamageService.CanDamage(request)
 	if not DamageService.ValidateRequest(request) then return false end
-	if request.Target == nil or not request.Target:IsDescendantOf(workspace) then return false end
+	if not isValidTarget(request.Target) then return false end
 
 	if request.DamageType == DamageTypes.Environmental and request.Attacker == nil then
 		return true
@@ -103,12 +113,6 @@ function DamageService.ProcessDamage(request)
 	local targetModel = request.Target:IsA("Player") and request.Target.Character or request.Target
 	if not targetModel or not targetModel:IsA("Model") then
 		return DamageResult.new(false, 0, "Invalid target model")
-	end
-
-	local isEnemy = targetModel:GetAttribute("Enemy") == true
-	local isBoss = targetModel:GetAttribute("BossId") ~= nil
-	if not isEnemy and not isBoss then
-		return DamageResult.new(false, 0, "Target is not a combat enemy")
 	end
 
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
