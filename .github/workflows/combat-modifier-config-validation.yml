@@ -1,0 +1,28 @@
+name: Combat Modifier Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate critical-hit configuration
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/CombatModifierConfig.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/CombatModifierService.lua").read_text(encoding="utf-8")
+          for marker in ("BaseChance =", "ChancePerMasteryLevel =", "MaxChance =", "Multiplier ="):
+              if marker not in config:
+                  raise SystemExit(f"CombatModifierConfig missing {marker}")
+          if "CombatModifierConfig" not in service:
+              raise SystemExit("CombatModifierService must consume shared CombatModifierConfig")
+          values = [float(value) for value in re.findall(r'=\s*(-?\d+(?:\.\d+)?)', config)]
+          if not values or any(value < 0 for value in values):
+              raise SystemExit("Combat modifier config values must not be negative")
+          print("Combat modifier config validated.")
