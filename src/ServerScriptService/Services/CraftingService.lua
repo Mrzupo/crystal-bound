@@ -11,6 +11,14 @@ local function finiteNumber(value)
 	return number
 end
 
+local function positiveInteger(value)
+	local number = finiteNumber(value)
+	if number == nil then return nil end
+	number = math.floor(number)
+	if number <= 0 then return nil end
+	return number
+end
+
 function CraftingService.GetRecipe(outputId)
 	return Recipes[outputId]
 end
@@ -18,8 +26,9 @@ end
 function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	local recipe = Recipes[outputId]
 	if not recipe then return false, "Recipe not found." end
-	local numericAmount = finiteNumber(amount) or 1
-	amount = math.clamp(math.floor(numericAmount), 1, 10)
+	amount = positiveInteger(amount)
+	if not amount then return false, "Craft amount must be a positive integer." end
+	amount = math.min(amount, 10)
 
 	InventoryService.GetInventory(profile)
 	local outputConfig = InventoryConfig.GetItemConfig(recipe.Output)
@@ -27,7 +36,9 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 
 	local currentRaw = profile.Inventory[recipe.Output]
 	local currentOutput = math.max(0, math.floor(finiteNumber(currentRaw) or 0))
-	local outputAmount = math.max(1, math.floor(finiteNumber(recipe.Amount) or 1)) * amount
+	local recipeAmount = positiveInteger(recipe.Amount)
+	if not recipeAmount then return false, "Crafting recipe output amount is invalid." end
+	local outputAmount = recipeAmount * amount
 	local maxStack = InventoryConfig.GetMaxStackSize(recipe.Output)
 	if currentOutput + outputAmount > maxStack then
 		return false, string.format("Not enough inventory space for %dx %s.", outputAmount, recipe.Output)
@@ -39,15 +50,18 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 
 	local consumed = {}
 	for itemId, required in pairs(recipe.Inputs) do
-		local safeRequired = math.max(0, math.floor(finiteNumber(required) or 0))
+		local safeRequired = positiveInteger(required)
+		if not safeRequired then
+			return false, string.format("Crafting recipe input %s is invalid.", tostring(itemId))
+		end
 		local totalRequired = safeRequired * amount
-		if totalRequired <= 0 or not InventoryService.HasItem(profile, itemId, totalRequired) then
+		if not InventoryService.HasItem(profile, itemId, totalRequired) then
 			return false, string.format("Need %d %s to craft %dx %s.", totalRequired, itemId, amount, outputId)
 		end
 	end
 
 	for itemId, required in pairs(recipe.Inputs) do
-		local safeRequired = math.max(0, math.floor(finiteNumber(required) or 0))
+		local safeRequired = positiveInteger(required)
 		local totalRequired = safeRequired * amount
 		if not InventoryService.RemoveItem(profile, itemId, totalRequired) then
 			for rollbackId, rollbackAmount in pairs(consumed) do InventoryService.AddItem(profile, rollbackId, rollbackAmount) end
