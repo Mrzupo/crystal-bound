@@ -17,10 +17,17 @@ local function normalizedXP(profile)
 	return math.clamp(math.floor(finiteNumber(profile.Experience) or 0), 0, XPConfig.MaxExperience)
 end
 
+local function positiveInteger(value)
+	local number = finiteNumber(value)
+	if number == nil or number < 0 or number % 1 ~= 0 then return nil end
+	return number
+end
+
 function XPService.AddXP(profile, amount)
 	local level = normalizedLevel(profile)
 	local experience = normalizedXP(profile)
-	amount = math.max(0, finiteNumber(amount) or 0)
+	amount = positiveInteger(amount)
+	if amount == nil then return level, experience, 0 end
 	local levelsGained = 0
 	if level >= XPConfig.MaxLevel then
 		profile.Level = XPConfig.MaxLevel
