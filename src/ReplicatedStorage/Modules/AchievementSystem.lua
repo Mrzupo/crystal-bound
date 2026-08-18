@@ -25,6 +25,24 @@ end
 
 function AchievementSystem.Get(id) return Definitions[id] end
 function AchievementSystem.GetAll() return Definitions end
+function AchievementSystem.GetOrder() return ORDER end
+function AchievementSystem.GetOrdered()
+	local result = {}
+	for _, id in ipairs(ORDER) do
+		local definition = Definitions[id]
+		if definition then
+			table.insert(result, {
+				Id = id,
+				Name = definition.Name,
+				Requirement = definition.Requirement,
+				RewardMoney = definition.RewardMoney,
+				Title = definition.Title,
+			})
+		end
+	end
+	return result
+end
+function AchievementSystem.IsValidTitle(title) return type(title) == "string" and VALID_TITLES[title] == true end
 function AchievementSystem.Has(profile, id) return table.find(profile.Achievements or {}, id) ~= nil end
 function AchievementSystem.Unlock(profile, id)
 	if not Definitions[id] or AchievementSystem.Has(profile, id) then return nil end
@@ -38,7 +56,7 @@ function AchievementSystem.Check(profile)
 	profile.Achievements = profile.Achievements or {}; profile.Titles = profile.Titles or {}; profile.Stats = profile.Stats or {}
 	local validTitles = {}
 	for _, title in ipairs(profile.Titles) do
-		if type(title) == "string" and VALID_TITLES[title] and not table.find(validTitles, title) then
+		if type(title) == "string" and AchievementSystem.IsValidTitle(title) and not table.find(validTitles, title) then
 			table.insert(validTitles, title)
 		end
 	end
