@@ -16,7 +16,6 @@
         "NPCDialogConfig": {"$path": "src/ReplicatedStorage/Modules/NPCDialogConfig.lua"},
         "NPCSystem": {"$path": "src/ReplicatedStorage/Modules/NPCSystem.lua"},
         "InventorySystem": {"$path": "src/ReplicatedStorage/Modules/InventorySystem.lua"},
-        "SaveSystem": {"$path": "src/ReplicatedStorage/Modules/SaveSystem.lua"},
         "Combat": {
           "$className": "Folder",
           "DamageRequest": {"$path": "src/ReplicatedStorage/Modules/Combat/DamageRequest.lua"},
