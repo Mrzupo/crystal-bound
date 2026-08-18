@@ -1,4 +1,6 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local DamageService = require(script.Parent.DamageService)
 
 local DodgeService = {}
 local cooldowns = {}
@@ -74,7 +76,7 @@ function DodgeService.IsInvulnerable(player)
 	return player and player:IsA("Player") and player:GetAttribute("DodgeInvulnerable") == true
 end
 
-function DodgeService.ApplyDamage(player, humanoid, amount)
+function DodgeService.ApplyDamage(player, humanoid, amount, attacker, damageType, range)
 	if not player or not humanoid or humanoid.Health <= 0 then return false end
 	if DodgeService.IsInvulnerable(player) then
 		player:SetAttribute("DodgeMessage", "Dodged!")
@@ -82,8 +84,16 @@ function DodgeService.ApplyDamage(player, humanoid, amount)
 	end
 	local damage = finiteDamage(amount)
 	if not damage or damage <= 0 then return false end
-	humanoid:TakeDamage(math.clamp(damage, 0, 1000))
-	return true
+	if not attacker or not attacker:IsA("Instance") then return false end
+
+	local result = DamageService.ProcessDamage({
+		Attacker = attacker,
+		Target = player,
+		Amount = math.clamp(damage, 0, 1000),
+		Range = range or 1000,
+		DamageType = damageType or "Physical",
+	})
+	return result.Success and result.Amount > 0
 end
 
 function DodgeService.CleanupPlayer(player)
