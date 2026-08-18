@@ -1,0 +1,29 @@
+name: Interaction Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-interaction-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate centralized NPC interaction range
+        shell: python
+        run: |
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/InteractionConfig.lua").read_text(encoding="utf-8")
+          for path in [
+              "src/ServerScriptService/Bootstrap.server.lua",
+              "src/ServerScriptService/ShopRemote.server.lua",
+              "src/ServerScriptService/CraftingRemote.server.lua",
+              "src/ServerScriptService/NPCDialogRemote.server.lua",
+          ]:
+              text = Path(path).read_text(encoding="utf-8")
+              if "InteractionConfig" not in text:
+                  raise SystemExit(f"{path} must consume shared InteractionConfig")
+          if "NPC_INTERACTION_RANGE" not in config:
+              raise SystemExit("InteractionConfig must define NPC interaction range")
+          print("InteractionConfig contract validated.")
