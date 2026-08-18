@@ -47,24 +47,28 @@ The current master design context is authoritative: Crystal Bound is an original
 - `CombatService` fires `CombatFeedback` only after `DamageService.ProcessDamage()` succeeds and includes the verified target, attacker id, action, crystal id, critical state and applied damage amount.
 - `CombatPresentation.client.lua` consumes only the server-confirmed `CombatFeedback` event for damage numbers, hit flashes, impact visuals and crystal-specific ability accents.
 - NPC-side `LastHitCrystal` / `LastHitCritical` / `LastAttackerUserId` presentation attributes are no longer used by the combat presentation path.
-- Added `combat-presentation-validation.yml` to guard the client/server presentation boundary, required mappings and the absence of client-side `TakeDamage()`.
+- Added `combat-presentation-validation.yml` to guard the client/server presentation boundary, required mappings, authored asset naming contracts and the absence of client-side `TakeDamage()`.
 - `ClientBootstrap.client.lua` throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
-- Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs for EMBER/TIDE/GALE.
+- Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs, asset names, VFX values and sound asset names for EMBER/TIDE/GALE.
+- `CrystalAnimationController.client.lua` loads authored `Animation` objects from `ReplicatedStorage.Assets.Animations` by configured `AssetName` and safely falls back to `AnimationId`.
+- `CrystalVFXController.client.lua` loads authored `Sound` objects from `ReplicatedStorage.Assets.Sounds` by configured `SoundAssetName` and safely falls back to `SoundId`.
 - Added `CrystalAnimationController.client.lua`, which owns client-side `Animator`/`AnimationTrack` loading, priority, fade and playback.
 - The animation controller handles character-generation/ancestry changes and clears stale tracks on respawn.
 - Local animation playback is throttled using the existing crystal Basic/Ability cooldown values; this does not replace server cooldown validation.
 - Added `CrystalVFXController.client.lua` for lightweight crystal-specific local combat bursts.
-- VFX configuration now lives beside animation configuration, including optional sound IDs, presentation scale and offsets.
 - VFX playback has a small local presentation guard to avoid excessive local burst/sound allocation during input spam.
 - Wired Basic/Q presentation animation + VFX on PC and mobile before the existing `CombatRequest`; these effects are cosmetic only.
-- Registered the animation/VFX controllers, presentation config and `CombatFeedback` remote mapping in `default.project.json`.
+- Registered the animation/VFX controllers, presentation config, asset folders and `CombatFeedback` remote mapping in `default.project.json`.
 
 ## Animation/VFX status
-The animation architecture is in place, but the asset IDs are intentionally empty until real Roblox animations are published. Therefore this is **not yet a claim of real in-game attack animations**. The controller safely no-ops when an ID is missing.
+The animation architecture is in place, but the actual `Animation` objects and published IDs are still absent. The configured asset names are intentionally ready for future authored assets:
+- `EMBER_Basic`, `EMBER_FlameBurst`
+- `TIDE_Basic`, `TIDE_TidalPulse`
+- `GALE_Basic`, `GALE_GaleStrike`
 
-The VFX layer is deliberately placeholder-level: it provides immediate crystal identity without pretending to be final asset-based particles. Optional sound hooks also remain empty until authored Roblox assets exist.
+Therefore this is **not yet a claim of real in-game attack animations or final audio**. Missing assets safely fall back/no-op.
 
-The confirmed-hit presentation is now explicitly client-side: the server validates damage and publishes only the verified result; the client turns that result into visuals. Animation timing still never determines damage authority.
+The VFX layer is deliberately placeholder-level: it provides immediate crystal identity without pretending to be final asset-based particles. The confirmed-hit presentation is explicitly client-side: the server validates damage and publishes only the verified result; the client turns that result into visuals. Animation timing still never determines damage authority.
 
 ## Quality assessment
 - **Architecture:** strong for a prototype; server authority is clear and gameplay services are separated.
@@ -78,13 +82,13 @@ The confirmed-hit presentation is now explicitly client-side: the server validat
 - No Luau interpreter is available here, so Luau syntax has only been statically/structurally reviewed, not executed.
 - The latest commit has no reported combined status/workflow run available through the connected GitHub status endpoints in this session; do not call that CI-green.
 - `src/ServerScriptService/StatusSpeedGuard.server.lua` may still physically exist as a legacy file, but it is not referenced by `default.project.json`.
-- Actual Roblox animation asset IDs are not available yet.
+- Actual Roblox animation and sound assets are not available yet.
 
 ## Exact next steps
-1. Continue auditing the refined `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua` and final Rojo mapping.
-2. Validate the new combat-presentation CI contract after subsequent changes.
-3. Add authored asset folders/lookup contracts for crystal VFX and sounds without moving gameplay authority client-side.
-4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire their IDs into `CrystalAnimationConfig.lua`.
+1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua` and final Rojo mapping.
+2. Validate the combat-presentation CI contract after subsequent changes.
+3. Add the actual authored `Animation`/`Sound` objects under the configured asset names.
+4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire them into the asset folders or IDs.
 5. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
 6. Repeat the same presentation contract for TIDE and GALE.
 7. Prepare the first Roblox Studio runtime/playtest and record actual combat/animation issues.
