@@ -33,6 +33,36 @@ local function bindHumanoid(player, humanoid)
 	updateHealth()
 end
 
+local function syncTitleTag(character, title)
+	local head = character and character:FindFirstChild("Head")
+	if not head then return end
+	local tag = head:FindFirstChild("CrystalBoundTitle")
+	if title == "" then
+		if tag then tag:Destroy() end
+		return
+	end
+	local expectedText = "< " .. title .. " >"
+	local label = tag and tag:FindFirstChild("Label")
+	if tag and label and label:IsA("TextLabel") and label.Text == expectedText then
+		return
+	end
+	if tag then tag:Destroy() end
+	tag = Instance.new("BillboardGui")
+	tag.Name = "CrystalBoundTitle"
+	tag.Size = UDim2.fromOffset(240, 34)
+	tag.StudsOffset = Vector3.new(0, 2.8, 0)
+	tag.AlwaysOnTop = true
+	tag.Parent = head
+	label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = expectedText
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 15
+	label.Parent = tag
+end
+
 function PlayerService.GetProfile(player) return PlayerService.Profiles[player] end
 
 function PlayerService.Load(player)
@@ -123,14 +153,7 @@ function PlayerService.Sync(player)
 		player:SetAttribute("Health", math.max(0, humanoid.Health))
 		player:SetAttribute("MaxHealth", maxHealth)
 	end
-	local head = character and character:FindFirstChild("Head")
-	if head then
-		local tag = head:FindFirstChild("CrystalBoundTitle"); if tag then tag:Destroy() end
-		if title ~= "" then
-			tag = Instance.new("BillboardGui"); tag.Name = "CrystalBoundTitle"; tag.Size = UDim2.fromOffset(240, 34); tag.StudsOffset = Vector3.new(0, 2.8, 0); tag.AlwaysOnTop = true; tag.Parent = head
-			local label = Instance.new("TextLabel"); label.Size = UDim2.fromScale(1, 1); label.BackgroundTransparency = 1; label.Text = "< " .. title .. " >"; label.Font = Enum.Font.GothamBold; label.TextSize = 15; label.Parent = tag
-		end
-	end
+	syncTitleTag(character, title)
 end
 
 function PlayerService.Save(player)
