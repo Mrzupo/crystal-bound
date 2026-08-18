@@ -1,4 +1,6 @@
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local WorldConfig = require(ReplicatedStorage.Config.WorldConfig)
 
 local islands = Workspace:WaitForChild("Islands")
 
@@ -11,6 +13,10 @@ local function addPart(parent, name, size, position, material)
 	part.Material = material
 	part.Parent = parent
 	return part
+end
+
+local function at(center, offset)
+	return center + offset
 end
 
 local function addAncientPillar(island, position, height)
@@ -49,47 +55,51 @@ local function mark(island, name)
 end
 
 local starter = islands:WaitForChild("StarterIsland", 30)
+local starterCenter = WorldConfig.Islands.STARTER.Center
 if starter and not starter:FindFirstChild("StarterDecorReady") then
-	for _, position in ipairs({ Vector3.new(-45, 1, 38), Vector3.new(-18, 1, 42), Vector3.new(42, 1, 35), Vector3.new(46, 1, -35) }) do
-		addTree(starter, position, Enum.Material.Grass)
+	for _, offset in ipairs({ Vector3.new(-45, 1, 38), Vector3.new(-18, 1, 42), Vector3.new(42, 1, 35), Vector3.new(46, 1, -35) }) do
+		addTree(starter, at(starterCenter, offset), Enum.Material.Grass)
 	end
-	for _, position in ipairs({ Vector3.new(-35, 1, -34), Vector3.new(38, 1, -28), Vector3.new(-45, 1, 5) }) do
-		addRock(starter, position)
+	for _, offset in ipairs({ Vector3.new(-35, 1, -34), Vector3.new(38, 1, -28), Vector3.new(-45, 1, 5) }) do
+		addRock(starter, at(starterCenter, offset))
 	end
-	local camp = addPart(starter, "TrainingCamp", Vector3.new(14, 1, 14), Vector3.new(0, 1.5, 8), Enum.Material.WoodPlanks)
+	local camp = addPart(starter, "TrainingCamp", Vector3.new(14, 1, 14), at(starterCenter, Vector3.new(0, 1.5, 8)), Enum.Material.WoodPlanks)
 	camp.Transparency = 0.25
 	mark(starter, "StarterDecorReady")
 end
 
 local tide = islands:WaitForChild("TideIsland", 30)
+local tideCenter = WorldConfig.Islands.TIDE.Center
 if tide and not tide:FindFirstChild("TideDecorReady") then
-	for _, position in ipairs({ Vector3.new(135, 1, -35), Vector3.new(200, 1, -32), Vector3.new(145, 1, 35), Vector3.new(205, 1, 32) }) do
-		addRock(tide, position, Vector3.new(7, 3, 6), Enum.Material.Sandstone)
+	for _, offset in ipairs({ Vector3.new(-35, 1, -35), Vector3.new(30, 1, -32), Vector3.new(-25, 1, 35), Vector3.new(35, 1, 32) }) do
+		addRock(tide, at(tideCenter, offset), Vector3.new(7, 3, 6), Enum.Material.Sandstone)
 	end
-	for index, position in ipairs({ Vector3.new(142, 1, 10), Vector3.new(180, 1, 30), Vector3.new(205, 1, -5) }) do
-		addCrystalCluster(tide, position, Enum.Material.Glass)
+	for _, offset in ipairs({ Vector3.new(-28, 1, 10), Vector3.new(10, 1, 30), Vector3.new(35, 1, -5) }) do
+		addCrystalCluster(tide, at(tideCenter, offset), Enum.Material.Glass)
 	end
 	mark(tide, "TideDecorReady")
 end
 
 local ancient = islands:WaitForChild("AncientRuins", 30)
+local ancientCenter = WorldConfig.Islands.ANCIENT.Center
 if ancient and not ancient:FindFirstChild("DecorReady") then
-	for _, data in ipairs({ { Vector3.new(460, 1, -35), 10 }, { Vector3.new(540, 1, -30), 8 }, { Vector3.new(465, 1, 35), 7 }, { Vector3.new(545, 1, 40), 11 } }) do
-		addAncientPillar(ancient, data[1], data[2])
+	for _, data in ipairs({ { Vector3.new(-40, 1, -35), 10 }, { Vector3.new(40, 1, -30), 8 }, { Vector3.new(-35, 1, 35), 7 }, { Vector3.new(45, 1, 40), 11 } }) do
+		addAncientPillar(ancient, at(ancientCenter, data[1]), data[2])
 	end
-	addCrystalCluster(ancient, Vector3.new(500, 1, -5))
-	addCrystalCluster(ancient, Vector3.new(555, 1, 18))
+	addCrystalCluster(ancient, at(ancientCenter, Vector3.new(0, 1, -5)))
+	addCrystalCluster(ancient, at(ancientCenter, Vector3.new(55, 1, 18)))
 	mark(ancient, "DecorReady")
 end
 
 local wind = islands:WaitForChild("WindIsland", 30)
+local windCenter = WorldConfig.Islands.WIND.Center
 if wind and not wind:FindFirstChild("WindDecorReady") then
-	for _, position in ipairs({ Vector3.new(300, 1, 35), Vector3.new(365, 1, 35), Vector3.new(315, 1, -35) }) do
-		local rock = addPart(wind, "WindRock", Vector3.new(7, 4, 7), position, Enum.Material.Slate)
+	for _, offset in ipairs({ Vector3.new(-30, 1, 35), Vector3.new(35, 1, 35), Vector3.new(-15, 1, -35) }) do
+		local rock = addPart(wind, "WindRock", Vector3.new(7, 4, 7), at(windCenter, offset), Enum.Material.Slate)
 		rock.Shape = Enum.PartType.Ball
 		rock.Orientation = Vector3.new(0, math.random(0, 180), math.random(-10, 10))
 	end
-	addCrystalCluster(wind, Vector3.new(330, 1, 18), Enum.Material.Neon)
+	addCrystalCluster(wind, at(windCenter, Vector3.new(0, 1, 18)), Enum.Material.Neon)
 	mark(wind, "WindDecorReady")
 end
 
