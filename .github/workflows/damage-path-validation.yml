@@ -1,0 +1,46 @@
+name: Crystal Bound Damage Path Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-damage-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate reviewed damage boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+
+          checks = {
+              "src/ServerScriptService/Services/CombatService.lua": False,
+              "src/ServerScriptService/Services/BossService.lua": False,
+              "src/ServerScriptService/Services/DamageService.lua": True,
+              "src/ServerScriptService/Services/StatusEffectService.lua": True,
+              "src/ServerScriptService/Services/DodgeService.lua": True,
+          }
+
+          problems = []
+          for relative, allowed in checks.items():
+              path = Path(relative)
+              if not path.is_file():
+                  problems.append(f"Missing reviewed damage-path file: {relative}")
+                  continue
+              has_direct = ":TakeDamage(" in path.read_text(encoding="utf-8")
+              if has_direct != allowed:
+                  state = "contains" if has_direct else "does not contain"
+                  expected = "must contain" if allowed else "must not contain"
+                  problems.append(f"{relative} {state} direct TakeDamage, but {expected} it")
+
+          if problems:
+              print("Damage path validation problems:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("Reviewed damage paths validated.")
