@@ -1,0 +1,35 @@
+name: Crystal Bound PvE Damage Boundary
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-pve-damage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate PvE-only DamageService contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/ServerScriptService/Services/DamageService.lua")
+          text = path.read_text(encoding="utf-8")
+
+          required = [
+              "Players:GetPlayerFromCharacter(attackerModel)",
+              "Players:GetPlayerFromCharacter(targetModel)",
+              "return false",
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f"Missing PvE damage boundary token: {token}")
+
+          if "DamageType = \"PvP\"" in text or "DamageTypes.PvP" in text:
+              raise SystemExit("PvP damage types must not be introduced into the PvE-only combat foundation")
+
+          print("PvE damage boundary validated.")
