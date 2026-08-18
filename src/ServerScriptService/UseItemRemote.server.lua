@@ -14,7 +14,13 @@ local USE_INTERVAL = 0.2
 
 remote.OnServerEvent:Connect(function(player, itemId)
 	local potion = ConsumableConfig.HealthPotion
+	if type(potion) ~= "table" or type(potion.ItemId) ~= "string" then return end
 	if type(itemId) ~= "string" or itemId ~= potion.ItemId then return end
+	local healAmount = tonumber(potion.HealAmount)
+	if type(healAmount) ~= "number" or healAmount ~= healAmount or healAmount == math.huge or healAmount <= 0 then
+		player:SetAttribute("ShopMessage", "Health Potion configuration is unavailable.")
+		return
+	end
 	local now = os.clock()
 	if now < (NEXT_USE[player] or 0) then return end
 	NEXT_USE[player] = now + USE_INTERVAL
@@ -34,7 +40,6 @@ remote.OnServerEvent:Connect(function(player, itemId)
 		player:SetAttribute("ShopMessage", "Unable to consume Health Potion safely.")
 		return
 	end
-	local healAmount = math.max(0, tonumber(potion.HealAmount) or 0)
 	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + healAmount)
 	PlayerService.Sync(player)
 	remotes.InventoryChanged:FireClient(player, profile.Inventory)
