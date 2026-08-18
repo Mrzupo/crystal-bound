@@ -7,6 +7,9 @@ local remote = remotes:FindFirstChild("NPCDialogRequest") or Instance.new("Remot
 remote.Name = "NPCDialogRequest"
 remote.Parent = remotes
 
+local REQUEST_INTERVAL = 0.2
+local nextRequest = {}
+
 local function isNearNPC(player, npcId)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -17,6 +20,9 @@ local function isNearNPC(player, npcId)
 end
 
 remote.OnServerInvoke = function(player, npcId)
+	local now = os.clock()
+	if now < (nextRequest[player] or 0) then return nil end
+	nextRequest[player] = now + REQUEST_INTERVAL
 	if type(npcId) ~= "string" then return nil end
 	local config = DialogConfig.Get(npcId)
 	if not config or not isNearNPC(player, npcId) then return nil end
@@ -27,4 +33,6 @@ remote.OnServerInvoke = function(player, npcId)
 	}
 end
 
-Players.PlayerRemoving:Connect(function() end)
+Players.PlayerRemoving:Connect(function(player)
+	nextRequest[player] = nil
+end)
