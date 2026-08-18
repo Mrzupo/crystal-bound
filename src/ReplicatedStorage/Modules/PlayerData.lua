@@ -77,6 +77,7 @@ function PlayerData.new()
 		DailyBounty = { Date = "", EnemyType = "Emberling", Goal = 8, Progress = 0, RewardMoney = 120, Claimed = false },
 		SessionId = "",
 		SessionLockedAt = 0,
+		SessionLock = nil,
 	}
 end
 
@@ -162,7 +163,18 @@ function PlayerData.Reconcile(data)
 	data.DailyBounty.Claimed = data.DailyBounty.Claimed == true
 
 	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
-	data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 2147483647, 0)
+	data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 4102444800, 0)
+	if type(data.SessionLock) ~= "table" then
+		data.SessionLock = nil
+	else
+		local jobId = type(data.SessionLock.JobId) == "string" and data.SessionLock.JobId or ""
+		local sessionTimestamp = clampInt(data.SessionLock.Timestamp, 0, 4102444800, 0)
+		if jobId == "" or sessionTimestamp <= 0 then
+			data.SessionLock = nil
+		else
+			data.SessionLock = { JobId = jobId, Timestamp = sessionTimestamp }
+		end
+	end
 
 	data.Version = defaults.Version
 	data.LegacyVersion = oldVersion
