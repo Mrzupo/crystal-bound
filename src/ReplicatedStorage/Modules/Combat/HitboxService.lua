@@ -15,10 +15,20 @@ local function rootOf(instance)
 	return nil
 end
 
+local function safeRadius(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return 0
+	end
+	return math.clamp(number, 0, 1000)
+end
+
 function HitboxService.GetEnemyModels(center, radius, ignoreModel)
 	local results = {}
+	if typeof(center) ~= "Vector3" then return results end
+	radius = safeRadius(radius)
 	local folder = Workspace:FindFirstChild("NPCs")
-	if not folder or typeof(center) ~= "Vector3" then return results end
+	if not folder then return results end
 	for _, model in ipairs(folder:GetChildren()) do
 		if model:IsA("Model") and model ~= ignoreModel and model:GetAttribute("Enemy") == true then
 			local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -34,6 +44,7 @@ end
 function HitboxService.GetPlayersInRadius(center, radius, ignorePlayer)
 	local results = {}
 	if typeof(center) ~= "Vector3" then return results end
+	radius = safeRadius(radius)
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= ignorePlayer then
 			local character = player.Character
@@ -48,6 +59,7 @@ function HitboxService.GetPlayersInRadius(center, radius, ignorePlayer)
 end
 
 function HitboxService.IsWithinRange(attacker, target, radius)
+	radius = safeRadius(radius)
 	local attackerRoot = rootOf(attacker)
 	local targetRoot = rootOf(target)
 	return attackerRoot ~= nil and targetRoot ~= nil and (attackerRoot.Position - targetRoot.Position).Magnitude <= radius
