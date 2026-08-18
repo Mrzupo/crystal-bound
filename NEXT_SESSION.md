@@ -41,28 +41,28 @@ The current master design context is authoritative: Crystal Bound is an original
 - `HitboxService` rejects invalid/negative/non-finite radius values.
 - `CombatModifierService` finite-safely normalizes mastery level before critical calculation.
 - `CombatService` has a small request-rate guard in addition to action cooldowns.
-- `CombatService` only marks `LastHitCritical` after successful damage validation.
-- `DailyBountyService` claim/progress is server-side and atomic within a single request.
-- `QuestMenu` no longer replaces valid available-quest data with an empty table when the availability RemoteFunction is rate-limited.
-- The temporary `DataQueryRateLimit.server.lua` was removed because it would compete with Bootstrap's `OnServerInvoke` handlers.
-- `remote-handler-validation.yml` checks unique `OnServerInvoke` ownership.
-- `StatusSpeedGuardV2` is the active Rojo speed guard; legacy V1 is not loaded by `default.project.json`.
-- The old unsafe `SaveSystem.lua` is not loaded/used.
+- `CombatService` now records confirmed hit presentation state only after `DamageService.ProcessDamage()` succeeds.
+- GALE splash damage goes through `DamageService.ProcessDamage()` rather than bypassing the central damage validator.
+- Server-side procedural Combat VFX were removed from `CombatService`; the server no longer creates transient VFX Parts/Tweens for crystal hits.
+- Confirmed hit state (`LastHitCrystal`, `LastHitCritical`, `LastAttackerUserId`) is replicated from the server to support client presentation without moving gameplay authority client-side.
+- `CombatPresentation.client.lua` now renders crystal-specific confirmed impact flashes/impacts from the replicated hit state.
 - `ClientBootstrap.client.lua` throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
 - Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs for EMBER/TIDE/GALE.
 - Added `CrystalAnimationController.client.lua`, which owns client-side `Animator`/`AnimationTrack` loading, priority, fade and playback.
-- Wired Basic click and Q Ability input through `CrystalAnimationController` before the existing `CombatRequest`; server validation and damage authority were not changed.
+- The animation controller handles character-generation/ancestry changes and clears stale tracks on respawn.
+- Local animation playback is throttled using the existing crystal Basic/Ability cooldown values; this does not replace server cooldown validation.
 - Added `CrystalVFXController.client.lua` for lightweight crystal-specific local combat bursts.
 - VFX configuration now lives beside animation configuration, including optional sound IDs, presentation scale and offsets.
-- Wired Basic/Q presentation VFX before the existing `CombatRequest`; these effects are cosmetic only and do not report hits or damage to the server.
-- Registered the VFX controller in `default.project.json`.
+- VFX playback has a small local presentation guard to avoid excessive local burst/sound allocation during input spam.
+- Wired Basic/Q presentation animation + VFX on PC and mobile before the existing `CombatRequest`; these effects are cosmetic only.
+- Registered the animation/VFX controllers and presentation config in `default.project.json`.
 
 ## Animation/VFX status
 The animation architecture is in place, but the asset IDs are intentionally empty until real Roblox animations are published. Therefore this is **not yet a claim of real in-game attack animations**. The controller safely no-ops when an ID is missing.
 
-The VFX layer is deliberately placeholder-level: it provides immediate crystal identity without pretending to be final asset-based particles. The optional sound hooks also remain empty until authored Roblox assets exist.
+The VFX layer is deliberately placeholder-level: it provides immediate crystal identity without pretending to be final asset-based particles. Optional sound hooks also remain empty until authored Roblox assets exist.
 
-Next presentation task is to create/publish the actual EMBER Basic + Flame Burst animations first, then TIDE and GALE. Keep asset IDs out of `CombatService` and never let animation timing determine server damage authority.
+The confirmed-hit presentation is now explicitly client-side: the server validates damage and records the result; the client turns that replicated result into visuals. Animation timing still never determines damage authority.
 
 ## Quality assessment
 - **Architecture:** strong for a prototype; server authority is clear and gameplay services are separated.
@@ -79,7 +79,7 @@ Next presentation task is to create/publish the actual EMBER Basic + Flame Burst
 - Actual Roblox animation asset IDs are not available yet.
 
 ## Exact next steps
-1. Audit the refined `CrystalVFXController.client.lua` and final Rojo mapping.
+1. Audit the refined `CrystalVFXController.client.lua`, `CombatPresentation.client.lua` and final Rojo mapping.
 2. Add authored asset folders/lookup contracts for crystal VFX and sounds without moving gameplay authority client-side.
 3. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire their IDs into `CrystalAnimationConfig.lua`.
 4. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
@@ -93,6 +93,7 @@ Next presentation task is to create/publish the actual EMBER Basic + Flame Burst
 - Do not claim runtime-tested or CI-green without a verified GitHub status.
 - Do not change the White Queen intro, first-loss setup, Ancient Crystal lore, or the long-term secret second-world plan without explicit project-owner approval.
 - Do not put gameplay authority into client animation markers.
+- Do not recreate server-side cosmetic Part/Tween VFX in `CombatService`.
 
 ## Useful files
 - `default.project.json`
@@ -103,6 +104,7 @@ Next presentation task is to create/publish the actual EMBER Basic + Flame Burst
 - `.github/workflows/remote-handler-validation.yml`
 - `src/ServerScriptService/Bootstrap.server.lua`
 - `src/ServerScriptService/Services/CombatService.lua`
+- `src/ServerScriptService/Services/DamageService.lua`
 - `src/ServerScriptService/Services/PlayerService.lua`
 - `src/ReplicatedStorage/Modules/PlayerData.lua`
 - `src/ReplicatedStorage/Config/CrystalConfig.lua`
