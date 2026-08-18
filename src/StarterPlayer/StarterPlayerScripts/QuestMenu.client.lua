@@ -11,6 +11,9 @@ local getAvailableQuests = remotes:WaitForChild("GetAvailableQuests")
 local open = false
 local data = nil
 local available = {}
+local loading = false
+local lastLoad = 0
+local LOAD_INTERVAL = 0.2
 
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -131,22 +134,26 @@ function refresh()
 	for id, definition in pairs(defs) do if completedSet[id] then addRow(id, definition, "completed", definition.Goal or 0) end end
 end
 
-function loadData()
+function loadData(force)
+	local now = os.clock()
+	if loading then return end
+	if not force and now - lastLoad < LOAD_INTERVAL then return end
+	loading = true
+	lastLoad = now
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
 	if ok and response then data = response end
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
 	if okAvailable and type(responseAvailable) == "table" then
 		available = responseAvailable
-	elseif not okAvailable then
-		-- Keep the last known availability when the request actually fails.
 	end
+	loading = false
 	refresh()
 end
 
 local function openMenu()
 	open = true
 	panel.Visible = true
-	loadData()
+	loadData(true)
 end
 
 player:GetAttributeChangedSignal("OpenQuestMenu"):Connect(openMenu)
@@ -157,4 +164,4 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
-loadData()
+loadData(true)
