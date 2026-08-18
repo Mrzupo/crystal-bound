@@ -1,0 +1,37 @@
+name: Persistence Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-persistence-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate persistence boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+          pd = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          store = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
+          checks = [
+              ("PlayerData clamps Level", "data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel", pd),
+              ("PlayerData clamps Experience", "data.Experience = clampInt(data.Experience, 0, 1000000000", pd),
+              ("PlayerData clamps Money", "data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney", pd),
+              ("PlayerData enforces EMBER", 'if not table.find(data.Crystals.Owned, "EMBER")', pd),
+              ("PlayerData validates equipped crystal", 'data.Crystals.Equipped = "EMBER"', pd),
+              ("PlayerData normalizes inventory", "data.Inventory = normalizeInventory(data.Inventory)", pd),
+              ("Store claims SessionLock atomically", "store:UpdateAsync(key, function(current)", store),
+              ("Store checks JobId ownership on save", "lock.JobId ~= SESSION_ID", store),
+              ("Store refreshes session lock", "function SafeProfileStore.Refresh(player)", store),
+              ("Store releases owned lock", "function SafeProfileStore.Release(player)", store),
+          ]
+          problems = [name for name, marker, text in checks if marker not in text]
+          if problems:
+              print("Persistence contract failures:")
+              for p in problems:
+                  print(" -", p)
+              raise SystemExit(1)
+          print("Persistence contract validated.")
