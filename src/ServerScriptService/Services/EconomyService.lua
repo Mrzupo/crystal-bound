@@ -23,18 +23,24 @@ end
 function EconomyService.RemoveMoney(profile, amount)
 	amount = finiteNumber(amount) or 0
 	amount = math.max(0, amount)
-	if profile.Money < amount then return false end
-	profile.Money -= amount
+	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
+	profile.Money = current
+	if current < amount then return false end
+	profile.Money = current - amount
 	return true
 end
 
 function EconomyService.GetMoney(profile)
-	return profile.Money
+	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
+	profile.Money = current
+	return current
 end
 
 function EconomyService.CanAfford(profile, amount)
 	amount = finiteNumber(amount) or 0
-	return profile.Money >= math.max(0, amount)
+	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
+	profile.Money = current
+	return current >= math.max(0, amount)
 end
 
 function EconomyService.GetSellPrice(itemId)
