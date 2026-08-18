@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local ShopService = require(script.Parent.Services.ShopService)
 local PlayerService = require(script.Parent.Services.PlayerService)
 local InventoryService = require(script.Parent.Services.InventoryService)
@@ -40,4 +41,8 @@ remote.OnServerEvent:Connect(function(player, action, itemId, amount)
 		remotes.InventoryChanged:FireClient(player, profile.Inventory)
 		remotes.MoneyChanged:FireClient(player, profile.Money)
 	end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	NEXT_REQUEST[player] = nil
 end)
