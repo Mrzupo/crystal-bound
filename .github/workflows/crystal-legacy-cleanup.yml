@@ -1,0 +1,47 @@
+name: Crystal Legacy Cleanup Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-legacy-crystal-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reject removed legacy Crystal modules
+        shell: python
+        run: |
+          from pathlib import Path
+
+          legacy = [
+              Path("src/ReplicatedStorage/Modules/Crystal/CrystalDefinitions.lua"),
+              Path("src/ReplicatedStorage/Modules/Crystal/CrystalTypes.lua"),
+              Path("src/ReplicatedStorage/Modules/Crystal/CrystalUtils.lua"),
+              Path("src/ReplicatedStorage/Modules/Crystal/Abilities/BaseCrystal.lua"),
+              Path("src/ReplicatedStorage/Modules/Crystal/Abilities/AbilityRegistry.lua"),
+              Path("src/ReplicatedStorage/Modules/Crystal/Abilities/PassiveRegistry.lua"),
+          ]
+          existing = [str(path) for path in legacy if path.exists()]
+          if existing:
+              print("Unexpected legacy Crystal modules:")
+              for path in existing:
+                  print(f" - {path}")
+              raise SystemExit(1)
+
+          project = Path("default.project.json").read_text(encoding="utf-8")
+          for name in (
+              "CrystalDefinitions.lua",
+              "CrystalTypes.lua",
+              "CrystalUtils.lua",
+              "BaseCrystal.lua",
+              "AbilityRegistry.lua",
+              "PassiveRegistry.lua",
+          ):
+              if name in project:
+                  raise SystemExit(f"legacy Crystal mapping remains in default.project.json: {name}")
+
+          print("Crystal legacy cleanup contract validated.")
