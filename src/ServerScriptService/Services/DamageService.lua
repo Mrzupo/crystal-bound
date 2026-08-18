@@ -77,7 +77,13 @@ function DamageService.CanDamage(request)
 		return true
 	end
 
-	if request.Attacker == request.Target then return false end
+	local attackerModel = request.Attacker:IsA("Player") and request.Attacker.Character or request.Attacker
+	local targetModel = request.Target:IsA("Player") and request.Target.Character or request.Target
+	if attackerModel == targetModel then return false end
+	if Players:GetPlayerFromCharacter(attackerModel) and Players:GetPlayerFromCharacter(targetModel) then
+		return false
+	end
+
 	local attackerRoot = getRoot(request.Attacker)
 	local targetRoot = getRoot(request.Target)
 	if not attackerRoot or not targetRoot then return false end
