@@ -1,6 +1,9 @@
-local Config = require(game.ReplicatedStorage.Config.CrystalUpgradeConfig)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
+local CrystalDefinitions = require(ReplicatedStorage.Modules.Crystal.CrystalDefinitions)
 
 local CrystalMastery = {}
+local DEFAULT_CRYSTAL = "EMBER"
 
 local function finiteNumber(value)
 	local number = tonumber(value)
@@ -8,8 +11,14 @@ local function finiteNumber(value)
 	return number
 end
 
+local function normalizeCrystalId(crystalId)
+	return type(crystalId) == "string" and CrystalDefinitions[crystalId] and crystalId or DEFAULT_CRYSTAL
+end
+
 local function ensure(profile, crystalId)
-	profile.CrystalMastery = profile.CrystalMastery or {}
+	if type(profile) ~= "table" then return { Level = 1, XP = 0 } end
+	profile.CrystalMastery = type(profile.CrystalMastery) == "table" and profile.CrystalMastery or {}
+	crystalId = normalizeCrystalId(crystalId)
 	local mastery = profile.CrystalMastery[crystalId]
 	if type(mastery) ~= "table" then
 		mastery = { Level = 1, XP = 0 }
@@ -63,6 +72,7 @@ function CrystalMastery.GetBonuses(profile, crystalId)
 end
 
 function CrystalMastery.GetUpgradeCost(profile, crystalId)
+	crystalId = normalizeCrystalId(crystalId)
 	local mastery = ensure(profile, crystalId)
 	if mastery.Level >= Config.MaxLevel then return {} end
 	local base = Config.BaseCosts[crystalId] or {}
