@@ -1,12 +1,15 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DodgeService = require(script.Parent.Services.DodgeService)
+local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 
 local NPCs = Workspace:WaitForChild("NPCs")
 local arena = Workspace:FindFirstChild("GuardianArena") or Instance.new("Folder")
 arena.Name = "GuardianArena"
 arena.Parent = Workspace
+local config = BossConfig.CrystalGuardian.ArenaHazard
 
 local center = Vector3.new(330, 1, 0)
 local pillarPositions = {
@@ -71,7 +74,7 @@ local function setPhaseHazard(enabled)
 			hazard.Color = Color3.fromRGB(255, 90, 120)
 			hazard.Transparency = 0.25
 			hazard.Parent = arena
-		hazardParts[index] = hazard
+			hazardParts[index] = hazard
 			TweenService:Create(hazard, TweenInfo.new(0.4), { Transparency = 0.05 }):Play()
 		end
 	else
@@ -87,14 +90,16 @@ end
 
 local function applyHazardDamage()
 	if not phaseActive then return end
+	local halfExtent = math.max(0, tonumber(config.HalfExtent) or 23)
+	local damage = math.clamp(tonumber(config.Damage) or 0, 0, 1000)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if humanoid and humanoid.Health > 0 and root then
 			local offset = root.Position - center
-			if math.abs(offset.X) <= 23 and math.abs(offset.Z) <= 23 then
-				DodgeService.ApplyDamage(player, humanoid, 4, nil, "Environmental", 0)
+			if math.abs(offset.X) <= halfExtent and math.abs(offset.Z) <= halfExtent then
+				DodgeService.ApplyDamage(player, humanoid, damage, nil, "Environmental", 0)
 			end
 		end
 	end
@@ -103,12 +108,13 @@ end
 createArena()
 
 task.spawn(function()
+	local interval = math.max(0.1, tonumber(config.Interval) or 0.75)
 	while arena.Parent do
 		local guardian = NPCs:FindFirstChild("CrystalGuardian")
 		local humanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
 		local phase = guardian and guardian:GetAttribute("BossPhase") or 1
 		setPhaseHazard(guardian ~= nil and humanoid ~= nil and humanoid.Health > 0 and phase >= 2)
 		applyHazardDamage()
-		task.wait(0.75)
+		task.wait(interval)
 	end
 end)
