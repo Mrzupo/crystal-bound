@@ -1,5 +1,6 @@
 local PlayerData = {}
 local InventoryConfig = require(game.ReplicatedStorage.Config.InventoryConfig)
+local EconomyConfig = require(game.ReplicatedStorage.Config.EconomyConfig)
 local XPConfig = require(game.ReplicatedStorage.Config.XPConfig)
 local QuestSystem = require(script.Parent.QuestSystem)
 
@@ -101,7 +102,7 @@ function PlayerData.Reconcile(data)
 	data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)
 	data.Experience = clampInt(data.Experience, 0, 1000000000, defaults.Experience)
 	if data.Level >= XPConfig.MaxLevel then data.Experience = 0 end
-	data.Money = clampInt(data.Money, 0, 1000000, defaults.Money)
+	data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)
 
 	data.Crystals = type(data.Crystals) == "table" and data.Crystals or clone(defaults.Crystals)
 	data.Crystals.Owned = normalizeList(data.Crystals.Owned, function(id) return VALID_CRYSTALS[id] end)
