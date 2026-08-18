@@ -11,6 +11,12 @@ local Recipes = {
 	},
 }
 
+local function finiteNumber(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
+
 function CraftingService.GetRecipe(outputId)
 	return Recipes[outputId]
 end
@@ -18,12 +24,14 @@ end
 function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	local recipe = Recipes[outputId]
 	if not recipe then return false, "Recipe not found." end
-	amount = math.clamp(math.floor(tonumber(amount) or 1), 1, 10)
+	local numericAmount = finiteNumber(amount) or 1
+	amount = math.clamp(math.floor(numericAmount), 1, 10)
 
 	local outputConfig = InventoryConfig.GetItemConfig(recipe.Output)
 	if not outputConfig then return false, "Crafting output is not registered." end
 
-	local currentOutput = math.max(0, math.floor((profile.Inventory and profile.Inventory[recipe.Output]) or 0))
+	local currentRaw = profile.Inventory and profile.Inventory[recipe.Output] or 0
+	local currentOutput = math.max(0, math.floor(finiteNumber(currentRaw) or 0))
 	local outputAmount = recipe.Amount * amount
 	local maxStack = InventoryConfig.GetMaxStackSize(recipe.Output)
 	if currentOutput + outputAmount > maxStack then
@@ -32,14 +40,16 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 
 	local consumed = {}
 	for itemId, required in pairs(recipe.Inputs) do
-		local totalRequired = required * amount
-		if not InventoryService.HasItem(profile, itemId, totalRequired) then
+		local safeRequired = math.max(0, math.floor(finiteNumber(required) or 0))
+		local totalRequired = safeRequired * amount
+		if totalRequired <= 0 or not InventoryService.HasItem(profile, itemId, totalRequired) then
 			return false, string.format("Need %d %s to craft %dx %s.", totalRequired, itemId, amount, outputId)
 		end
 	end
 
 	for itemId, required in pairs(recipe.Inputs) do
-		local totalRequired = required * amount
+		local safeRequired = math.max(0, math.floor(finiteNumber(required) or 0))
+		local totalRequired = safeRequired * amount
 		if not InventoryService.RemoveItem(profile, itemId, totalRequired) then
 			for rollbackId, rollbackAmount in pairs(consumed) do
 				InventoryService.AddItem(profile, rollbackId, rollbackAmount)
