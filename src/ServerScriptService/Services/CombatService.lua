@@ -31,16 +31,11 @@ local function isPlayerTarget(target)
 	return target:IsA("Player") or (target:IsA("Model") and Players:GetPlayerFromCharacter(target) ~= nil)
 end
 
-local function markConfirmedHit(targetModel, player, crystalId, critical)
-	targetModel:SetAttribute("LastAttackerUserId", player.UserId)
-	targetModel:SetAttribute("LastHitCritical", critical == true)
-	targetModel:SetAttribute("LastHitCrystal", crystalId)
-	task.delay(0.25, function()
-		if targetModel.Parent then
-			targetModel:SetAttribute("LastHitCritical", false)
-			targetModel:SetAttribute("LastHitCrystal", "")
-		end
-	end)
+local function fireCombatFeedback(targetModel, attacker, action, crystalId, critical, amount)
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	local feedback = remotes and remotes:FindFirstChild("CombatFeedback")
+	if not feedback or not feedback:IsA("RemoteEvent") then return end
+	feedback:FireAllClients(targetModel, attacker.UserId, action, crystalId, critical == true, amount)
 end
 
 local function fireProgress(player, levelsGained, mastery)
@@ -127,7 +122,7 @@ local function applyGaleSplash(player, centerModel, damage, range)
 				DamageType = "CrystalAbilitySplash",
 			})
 			if result.Success then
-				markConfirmedHit(enemy, player, "GALE", false)
+				fireCombatFeedback(enemy, player, "Ability", "GALE", false, result.Amount)
 				if humanoid.Health <= 0 and profile then
 					rewardDefeat(player, profile, enemy, "Ability", "GALE")
 				end
@@ -191,7 +186,7 @@ function CombatService.HandleRequest(player, action, target)
 	})
 	if not result.Success then return end
 
-	markConfirmedHit(targetModel, player, crystalId, critical)
+	fireCombatFeedback(targetModel, player, action, crystalId, critical, result.Amount)
 	cooldowns[player][action] = now + config.Cooldown
 	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
 
