@@ -14,6 +14,13 @@ local COLORS = {
 	GALE = Color3.fromRGB(175, 255, 235),
 }
 
+local ACTION_GUARD = {
+	Basic = 0.07,
+	Ability = 0.12,
+}
+
+local lastPlayed = {}
+
 local function getRoot()
 	local character = player.Character
 	return character and character:FindFirstChild("HumanoidRootPart")
@@ -43,16 +50,15 @@ end
 
 local function playSound(root, definition)
 	local soundId = definition and definition.SoundId
-	if type(soundId) ~= "string" or soundId == "" then return end
-	if not root then return end
+	if type(soundId) ~= "string" or soundId == "" or not root then return end
+
+	local normalized = soundId:match("^rbxassetid://") and soundId
+		or (soundId:match("^%d+$") and ("rbxassetid://" .. soundId) or nil)
+	if not normalized then return end
 
 	local sound = Instance.new("Sound")
 	sound.Name = "CrystalBoundAbilitySound"
-	sound.SoundId = soundId:match("^rbxassetid://") and soundId or (soundId:match("^%d+$") and ("rbxassetid://" .. soundId) or "")
-	if sound.SoundId == "" then
-		sound:Destroy()
-		return
-	end
+	sound.SoundId = normalized
 	sound.Volume = math.clamp(tonumber(definition.SoundVolume) or 0.5, 0, 1)
 	sound.RollOffMaxDistance = 70
 	sound.Parent = root
@@ -62,6 +68,16 @@ end
 
 function VFX.Play(action, crystalId)
 	if action ~= "Basic" and action ~= "Ability" then return false end
+
+	crystalId = crystalId or player:GetAttribute("EquippedCrystal") or "EMBER"
+	local now = os.clock()
+	local key = crystalId .. ":" .. action
+	local guard = ACTION_GUARD[action] or 0.08
+	if now - (lastPlayed[key] or -math.huge) < guard then
+		return false
+	end
+	lastPlayed[key] = now
+
 	local root = getRoot()
 	if not root then return false end
 
