@@ -8,16 +8,24 @@ local inventoryRequest = remotes:WaitForChild("InventoryRequest")
 local inventoryChanged = remotes:WaitForChild("InventoryChanged")
 local shopRequest = remotes:WaitForChild("ShopRequest")
 local useItemRequest = remotes:WaitForChild("UseItemRequest")
+local inventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
+local shopConfig = require(ReplicatedStorage.Config.ShopConfig)
 
-local sellable = {
-	{ Id = "EmberShard", Name = "Ember Shard", Rarity = "Common", Price = 8 },
-	{ Id = "TidePearl", Name = "Tide Pearl", Rarity = "Uncommon", Price = 14 },
-	{ Id = "GaleFeather", Name = "Gale Feather", Rarity = "Rare", Price = 22 },
-	{ Id = "GuardianCore", Name = "Guardian Core", Rarity = "Legendary", Price = 250 },
-	{ Id = "AncientShard", Name = "Ancient Shard", Rarity = "Epic", Price = 35 },
-}
+local sellable = {}
+for _, itemId in ipairs(shopConfig.SellOrder or {}) do
+	local item = inventoryConfig.GetItemConfig(itemId)
+	if item then
+		table.insert(sellable, {
+			Id = itemId,
+			Name = item.Name,
+			Rarity = item.Rarity,
+			Price = item.SellPrice,
+		})
+	end
+end
 
-local rarityOrder = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5 }
+local rarityOrder = inventoryConfig.Rarities or {}
+local potionOffer = shopConfig.Offers.HealthPotion
 local inventory = {}
 local open = false
 
@@ -88,7 +96,6 @@ local function ensureGui()
 	potionLabel.Position = UDim2.fromOffset(12, 0)
 	potionLabel.Size = UDim2.fromOffset(350, 54)
 	potionLabel.BackgroundTransparency = 1
-	potionLabel.Text = "Health Potion  •  Uncommon  •  75 Money"
 	potionLabel.TextXAlignment = Enum.TextXAlignment.Left
 	potionLabel.Font = Enum.Font.GothamBold
 	potionLabel.TextSize = 14
@@ -102,7 +109,7 @@ local function ensureGui()
 	buy.Font = Enum.Font.GothamBold
 	buy.TextSize = 13
 	buy.Parent = potion
-	buy.Activated:Connect(function() shopRequest:FireServer("Buy", "HealthPotion", 1) end)
+	buy.Activated:Connect(function() shopRequest:FireServer("Buy", potionOffer.ItemId, 1) end)
 
 	local use = Instance.new("TextButton")
 	use.Name = "Use"
@@ -174,15 +181,15 @@ local function refresh()
 		local row = panel.List:FindFirstChild(item.Id)
 		if row then
 			local amount = math.max(0, math.floor(tonumber(inventory[item.Id]) or 0))
-			local rarityRank = rarityOrder[item.Rarity] or 1
+			local rarityRank = math.max(1, math.floor(tonumber(rarityOrder[item.Rarity]) or 1))
 			row.Label.Text = string.format("%s  •  %s  •  %d owned  •  %d Money each", item.Name, item.Rarity, amount, item.Price)
 			row.Label.TextSize = 13 + math.min(3, rarityRank)
 			row.Sell.Active = amount > 0
 			row.Sell.TextTransparency = amount > 0 and 0 or 0.5
 		end
 	end
-	local potionAmount = math.max(0, math.floor(tonumber(inventory.HealthPotion) or 0))
-	panel.PotionOffer.Label.Text = string.format("Health Potion  •  Uncommon  •  75 Money  •  Owned: %d", potionAmount)
+	local potionAmount = math.max(0, math.floor(tonumber(inventory[potionOffer.ItemId]) or 0))
+	panel.PotionOffer.Label.Text = string.format("%s  •  %s  •  %d Money  •  Owned: %d", inventoryConfig.GetItemConfig(potionOffer.ItemId).Name, inventoryConfig.GetItemConfig(potionOffer.ItemId).Rarity, potionOffer.Price, potionAmount)
 	panel.PotionOffer.Use.Active = potionAmount > 0
 	panel.PotionOffer.Use.TextTransparency = potionAmount > 0 and 0 or 0.5
 end
