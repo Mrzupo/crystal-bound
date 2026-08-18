@@ -1,15 +1,20 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local craftingRequest = remotes:WaitForChild("CraftingRequest")
 local inventoryRequest = remotes:WaitForChild("InventoryRequest")
 local inventoryChanged = remotes:WaitForChild("InventoryChanged")
+local inventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
+local craftingConfig = require(ReplicatedStorage.Config.CraftingConfig)
 
 local inventory = {}
 local open = false
+local recipeId = "HealthPotion"
+local recipe = craftingConfig.Recipes[recipeId]
+local outputItem = inventoryConfig.GetItemConfig(recipe.Output)
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "CraftingMenu"
@@ -44,25 +49,24 @@ close.Font = Enum.Font.GothamBold
 close.Parent = panel
 close.Activated:Connect(function() open = false; panel.Visible = false end)
 
-local recipe = Instance.new("TextLabel")
-recipe.Position = UDim2.fromOffset(18, 65)
-recipe.Size = UDim2.fromOffset(484, 80)
-recipe.BackgroundTransparency = 1
-recipe.TextWrapped = true
-recipe.TextXAlignment = Enum.TextXAlignment.Left
-recipe.TextYAlignment = Enum.TextYAlignment.Top
-recipe.Font = Enum.Font.Gotham
-recipe.TextSize = 16
-recipe.Parent = panel
+local recipeLabel = Instance.new("TextLabel")
+recipeLabel.Position = UDim2.fromOffset(18, 65)
+recipeLabel.Size = UDim2.fromOffset(484, 80)
+recipeLabel.BackgroundTransparency = 1
+recipeLabel.TextWrapped = true
+recipeLabel.TextXAlignment = Enum.TextXAlignment.Left
+recipeLabel.TextYAlignment = Enum.TextYAlignment.Top
+recipeLabel.Font = Enum.Font.Gotham
+recipeLabel.TextSize = 16
+recipeLabel.Parent = panel
 
 local craft = Instance.new("TextButton")
 craft.Position = UDim2.fromOffset(18, 165)
 craft.Size = UDim2.fromOffset(484, 48)
-craft.Text = "Craft 1 Health Potion"
 craft.Font = Enum.Font.GothamBold
 craft.TextSize = 16
 craft.Parent = panel
-craft.Activated:Connect(function() craftingRequest:FireServer("Craft", "HealthPotion", 1) end)
+craft.Activated:Connect(function() craftingRequest:FireServer("Craft", recipeId, 1) end)
 
 local hint = Instance.new("TextLabel")
 hint.Position = UDim2.fromOffset(18, 230)
@@ -74,12 +78,34 @@ hint.TextSize = 14
 hint.TextXAlignment = Enum.TextXAlignment.Right
 hint.Parent = panel
 
+local function formatInputs()
+	local lines = {}
+	for itemId, amount in pairs(recipe.Inputs or {}) do
+		local config = inventoryConfig.GetItemConfig(itemId)
+		table.insert(lines, string.format("%d %s", amount, config and config.Name or itemId))
+	end
+	table.sort(lines)
+	return table.concat(lines, " + ")
+end
+
 local function refresh()
-	local ember = math.floor(tonumber(inventory.EmberShard) or 0)
-	local tide = math.floor(tonumber(inventory.TidePearl) or 0)
-	local potions = math.floor(tonumber(inventory.HealthPotion) or 0)
-	recipe.Text = string.format("Health Potion • Uncommon\nRezept: 2 Ember Shard + 1 Tide Pearl → 1 Health Potion\nBesitz: %d Ember Shard | %d Tide Pearl | %d Potions", ember, tide, potions)
-	craft.Active = ember >= 2 and tide >= 1 and potions < 20
+	if not recipe or not outputItem then
+		recipeLabel.Text = "Crafting recipe unavailable."
+		craft.Active = false
+		craft.TextTransparency = 0.5
+		return
+	end
+	local outputAmount = math.max(1, math.floor(tonumber(recipe.Amount) or 1))
+	local currentOutput = math.max(0, math.floor(tonumber(inventory[recipe.Output]) or 0))
+	local maxStack = inventoryConfig.GetMaxStackSize(recipe.Output)
+	local requirements = true
+	for itemId, amount in pairs(recipe.Inputs or {}) do
+		requirements = requirements and (math.max(0, math.floor(tonumber(inventory[itemId]) or 0)) >= amount)
+	end
+	local outputSpace = currentOutput + outputAmount <= maxStack
+	recipeLabel.Text = string.format("%s • %s\nRezept: %s → %d %s\nBesitz: %d / %d %s", outputItem.Name, outputItem.Rarity, formatInputs(), outputAmount, outputItem.Name, currentOutput, maxStack, outputItem.Name)
+	craft.Text = string.format("Craft %d %s", outputAmount, outputItem.Name)
+	craft.Active = requirements and outputSpace
 	craft.TextTransparency = craft.Active and 0 or 0.5
 end
 
