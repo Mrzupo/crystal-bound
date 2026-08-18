@@ -48,7 +48,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - `DamageValidators` now rejects unknown `DamageType` values.
 - Central damage types now explicitly include `CrystalAbilitySplash` and `BossShockwave`.
 - `DamageService` returns the actually applied HP delta instead of the requested amount.
-- `DamageService` tracks the last valid attacker in server-only weak state so Guardian rewards do not depend on NPC presentation attributes.
+- `DamageService` tracks the last valid attacker in server-only weak state; player attackers are stored by immutable UserId so a player death during a boss defeat race does not erase attribution.
 - `BossService` uses the server-only damage attribution state for Guardian rewards and clears it on defeat.
 - Server-side procedural Combat VFX were removed from `CombatService`; the server no longer creates transient VFX Parts/Tweens for crystal hits.
 - Added a dedicated `CombatFeedback` RemoteEvent for server-confirmed hit presentation.
