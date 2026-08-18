@@ -1,0 +1,37 @@
+name: Quest HUD Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-quest-hud:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate quest HUD presentation contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          presenter = Path("src/StarterPlayer/StarterPlayerScripts/QuestHUDPresenter.client.lua").read_text(encoding="utf-8")
+          rojo = Path("default.project.json").read_text(encoding="utf-8")
+          bootstrap = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
+
+          problems = []
+          for marker in ["GetQuestData", "CrystalBoundHUD", "Quest", "Definitions", "Progress"]:
+              if marker not in presenter:
+                  problems.append(f"QuestHUDPresenter missing marker: {marker}")
+          if '"QuestHUDPresenter": {"$path": "src/StarterPlayer/StarterPlayerScripts/QuestHUDPresenter.client.lua"}' not in rojo:
+              problems.append("QuestHUDPresenter is not mapped in default.project.json")
+          if '"Quest"' not in bootstrap:
+              problems.append("ClientBootstrap HUD no longer exposes the Quest label")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Quest HUD contract validated.")
