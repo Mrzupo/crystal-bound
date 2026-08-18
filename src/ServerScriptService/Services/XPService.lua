@@ -14,7 +14,7 @@ local function normalizedLevel(profile)
 end
 
 local function normalizedXP(profile)
-	return math.clamp(math.floor(finiteNumber(profile.Experience) or 0), 0, 1000000000)
+	return math.clamp(math.floor(finiteNumber(profile.Experience) or 0), 0, XPConfig.MaxExperience)
 end
 
 function XPService.AddXP(profile, amount)
@@ -29,7 +29,7 @@ function XPService.AddXP(profile, amount)
 	end
 
 	profile.Level = level
-	profile.Experience = math.min(1000000000, experience + amount)
+	profile.Experience = math.min(XPConfig.MaxExperience, experience + amount)
 
 	while profile.Level < XPConfig.MaxLevel do
 		local required = XPConfig.GetRequiredXP(profile.Level)
