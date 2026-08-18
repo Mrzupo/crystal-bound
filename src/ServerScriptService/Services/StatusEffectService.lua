@@ -27,6 +27,17 @@ local function isPlayerDodging(humanoid)
 	return player ~= nil and DodgeService.IsInvulnerable(player)
 end
 
+local function clearState(humanoid, state)
+	if not state then return end
+	state.Slow = nil
+	state.Burn = nil
+	humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
+	if humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
+		humanoid.WalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
+	end
+	state.BaseWalkSpeed = nil
+end
+
 function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
 	multiplier = math.clamp(tonumber(multiplier) or 0.8, 0.2, 1)
@@ -48,7 +59,7 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	return true
 end
 
-function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval)
+function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval, attacker, range)
 	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
 	damagePerTick = math.clamp(tonumber(damagePerTick) or 3, 1, 100)
 	ticks = math.clamp(math.floor(tonumber(ticks) or 3), 1, 10)
@@ -63,7 +74,7 @@ function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval)
 			local character = humanoid.Parent
 			local player = character and Players:GetPlayerFromCharacter(character)
 			if player then
-				DodgeService.ApplyDamage(player, humanoid, damagePerTick)
+				DodgeService.ApplyDamage(player, humanoid, damagePerTick, attacker, "Physical", range)
 			else
 				DamageService.ProcessDamage({
 					Attacker = nil,
@@ -82,12 +93,7 @@ end
 function StatusEffectService.Clear(humanoid)
 	if not humanoid then return end
 	local state = active[humanoid]
-	if state then
-		humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
-		if humanoid.Parent and humanoid.Health > 0 and state.Slow and state.BaseWalkSpeed then
-			humanoid.WalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
-		end
-	end
+	if state then clearState(humanoid, state) end
 	active[humanoid] = nil
 end
 
