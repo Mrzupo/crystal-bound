@@ -1,0 +1,31 @@
+name: Reward Idempotency
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-reward-idempotency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate reward guards
+        shell: python
+        run: |
+          from pathlib import Path
+          bounty = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          achievement = Path("src/ReplicatedStorage/Modules/AchievementSystem.lua").read_text(encoding="utf-8")
+          checks = [
+              ("bounty checks claimed", "if bounty.Claimed or bounty.EnemyType ~= enemyType then return false end", bounty),
+              ("bounty marks claimed before reward", "bounty.Claimed = true", bounty),
+              ("bounty clamps progress", "bounty.Progress = math.min(bounty.Goal", bounty),
+              ("achievement checks existing unlock", "if not Definitions[id] or AchievementSystem.Has(profile, id) then return nil end", achievement),
+              ("achievement derives titles from definitions", "if definition.Title and not table.find(profile.Titles, definition.Title)", achievement),
+          ]
+          failures = [name for name, marker, text in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Reward idempotency contract validated.")
