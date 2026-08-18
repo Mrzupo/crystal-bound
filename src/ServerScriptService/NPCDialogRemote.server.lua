@@ -8,7 +8,7 @@ remote.Name = "NPCDialogRequest"
 remote.Parent = remotes
 
 local REQUEST_INTERVAL = 0.2
-local nextRequest = {}
+local nextRequest = setmetatable({}, { __mode = "k" })
 
 local function isNearNPC(player, npcId)
 	local character = player.Character
@@ -32,7 +32,3 @@ remote.OnServerInvoke = function(player, npcId)
 		Options = config.Options,
 	}
 end
-
-Players.PlayerRemoving:Connect(function(player)
-	nextRequest[player] = nil
-end)
