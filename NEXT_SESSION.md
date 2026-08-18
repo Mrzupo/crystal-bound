@@ -26,19 +26,24 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - PC and mobile Ability input both honor the server-provided `AbilityCooldownEnd` plus a local cooldown guard. These checks are only presentation/input throttles and do not replace server validation.
 - `ClientBootstrap` uses `CrystalConfig.BasicAttack` (singular) and `CrystalConfig.Abilities` as defined by the config contract.
 - `CrystalConfig.UnlockLevels` is now the single source of truth for EMBER/TIDE/GALE level gates; Bootstrap no longer owns a separate unlock-level table.
+- `InventoryMenu` now consumes the shared `CrystalConfig.UnlockLevels` rather than a duplicated client unlock table.
 - `CrystalMastery.Upgrade()` is now the central mastery-level mutation; Bootstrap no longer increments mastery directly.
-- `crystal-config-validation.yml` protects the required UnlockLevels/BasicAttack/Abilities/Passives contract.
+- `crystal-config-validation.yml` protects the required UnlockLevels/BasicAttack/Abilities/Passives contract and prevents duplicate client/server unlock tables.
 - `progression-boundary.yml` protects AchievementSystem checking, Daily Bounty one-time claiming, Enemy reward guards and Boss reward guards.
 - `crystal-ability-boundary.yml` protects the server CrystalAbilityService boundary.
 - `pve-attacker-context-validation.yml` now protects NPC/Boss/status-effect attacker context.
 - NPC normal attacks and special attacks now carry the concrete NPC as attacker, use `Physical` damage and pass their real attack range; Emberling burn ticks preserve the NPC attacker context.
 - Guardian normal attacks and telegraphs now preserve the Guardian attacker and use `Physical` / `BossShockwave` damage types with explicit ranges.
+- `combat-validation-contract.yml` protects shared Hitbox/DamageService validation bounds.
+- `boss-client-contract.yml` protects the `CrystalGuardian` model identity between server and client.
+- `feedback-remote-direction-validation.yml` protects `CombatFeedback` as server-to-client only.
+- `client-presentation-authority-validation.yml` protects client combat presentation from gameplay authority references.
+- `presentation-asset-contract.yml` protects the six required Crystal animation/sound asset names.
+- `QuestMenu` now has a local load debounce so rapid open/refresh cycles do not create overlapping quest RemoteFunction calls.
 - AnimationController clears stale tracks on character generation changes and uses CrystalConfig cooldowns for local animation throttling.
 - VFXController uses authored Sound assets when available, with safe ID fallbacks and short-lived cosmetic parts.
 - Guardian BossBar work remains throttled to 0.1 s and currently resolves the server-spawned `CrystalGuardian` model name.
 - Cooldown UI remains idle-throttled (0.25 s idle / 0.1 s active).
-- `feedback-remote-direction-validation.yml` protects `CombatFeedback` as server-to-client only.
-- `client-presentation-authority-validation.yml` protects client combat presentation from gameplay authority references.
 
 ## Security / authority contracts
 - `DamageService` is the only direct `Humanoid:TakeDamage()` path in `src`.
@@ -62,7 +67,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 
 ## Exact next steps
 1. Continue static auditing of `CrystalAnimationController`, `CrystalVFXController`, `CombatPresentation`, `CombatService`, `CrystalAbilityService`, `BossService`, `StatusEffectService`, `NPCService` and `default.project.json`.
-2. Verify `crystal-ability-boundary.yml`, `crystal-config-validation.yml`, `progression-boundary.yml`, `pve-attacker-context-validation.yml` plus all existing combat/damage/feedback/remote CI contracts after further edits.
+2. Verify all combat/damage/feedback/remote/progression/presentation CI contracts after further edits.
 3. Add authored Animation/Sound objects under the configured asset names.
 4. Build the first real EMBER Basic + Flame Burst assets, then repeat for TIDE and GALE.
 5. Keep animation markers presentation-only; never make them gameplay authority.
