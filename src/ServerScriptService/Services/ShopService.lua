@@ -11,6 +11,14 @@ local function finiteNumber(value)
 	return number
 end
 
+local function positiveInteger(value)
+	local number = finiteNumber(value)
+	if number == nil then return nil end
+	number = math.floor(number)
+	if number <= 0 then return nil end
+	return number
+end
+
 function ShopService.GetOffer(itemId)
 	return Offers[itemId]
 end
@@ -23,8 +31,10 @@ function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyServi
 	end
 	local price = finiteNumber(offer.Price)
 	if not price or price <= 0 then return false, "Shop offer is invalid." end
-	local numericAmount = finiteNumber(amount) or 1
-	amount = math.clamp(math.floor(numericAmount), 1, math.max(1, math.floor(finiteNumber(offer.MaxPerPurchase) or 1)))
+	amount = positiveInteger(amount)
+	if not amount then return false, "Purchase amount must be a positive integer." end
+	local maxPerPurchase = positiveInteger(offer.MaxPerPurchase) or 1
+	if amount > maxPerPurchase then return false, "Purchase amount exceeds the per-purchase limit." end
 	local total = price * amount
 	if not EconomyService.CanAfford(profile, total) then return false, "Not enough Money." end
 
