@@ -12,7 +12,7 @@ local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local upgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 
 local crystals = { "EMBER", "TIDE", "GALE" }
-local unlockLevels = { EMBER = 1, TIDE = 3, GALE = 5 }
+local unlockLevels = crystalConfig.UnlockLevels or {}
 local crystalLabels = { EMBER = "Ember", TIDE = "Tide", GALE = "Gale" }
 local rarityByItem = { EmberShard = "Common", TidePearl = "Uncommon", GaleFeather = "Rare", AncientShard = "Epic", GuardianCore = "Legendary", HealthPotion = "Uncommon" }
 local inventory = {}
