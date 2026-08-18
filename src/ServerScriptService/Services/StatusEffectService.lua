@@ -26,9 +26,11 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	local token = {}
 	if not state.BaseWalkSpeed then state.BaseWalkSpeed = getCurrentBaseWalkSpeed(humanoid) end
 	state.Slow = token
+	humanoid:SetAttribute("CrystalBoundSlowMultiplier", multiplier)
 	humanoid.WalkSpeed = math.max(6, state.BaseWalkSpeed * multiplier)
 	task.delay(duration, function()
 		if humanoid.Parent and humanoid.Health > 0 and state.Slow == token then
+			humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
 			humanoid.WalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
 			state.Slow = nil
 			state.BaseWalkSpeed = nil
@@ -65,8 +67,11 @@ end
 function StatusEffectService.Clear(humanoid)
 	if not humanoid then return end
 	local state = active[humanoid]
-	if state and state.Slow and humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
-		humanoid.WalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
+	if state then
+		humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
+		if humanoid.Parent and humanoid.Health > 0 and state.Slow and state.BaseWalkSpeed then
+			humanoid.WalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
+		end
 	end
 	active[humanoid] = nil
 end
