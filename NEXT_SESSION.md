@@ -36,6 +36,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - GitHub CI for Rojo mapping, JSON, require paths, gameplay references, remote references, profile migration IDs, balancing invariants and reviewed direct `TakeDamage()` paths
 - CI guard ensuring `RemoteFunction.OnServerInvoke` ownership is unique
 - Repo-wide direct damage audit that permits `Humanoid:TakeDamage()` only inside `DamageService`
+- CI audit enforcing server-only `CombatFeedback` publication
 
 ## Important recent fixes
 - `PlayerData` whitelists valid Titles and `UnlockedIslands` during reconciliation.
@@ -45,13 +46,16 @@ The current master design context is authoritative: Crystal Bound is an original
 - GALE splash damage goes through `DamageService.ProcessDamage()` rather than bypassing the central damage validator.
 - Guardian shockwave NPC damage now also goes through `DamageService.ProcessDamage()` instead of a direct `Humanoid:TakeDamage()` path.
 - Burn damage now goes through `DamageService.ProcessDamage()` for NPC targets instead of bypassing the central damage validator.
-- `DamageService` now accepts only living Player or server-marked living Enemy/Boss models as attackers.
-- `DamageValidators` now rejects unknown `DamageType` values.
-- Central damage types now explicitly include `CrystalAbilitySplash` and `BossShockwave`.
+- `DodgeService` no longer directly calls `Humanoid:TakeDamage()`; its damage helper routes through `DamageService` and keeps backwards-compatible NPC/Boss callers using the explicit `Environmental` damage type when no source model is supplied.
+- `DamageService` now accepts living Player characters as valid targets for server-side NPC/Boss damage while retaining Enemy/Boss target validation.
+- `DamageService` now accepts only living Player or server-marked living Enemy/Boss models as attackers when an attacker is supplied.
+- `DamageValidators` rejects missing attackers for every damage type except `Environmental`.
+- `DamageValidators` rejects unknown `DamageType` values.
+- Central damage types explicitly include `CrystalAbilitySplash` and `BossShockwave`.
 - `DamageService` returns the actually applied HP delta instead of the requested amount.
 - `DamageService` tracks the last valid attacker in server-only weak state; player attackers are stored by immutable UserId so a player death during a boss defeat race does not erase attribution.
 - `BossService` uses the server-only damage attribution state for Guardian rewards and clears it on defeat.
-- Server-side procedural Combat VFX were removed from `CombatService`; the server no longer creates transient VFX Parts/Tweens for crystal hits.
+- Server-side procedural Crystal Combat VFX were removed from `CombatService`; the server no longer creates transient VFX Parts/Tweens for crystal hits.
 - Added a dedicated `CombatFeedback` RemoteEvent for server-confirmed hit presentation.
 - `CombatService` fires `CombatFeedback` only after `DamageService.ProcessDamage()` succeeds with applied damage and includes the verified target, attacker id, action, crystal id, critical state and applied damage amount.
 - Dodge results with zero applied damage no longer produce confirmed-hit feedback or CRITICAL HIT messaging.
@@ -61,6 +65,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - Added `combat-presentation-validation.yml` to guard the client/server presentation boundary, required mappings, authored asset naming contracts and the absence of client-side `TakeDamage()`.
 - Added `damage-path-validation.yml` to explicitly protect reviewed Boss/Combat damage boundaries.
 - Added `direct-damage-audit.yml` to reject any direct `Humanoid:TakeDamage()` call outside `DamageService` across the whole `src` tree.
+- Added `feedback-authority-audit.yml` to ensure `CombatFeedback` is server-published only and has no server receive handler.
 - `ClientBootstrap.client.lua` throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
 - Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs, asset names, VFX values and sound asset names for EMBER/TIDE/GALE.
 - `CrystalAnimationController.client.lua` loads authored `Animation` objects from `ReplicatedStorage.Assets.Animations` by configured `AssetName` and safely falls back to `AnimationId`.
@@ -72,6 +77,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - Registered the animation/VFX controllers, presentation config, asset folders and `CombatFeedback` remote mapping in `default.project.json`.
 - `GetAvailableQuests` already has a dedicated 0.2-second RemoteFunction guard with PlayerRemoving cleanup.
 - `QuestRequest` remains owned by the single Bootstrap handler; do not add a second handler.
+- Shop, Crafting, Consumable and NPC dialog remotes have explicit request limits and the relevant server-side ownership/distance checks.
 
 ## Animation/VFX status
 The animation architecture is in place, but the actual `Animation` objects and published IDs are still absent. The configured asset names are intentionally ready for future authored assets:
@@ -99,7 +105,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 
 ## Exact next steps
 1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua`, `BossService.lua`, `StatusEffectService.lua` and final Rojo mapping.
-2. Validate the combat-presentation, damage-path and direct-damage CI contracts after subsequent changes.
+2. Validate the combat-presentation, damage-path, direct-damage and feedback-authority CI contracts after subsequent changes.
 3. Add the actual authored `Animation`/`Sound` objects under the configured asset names.
 4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire them into the asset folders or IDs.
 5. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
@@ -125,9 +131,12 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - `.github/workflows/combat-presentation-validation.yml`
 - `.github/workflows/damage-path-validation.yml`
 - `.github/workflows/direct-damage-audit.yml`
+- `.github/workflows/feedback-authority-audit.yml`
 - `src/ServerScriptService/Bootstrap.server.lua`
 - `src/ServerScriptService/Services/CombatService.lua`
 - `src/ServerScriptService/Services/DamageService.lua`
+- `src/ServerScriptService/Services/DodgeService.lua`
+- `src/ServerScriptService/Services/NPCService.lua`
 - `src/ServerScriptService/Services/BossService.lua`
 - `src/ServerScriptService/Services/PlayerService.lua`
 - `src/ServerScriptService/CombatFeedbackRemote.server.lua`
