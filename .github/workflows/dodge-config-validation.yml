@@ -1,0 +1,30 @@
+name: Dodge Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-dodge-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate centralized dodge configuration
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path("src/ReplicatedStorage/Config/DodgeConfig.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
+          for marker in ("Cooldown =", "Invulnerability =", "Boost =", "MaxDirectionMagnitude ="):
+              if marker not in config:
+                  raise SystemExit(f"DodgeConfig missing {marker}")
+          for marker in ("DodgeConfig.Cooldown", "DodgeConfig.Invulnerability", "DodgeConfig.Boost", "DodgeConfig.MaxDirectionMagnitude"):
+              if marker not in service:
+                  raise SystemExit(f"DodgeService missing centralized config usage: {marker}")
+          numbers = [float(value) for value in re.findall(r'=\s*(-?\d+(?:\.\d+)?)', config)]
+          if any(value <= 0 for value in numbers):
+              raise SystemExit("DodgeConfig values must all be positive")
+          print("DodgeConfig contract validated.")
