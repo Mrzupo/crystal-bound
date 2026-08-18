@@ -83,7 +83,7 @@ function VFX.Play(action, crystalId)
 
 	crystalId = crystalId or player:GetAttribute("EquippedCrystal") or "EMBER"
 	local now = os.clock()
-	local key = crystalId .. ":" .. action
+	local key = action
 	local guard = ACTION_GUARD[action] or 0.08
 	if now - (lastPlayed[key] or -math.huge) < guard then
 		return false
