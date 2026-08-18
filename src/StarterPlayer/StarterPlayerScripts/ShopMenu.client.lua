@@ -157,7 +157,7 @@ local function ensureGui()
 	hint.Position = UDim2.fromOffset(18, 432)
 	hint.Size = UDim2.fromOffset(564, 24)
 	hint.BackgroundTransparency = 1
-	hint.Text = "O = Händler   •   Health Potion kaufen/benutzen"
+	hint.Text = "O = Händler   •   P = Potion benutzen (global)"
 	hint.Font = Enum.Font.Gotham
 	hint.TextSize = 13
 	hint.TextXAlignment = Enum.TextXAlignment.Right
@@ -204,8 +204,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.O then
 		if open then open = false; panel.Visible = false else openMenu() end
-	elseif input.KeyCode == Enum.KeyCode.P then
-		useItemRequest:FireServer("HealthPotion")
 	end
 end)
 
