@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
@@ -24,6 +23,9 @@ label.Parent = gui
 Instance.new("UICorner", label).CornerRadius = UDim.new(0, 8)
 
 local function fireDodge()
+	local now = os.clock()
+	local cooldownEnd = tonumber(player:GetAttribute("DodgeCooldownEnd")) or 0
+	if now < cooldownEnd then return end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -57,7 +59,7 @@ end
 
 task.spawn(function()
 	while gui.Parent do
-		local remaining = math.max(0, (player:GetAttribute("DodgeCooldownEnd") or 0) - os.clock())
+		local remaining = math.max(0, (tonumber(player:GetAttribute("DodgeCooldownEnd")) or 0) - os.clock())
 		label.Text = remaining > 0 and string.format("Dodge: %.1fs", remaining) or "Dodge: READY"
 		task.wait(0.1)
 	end
