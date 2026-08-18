@@ -97,8 +97,10 @@ function DamageService.ProcessDamage(request)
 		return DamageResult.new(true, 0, "Dodged")
 	end
 
+	local before = humanoid.Health
 	humanoid:TakeDamage(amount)
-	return DamageResult.new(true, amount, "Damage applied")
+	local applied = math.max(0, before - humanoid.Health)
+	return DamageResult.new(true, applied, applied > 0 and "Damage applied" or "No damage applied")
 end
 
 DamageService.ApplyDamage = DamageService.ProcessDamage
