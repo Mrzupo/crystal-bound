@@ -13,19 +13,23 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 
 ## Recent implementation work
 - Server-authoritative combat remains centered on `CombatService` + `DamageService`.
-- Crystal-specific server ability behavior is now isolated in `CrystalAbilityService`.
+- Crystal-specific server ability behavior is isolated in `CrystalAbilityService`.
 - `CombatService` handles validation, cooldowns, damage orchestration, feedback, progression and rewards; `CrystalAbilityService` handles TIDE heal and GALE splash behavior.
 - `CRYSTAL_POWER` progresses through `QuestSystem.Advance()` and only completes at its goal.
 - GALE splash uses `DamageService.ProcessDamage()` and returns verified hit results to `CombatService` for feedback/rewards.
 - Invalid equipped crystals normalize to `EMBER`; unknown crystal mastery keys are removed during profile reconciliation.
-- QuestRequest has a dedicated weak-key rate limit inside the single Bootstrap handler.
+- `QuestRequest` has a dedicated weak-key rate limit inside the single Bootstrap handler.
 - RemoteEvent ownership and direct-damage rules are protected by CI contracts.
 - Server-confirmed `CombatFeedback` remains the sole authoritative source for hit presentation.
 - Server-generated Crystal combat VFX remain removed; presentation is client-side.
-- PC and mobile combat input now defensively validate Enemy targets, living humanoids and local Crystal range before playing local presentation.
+- PC and mobile combat input defensively validate Enemy targets, living humanoids and local Crystal range before playing local presentation.
 - PC and mobile Ability input both honor the server-provided `AbilityCooldownEnd` plus a local cooldown guard. These checks are only presentation/input throttles and do not replace server validation.
-- Client `ClientBootstrap` uses `CrystalConfig.BasicAttack` (singular) and `CrystalConfig.Abilities` as defined by the config contract.
-- Client local variables in `ClientBootstrap` remain scoped; `refreshQuests` is local.
+- `ClientBootstrap` uses `CrystalConfig.BasicAttack` (singular) and `CrystalConfig.Abilities` as defined by the config contract.
+- `CrystalConfig.UnlockLevels` is now the single source of truth for EMBER/TIDE/GALE level gates; Bootstrap no longer owns a separate unlock-level table.
+- `CrystalMastery.Upgrade()` is now the central mastery-level mutation; Bootstrap no longer increments mastery directly.
+- `crystal-config-validation.yml` protects the required UnlockLevels/BasicAttack/Abilities/Passives contract.
+- `progression-boundary.yml` protects AchievementSystem checking, Daily Bounty one-time claiming, Enemy reward guards and Boss reward guards.
+- `crystal-ability-boundary.yml` protects the server CrystalAbilityService boundary.
 - AnimationController clears stale tracks on character generation changes and uses CrystalConfig cooldowns for local animation throttling.
 - VFXController uses authored Sound assets when available, with safe ID fallbacks and short-lived cosmetic parts.
 - Guardian BossBar work remains throttled to 0.1 s.
@@ -52,7 +56,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 
 ## Exact next steps
 1. Continue static auditing of `CrystalAnimationController`, `CrystalVFXController`, `CombatPresentation`, `CombatService`, `CrystalAbilityService`, `BossService`, `StatusEffectService`, `NPCService` and `default.project.json`.
-2. Verify the new `crystal-ability-boundary.yml` plus all existing combat/damage/feedback/remote CI contracts after further edits.
+2. Verify `crystal-ability-boundary.yml`, `crystal-config-validation.yml`, `progression-boundary.yml` plus all existing combat/damage/feedback/remote CI contracts after further edits.
 3. Add authored Animation/Sound objects under the configured asset names.
 4. Build the first real EMBER Basic + Flame Burst assets, then repeat for TIDE and GALE.
 5. Keep animation markers presentation-only; never make them gameplay authority.
