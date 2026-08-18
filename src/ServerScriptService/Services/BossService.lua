@@ -7,6 +7,7 @@ local InventoryService = require(script.Parent.InventoryService)
 local EconomyService = require(script.Parent.EconomyService)
 local XPService = require(script.Parent.XPService)
 local QuestService = require(script.Parent.QuestService)
+local DamageService = require(script.Parent.DamageService)
 local DodgeService = require(script.Parent.DodgeService)
 local BossService = { Bound = false }
 
@@ -21,13 +22,22 @@ local function shockwave(center, radius, damage, ignoreModel)
 	end
 
 	local folder = workspace:FindFirstChild("NPCs")
-	if folder then
-		for _, child in ipairs(folder:GetChildren()) do
-			if child ~= ignoreModel and child:GetAttribute("Enemy") == true and not child:GetAttribute("BossId") then
-				local humanoid = child:FindFirstChildOfClass("Humanoid")
-				local root = child:FindFirstChild("HumanoidRootPart") or child.PrimaryPart
-				if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
-					humanoid:TakeDamage(damage)
+	if folder and ignoreModel and ignoreModel:IsA("Model") then
+		local attackerRoot = ignoreModel:FindFirstChild("HumanoidRootPart") or ignoreModel.PrimaryPart
+		if attackerRoot then
+			for _, child in ipairs(folder:GetChildren()) do
+				if child ~= ignoreModel and child:GetAttribute("Enemy") == true and not child:GetAttribute("BossId") then
+					local humanoid = child:FindFirstChildOfClass("Humanoid")
+					local root = child:FindFirstChild("HumanoidRootPart") or child.PrimaryPart
+					if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
+						DamageService.ProcessDamage({
+							Attacker = ignoreModel,
+							Target = child,
+							Amount = math.max(0, damage),
+							Range = radius,
+							DamageType = "BossShockwave",
+						})
+					end
 				end
 			end
 		end
