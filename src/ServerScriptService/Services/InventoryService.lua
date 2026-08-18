@@ -7,10 +7,12 @@ local function finiteNumber(value)
 	return number
 end
 
-local function normalizeAmount(amount, default)
+local function normalizePositiveAmount(amount)
 	local value = finiteNumber(amount)
-	if value == nil then return default or 1 end
-	return math.max(1, math.floor(value))
+	if value == nil then return nil end
+	value = math.floor(value)
+	if value <= 0 then return nil end
+	return value
 end
 
 function InventoryService.IsValidItem(itemId)
@@ -19,8 +21,9 @@ end
 
 function InventoryService.AddItem(profile, itemId, amount)
 	if not InventoryService.IsValidItem(itemId) then return 0 end
-	amount = normalizeAmount(amount, 1)
-	profile.Inventory = type(profile.Inventory) == "table" and profile.Inventory or {}
+	amount = normalizePositiveAmount(amount)
+	if not amount then return 0 end
+	if type(profile.Inventory) ~= "table" then profile.Inventory = {} end
 	local currentRaw = finiteNumber(profile.Inventory[itemId]) or 0
 	local current = math.max(0, math.floor(currentRaw))
 	local nextAmount = math.min(Config.GetMaxStackSize(itemId), current + amount)
@@ -31,8 +34,9 @@ end
 
 function InventoryService.RemoveItem(profile, itemId, amount)
 	if not InventoryService.IsValidItem(itemId) then return false end
-	amount = normalizeAmount(amount, 1)
-	profile.Inventory = type(profile.Inventory) == "table" and profile.Inventory or {}
+	amount = normalizePositiveAmount(amount)
+	if not amount then return false end
+	if type(profile.Inventory) ~= "table" then profile.Inventory = {} end
 	local currentRaw = finiteNumber(profile.Inventory[itemId]) or 0
 	local current = math.max(0, math.floor(currentRaw))
 	if current < amount then return false end
@@ -42,9 +46,11 @@ end
 
 function InventoryService.HasItem(profile, itemId, amount)
 	if not InventoryService.IsValidItem(itemId) then return false end
-	amount = normalizeAmount(amount, 1)
+	amount = normalizePositiveAmount(amount)
+	if not amount then return false end
 	if type(profile.Inventory) ~= "table" then return false end
-	return (finiteNumber(profile.Inventory[itemId]) or 0) >= amount
+	local current = math.max(0, math.floor(finiteNumber(profile.Inventory[itemId]) or 0))
+	return current >= amount
 end
 
 function InventoryService.GetInventory(profile)
