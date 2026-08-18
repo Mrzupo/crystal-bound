@@ -18,6 +18,7 @@ jobs:
           inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
           shop = Path("src/ServerScriptService/Services/ShopService.lua").read_text(encoding="utf-8")
           ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
           for marker in ("HealthPotion", "Price = 75", "MaxPerPurchase = 10", "SellOrder", "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard"):
               if marker not in config:
                   raise SystemExit(f"ShopConfig missing {marker}")
@@ -28,4 +29,6 @@ jobs:
               raise SystemExit("ShopService must consume shared ShopConfig")
           if "ShopConfig" not in ui or "InventoryConfig" not in ui:
               raise SystemExit("ShopMenu must consume shared ShopConfig and InventoryConfig")
+          if "ShopConfig" not in bootstrap or "local sellOrder = shopConfig.SellOrder" not in bootstrap:
+              raise SystemExit("ClientBootstrap must consume shared ShopConfig.SellOrder")
           print("Shop configuration contract validated.")
