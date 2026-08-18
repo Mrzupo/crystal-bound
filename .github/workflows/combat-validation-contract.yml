@@ -1,0 +1,38 @@
+name: Combat Validation Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-combat-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate combat bounds
+        shell: python
+        run: |
+          from pathlib import Path
+
+          hitbox = Path("src/ReplicatedStorage/Modules/Combat/HitboxService.lua").read_text(encoding="utf-8")
+          damage = Path("src/ServerScriptService/Services/DamageService.lua").read_text(encoding="utf-8")
+          validators = Path("src/ReplicatedStorage/Modules/Combat/DamageValidators.lua").read_text(encoding="utf-8")
+
+          problems = []
+          if "math.clamp(number, 0, 1000)" not in hitbox:
+              problems.append("Hitbox radius cap must remain 1000")
+          if "maxRange > 1000" not in damage:
+              problems.append("DamageService must reject range above 1000")
+          if "request.Amount >= 0" not in validators:
+              problems.append("DamageValidators must reject negative damage")
+          if "DamageTypes.Environmental" not in validators:
+              problems.append("DamageValidators must explicitly gate Environmental damage")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Combat validation contract validated.")
