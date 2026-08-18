@@ -31,8 +31,11 @@ local function executeTide(player)
 end
 
 local function executeGale(player, targetModel, abilityDamage, abilityRange)
-	local safeDamage = safePositive(abilityDamage, 1)
-	local safeRange = safePositive(abilityRange, 1)
+	local safeDamage = safePositive(abilityDamage, 0)
+	local safeRange = safePositive(abilityRange, 0)
+	if safeDamage <= 0 or safeRange <= 0 then
+		return { Message = nil, Hits = {} }
+	end
 	local centerRoot = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
 	if not centerRoot then
 		return { Message = nil, Hits = {} }
@@ -45,7 +48,7 @@ local function executeGale(player, targetModel, abilityDamage, abilityRange)
 			local result = DamageService.ProcessDamage({
 				Attacker = player,
 				Target = enemy,
-				Amount = math.max(1, safeDamage * 0.45),
+				Amount = safeDamage * 0.45,
 				Range = safeRange,
 				DamageType = "CrystalAbilitySplash",
 			})
