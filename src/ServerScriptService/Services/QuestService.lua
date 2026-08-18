@@ -17,6 +17,11 @@ local QuestOrder = {
 	"BAT_HUNT",
 }
 
+local SERVER_TRIGGERED_SINGLE_STEP = {
+	FIRST_FIGHT = true,
+	GUARDIAN_TRIAL = true,
+}
+
 local function sync(player, profile)
 	player:SetAttribute("ActiveQuestCount", #(profile.ActiveQuests or {}))
 	player:SetAttribute("CompletedQuestCount", #(profile.CompletedQuests or {}))
@@ -48,6 +53,16 @@ end
 function QuestService.Complete(player, profile, questId, message)
 	local definition = QuestSystem.GetDefinition(questId)
 	if not definition or not QuestSystem.IsActive(profile, questId) then return false end
+
+	local progress = QuestSystem.GetProgress(profile, questId)
+	local reachedGoal = progress >= (definition.Goal or 0)
+	if not reachedGoal and not SERVER_TRIGGERED_SINGLE_STEP[questId] then
+		if player then
+			player:SetAttribute("QuestMessage", string.format("Complete the objective first: %d/%d", progress, definition.Goal or 0))
+		end
+		return false
+	end
+
 	if not QuestSystem.Complete(profile, questId) then return false end
 
 	XPService.AddXP(profile, definition.XP)
