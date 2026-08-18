@@ -147,7 +147,8 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 	humanoid.Died:Connect(function()
 		if model:GetAttribute("Rewarded") then return end
 		model:SetAttribute("Rewarded", true)
-		local creator = model:GetAttribute("LastAttackerUserId"); local player = creator and Players:GetPlayerByUserId(creator)
+		local creator = DamageService.GetLastAttacker(model)
+		local player = creator and (creator:IsA("Player") and creator or Players:GetPlayerFromCharacter(creator))
 		if player then
 			local PlayerService = require(script.Parent.PlayerService); local profile = PlayerService.GetProfile(player)
 			if profile then
@@ -165,6 +166,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 				local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
 			end
 		end
+		DamageService.ClearTarget(model)
 		task.delay(1.5, function()
 			if model.Parent then model:Destroy() end
 		end)
