@@ -1,0 +1,34 @@
+name: Daily Bounty Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-bounty-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared daily bounty config
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/DailyBountyConfig.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          profile = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          for marker in ("Goals", "Emberling", "Tidecrawler", "Galewisp", "CrystalBat", "AncientGolem"):
+              if marker not in config:
+                  raise SystemExit(f"DailyBountyConfig missing {marker}")
+          rewards = [int(value) for value in re.findall(r"RewardMoney\s*=\s*(\d+)", config)]
+          goals = [int(value) for value in re.findall(r"Goal\s*=\s*(\d+)", config)]
+          if not rewards or any(value <= 0 for value in rewards):
+              raise SystemExit("Daily bounty rewards must be positive")
+          if not goals or any(value <= 0 for value in goals):
+              raise SystemExit("Daily bounty goals must be positive")
+          if "BountyConfig" not in service:
+              raise SystemExit("DailyBountyService must consume shared BountyConfig")
+          if "DailyBountyConfig" not in profile:
+              raise SystemExit("PlayerData must consume shared DailyBountyConfig")
+          print("Daily bounty config validated.")
