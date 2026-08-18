@@ -28,8 +28,8 @@ end
 function CrystalMastery.GetRequiredXP(level)
 	local safeLevel = math.max(1, math.floor(finiteNumber(level) or 1))
 	local growth = math.max(0, finiteNumber(Config.Growth) or 0)
-	local baseXP = math.max(0, finiteNumber(Config.BaseXP) or 0)
-	return math.floor(baseXP * (safeLevel ^ growth))
+	local baseXP = math.max(1, finiteNumber(Config.BaseXP) or 1)
+	return math.max(1, math.floor(baseXP * (safeLevel ^ growth)))
 end
 
 function CrystalMastery.AddXP(profile, crystalId, amount)
@@ -67,9 +67,9 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	if mastery.Level >= Config.MaxLevel then return {} end
 	local base = Config.BaseCosts[crystalId] or {}
 	local cost = {}
-	local multiplier = mastery.Level
+	local multiplier = math.max(1, mastery.Level)
 	for itemId, amount in pairs(base) do
-		local safeAmount = math.max(0, math.floor(finiteNumber(amount) or 0))
+		local safeAmount = math.max(1, math.floor(finiteNumber(amount) or 1))
 		cost[itemId] = safeAmount * multiplier
 	end
 	return cost
