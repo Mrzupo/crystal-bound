@@ -1,19 +1,24 @@
-local Definitions = require(script.Parent.Crystal.CrystalDefinitions)
 local CrystalConfig = require(game.ReplicatedStorage.Config.CrystalConfig)
 
 local CrystalSystem = {}
+
+local DEFINITIONS = {
+	EMBER = { Id = "EMBER", Name = "Ember", Element = "Fire" },
+	TIDE = { Id = "TIDE", Name = "Tide", Element = "Water" },
+	GALE = { Id = "GALE", Name = "Gale", Element = "Wind" },
+}
 
 local function validProfileCrystals(profile)
 	return type(profile) == "table" and type(profile.Crystals) == "table"
 end
 
 function CrystalSystem.Exists(id)
-	return type(id) == "string" and Definitions[id] ~= nil
+	return type(id) == "string" and CrystalConfig.UnlockLevels[id] ~= nil
 end
 
 function CrystalSystem.GetDefinition(id)
 	if not CrystalSystem.Exists(id) then return nil end
-	return Definitions[id]
+	return DEFINITIONS[id]
 end
 
 function CrystalSystem.GetBasicAttack(id)
