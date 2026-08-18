@@ -119,20 +119,31 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	fireProgress(player, levelsGained or 0, { Crystal = crystalId, Level = masteryLevel, XP = masteryXP })
 end
 
-local function applyGaleSplash(player, centerModel, damage)
+local function applyGaleSplash(player, centerModel, damage, range)
 	local centerRoot = centerModel:FindFirstChild("HumanoidRootPart") or centerModel.PrimaryPart; if not centerRoot then return end
 	local profile = PlayerService.GetProfile(player)
 	for _, enemy in ipairs(HitboxService.GetEnemyModels(centerRoot.Position, 12, centerModel)) do
 		local humanoid = enemy:FindFirstChildOfClass("Humanoid")
-		if humanoid then humanoid:TakeDamage(math.max(1, damage * 0.45)); if humanoid.Health <= 0 and profile then rewardDefeat(player, profile, enemy, "Ability", "GALE") end end
+		if humanoid and humanoid.Health > 0 then
+			local result = DamageService.ProcessDamage({
+				Attacker = player,
+				Target = enemy,
+				Amount = math.max(1, damage * 0.45),
+				Range = range,
+				DamageType = "CrystalAbilitySplash",
+			})
+			if result.Success and humanoid.Health <= 0 and profile then
+				rewardDefeat(player, profile, enemy, "Ability", "GALE")
+			end
+		end
 	end
 end
 
-local function applyAbilitySpecial(player, profile, crystalId, targetModel, abilityDamage)
+local function applyAbilitySpecial(player, profile, crystalId, targetModel, abilityDamage, abilityRange)
 	if crystalId == "TIDE" then
 		local character = player.Character; local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid.Health > 0 then humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 30); player:SetAttribute("CrystalMessage", "Tidal Pulse restored health.") end
-	elseif crystalId == "GALE" then applyGaleSplash(player, targetModel, abilityDamage) end
+	elseif crystalId == "GALE" then applyGaleSplash(player, targetModel, abilityDamage, abilityRange) end
 end
 
 function CombatService.HandleRequest(player, action, target)
@@ -165,7 +176,7 @@ function CombatService.HandleRequest(player, action, target)
 	end)
 	emitCombatEffect(crystalId, targetModel, action == "Ability", critical)
 	if critical then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
-	if action == "Ability" then applyAbilitySpecial(player, profile, crystalId, targetModel, damage); completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
+	if action == "Ability" then applyAbilitySpecial(player, profile, crystalId, targetModel, damage, config.Range); completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
 	if humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
 
