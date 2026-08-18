@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local EnemyConfig = require(game.ReplicatedStorage.Config.EnemyConfig)
 local AIPathService = require(script.Parent.AIPathService)
 local StatusEffectService = require(script.Parent.StatusEffectService)
+local DodgeService = require(script.Parent.DodgeService)
 
 local NPCService = {}
 
@@ -103,36 +104,47 @@ local function emitSpecialEffect(position, color, radius)
 	task.delay(0.35, function() if part.Parent then part:Destroy() end end)
 end
 
+local function damagePlayer(player, humanoid, amount)
+	if not player or not humanoid or humanoid.Health <= 0 then return false end
+	return DodgeService.ApplyDamage(player, humanoid, math.max(0, amount))
+end
+
 local function specialAttack(typeId, model, character, targetHumanoid, targetRoot, root)
 	local baseDamage = EnemyConfig.Get(typeId).AttackDamage
+	local player = character and Players:GetPlayerFromCharacter(character)
+	if not player then return end
 	if typeId == "Emberling" then
 		if (targetRoot.Position - root.Position).Magnitude <= 14 then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(255, 90, 30), 6)
-			targetHumanoid:TakeDamage(baseDamage + 6)
+			damagePlayer(player, targetHumanoid, baseDamage + 6)
 			StatusEffectService.ApplyBurn(targetHumanoid, 2, 3, 0.6)
 		end
 	elseif typeId == "Tidecrawler" then
-		emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
-		targetHumanoid:TakeDamage(baseDamage + 3)
-		StatusEffectService.ApplySlow(targetHumanoid, 0.65, 1.5)
+		if (targetRoot.Position - root.Position).Magnitude <= 10 then
+			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
+			damagePlayer(player, targetHumanoid, baseDamage + 3)
+			StatusEffectService.ApplySlow(targetHumanoid, 0.65, 1.5)
+		end
 	elseif typeId == "Galewisp" then
 		local direction = targetRoot.Position - root.Position
 		if direction.Magnitude > 0.1 and direction.Magnitude <= 18 then
 			emitSpecialEffect(root.Position, Color3.fromRGB(175, 120, 255), 8)
 			model:PivotTo(CFrame.lookAt(targetRoot.Position - direction.Unit * 4, targetRoot.Position))
-			targetHumanoid:TakeDamage(baseDamage + 8)
+			damagePlayer(player, targetHumanoid, baseDamage + 8)
 		end
 	elseif typeId == "CrystalBat" then
-		emitSpecialEffect(targetRoot.Position, Color3.fromRGB(80, 255, 240), 5)
-		targetHumanoid:TakeDamage(baseDamage + 5)
+		if (targetRoot.Position - root.Position).Magnitude <= 12 then
+			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(80, 255, 240), 5)
+			damagePlayer(player, targetHumanoid, baseDamage + 5)
+		end
 	elseif typeId == "AncientGolem" then
 		emitSpecialEffect(root.Position, Color3.fromRGB(150, 140, 125), 12)
-		for _, player in ipairs(Players:GetPlayers()) do
-			local otherCharacter = player.Character
+		for _, otherPlayer in ipairs(Players:GetPlayers()) do
+			local otherCharacter = otherPlayer.Character
 			local otherHumanoid = otherCharacter and otherCharacter:FindFirstChildOfClass("Humanoid")
 			local otherRoot = otherCharacter and otherCharacter:FindFirstChild("HumanoidRootPart")
 			if otherHumanoid and otherHumanoid.Health > 0 and otherRoot and (otherRoot.Position - root.Position).Magnitude <= 10 then
-				otherHumanoid:TakeDamage(baseDamage + 10)
+				damagePlayer(otherPlayer, otherHumanoid, baseDamage + 10)
 			end
 		end
 	end
@@ -154,7 +166,8 @@ function NPCService.StartEnemyAI(model)
 			if character then
 				local targetRoot = character:FindFirstChild("HumanoidRootPart")
 				local targetHumanoid = character:FindFirstChildOfClass("Humanoid")
-				if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+				local targetPlayer = Players:GetPlayerFromCharacter(character)
+				if targetRoot and targetHumanoid and targetHumanoid.Health > 0 and targetPlayer then
 					if distance > config.AttackRange then
 						local direction = targetRoot.Position - root.Position
 						local steer = steerAroundObstacle(model, direction)
@@ -165,9 +178,9 @@ function NPCService.StartEnemyAI(model)
 						end
 					elseif os.clock() >= nextAttack then
 						nextAttack = os.clock() + math.max(0.25, config.AttackCooldown)
-						targetHumanoid:TakeDamage(math.max(0, config.AttackDamage))
+						damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage)
 					end
-					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" then
+					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" and distance <= math.max(config.AttackRange * 2, 10) then
 						nextSpecial = os.clock() + 6
 						specialAttack(typeId, model, character, targetHumanoid, targetRoot, root)
 					end
