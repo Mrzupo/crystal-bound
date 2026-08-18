@@ -16,6 +16,7 @@ jobs:
           import re
           from pathlib import Path
           config = Path("src/ReplicatedStorage/Config/DailyBountyConfig.lua").read_text(encoding="utf-8")
+          economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
           service = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
           profile = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
           for marker in ("Goals", "Emberling", "Tidecrawler", "Galewisp", "CrystalBat", "AncientGolem"):
@@ -23,10 +24,14 @@ jobs:
                   raise SystemExit(f"DailyBountyConfig missing {marker}")
           rewards = [int(value) for value in re.findall(r"RewardMoney\s*=\s*(\d+)", config)]
           goals = [int(value) for value in re.findall(r"Goal\s*=\s*(\d+)", config)]
+          max_money_match = re.search(r"MaxMoney\s*=\s*(\d+)", economy)
+          max_money = int(max_money_match.group(1)) if max_money_match else 1000000000
           if not rewards or any(value <= 0 for value in rewards):
               raise SystemExit("Daily bounty rewards must be positive")
-          if not goals or any(value <= 0 for value in goals):
-              raise SystemExit("Daily bounty goals must be positive")
+          if any(value > max_money for value in rewards):
+              raise SystemExit("Daily bounty reward exceeds EconomyConfig.MaxMoney")
+          if not goals or any(value <= 0 or value > 100 for value in goals):
+              raise SystemExit("Daily bounty goals must be within 1..100")
           if "BountyConfig" not in service:
               raise SystemExit("DailyBountyService must consume shared BountyConfig")
           if "DailyBountyConfig" not in profile:
