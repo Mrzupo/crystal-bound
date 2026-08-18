@@ -7,7 +7,7 @@ local function isFiniteNumber(value)
 end
 
 local function isKnownDamageType(value)
-	if value == nil then return true end
+	if type(value) ~= "string" then return false end
 	for _, damageType in pairs(DamageTypes) do
 		if value == damageType then return true end
 	end
