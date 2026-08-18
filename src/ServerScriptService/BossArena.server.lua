@@ -9,9 +9,9 @@ local NPCs = Workspace:WaitForChild("NPCs")
 local arena = Workspace:FindFirstChild("GuardianArena") or Instance.new("Folder")
 arena.Name = "GuardianArena"
 arena.Parent = Workspace
-local config = BossConfig.CrystalGuardian.ArenaHazard
-
-local center = Vector3.new(330, 1, 0)
+local bossConfig = BossConfig.CrystalGuardian
+local config = bossConfig.ArenaHazard
+local center = bossConfig.ArenaCenter
 local pillarPositions = {
 	center + Vector3.new(18, 4, 18),
 	center + Vector3.new(-18, 4, 18),
