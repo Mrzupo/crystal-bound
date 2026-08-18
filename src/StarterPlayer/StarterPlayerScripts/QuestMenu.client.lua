@@ -135,7 +135,11 @@ function loadData()
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
 	if ok and response then data = response end
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
-	if okAvailable and type(responseAvailable) == "table" then available = responseAvailable else available = {} end
+	if okAvailable and type(responseAvailable) == "table" then
+		available = responseAvailable
+	elseif not okAvailable then
+		-- Keep the last known availability when the request actually fails.
+	end
 	refresh()
 end
 
