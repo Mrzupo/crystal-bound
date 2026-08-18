@@ -10,13 +10,28 @@ local crystalUpgradeRequest = remotes:WaitForChild("CrystalUpgradeRequest")
 local useItemRequest = remotes:WaitForChild("UseItemRequest")
 local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local upgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
+local inventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 
-local crystals = { "EMBER", "TIDE", "GALE" }
+local crystals = {}
+for crystalId in pairs(crystalConfig.Definitions or {}) do
+	table.insert(crystals, crystalId)
+end
+table.sort(crystals, function(left, right)
+	return (tonumber(crystalConfig.UnlockLevels[left]) or math.huge) < (tonumber(crystalConfig.UnlockLevels[right]) or math.huge)
+end)
 local unlockLevels = crystalConfig.UnlockLevels or {}
-local crystalLabels = { EMBER = "Ember", TIDE = "Tide", GALE = "Gale" }
-local rarityByItem = { EmberShard = "Common", TidePearl = "Uncommon", GaleFeather = "Rare", AncientShard = "Epic", GuardianCore = "Legendary", HealthPotion = "Uncommon" }
 local inventory = {}
 local open = false
+
+local function getCrystalName(crystalId)
+	local definition = crystalConfig.Definitions and crystalConfig.Definitions[crystalId]
+	return definition and definition.Name or crystalId
+end
+
+local function getItemRarity(itemId)
+	local item = inventoryConfig.GetItemConfig(itemId)
+	return item and item.Rarity or "Common"
+end
 
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -87,22 +102,22 @@ local function refresh()
 	local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
 	local level = player:GetAttribute("CrystalMasteryLevel") or 1
 	local xp = player:GetAttribute("CrystalMasteryXP") or 0
-	panel.Info.Text = string.format("Equipped: %s   |   Mastery: Lv. %d   |   Mastery XP: %d   |   Upgrade: %s", crystalLabels[crystal] or crystal, level, xp, formatCost(crystal))
+	panel.Info.Text = string.format("Equipped: %s   |   Mastery: Lv. %d   |   Mastery XP: %d   |   Upgrade: %s", getCrystalName(crystal), level, xp, formatCost(crystal))
 	for _, crystalId in ipairs(crystals) do
 		local button = panel.Crystals:FindFirstChild(crystalId)
 		if button then
 			local owned = player:GetAttribute("Owns_" .. crystalId) == true
-			local passive = crystalConfig.Passives[crystalId]
-			local ability = crystalConfig.Abilities[crystalId]
-			local unlock = unlockLevels[crystalId]
+			local passive = crystalConfig.Passives[crystalId] or {}
+			local ability = crystalConfig.Abilities[crystalId] or {}
+			local unlock = tonumber(unlockLevels[crystalId]) or math.huge
 			local status = crystalId == crystal and "EQUIPPED" or (owned and "EQUIP" or string.format("LOCKED • Level %d", unlock))
-			button.Text = string.format("%s\n%s\nAbility: %s (%d DMG)\nPassive: x%.2f damage | +%d HP | +%d speed\n[%s]", crystalLabels[crystalId], status, ability.Name, ability.Damage, passive.DamageMultiplier, passive.MaxHealthBonus, passive.WalkSpeedBonus)
+			button.Text = string.format("%s\n%s\nAbility: %s (%d DMG)\nPassive: x%.2f damage | +%d HP | +%d speed\n[%s]", getCrystalName(crystalId), status, ability.Name or "Ability", tonumber(ability.Damage) or 0, tonumber(passive.DamageMultiplier) or 1, tonumber(passive.MaxHealthBonus) or 0, tonumber(passive.WalkSpeedBonus) or 0)
 			button.Active = owned or (tonumber(player:GetAttribute("Level")) or 1) >= unlock
 		end
 	end
 	local parts = {}
 	for itemId, amount in pairs(inventory) do
-		if tonumber(amount) and amount > 0 then table.insert(parts, string.format("%s [%s]: %d", itemId, rarityByItem[itemId] or "Common", amount)) end
+		if tonumber(amount) and amount > 0 then table.insert(parts, string.format("%s [%s]: %d", itemId, getItemRarity(itemId), amount)) end
 	end
 	table.sort(parts)
 	panel.Loot.Text = #parts > 0 and ("Loot / Items\n" .. table.concat(parts, "   |   ")) or "Loot / Items\nNo items collected."
