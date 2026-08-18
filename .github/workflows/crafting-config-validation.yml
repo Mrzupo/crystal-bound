@@ -1,0 +1,25 @@
+name: Crafting Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-crafting-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared crafting config
+        shell: python
+        run: |
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/CraftingConfig.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/CraftingService.lua").read_text(encoding="utf-8")
+          ui = Path("src/StarterPlayer/StarterPlayerScripts/CraftingMenu.client.lua").read_text(encoding="utf-8")
+          for marker in ("HealthPotion", "EmberShard", "TidePearl", "Inputs"):
+              if marker not in config:
+                  raise SystemExit(f"CraftingConfig missing {marker}")
+          if "CraftingConfig" not in service or "CraftingConfig" not in ui:
+              raise SystemExit("Server and UI must consume shared CraftingConfig")
+          print("Crafting configuration contract validated.")
