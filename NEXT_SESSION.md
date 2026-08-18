@@ -34,8 +34,11 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `CrystalAbilityService` defensively validates player/target instances plus finite/clamped damage and range inputs before executing server abilities.
 - Status effects have bounded Slow/Burn duration, tick count, damage and interval; tokenized callbacks prevent stale effect cleanup from cancelling newer effects.
 - Dodge validates finite vectors, resets on respawn, cleans state on leave and routes actual damage through `DamageService`.
+- `DodgeService.ApplyDamage()` now requires an explicit positive range for non-environmental attacker damage; the old 1000-stud fallback is restricted away from PvE attackers.
+- Central `DamageValidators` now requires an explicit known `DamageType`; ambiguous nil-type damage requests are rejected.
 - Shop, Crafting and Health Potion transactions validate before mutation and protect their mutation paths with server rate limits; Crafting and Shop roll back failed final mutations.
 - Economy sell accounting now reports the **actual** Money delta after MaxMoney clamping rather than the requested sale value.
+- Daily Bounty completion messages now report the **actual** Money delta after MaxMoney clamping.
 - `StatusSpeedGuardV2` now tracks and disconnects per-player event connections on Leave/Respawn, removing a connection leak.
 - Persistence reconciliation clamps Level/XP/Money/Inventory/Crystal ownership/mastery/quest state, while `SafeProfileStore` atomically claims and refreshes `SessionLock` ownership.
 - SessionLock age now clamps future timestamps to avoid clock-skew extending a lock incorrectly.
@@ -60,8 +63,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Critical RemoteFunctions have unique `OnServerInvoke` ownership and server rate limits.
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
-- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync and project identity are protected by dedicated CI workflows.
-- Persistence save-snapshot timing is protected by `persistence-save-snapshot-contract.yml`.
+- Quest completion, reward idempotency, persistence session locks, persistence save-snapshot timing, status-effect bounds, Dodge bounds, PvE damage range, explicit damage types, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync and project identity are protected by dedicated CI workflows.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
