@@ -1,0 +1,33 @@
+name: Boss Client Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-boss-client-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Guardian model identity
+        shell: python
+        run: |
+          from pathlib import Path
+
+          boss = Path("src/ServerScriptService/Services/BossService.lua").read_text(encoding="utf-8")
+          client = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
+
+          problems = []
+          if 'model.Name = uniqueName or "CrystalGuardian"' not in boss:
+              problems.append("BossService must use CrystalGuardian as the default model identity")
+          if 'FindFirstChild("CrystalGuardian")' not in client:
+              problems.append("ClientBootstrap BossBar must resolve CrystalGuardian by model identity")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Guardian client contract validated.")
