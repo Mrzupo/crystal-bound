@@ -2,12 +2,6 @@ local CrystalConfig = require(game.ReplicatedStorage.Config.CrystalConfig)
 
 local CrystalSystem = {}
 
-local DEFINITIONS = {
-	EMBER = { Id = "EMBER", Name = "Ember", Element = "Fire" },
-	TIDE = { Id = "TIDE", Name = "Tide", Element = "Water" },
-	GALE = { Id = "GALE", Name = "Gale", Element = "Wind" },
-}
-
 local function validProfileCrystals(profile)
 	return type(profile) == "table" and type(profile.Crystals) == "table"
 end
@@ -18,7 +12,7 @@ end
 
 function CrystalSystem.GetDefinition(id)
 	if not CrystalSystem.Exists(id) then return nil end
-	return DEFINITIONS[id]
+	return CrystalConfig.Definitions[id]
 end
 
 function CrystalSystem.GetBasicAttack(id)
@@ -38,15 +32,12 @@ end
 
 function CrystalSystem.Owns(profile, id)
 	if not CrystalSystem.Exists(id) or not validProfileCrystals(profile) then return false end
-	return type(profile.Crystals.Owned) == "table"
-		and table.find(profile.Crystals.Owned, id) ~= nil
+	return type(profile.Crystals.Owned) == "table" and table.find(profile.Crystals.Owned, id) ~= nil
 end
 
 function CrystalSystem.Unlock(profile, id)
 	if not CrystalSystem.Exists(id) or not validProfileCrystals(profile) or CrystalSystem.Owns(profile, id) then return false end
-	if type(profile.Crystals.Owned) ~= "table" then
-		profile.Crystals.Owned = {}
-	end
+	if type(profile.Crystals.Owned) ~= "table" then profile.Crystals.Owned = {} end
 	table.insert(profile.Crystals.Owned, id)
 	return true
 end
