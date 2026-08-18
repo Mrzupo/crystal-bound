@@ -20,7 +20,13 @@ local shopConfig = require(ReplicatedStorage.Config.ShopConfig)
 local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
 local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
 
-local crystalOrder = { "EMBER", "TIDE", "GALE" }
+local crystalOrder = {}
+for crystalId in pairs(crystalConfig.Definitions or {}) do
+	table.insert(crystalOrder, crystalId)
+end
+table.sort(crystalOrder, function(left, right)
+	return (tonumber(crystalConfig.UnlockLevels[left]) or math.huge) < (tonumber(crystalConfig.UnlockLevels[right]) or math.huge)
+end)
 local sellOrder = shopConfig.SellOrder or {}
 local inventory = {}
 local questRefreshBusy = false
