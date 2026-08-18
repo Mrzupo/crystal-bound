@@ -18,7 +18,11 @@ local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
 local AUTOSAVE_INTERVAL = 60
 local NPC_INTERACTION_RANGE = 14
 local INVENTORY_REQUEST_INTERVAL = 0.1
+local CRYSTAL_REQUEST_INTERVAL = 0.12
+local CRYSTAL_UPGRADE_INTERVAL = 0.25
 local nextInventoryRequest = {}
+local nextCrystalRequest = {}
+local nextCrystalUpgradeRequest = {}
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -66,6 +70,9 @@ remotes.InventoryRequest.OnServerEvent:Connect(function(player, action, itemId, 
 end)
 
 remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
+	local now = os.clock()
+	if now < (nextCrystalRequest[player] or 0) then return end
+	nextCrystalRequest[player] = now + CRYSTAL_REQUEST_INTERVAL
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
 	local profile = PlayerService.GetProfile(player); if not profile then return end
 	local requiredLevel = crystalRequirements[crystalId] or math.huge
@@ -75,6 +82,9 @@ remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
 end)
 
 remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
+	local now = os.clock()
+	if now < (nextCrystalUpgradeRequest[player] or 0) then return end
+	nextCrystalUpgradeRequest[player] = now + CRYSTAL_UPGRADE_INTERVAL
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
 	if not isNearNPC(player, "CrystalKeeper") then player:SetAttribute("CrystalMessage", "Go to the Crystal Keeper to upgrade your crystal."); return end
 	local profile = PlayerService.GetProfile(player); if not profile or not CrystalService.OwnsCrystal(profile, crystalId) then return end
@@ -125,5 +135,5 @@ local function initializePlayer(player)
 	end
 	if not QuestSystem.IsActive(profile,"FIRST_FIGHT") and not QuestSystem.IsCompleted(profile,"FIRST_FIGHT") then QuestService.Start(player,profile,"FIRST_FIGHT") end
 end
-Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; PlayerService.Remove(player) end)
-task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; PlayerService.Remove(player) end end end)
+Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end)
+task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end end end)
