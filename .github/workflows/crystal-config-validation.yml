@@ -17,7 +17,9 @@ jobs:
         run: |
           from pathlib import Path
 
-          text = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
+          config = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
+          inventory_ui = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           required = {
               "UnlockLevels": ("EMBER = 1", "TIDE = 3", "GALE = 5"),
               "BasicAttack": ("EMBER =", "TIDE =", "GALE ="),
@@ -27,12 +29,21 @@ jobs:
 
           problems = []
           for section, markers in required.items():
-              if section not in text:
+              if section not in config:
                   problems.append(f"CrystalConfig is missing section {section}")
                   continue
               for marker in markers:
-                  if marker not in text:
+                  if marker not in config:
                       problems.append(f"CrystalConfig {section} is missing marker {marker}")
+
+          if "local unlockLevels = crystalConfig.UnlockLevels" not in inventory_ui:
+              problems.append("InventoryMenu must consume shared CrystalConfig.UnlockLevels")
+          if "CrystalConfig.UnlockLevels" not in bootstrap:
+              problems.append("Bootstrap must consume shared CrystalConfig.UnlockLevels")
+          if "local unlockLevels = {" in inventory_ui:
+              problems.append("InventoryMenu must not hardcode an unlock table")
+          if "local crystalRequirements = {" in bootstrap:
+              problems.append("Bootstrap must not hardcode a crystal unlock table")
 
           if problems:
               for problem in problems:
