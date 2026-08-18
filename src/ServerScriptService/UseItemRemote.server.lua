@@ -8,7 +8,7 @@ local remote = remotes:FindFirstChild("UseItemRequest") or Instance.new("RemoteE
 remote.Name = "UseItemRequest"
 remote.Parent = remotes
 
-local NEXT_USE = {}
+local NEXT_USE = setmetatable({}, { __mode = "k" })
 local USE_INTERVAL = 0.2
 
 remote.OnServerEvent:Connect(function(player, itemId)
@@ -40,5 +40,4 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
 	NEXT_USE[player] = nil
-	player:SetAttribute("UsingPotion", false)
 end)
