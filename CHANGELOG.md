@@ -39,7 +39,8 @@
 - Shop-GUI mit Verkauf und Kaufangebot.
 - Mobile Touch Controls mit echter Kamera-/Touch-Zielauswahl.
 - Mobile Dodge-, Inventory-, Quest-, Shop- und Achievement-Steuerung.
-- GitHub-CI zur JSON-, Rojo-Dateipfad- und häufigen Luau-`require`-Pfad-Validierung.
+- GitHub-CI zur JSON-, Rojo-Dateipfad-, Remote-, Gameplay- und Balancing-Validierung.
+- Serverseitiger Rate-Limiter für PlayerData-/QuestData-RemoteFunctions.
 
 ### Changed
 
@@ -50,21 +51,21 @@
 - `NPCService` leitet normale und spezielle Spieler-Schäden jetzt über `DodgeService` und begrenzt Spezialangriffe auf sinnvolle Nahkampfreichweiten.
 - `CombatService` verwendet gegnerspezifische XP-, Geld-, Loot- und Masterywerte, markiert den letzten Boss-Angreifer korrekt, validiert Reichweite serverseitig und verarbeitet Krits, Bounty und Drop-Chancen.
 - `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu, respektiert Dodge-Invulnerability und validiert Range/Amount finite-sicher.
-- `DamageValidators` weist jetzt auch nicht-endliche Schadenswerte explizit ab.
+- `DamageValidators` weist nicht-endliche Schadenswerte explizit ab.
 - `DodgeService` schützt das komplette Character-Schadensfenster zentral über ein temporäres ForceField, validiert Bewegungs-/Schadenswerte finite-sicher und setzt Dodge-State bei Respawn zurück.
 - `StatusEffectService` verhindert Slow/Burn während eines aktiven Dodge-Fensters und erhält aktives Slow bei Player-Syncs.
-- `StatusSpeedGuardV2` hält aktive Slow-Effekte nach Crystal-/Mastery-Syncs stabil, ohne pro Respawn zusätzliche Player-Connections zu erzeugen.
+- `StatusSpeedGuardV2` hält aktive Slow-Effekte nach Crystal-/Mastery-Syncs stabil.
 - `BossArena` leitet Phasen-Hazard-Schaden über `DodgeService`.
 - `BossTelegraph` bricht verzögerte Boss-Angriffe ab, wenn der Guardian während des Telegraphs verschwindet oder stirbt.
 - `AIPathService` nutzt einen Weak-Key-Cache, gedrosselte Pfadberechnung und verarbeitet Jump-Waypoints auch beim Erreichen gespeicherter Waypoints.
 - `PlayerService` verwendet den sicheren Session-locked Profile Store, schützt Save/Remove vor Race Conditions und synchronisiert Daily-Bounty-/Progressionsattribute.
 - `SafeProfileStore` nutzt Profil-Snapshots beim Save und verweigert beschädigte DataStore-Werte statt sie mit frischen Daten zu überschreiben.
-- `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand, Session-Lock und Daily-Bounty-Daten während der Migration.
-- `CraftingRemote` und `ShopRemote` verlangen jetzt die nötige Nähe zum Material Trader und räumen Request-State beim Player-Leave auf.
+- `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand, Session-Lock, Daily-Bounty, Achievements und Titles während der Migration.
+- `CraftingRemote` und `ShopRemote` verlangen die nötige Nähe zum Material Trader und räumen Request-State beim Player-Leave auf.
 - `EconomyService`, `InventoryService`, `XPService` und `CrystalMastery` filtern nicht-endliche Eingabewerte und schützen Limits serverseitig.
 - `StatusMessages` erlaubt wiederholt auftretende identische Meldungen nach Ablauf des aktuellen Anzeigefensters.
-- `WorldDecor` und `WorldTheme` decken alle vier aktuellen Inseln ab.
-- `default.project.json` wurde fortlaufend mit jeder neuen Server-/Client-Datei synchronisiert.
+- Portal-Cooldowns nutzen Weak Keys für lange Serverlaufzeiten.
+- `default.project.json` lädt ausschließlich `StatusSpeedGuardV2`; der Legacy-Guard und das alte SaveSystem bleiben außerhalb von Rojo.
 - `TODO.md` wurde an den tatsächlichen Entwicklungsstand angepasst.
 
 ### Notes
