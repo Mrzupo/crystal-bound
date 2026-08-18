@@ -14,6 +14,7 @@ local available = {}
 local loading = false
 local lastLoad = 0
 local LOAD_INTERVAL = 0.2
+local loadData
 
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -113,12 +114,12 @@ local function addRow(questId, definition, state, progress)
 		start.Parent = row
 		start.Activated:Connect(function()
 			questRequest:FireServer("Start", questId)
-			task.delay(0.2, function() if open then loadData() end end)
+			task.delay(0.2, function() if open then loadData(true) end end)
 		end)
 	end
 end
 
-function refresh()
+local function refresh()
 	if not data then return end
 	clearList()
 	local active = data.Active or {}
@@ -134,7 +135,7 @@ function refresh()
 	for id, definition in pairs(defs) do if completedSet[id] then addRow(id, definition, "completed", definition.Goal or 0) end end
 end
 
-function loadData(force)
+loadData = function(force)
 	local now = os.clock()
 	if loading then return end
 	if not force and now - lastLoad < LOAD_INTERVAL then return end
@@ -164,4 +165,4 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
-loadData(true)
+loadData(true) 
