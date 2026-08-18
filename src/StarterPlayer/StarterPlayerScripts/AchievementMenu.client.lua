@@ -96,12 +96,18 @@ local function refresh()
 	end
 end
 
+local function openMenu()
+	open = true
+	panel.Visible = true
+	refresh()
+end
+
 ensureGui()
+player:GetAttributeChangedSignal("OpenAchievementMenu"):Connect(openMenu)
+
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.L then
-		open = not open
-		panel.Visible = open
-		if open then refresh() end
+		if open then open = false; panel.Visible = false else openMenu() end
 	end
 end)
