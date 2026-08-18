@@ -107,7 +107,7 @@ function PlayerData.new()
 		Experience = 0,
 		Crystals = { Owned = { "EMBER" }, Equipped = "EMBER" },
 		CrystalMastery = { EMBER = { Level = 1, XP = 0 }, TIDE = { Level = 1, XP = 0 }, GALE = { Level = 1, XP = 0 } },
-		Money = 100,
+		Money = EconomyConfig.StartingMoney,
 		Stats = { Damage = 10, Health = 100, EnemiesDefeated = 0, BossesDefeated = 0, AncientGolemsDefeated = 0, CrystalBatsDefeated = 0 },
 		Inventory = {},
 		ActiveQuests = {}, CompletedQuests = {}, QuestProgress = {},
