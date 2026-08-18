@@ -11,9 +11,21 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local combatRemote = remotes:WaitForChild("CombatRequest")
 local crystalChanged = remotes:WaitForChild("CrystalChanged")
+local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
+local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
 
 local selectedTarget = nil
 local selectedTargetExpires = 0
+
+local function getEquippedCrystal()
+	return player:GetAttribute("EquippedCrystal") or "EMBER"
+end
+
+local function playPresentation(action)
+	local crystal = getEquippedCrystal()
+	crystalAnimationController.Play(action, crystal)
+	crystalVFXController.Play(action, crystal)
+end
 
 local function resolveTargetFromTouch(position)
 	local camera = Workspace.CurrentCamera
@@ -84,12 +96,18 @@ end
 
 makeButton("Attack", "ATK", UDim2.new(1, -95, 1, -100), UDim2.fromOffset(86, 86), function()
 	local hit = getTarget()
-	if hit then combatRemote:FireServer("Basic", hit) end
+	if hit then
+		playPresentation("Basic")
+		combatRemote:FireServer("Basic", hit)
+	end
 end)
 
 makeButton("Ability", "Q", UDim2.new(1, -195, 1, -165), UDim2.fromOffset(74, 74), function()
 	local hit = getTarget()
-	if hit then combatRemote:FireServer("Ability", hit) end
+	if hit then
+		playPresentation("Ability")
+		combatRemote:FireServer("Ability", hit)
+	end
 end)
 
 makeButton("Ember", "E", UDim2.new(0, 60, 1, -110), UDim2.fromOffset(64, 64), function() crystalChanged:FireServer("EMBER") end)
