@@ -28,8 +28,10 @@ jobs:
           for marker in ["MinMoney = 0", "MaxMoney = 1000000000"]:
               if marker not in economy:
                   problems.append(f"EconomyConfig missing expected marker: {marker}")
-          if "math.min(1000000000" not in xp_service:
-              problems.append("XPService must cap accumulated XP")
+          if "math.min(XPConfig.MaxExperience, experience + amount)" not in xp_service:
+              problems.append("XPService must cap accumulated XP using XPConfig.MaxExperience")
+          if "amount % 1 ~= 0" not in xp_service:
+              problems.append("XPService must reject fractional XP amounts")
 
           if problems:
               for problem in problems:
