@@ -1,0 +1,29 @@
+name: Consumable Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Health Potion server contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/UseItemRemote.server.lua').read_text(encoding='utf-8')
+          required = [
+              'itemId ~= "HealthPotion"',
+              'USE_INTERVAL = 0.2',
+              'InventoryService.HasItem(profile, itemId, 1)',
+              'humanoid.Health >= humanoid.MaxHealth',
+              'InventoryService.RemoveItem(profile, itemId, 1)',
+              'math.min(humanoid.MaxHealth, humanoid.Health + 60)',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing consumable guard: ' + ', '.join(missing))
+          print('Health Potion server contract validated.')
+          PY
