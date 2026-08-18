@@ -1,0 +1,33 @@
+name: RemoteFunction Rate Limit Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-remote-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate RemoteFunction request limits
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          required = [
+              "local PLAYER_DATA_REQUEST_INTERVAL = 0.2",
+              "local QUEST_DATA_REQUEST_INTERVAL = 0.35",
+              "local nextPlayerDataRequest = setmetatable({}, { __mode = \"k\" })",
+              "local nextQuestDataRequest = setmetatable({}, { __mode = \"k\" })",
+              "if now < (nextPlayerDataRequest[player] or 0) then return nil end",
+              "if now < (nextQuestDataRequest[player] or 0) then return nil end",
+              "nextPlayerDataRequest[player] = nil",
+              "nextQuestDataRequest[player] = nil",
+          ]
+          failures = [marker for marker in required if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" - missing:", failure)
+              raise SystemExit(1)
+          print("RemoteFunction rate limits validated.")
