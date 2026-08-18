@@ -39,7 +39,7 @@ local function executeGale(player, targetModel, abilityDamage, abilityRange)
 	end
 
 	local hits = {}
-	for _, enemy in ipairs(HitboxService.GetEnemyModels(centerRoot.Position, 12, targetModel)) do
+	for _, enemy in ipairs(HitboxService.GetEnemyModels(centerRoot.Position, safeRange, targetModel)) do
 		local humanoid = enemy:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid.Health > 0 then
 			local result = DamageService.ProcessDamage({
