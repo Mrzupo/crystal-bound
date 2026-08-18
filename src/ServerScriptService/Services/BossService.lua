@@ -6,7 +6,6 @@ local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local InventoryService = require(script.Parent.InventoryService)
 local EconomyService = require(script.Parent.EconomyService)
 local XPService = require(script.Parent.XPService)
-local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local QuestService = require(script.Parent.QuestService)
 local DodgeService = require(script.Parent.DodgeService)
 local BossService = { Bound = false }
@@ -146,9 +145,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 				EconomyService.AddMoney(profile, config.Money)
 				local coreAdded = InventoryService.AddItem(profile, config.Drop, 1)
 				profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
-				if QuestSystem.IsActive(profile, "GUARDIAN_TRIAL") then
-					QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian Trial complete!")
-				end
+				QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
 				PlayerService.Sync(player)
 				if coreAdded > 0 then
 					player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
