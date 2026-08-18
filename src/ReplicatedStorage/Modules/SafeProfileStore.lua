@@ -92,8 +92,11 @@ function SafeProfileStore.Save(player, profile)
 	local saved = false
 	local ok, result = retry(function()
 		return store:UpdateAsync(key, function(current)
-			local lock = type(current) == "table" and current.SessionLock or nil
-			if lock and lock.JobId and lock.JobId ~= SESSION_ID then
+			if type(current) ~= "table" then
+				return current
+			end
+			local lock = current.SessionLock
+			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID then
 				return current
 			end
 			payload.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }
@@ -107,7 +110,7 @@ function SafeProfileStore.Save(player, profile)
 		return false, result
 	end
 	if not saved then
-		warn(("Crystal Bound: save refused for %s because another session owns the profile"):format(player.Name))
+		warn(("Crystal Bound: save refused for %s because the profile lock is not owned by this server"):format(player.Name))
 		return false, "Profile lock lost"
 	end
 	return true, result
