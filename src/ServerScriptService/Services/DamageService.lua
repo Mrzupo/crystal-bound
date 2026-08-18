@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Validators = require(ReplicatedStorage.Modules.Combat.DamageValidators)
+local DamageTypes = require(ReplicatedStorage.Modules.Combat.DamageTypes)
 local DamageResult = require(ReplicatedStorage.Modules.Combat.DamageResult)
 
 local DamageService = {}
@@ -37,16 +38,23 @@ local function isValidAttacker(instance)
 end
 
 function DamageService.ValidateRequest(request)
-	return Validators.IsValid(request)
-		and typeof(request.Target) == "Instance"
-		and typeof(request.Attacker) == "Instance"
-		and isValidAttacker(request.Attacker)
+	if not Validators.IsValid(request) then return false end
+	if typeof(request.Target) ~= "Instance" then return false end
+	if request.DamageType == DamageTypes.Environmental and request.Attacker == nil then
+		return true
+	end
+	return typeof(request.Attacker) == "Instance" and isValidAttacker(request.Attacker)
 end
 
 function DamageService.CanDamage(request)
 	if not DamageService.ValidateRequest(request) then return false end
+	if request.Target == nil or not request.Target:IsDescendantOf(workspace) then return false end
+
+	if request.DamageType == DamageTypes.Environmental and request.Attacker == nil then
+		return true
+	end
+
 	if request.Attacker == request.Target then return false end
-	if not request.Target:IsDescendantOf(workspace) then return false end
 	local attackerRoot = getRoot(request.Attacker)
 	local targetRoot = getRoot(request.Target)
 	if not attackerRoot or not targetRoot then return false end
