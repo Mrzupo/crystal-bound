@@ -1,0 +1,26 @@
+name: Environmental Damage Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate attacker-less damage boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          damage = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
+          status = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
+          arena = Path('src/ServerScriptService/BossArena.server.lua').read_text(encoding='utf-8')
+          if 'DamageType.Environmental and request.Attacker == nil' not in damage:
+              raise SystemExit('DamageService missing explicit attacker-less Environmental gate')
+          if 'DamageType = DamageTypes.Environmental' not in status:
+              raise SystemExit('StatusEffectService environmental burn path missing explicit type')
+          if 'DodgeService.ApplyDamage(player, humanoid, 4)' not in arena:
+              raise SystemExit('BossArena expected environmental hazard call changed unexpectedly')
+          print('Environmental damage boundaries validated.')
+          PY
