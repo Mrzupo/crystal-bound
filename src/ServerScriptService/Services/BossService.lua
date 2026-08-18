@@ -11,6 +11,22 @@ local DamageService = require(script.Parent.DamageService)
 local DodgeService = require(script.Parent.DodgeService)
 local BossService = { Bound = false }
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
+local function getPhase2Config(config)
+	local phase2 = type(config.Phase2) == "table" and config.Phase2 or {}
+	return {
+		HealthThreshold = math.clamp(finiteNumber(phase2.HealthThreshold, 0.5), 0.01, 0.99),
+		AttackCooldown = math.max(0.1, finiteNumber(phase2.AttackCooldown, config.AttackCooldown)),
+		AttackDamageMultiplier = math.max(0, finiteNumber(phase2.AttackDamageMultiplier, 1.35)),
+		AbilityRangeMultiplier = math.max(0, finiteNumber(phase2.AbilityRangeMultiplier, 1.5)),
+	}
+end
+
 local function shockwave(center, radius, damage, ignoreModel)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
@@ -96,6 +112,7 @@ function BossService.IsBoss(model) return model and model:GetAttribute("BossId")
 
 function BossService.CreateGuardian(position, parent, uniqueName)
 	local config = BossConfig.CrystalGuardian
+	local phase2 = getPhase2Config(config)
 	local model = Instance.new("Model"); model.Name = uniqueName or "CrystalGuardian"; model.Parent = parent
 	model:SetAttribute("Enemy", true); model:SetAttribute("BossId", "CrystalGuardian"); model:SetAttribute("EnemyType", "CrystalGuardian"); model:SetAttribute("BossPhase", 1)
 	local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Size = Vector3.new(2, 2, 1); root.Position = position + Vector3.new(0, 3, 0); root.Transparency = 1; root.Anchored = true; root.CanCollide = false; root.Parent = model
@@ -123,7 +140,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 				local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
 				local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if targetRoot and targetHumanoid then
-					local phase = humanoid.Health <= config.Health * 0.5 and 2 or 1
+					local phase = humanoid.Health <= config.Health * phase2.HealthThreshold and 2 or 1
 					model:SetAttribute("BossPhase", phase)
 					if nearestDistance > config.AttackRange then
 						local direction = targetRoot.Position - root.Position
@@ -132,12 +149,14 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 							model:PivotTo(CFrame.lookAt(root.Position + direction.Unit * step, targetRoot.Position))
 						end
 					elseif os.clock() >= nextAttack then
-						nextAttack = os.clock() + (phase == 2 and 1.0 or config.AttackCooldown)
-						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, phase == 2 and math.floor(config.AttackDamage * 1.35) or config.AttackDamage, model, "Physical", config.AttackRange)
+						local attackCooldown = phase == 2 and phase2.AttackCooldown or math.max(0.1, finiteNumber(config.AttackCooldown, 1))
+						local attackDamage = phase == 2 and math.floor(math.max(0, finiteNumber(config.AttackDamage, 0)) * phase2.AttackDamageMultiplier) or math.max(0, finiteNumber(config.AttackDamage, 0))
+						nextAttack = os.clock() + attackCooldown
+						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", config.AttackRange)
 					end
-					if os.clock() >= nextAbility and nearestDistance <= config.AbilityRadius * 1.5 then
-						nextAbility = os.clock() + config.AbilityCooldown
-						shockwave(root.Position, config.AbilityRadius, config.AbilityDamage, model)
+					if os.clock() >= nextAbility and nearestDistance <= config.AbilityRadius * (phase == 2 and phase2.AbilityRangeMultiplier or 1) then
+						nextAbility = os.clock() + math.max(0.1, finiteNumber(config.AbilityCooldown, 6))
+						shockwave(root.Position, math.max(0, finiteNumber(config.AbilityRadius, 0)), math.max(0, finiteNumber(config.AbilityDamage, 0)), model)
 					end
 				end
 			end
