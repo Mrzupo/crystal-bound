@@ -32,10 +32,14 @@ local function isPlayerTarget(target)
 end
 
 local function fireCombatFeedback(targetModel, attacker, action, crystalId, critical, amount)
+	local numericAmount = tonumber(amount)
+	if not numericAmount or numericAmount <= 0 or numericAmount ~= numericAmount or numericAmount == math.huge or numericAmount == -math.huge then
+		return
+	end
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	local feedback = remotes and remotes:FindFirstChild("CombatFeedback")
 	if not feedback or not feedback:IsA("RemoteEvent") then return end
-	feedback:FireAllClients(targetModel, attacker.UserId, action, crystalId, critical == true, amount)
+	feedback:FireAllClients(targetModel, attacker.UserId, action, crystalId, critical == true, numericAmount)
 end
 
 local function fireProgress(player, levelsGained, mastery)
@@ -190,12 +194,12 @@ function CombatService.HandleRequest(player, action, target)
 	cooldowns[player][action] = now + config.Cooldown
 	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
 
-	if critical then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
+	if critical and result.Amount > 0 then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
 	if action == "Ability" then
 		applyAbilitySpecial(player, profile, crystalId, targetModel, damage, config.Range)
 		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
 	end
-	if humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
+	if result.Amount > 0 and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
 
 function CombatService.CleanupPlayer(player)
