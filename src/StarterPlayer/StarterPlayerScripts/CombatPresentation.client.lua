@@ -12,6 +12,10 @@ local CRYSTAL_COLORS = {
 }
 
 local MAX_PRESENTATION_DISTANCE = 220
+local FEEDBACK_WINDOW = 1
+local MAX_FEEDBACK_EVENTS = 30
+local feedbackWindowStarted = 0
+local feedbackEvents = 0
 
 local function getRoot(model)
 	return model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
@@ -22,6 +26,17 @@ local function isLocallyRelevant(root)
 	local localRoot = character and character:FindFirstChild("HumanoidRootPart")
 	if not localRoot or not root then return false end
 	return (localRoot.Position - root.Position).Magnitude <= MAX_PRESENTATION_DISTANCE
+end
+
+local function allowFeedbackPresentation()
+	local now = os.clock()
+	if now - feedbackWindowStarted >= FEEDBACK_WINDOW then
+		feedbackWindowStarted = now
+		feedbackEvents = 0
+	end
+	if feedbackEvents >= MAX_FEEDBACK_EVENTS then return false end
+	feedbackEvents += 1
+	return true
 end
 
 local function createDamageNumber(model, amount, critical)
@@ -182,8 +197,8 @@ local function createAbilityAccent(model, crystalId)
 			slash.Color = color
 			slash.Transparency = 0.2
 			slash.Size = Vector3.new(0.3, 5, 0.3)
-			slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
-			slash.Parent = root
+		slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
+		slash.Parent = root
 			TweenService:Create(slash, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 				Size = Vector3.new(0.3, 9, 0.3),
 				Transparency = 1,
@@ -224,6 +239,7 @@ local function watchPlayerHealth(character)
 end
 
 combatFeedback.OnClientEvent:Connect(function(targetModel, attackerUserId, action, crystalId, critical, amount)
+	if not allowFeedbackPresentation() then return end
 	if typeof(targetModel) ~= "Instance" or not targetModel:IsDescendantOf(workspace) then return end
 	if targetModel:GetAttribute("Enemy") ~= true then return end
 	if type(action) ~= "string" or (action ~= "Basic" and action ~= "Ability") then return end
