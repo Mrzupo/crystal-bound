@@ -81,10 +81,13 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	local cost = {}
 	local multiplier = math.max(1, mastery.Level)
 	for itemId, amount in pairs(base) do
-		local safeAmount = math.max(1, math.floor(finiteNumber(amount) or 1))
-		cost[itemId] = safeAmount * multiplier
+		local safeAmount = finiteNumber(amount)
+		if type(itemId) ~= "string" or not safeAmount or safeAmount <= 0 then
+			return nil
+		end
+		cost[itemId] = math.floor(safeAmount) * multiplier
 	end
-	return cost
+	return next(cost) and cost or nil
 end
 
 function CrystalMastery.Upgrade(profile, crystalId)
