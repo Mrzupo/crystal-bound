@@ -21,6 +21,8 @@ jobs:
           targets = {
               "GetPlayerData": "GetPlayerData.OnServerInvoke",
               "GetQuestData": "GetQuestData.OnServerInvoke",
+              "GetAvailableQuests": "GetAvailableQuests.OnServerInvoke",
+              "NPCDialogRequest": "NPCDialogRequest.OnServerInvoke",
           }
           counts = {key: [] for key in targets}
 
