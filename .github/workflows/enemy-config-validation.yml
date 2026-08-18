@@ -25,6 +25,9 @@ jobs:
               "AttackCooldown =",
               "AggroRange =",
               "DropChance =",
+              "Special = {",
+              "Special = { Cooldown =",
+              "BonusDamage =",
           ]
           problems = [marker for marker in required if marker not in text]
           if problems:
@@ -32,7 +35,6 @@ jobs:
                   print(f" - EnemyConfig missing field: {problem}")
               raise SystemExit(1)
 
-          # Keep authored examples within sane combat bounds.
           numeric_fields = re.findall(r"AttackRange = ([0-9.]+).*?AttackDamage = ([0-9.]+).*?AttackCooldown = ([0-9.]+)", text)
           for attack_range, damage, cooldown in numeric_fields:
               if float(attack_range) > 1000:
@@ -41,5 +43,17 @@ jobs:
                   raise SystemExit("Enemy AttackDamage is outside 0..1000")
               if float(cooldown) < 0.1 or float(cooldown) > 60:
                   raise SystemExit("Enemy AttackCooldown is outside 0.1..60")
+
+          special_fields = re.findall(r"Special = \{([^}]*)\}", text)
+          for block in special_fields:
+              cooldown = re.search(r"Cooldown = ([0-9.]+)", block)
+              if cooldown and not 0.1 <= float(cooldown.group(1)) <= 60:
+                  raise SystemExit("Enemy Special Cooldown is outside 0.1..60")
+              ranges = re.findall(r"(?:Range|Radius|EffectRadius|TeleportOffset) = ([0-9.]+)", block)
+              if any(float(value) > 1000 for value in ranges):
+                  raise SystemExit("Enemy Special range/radius exceeds 1000-unit cap")
+              status_values = re.findall(r"(?:BurnDamage|BurnTicks|BurnInterval|SlowDuration|SlowMultiplier|BonusDamage) = ([0-9.]+)", block)
+              if any(float(value) < 0 for value in status_values):
+                  raise SystemExit("Enemy Special status/damage values must not be negative")
 
           print("EnemyConfig combat bounds validated.")
