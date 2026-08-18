@@ -18,6 +18,7 @@ jobs:
           from pathlib import Path
 
           required = {
+              "src/ServerScriptService/Bootstrap.server.lua": ["QUEST_REQUEST_INTERVAL", "nextQuestRequest"],
               "src/ServerScriptService/ShopRemote.server.lua": ["REQUEST_INTERVAL", "nextRequest"],
               "src/ServerScriptService/CraftingRemote.server.lua": ["REQUEST_INTERVAL", "NEXT_REQUEST"],
               "src/ServerScriptService/UseItemRemote.server.lua": ["USE_INTERVAL", "NEXT_USE"],
