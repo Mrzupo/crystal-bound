@@ -146,7 +146,9 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 				EconomyService.AddMoney(profile, config.Money)
 				local coreAdded = InventoryService.AddItem(profile, config.Drop, 1)
 				profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
-				if QuestSystem.IsActive(profile, "GUARDIAN_TRIAL") then QuestSystem.Complete(profile, "GUARDIAN_TRIAL"); XPService.AddXP(profile, 2200); EconomyService.AddMoney(profile, 1500); QuestService.TryStartNext(player, profile) end
+				if QuestSystem.IsActive(profile, "GUARDIAN_TRIAL") then
+					QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian Trial complete!")
+				end
 				PlayerService.Sync(player)
 				if coreAdded > 0 then
 					player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
