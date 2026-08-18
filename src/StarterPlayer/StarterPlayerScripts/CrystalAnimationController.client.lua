@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local animationConfig = require(ReplicatedStorage.Config.CrystalAnimationConfig)
 local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+local animationAssets = ReplicatedStorage:FindFirstChild("Assets") and ReplicatedStorage.Assets:FindFirstChild("Animations")
 
 local Controller = {}
 local tracks = {}
@@ -72,17 +73,29 @@ end
 local function loadTrack(crystalId, action)
 	local crystal = animationConfig[crystalId]
 	local definition = crystal and crystal[action]
-	local animationId = definition and normalizeAnimationId(definition.AnimationId)
-	if not animationId or not animator then return nil end
+	if not definition or not animator then return nil end
 
 	local key = crystalId .. ":" .. action
 	local cached = tracks[key]
 	if cached and cached.Parent then return cached, definition end
 	tracks[key] = nil
 
-	local animation = Instance.new("Animation")
+	local animation
+	if animationAssets and type(definition.AssetName) == "string" and definition.AssetName ~= "" then
+		local source = animationAssets:FindFirstChild(definition.AssetName)
+		if source and source:IsA("Animation") then
+			animation = source:Clone()
+		end
+	end
+
+	if not animation then
+		local animationId = normalizeAnimationId(definition.AnimationId)
+		if not animationId then return nil end
+		animation = Instance.new("Animation")
+		animation.AnimationId = animationId
+	end
+
 	animation.Name = "CrystalBound_" .. key:gsub(":", "_")
-	animation.AnimationId = animationId
 	local ok, track = pcall(function()
 		return animator:LoadAnimation(animation)
 	end)
