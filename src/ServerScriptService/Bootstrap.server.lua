@@ -21,10 +21,14 @@ local QUEST_REQUEST_INTERVAL = 0.15
 local INVENTORY_REQUEST_INTERVAL = 0.1
 local CRYSTAL_REQUEST_INTERVAL = 0.12
 local CRYSTAL_UPGRADE_INTERVAL = 0.25
+local PLAYER_DATA_REQUEST_INTERVAL = 0.2
+local QUEST_DATA_REQUEST_INTERVAL = 0.35
 local nextQuestRequest = setmetatable({}, { __mode = "k" })
 local nextInventoryRequest = setmetatable({}, { __mode = "k" })
 local nextCrystalRequest = setmetatable({}, { __mode = "k" })
 local nextCrystalUpgradeRequest = setmetatable({}, { __mode = "k" })
+local nextPlayerDataRequest = setmetatable({}, { __mode = "k" })
+local nextQuestDataRequest = setmetatable({}, { __mode = "k" })
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -106,8 +110,23 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 	PlayerService.Sync(player); remotes.InventoryChanged:FireClient(player, profile.Inventory); remotes.CrystalMasteryChanged:FireClient(player, crystalId, newLevel, 0); player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, newLevel))
 end)
 
-remotes.GetPlayerData.OnServerInvoke = function(player) local profile = PlayerService.GetProfile(player); if not profile then return nil end; return { Level = profile.Level, Experience = profile.Experience, Money = profile.Money, Crystals = profile.Crystals, CrystalMastery = profile.CrystalMastery, Inventory = profile.Inventory, Achievements = profile.Achievements, Titles = profile.Titles } end
-remotes.GetQuestData.OnServerInvoke = function(player) local profile = PlayerService.GetProfile(player); if not profile then return { Active = {}, Completed = {}, Progress = {}, Definitions = QuestSystem.GetDefinitions() } end; return { Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Progress = profile.QuestProgress, Definitions = QuestSystem.GetDefinitions() } end
+remotes.GetPlayerData.OnServerInvoke = function(player)
+	local now = os.clock()
+	if now < (nextPlayerDataRequest[player] or 0) then return nil end
+	nextPlayerDataRequest[player] = now + PLAYER_DATA_REQUEST_INTERVAL
+	local profile = PlayerService.GetProfile(player)
+	if not profile then return nil end
+	return { Level = profile.Level, Experience = profile.Experience, Money = profile.Money, Crystals = profile.Crystals, CrystalMastery = profile.CrystalMastery, Inventory = profile.Inventory, Achievements = profile.Achievements, Titles = profile.Titles }
+end
+
+remotes.GetQuestData.OnServerInvoke = function(player)
+	local now = os.clock()
+	if now < (nextQuestDataRequest[player] or 0) then return nil end
+	nextQuestDataRequest[player] = now + QUEST_DATA_REQUEST_INTERVAL
+	local profile = PlayerService.GetProfile(player)
+	if not profile then return { Active = {}, Completed = {}, Progress = {}, Definitions = QuestSystem.GetDefinitions() } end
+	return { Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Progress = profile.QuestProgress, Definitions = QuestSystem.GetDefinitions() }
+end
 
 local function ensureWorldFolders() for _, name in ipairs({ "NPCs", "Islands", "Spawn" }) do local folder = Workspace:FindFirstChild(name); if not folder then folder = Instance.new("Folder"); folder.Name = name; folder.Parent = Workspace end end; return Workspace.NPCs, Workspace.Islands, Workspace.Spawn end
 local function createIsland(islands, name, center, size)
@@ -146,5 +165,5 @@ local function initializePlayer(player)
 	end
 	if not QuestSystem.IsActive(profile,"FIRST_FIGHT") and not QuestSystem.IsCompleted(profile,"FIRST_FIGHT") then QuestService.Start(player,profile,"FIRST_FIGHT") end
 end
-Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextQuestRequest[player] = nil; nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end)
+Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextQuestRequest[player] = nil; nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; nextPlayerDataRequest[player] = nil; nextQuestDataRequest[player] = nil; PlayerService.Remove(player) end)
 task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do PlayerService.Save(player) end end end)
