@@ -1,0 +1,42 @@
+name: Crystal Config Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-crystal-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate CrystalConfig contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
+          required = {
+              "UnlockLevels": ("EMBER = 1", "TIDE = 3", "GALE = 5"),
+              "BasicAttack": ("EMBER =", "TIDE =", "GALE ="),
+              "Abilities": ("EMBER =", "TIDE =", "GALE ="),
+              "Passives": ("EMBER =", "TIDE =", "GALE ="),
+          }
+
+          problems = []
+          for section, markers in required.items():
+              if section not in text:
+                  problems.append(f"CrystalConfig is missing section {section}")
+                  continue
+              for marker in markers:
+                  if marker not in text:
+                      problems.append(f"CrystalConfig {section} is missing marker {marker}")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("CrystalConfig contract validated.")
