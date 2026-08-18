@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
-local CrystalDefinitions = require(ReplicatedStorage.Modules.Crystal.CrystalDefinitions)
+local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 
 local CrystalMastery = {}
 local DEFAULT_CRYSTAL = "EMBER"
@@ -12,7 +12,7 @@ local function finiteNumber(value)
 end
 
 local function normalizeCrystalId(crystalId)
-	return type(crystalId) == "string" and CrystalDefinitions[crystalId] and crystalId or DEFAULT_CRYSTAL
+	return type(crystalId) == "string" and CrystalConfig.UnlockLevels[crystalId] and crystalId or DEFAULT_CRYSTAL
 end
 
 local function ensure(profile, crystalId)
