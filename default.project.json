@@ -105,6 +105,7 @@
       "CombatCleanup": {"$path": "src/ServerScriptService/CombatCleanup.server.lua"},
       "SessionHeartbeat": {"$path": "src/ServerScriptService/SessionHeartbeat.server.lua"},
       "StatusSpeedGuardV2": {"$path": "src/ServerScriptService/StatusSpeedGuardV2.server.lua"},
+      "DataQueryRateLimit": {"$path": "src/ServerScriptService/DataQueryRateLimit.server.lua"},
       "DodgeRemote": {"$path": "src/ServerScriptService/DodgeRemote.server.lua"},
       "ShopRemote": {"$path": "src/ServerScriptService/ShopRemote.server.lua"},
       "UseItemRemote": {"$path": "src/ServerScriptService/UseItemRemote.server.lua"},
