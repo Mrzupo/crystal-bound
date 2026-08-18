@@ -100,6 +100,10 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 	local profile = PlayerService.GetProfile(player); if not profile or not CrystalService.OwnsCrystal(profile, crystalId) then return end
 	local mastery = CrystalMastery.Get(profile, crystalId); if mastery.Level >= 10 then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
 	local cost = CrystalMastery.GetUpgradeCost(profile, crystalId)
+	if type(cost) ~= "table" then
+		player:SetAttribute("CrystalMessage", "Crystal upgrade configuration is unavailable.")
+		return
+	end
 	for itemId, amount in pairs(cost) do if not InventoryService.HasItem(profile, itemId, amount) then player:SetAttribute("CrystalMessage", string.format("Need %d %s to upgrade.", amount, itemId)); return end end
 	for itemId, amount in pairs(cost) do InventoryService.RemoveItem(profile, itemId, amount) end
 	local upgraded, newLevel = CrystalMastery.Upgrade(profile, crystalId)
