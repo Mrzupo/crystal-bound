@@ -10,9 +10,17 @@ local function finiteNumber(value)
 	return number
 end
 
+local function positiveInteger(value)
+	local number = finiteNumber(value)
+	if number == nil then return nil end
+	number = math.floor(number)
+	if number <= 0 then return nil end
+	return number
+end
+
 function EconomyService.AddMoney(profile, amount)
-	amount = finiteNumber(amount) or 0
-	amount = math.max(0, amount)
+	amount = finiteNumber(amount)
+	if amount == nil or amount < 0 then return false, 0 end
 	local before = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 	profile.Money = before
 	local nextMoney = math.clamp(before + amount, Config.MinMoney, Config.MaxMoney)
@@ -21,8 +29,8 @@ function EconomyService.AddMoney(profile, amount)
 end
 
 function EconomyService.RemoveMoney(profile, amount)
-	amount = finiteNumber(amount) or 0
-	amount = math.max(0, amount)
+	amount = finiteNumber(amount)
+	if amount == nil or amount < 0 then return false end
 	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 	profile.Money = current
 	if current < amount then return false end
@@ -37,10 +45,11 @@ function EconomyService.GetMoney(profile)
 end
 
 function EconomyService.CanAfford(profile, amount)
-	amount = finiteNumber(amount) or 0
+	amount = finiteNumber(amount)
+	if amount == nil or amount < 0 then return false end
 	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 	profile.Money = current
-	return current >= math.max(0, amount)
+	return current >= amount
 end
 
 function EconomyService.GetSellPrice(itemId)
@@ -50,8 +59,8 @@ function EconomyService.GetSellPrice(itemId)
 end
 
 function EconomyService.SellItem(profile, itemId, amount, InventoryService)
-	local numericAmount = finiteNumber(amount) or 1
-	amount = math.max(1, math.floor(numericAmount))
+	amount = positiveInteger(amount)
+	if not amount then return false, 0 end
 	local price = EconomyService.GetSellPrice(itemId)
 	if price <= 0 or not InventoryService.HasItem(profile, itemId, amount) then
 		return false, 0
