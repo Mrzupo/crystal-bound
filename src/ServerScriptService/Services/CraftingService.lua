@@ -21,10 +21,11 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	local numericAmount = finiteNumber(amount) or 1
 	amount = math.clamp(math.floor(numericAmount), 1, 10)
 
+	InventoryService.GetInventory(profile)
 	local outputConfig = InventoryConfig.GetItemConfig(recipe.Output)
 	if not outputConfig then return false, "Crafting output is not registered." end
 
-	local currentRaw = profile.Inventory and profile.Inventory[recipe.Output] or 0
+	local currentRaw = profile.Inventory[recipe.Output]
 	local currentOutput = math.max(0, math.floor(finiteNumber(currentRaw) or 0))
 	local outputAmount = math.max(1, math.floor(finiteNumber(recipe.Amount) or 1)) * amount
 	local maxStack = InventoryConfig.GetMaxStackSize(recipe.Output)
@@ -49,9 +50,7 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 		local safeRequired = math.max(0, math.floor(finiteNumber(required) or 0))
 		local totalRequired = safeRequired * amount
 		if not InventoryService.RemoveItem(profile, itemId, totalRequired) then
-			for rollbackId, rollbackAmount in pairs(consumed) do
-				InventoryService.AddItem(profile, rollbackId, rollbackAmount)
-			end
+			for rollbackId, rollbackAmount in pairs(consumed) do InventoryService.AddItem(profile, rollbackId, rollbackAmount) end
 			return false, "Crafting could not consume all materials safely."
 		end
 		consumed[itemId] = totalRequired
@@ -59,9 +58,7 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 
 	local added = InventoryService.AddItem(profile, recipe.Output, outputAmount)
 	if added ~= outputAmount then
-		for itemId, consumedAmount in pairs(consumed) do
-			InventoryService.AddItem(profile, itemId, consumedAmount)
-		end
+		for itemId, consumedAmount in pairs(consumed) do InventoryService.AddItem(profile, itemId, consumedAmount) end
 		return false, "Crafting output could not be added safely."
 	end
 
