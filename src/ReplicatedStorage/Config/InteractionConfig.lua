@@ -1,0 +1,3 @@
+return {
+	NPCInteractionRange = 14,
+}
