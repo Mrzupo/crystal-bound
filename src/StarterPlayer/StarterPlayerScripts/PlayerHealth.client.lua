@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local gui
@@ -9,7 +8,6 @@ local barFill
 local valueLabel
 local deathLabel
 local lastHealth = nil
-local shakeTime = 0
 
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -75,10 +73,6 @@ local function ensureGui()
 	Instance.new("UICorner", deathLabel).CornerRadius = UDim.new(0, 10)
 end
 
-local function triggerShake(amount)
-	shakeTime = math.max(shakeTime, amount)
-end
-
 local function update()
 	ensureGui()
 	local health = math.max(0, tonumber(player:GetAttribute("Health")) or 0)
@@ -93,9 +87,6 @@ local function update()
 	else
 		deathLabel.Visible = false
 	end
-	if lastHealth ~= nil and health < lastHealth then
-		triggerShake(math.clamp((lastHealth - health) / maxHealth * 0.35, 0.04, 0.2))
-	end
 	lastHealth = health
 end
 
@@ -108,32 +99,18 @@ player.CharacterAdded:Connect(function()
 	task.delay(0.25, update)
 end)
 
-RunService.RenderStepped:Connect(function(deltaTime)
-	if shakeTime <= 0 then return end
-	local camera = workspace.CurrentCamera
-	if not camera then return end
-	shakeTime = math.max(0, shakeTime - deltaTime)
-	local strength = shakeTime * 0.5
-	camera.CFrame = camera.CFrame * CFrame.Angles(
-		(math.random() - 0.5) * strength,
-		(math.random() - 0.5) * strength,
-		(math.random() - 0.5) * strength
-	)
-end)
-
 ensureGui()
 update()
 
 player:GetAttributeChangedSignal("Health"):Connect(function()
 	local health = tonumber(player:GetAttribute("Health")) or 0
-	if health > 0 then
-		local panel = gui and gui:FindFirstChild("HealthPanel")
-		if panel then
-			panel.Size = UDim2.fromOffset(360, 58)
-			TweenService:Create(panel, TweenInfo.new(0.12), { Size = UDim2.fromOffset(370, 62) }):Play()
-			task.delay(0.13, function()
-				if panel.Parent then TweenService:Create(panel, TweenInfo.new(0.12), { Size = UDim2.fromOffset(360, 58) }):Play() end
-			end)
-		end
+	if health <= 0 then return end
+	local panel = gui and gui:FindFirstChild("HealthPanel")
+	if panel then
+		panel.Size = UDim2.fromOffset(360, 58)
+		TweenService:Create(panel, TweenInfo.new(0.12), { Size = UDim2.fromOffset(370, 62) }):Play()
+		task.delay(0.13, function()
+			if panel.Parent then TweenService:Create(panel, TweenInfo.new(0.12), { Size = UDim2.fromOffset(360, 58) }):Play() end
+		end)
 	end
 end)
