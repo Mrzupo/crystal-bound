@@ -11,6 +11,14 @@ local Definitions = {
 	BAT_HUNT = { Id = "BAT_HUNT", Name = "Shards in the Dark", Description = "Defeat 3 Crystal Bats.", Goal = 3, XP = 1000, Money = 700, EnemyType = "CrystalBat", MinLevel = 19, Requires = "GOLEM_HUNT" },
 }
 
+local function safeAmount(amount, fallback)
+	local value = tonumber(amount)
+	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
+		return fallback or 0
+	end
+	return math.max(0, math.floor(value))
+end
+
 function QuestSystem.GetDefinition(id)
 	return Definitions[id]
 end
@@ -46,9 +54,7 @@ function QuestSystem.GetAvailable(profile)
 	local available = {}
 	for questId, definition in pairs(Definitions) do
 		local canStart = QuestSystem.CanStart(profile, questId)
-		if canStart then
-			table.insert(available, questId)
-		end
+		if canStart then table.insert(available, questId) end
 	end
 	table.sort(available, function(a, b)
 		local left = Definitions[a]
@@ -82,7 +88,8 @@ function QuestSystem.Advance(profile, questId, amount)
 		return false, 0, definition and definition.Goal or 0
 	end
 	profile.QuestProgress = profile.QuestProgress or {}
-	profile.QuestProgress[questId] = math.min(definition.Goal, QuestSystem.GetProgress(profile, questId) + math.max(0, amount or 1))
+	local safeIncrement = safeAmount(amount, 1)
+	profile.QuestProgress[questId] = math.min(definition.Goal, QuestSystem.GetProgress(profile, questId) + safeIncrement)
 	return profile.QuestProgress[questId] >= definition.Goal, profile.QuestProgress[questId], definition.Goal
 end
 
