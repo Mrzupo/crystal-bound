@@ -238,6 +238,38 @@ jobs:
               raise SystemExit(1)
           print("Profile migration ids validated.")
 
+      - name: Validate inventory economy invariants
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
+          rarities = {name: int(value) for name, value in re.findall(r'(Common|Uncommon|Rare|Epic|Legendary)\s*=\s*(\d+)', text)}
+          items = re.findall(r'([A-Za-z0-9_]+)\s*=\s*\{\s*Id\s*=\s*"([A-Za-z0-9_]+)"\s*,\s*Name\s*=\s*"[^"]+"\s*,\s*Type\s*=\s*"([A-Za-z]+)"\s*,\s*Rarity\s*=\s*"([A-Za-z]+)"\s*,\s*MaxStackSize\s*=\s*(-?\d+)\s*,\s*SellPrice\s*=\s*(-?\d+)\s*\}', text)
+
+          problems = []
+          if sorted(rarities.values()) != [1, 2, 3, 4, 5]:
+              problems.append("Inventory rarities must map to 1..5")
+          for key, item_id, item_type, rarity, max_stack, sell_price in items:
+              if key != item_id:
+                  problems.append(f"Inventory key/id mismatch for {key}/{item_id}")
+              if rarity not in rarities:
+                  problems.append(f"Unknown rarity {rarity} on {item_id}")
+              if int(max_stack) <= 0:
+                  problems.append(f"MaxStackSize must be positive for {item_id}")
+              if int(sell_price) < 0:
+                  problems.append(f"SellPrice must not be negative for {item_id}")
+              if item_type == "Consumable" and item_id == "HealthPotion" and int(sell_price) != 0:
+                  problems.append("HealthPotion must remain non-sellable")
+
+          if problems:
+              print("Inventory economy invariant problems:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Inventory economy invariants validated.")
+
       - name: Validate balancing invariants
         shell: python
         run: |
