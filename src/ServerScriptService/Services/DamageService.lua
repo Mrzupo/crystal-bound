@@ -5,6 +5,7 @@ local DamageTypes = require(ReplicatedStorage.Modules.Combat.DamageTypes)
 local DamageResult = require(ReplicatedStorage.Modules.Combat.DamageResult)
 
 local DamageService = {}
+local lastAttackers = setmetatable({}, { __mode = "k" })
 
 local function finiteNumber(value)
 	local number = tonumber(value)
@@ -27,12 +28,16 @@ end
 local function isValidAttacker(instance)
 	if not instance or not instance:IsA("Instance") then return false end
 	if instance:IsA("Player") then
-		return instance.Parent ~= nil
+		local character = instance.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		return instance.Parent ~= nil and humanoid ~= nil and humanoid.Health > 0
 	end
 	if instance:IsA("Model") then
+		local humanoid = instance:FindFirstChildOfClass("Humanoid")
 		return instance:IsDescendantOf(workspace)
 			and instance:GetAttribute("Enemy") == true
-			and instance:FindFirstChildOfClass("Humanoid") ~= nil
+			and humanoid ~= nil
+			and humanoid.Health > 0
 	end
 	return false
 end
@@ -61,6 +66,18 @@ function DamageService.CanDamage(request)
 	local maxRange = finiteNumber(request.Range)
 	if not maxRange or maxRange <= 0 or maxRange > 1000 then return false end
 	return (attackerRoot.Position - targetRoot.Position).Magnitude <= maxRange
+end
+
+function DamageService.GetLastAttacker(targetModel)
+	if not targetModel or not targetModel:IsA("Model") then return nil end
+	local attacker = lastAttackers[targetModel]
+	if attacker and attacker.Parent then return attacker end
+	lastAttackers[targetModel] = nil
+	return nil
+end
+
+function DamageService.ClearTarget(targetModel)
+	if targetModel then lastAttackers[targetModel] = nil end
 end
 
 function DamageService.ProcessDamage(request)
@@ -100,6 +117,9 @@ function DamageService.ProcessDamage(request)
 	local before = humanoid.Health
 	humanoid:TakeDamage(amount)
 	local applied = math.max(0, before - humanoid.Health)
+	if applied > 0 and request.Attacker then
+		lastAttackers[targetModel] = request.Attacker
+	end
 	return DamageResult.new(true, applied, applied > 0 and "Damage applied" or "No damage applied")
 end
 
