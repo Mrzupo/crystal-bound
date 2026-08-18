@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BountyConfig = require(ReplicatedStorage.Config.DailyBountyConfig)
+local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 
 local DailyBountyService = {}
 local GOALS = BountyConfig.Goals
@@ -31,7 +32,9 @@ function DailyBountyService.Refresh(profile)
 			Claimed = false,
 		}
 	end
-	profile.DailyBounty.Progress = math.max(0, math.min(profile.DailyBounty.Goal or 1, math.floor(tonumber(profile.DailyBounty.Progress) or 0)))
+	profile.DailyBounty.Goal = math.clamp(math.floor(tonumber(profile.DailyBounty.Goal) or 1), 1, 100)
+	profile.DailyBounty.Progress = math.clamp(math.floor(tonumber(profile.DailyBounty.Progress) or 0), 0, profile.DailyBounty.Goal)
+	profile.DailyBounty.RewardMoney = math.clamp(math.floor(tonumber(profile.DailyBounty.RewardMoney) or 0), 0, EconomyConfig.MaxMoney)
 	profile.DailyBounty.Claimed = profile.DailyBounty.Claimed == true
 	return profile.DailyBounty
 end
