@@ -21,6 +21,15 @@ local function retry(callback)
 	return false, lastError
 end
 
+local function clone(value)
+	if type(value) ~= "table" then return value end
+	local result = {}
+	for key, child in pairs(value) do
+		result[key] = clone(child)
+	end
+	return result
+end
+
 local function timestamp()
 	return os.time()
 end
@@ -28,8 +37,15 @@ end
 function SafeProfileStore.Load(player)
 	local key = tostring(player.UserId)
 	local claimed = false
+	local invalidStoredValue = false
 	local ok, result = retry(function()
 		return store:UpdateAsync(key, function(current)
+			if current ~= nil and type(current) ~= "table" then
+				invalidStoredValue = true
+				claimed = false
+				return current
+			end
+
 			local data = type(current) == "table" and current or PlayerData.new()
 			local lock = type(data.SessionLock) == "table" and data.SessionLock or nil
 			local age = lock and (timestamp() - (tonumber(lock.Timestamp) or 0)) or math.huge
@@ -50,6 +66,10 @@ function SafeProfileStore.Load(player)
 		warn(("Crystal Bound: DataStore load failed for %s: %s"):format(player.Name, tostring(result)))
 		return nil, "DataStore load failed"
 	end
+	if invalidStoredValue then
+		warn(("Crystal Bound: refusing to replace invalid stored value for %s"):format(player.Name))
+		return nil, "Invalid stored profile data"
+	end
 	if not claimed then
 		return nil, "Profile is already open on another server"
 	end
@@ -67,7 +87,7 @@ function SafeProfileStore.Save(player, profile)
 		return false, "Invalid profile"
 	end
 
-	local payload = PlayerData.Reconcile(profile)
+	local payload = PlayerData.Reconcile(clone(profile))
 	local key = tostring(player.UserId)
 	local saved = false
 	local ok, result = retry(function()
