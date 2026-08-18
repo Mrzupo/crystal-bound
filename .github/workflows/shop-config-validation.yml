@@ -1,0 +1,27 @@
+name: Shop Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-shop-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared shop config
+        shell: python
+        run: |
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/ShopConfig.lua").read_text(encoding="utf-8")
+          shop = Path("src/ServerScriptService/Services/ShopService.lua").read_text(encoding="utf-8")
+          ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
+          for marker in ("HealthPotion", "Price = 75", "MaxPerPurchase = 10", "SellOrder"):
+              if marker not in config:
+                  raise SystemExit(f"ShopConfig missing {marker}")
+          if "ShopConfig" not in shop:
+              raise SystemExit("ShopService must consume shared ShopConfig")
+          if "ShopConfig" not in ui or "InventoryConfig" not in ui:
+              raise SystemExit("ShopMenu must consume shared ShopConfig and InventoryConfig")
+          print("Shop configuration contract validated.")
