@@ -1,0 +1,31 @@
+name: Mobile Combat Parity
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-mobile-combat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate mobile target and cooldown checks
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua").read_text(encoding="utf-8")
+          checks = [
+              ("touch target must be enemy", 'model:GetAttribute("Enemy") ~= true'),
+              ("touch target must be alive", "humanoid.Health <= 0"),
+              ("mobile range check", "Magnitude > range"),
+              ("server cooldown attribute", 'GetAttribute("AbilityCooldownEnd")'),
+              ("local ability throttle", "localAbilityReadyAt"),
+              ("server combat request", 'combatRemote:FireServer("Ability", hit)'),
+          ]
+          failures = [name for name, marker in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Mobile combat parity validated.")
