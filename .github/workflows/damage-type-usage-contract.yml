@@ -1,0 +1,47 @@
+name: Damage Type Usage Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-damage-type-usage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate known damage type literals
+        shell: python
+        run: |
+          from pathlib import Path
+          allowed = {
+              "Physical",
+              "Crystal",
+              "CrystalAbilitySplash",
+              "BossShockwave",
+              "True",
+              "Environmental",
+          }
+          offenders = []
+          for path in Path("src/ServerScriptService").rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              for marker in ("DamageType = \"", "DamageType=\""):
+                  start = 0
+                  while True:
+                      index = text.find(marker, start)
+                      if index < 0:
+                          break
+                      value_start = index + len(marker)
+                      value_end = text.find("\"", value_start)
+                      if value_end < 0:
+                          break
+                      value = text[value_start:value_end]
+                      if value not in allowed:
+                          offenders.append(f"{path}: unknown DamageType {value}")
+                      start = value_end + 1
+          if offenders:
+              print("Unknown DamageTypes:")
+              for offender in offenders:
+                  print(f" - {offender}")
+              raise SystemExit(1)
+          print("Damage type usage contract validated.")
