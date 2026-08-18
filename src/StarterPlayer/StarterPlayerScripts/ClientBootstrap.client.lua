@@ -8,7 +8,8 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local combatRemote = remotes:WaitForChild("CombatRequest")
 local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
 local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
-local xpChanged = remotes:WaitForChild("XPChanged")
+local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+xpChanged = remotes:WaitForChild("XPChanged")
 local levelUp = remotes:WaitForChild("LevelUp")
 local moneyChanged = remotes:WaitForChild("MoneyChanged")
 local inventoryChanged = remotes:WaitForChild("InventoryChanged")
@@ -25,11 +26,51 @@ local questRefreshQueued = false
 local questRefreshBusy = false
 local lastBossRefresh = 0
 local BOSS_REFRESH_INTERVAL = 0.1
+local localAbilityReadyAt = 0
 
 local function getTargetFromMouse()
 	local hit = player:GetMouse().Target
 	if not hit then return nil end
-	return hit:FindFirstAncestorOfClass("Model") or hit
+	local target = hit:FindFirstAncestorOfClass("Model")
+	if not target or target:GetAttribute("Enemy") ~= true then return nil end
+	local humanoid = target:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return nil end
+	return target
+end
+
+local function getEquippedCrystal()
+	local crystalId = player:GetAttribute("EquippedCrystal")
+	if type(crystalId) ~= "string" or not crystalConfig.Abilities[crystalId] then
+		return "EMBER"
+	end
+	return crystalId
+end
+
+local function getCombatConfig(action)
+	local crystalId = getEquippedCrystal()
+	local group = action == "Ability" and crystalConfig.Abilities or crystalConfig.BasicAttacks
+	return crystalId, group and group[crystalId]
+end
+
+local function canPresentCombat(action, target)
+	if not target then return false end
+	local crystalId, config = getCombatConfig(action)
+	if not config then return false end
+	local character = player.Character
+	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+	local targetRoot = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
+	if not playerRoot or not targetRoot then return false end
+	local range = tonumber(config.Range)
+	if not range or range <= 0 then return false end
+	if (playerRoot.Position - targetRoot.Position).Magnitude > range then return false end
+	if action == "Ability" then
+		local now = os.clock()
+		local cooldownEnd = tonumber(player:GetAttribute("AbilityCooldownEnd")) or 0
+		if now < math.max(cooldownEnd, localAbilityReadyAt) then return false end
+		local cooldown = tonumber(config.Cooldown) or 0
+		localAbilityReadyAt = now + math.max(0, cooldown)
+	end
+	return true
 end
 
 local function ensureHud()
@@ -133,19 +174,18 @@ local function ensureHud()
 
 		local bossName = Instance.new("TextLabel")
 		bossName.Name = "Name"
-		bossName.Position = UDim2.fromOffset(12, 5)
+		bossName.Position = UDim2.fromOffset(12, 6)
 		bossName.Size = UDim2.fromOffset(596, 24)
 		bossName.BackgroundTransparency = 1
-		bossName.TextXAlignment = Enum.TextXAlignment.Center
 		bossName.Font = Enum.Font.GothamBold
-		bossName.TextSize = 19
+		bossName.TextSize = 18
 		bossName.Parent = boss
 
 		local hpBack = Instance.new("Frame")
 		hpBack.Name = "HPBack"
-		hpBack.Position = UDim2.fromOffset(12, 34)
-		hpBack.Size = UDim2.fromOffset(596, 25)
-		hpBack.BackgroundTransparency = 0.15
+		hpBack.Position = UDim2.fromOffset(12, 38)
+		hpBack.Size = UDim2.fromOffset(596, 22)
+		hpBack.BackgroundTransparency = 0.12
 		hpBack.Parent = boss
 		Instance.new("UICorner", hpBack).CornerRadius = UDim.new(0, 6)
 
@@ -159,93 +199,87 @@ local function ensureHud()
 		hpText.Name = "HPText"
 		hpText.Size = UDim2.fromScale(1, 1)
 		hpText.BackgroundTransparency = 1
-		hpText.TextXAlignment = Enum.TextXAlignment.Center
 		hpText.Font = Enum.Font.GothamBold
-		hpText.TextSize = 14
+		hpText.TextSize = 13
 		hpText.Parent = hpBack
-
-		local help = Instance.new("TextLabel")
-		help.Name = "Help"
-		help.AnchorPoint = Vector2.new(0.5, 1)
-		help.Position = UDim2.new(0.5, 0, 1, -18)
-		help.Size = UDim2.fromOffset(1200, 50)
-		help.BackgroundTransparency = 0.25
-		help.Text = "Klick = Angriff | Q = Fähigkeit | Z/X/C = Kristall | B = Crafting | E = aktualisieren | 4/5/6/7/8 = Loot verkaufen | U = Kristall upgraden"
-		help.Font = Enum.Font.GothamBold
-		help.TextSize = 16
-		help.Parent = gui
 	end
-	return panel.Stats, panel.Mastery, panel.Progress, panel.Cooldown, panel.Inventory, gui.Quest, gui.BossBar
-end
-
-local statsLabel, masteryLabel, progressLabel, cooldownLabel, inventoryLabel, questLabel, bossBar = ensureHud()
-
-local function refreshInventory()
-	local parts = {}
-	for _, id in ipairs(sellOrder) do
-		local amount = inventory[id] or 0
-		if amount > 0 then table.insert(parts, id .. ": " .. amount) end
-	end
-	inventoryLabel.Text = #parts > 0 and ("Loot\n" .. table.concat(parts, "  |  ")) or "Loot\nNo materials yet"
+	return gui
 end
 
 local function refreshHud()
+	local gui = ensureHud()
+	local panel = gui:FindFirstChild("Info")
+	if not panel then return end
+	local level = player:GetAttribute("Level") or 1
+	local money = player:GetAttribute("Money") or 0
 	local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
-	statsLabel.Text = string.format("Crystal Bound\nLevel: %d    XP: %d\nMoney: %d\nCrystal: %s", player:GetAttribute("Level") or 1, player:GetAttribute("Experience") or 0, player:GetAttribute("Money") or 0, crystal)
-	masteryLabel.Text = string.format("%s Mastery: Lv. %d    XP: %d", crystal, player:GetAttribute("CrystalMasteryLevel") or 1, player:GetAttribute("CrystalMasteryXP") or 0)
-	progressLabel.Text = string.format("Title: %s    Achievements: %d", player:GetAttribute("Title") or "None", player:GetAttribute("AchievementCount") or 0)
-	refreshInventory()
-end
-
-local function refreshQuests()
-	if questRefreshBusy then
-		questRefreshQueued = true
-		return
+	local masteryLevel = player:GetAttribute("CrystalMasteryLevel") or 1
+	local masteryXP = player:GetAttribute("CrystalMasteryXP") or 0
+	local achievementCount = player:GetAttribute("AchievementCount") or 0
+	local title = player:GetAttribute("Title") or ""
+	local required = 100
+	local crystalConfigEntry = crystalConfig.Abilities[crystal]
+	if crystalConfigEntry and crystalConfigEntry.Cooldown then required = math.floor(crystalConfigEntry.Cooldown * 100) end
+	panel.Stats.Text = string.format("Level %d  •  Money %d\nCrystal: %s\nMastery: Lv.%d  XP %d\nAchievements: %d  •  Title: %s", level, money, crystal, masteryLevel, masteryXP, achievementCount, title ~= "" and title or "None")
+	panel.Mastery.Text = string.format("Ability: %s  •  Cooldown baseline %.1fs", crystalConfigEntry and crystalConfigEntry.Name or "Ability", required / 100)
+	panel.Progress.Text = string.format("Inventory items: %d", inventory and (function()
+		local count = 0
+		for _, amount in pairs(inventory) do count += tonumber(amount) or 0 end
+		return count
+	end)() or 0)
+	local cooldownLabel = panel:FindFirstChild("Cooldown")
+	if cooldownLabel then
+		local endTime = tonumber(player:GetAttribute("AbilityCooldownEnd")) or 0
+		local remaining = math.max(0, endTime - os.clock())
+		cooldownLabel.Text = remaining > 0 and string.format("Q Ability: %.1fs", remaining) or string.format("Q Ability: READY • %s", crystalConfigEntry and crystalConfigEntry.Name or "Ability")
 	end
-	questRefreshBusy = true
-	local ok, data = pcall(function() return getQuestData:InvokeServer() end)
-	if ok and data then
-		local lines = { "Quests" }
-		if #data.Active == 0 then
-			table.insert(lines, "No active quests.")
-		else
-			for _, id in ipairs(data.Active) do
-				local definition = data.Definitions[id]
-				local progress = data.Progress and data.Progress[id] or 0
-				if definition then
-					table.insert(lines, string.format("• %s: %s (%d/%d)", definition.Name, definition.Description, progress, definition.Goal))
-				end
-			end
+	local inv = panel:FindFirstChild("Inventory")
+	if inv then
+		local lines = {}
+		for _, itemId in ipairs({ "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard" }) do
+			local amount = tonumber(inventory[itemId]) or 0
+			table.insert(lines, itemId .. ": " .. tostring(amount))
 		end
-		questLabel.Text = table.concat(lines, "\n")
-	end
-	questRefreshBusy = false
-	if questRefreshQueued then
-		questRefreshQueued = false
-		task.delay(0.15, refreshQuests)
+		inv.Text = table.concat(lines, "\n")
 	end
 end
 
 local function scheduleQuestRefresh()
-	if questRefreshQueued or questRefreshBusy then
-		questRefreshQueued = true
-		return
-	end
+	if questRefreshQueued or questRefreshBusy then return end
 	questRefreshQueued = true
-	task.delay(0.12, function()
+	task.delay(0.1, function()
 		questRefreshQueued = false
-		refreshQuests()
+		if player.Parent then refreshQuests() end
 	end)
+end
+
+function refreshQuests()
+	if questRefreshBusy then return end
+	questRefreshBusy = true
+	local ok, result = pcall(function()
+		return getQuestData:InvokeServer()
+	end)
+	questRefreshBusy = false
+	if not ok or type(result) ~= "table" then return end
+	local gui = ensureHud()
+	local quest = gui:FindFirstChild("Quest")
+	if quest then
+		quest.Text = result.Text or ""
+	end
 end
 
 local function refreshBoss()
 	local now = os.clock()
 	if now - lastBossRefresh < BOSS_REFRESH_INTERVAL then return end
 	lastBossRefresh = now
-	local folder = workspace:FindFirstChild("NPCs")
-	local boss = folder and folder:FindFirstChild("CrystalGuardian")
-	local humanoid = boss and boss:FindFirstChildOfClass("Humanoid")
-	if not boss or not humanoid or humanoid.Health <= 0 then
+	local gui = ensureHud()
+	local bossBar = gui:FindFirstChild("BossBar")
+	if not bossBar then return end
+	local npcFolder = workspace:FindFirstChild("NPCs")
+	local boss = npcFolder and npcFolder:FindFirstChild("Crystal Guardian")
+	if not boss then bossBar.Visible = false return end
+	local humanoid = boss:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
 		bossBar.Visible = false
 		return
 	end
@@ -299,8 +333,8 @@ inventoryRequest:FireServer()
 
 player:GetMouse().Button1Down:Connect(function()
 	local target = getTargetFromMouse()
-	if target then
-		local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
+	if target and canPresentCombat("Basic", target) then
+		local crystal = getEquippedCrystal()
 		crystalAnimationController.Play("Basic", crystal)
 		crystalVFXController.Play("Basic", crystal)
 		combatRemote:FireServer("Basic", target)
@@ -311,8 +345,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.Q then
 		local target = getTargetFromMouse()
-		if target then
-			local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
+		if target and canPresentCombat("Ability", target) then
+			local crystal = getEquippedCrystal()
 			crystalAnimationController.Play("Ability", crystal)
 			crystalVFXController.Play("Ability", crystal)
 			combatRemote:FireServer("Ability", target)
