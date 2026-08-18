@@ -9,6 +9,9 @@ local FETCH_INTERVAL = 0.35
 local fetching = false
 local queued = false
 local lastFetch = 0
+local cachedData = nil
+local boundLabel = nil
+local rebinding = false
 
 local function getQuestLabel()
 	local playerGui = player:FindFirstChildOfClass("PlayerGui")
@@ -22,23 +25,40 @@ end
 local function present(data)
 	local label = getQuestLabel()
 	if not label or not label:IsA("TextLabel") or type(data) ~= "table" then return end
+	cachedData = data
 
 	local active = data.Active or {}
 	local progress = data.Progress or {}
 	local definitions = data.Definitions or {}
 	local questId = active[1]
 	local definition = questId and definitions[questId]
+	local text
 	if not definition then
-		label.Text = "Quest: no active quest"
-		return
+		text = "Quest: no active quest"
+	else
+		text = string.format(
+			"Quest: %s  •  %d/%d",
+			definition.Name or questId,
+			tonumber(progress[questId]) or 0,
+			tonumber(definition.Goal) or 0
+		)
 	end
 
-	label.Text = string.format(
-		"Quest: %s  •  %d/%d",
-		definition.Name or questId,
-		onumber(progress[questId]) or 0,
-		onumber(definition.Goal) or 0
-	)
+	if label.Text ~= text then
+		rebinding = true
+		label.Text = text
+		rebinding = false
+	end
+
+	if boundLabel ~= label then
+		boundLabel = label
+		label:GetPropertyChangedSignal("Text"):Connect(function()
+			if rebinding or not cachedData or label.Parent == nil then return end
+			if label.Text == "" or label.Text == "Quest: " then
+				present(cachedData)
+			end
+		end)
+	end
 end
 
 local function fetchNow(force)
@@ -79,6 +99,18 @@ playerGui.ChildAdded:Connect(function(child)
 		task.defer(function()
 			if player.Parent then fetchNow(true) end
 		end)
+	end
+end)
+
+task.spawn(function()
+	while player.Parent do
+		task.wait(1)
+		if player.Parent then
+			local label = getQuestLabel()
+			if label and (label.Text == "" or label.Text == "Quest: ") then
+				if cachedData then present(cachedData) else fetchNow(false) end
+			end
+		end
 	end
 end)
 
