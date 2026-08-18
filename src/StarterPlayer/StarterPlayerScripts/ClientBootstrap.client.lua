@@ -9,7 +9,7 @@ local combatRemote = remotes:WaitForChild("CombatRequest")
 local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
 local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
 local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
-xpChanged = remotes:WaitForChild("XPChanged")
+local xpChanged = remotes:WaitForChild("XPChanged")
 local levelUp = remotes:WaitForChild("LevelUp")
 local moneyChanged = remotes:WaitForChild("MoneyChanged")
 local inventoryChanged = remotes:WaitForChild("InventoryChanged")
@@ -48,13 +48,13 @@ end
 
 local function getCombatConfig(action)
 	local crystalId = getEquippedCrystal()
-	local group = action == "Ability" and crystalConfig.Abilities or crystalConfig.BasicAttacks
+	local group = action == "Ability" and crystalConfig.Abilities or crystalConfig.BasicAttack
 	return crystalId, group and group[crystalId]
 end
 
 local function canPresentCombat(action, target)
 	if not target then return false end
-	local crystalId, config = getCombatConfig(action)
+	local _, config = getCombatConfig(action)
 	if not config then return false end
 	local character = player.Character
 	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
@@ -217,11 +217,9 @@ local function refreshHud()
 	local masteryXP = player:GetAttribute("CrystalMasteryXP") or 0
 	local achievementCount = player:GetAttribute("AchievementCount") or 0
 	local title = player:GetAttribute("Title") or ""
-	local required = 100
 	local crystalConfigEntry = crystalConfig.Abilities[crystal]
-	if crystalConfigEntry and crystalConfigEntry.Cooldown then required = math.floor(crystalConfigEntry.Cooldown * 100) end
 	panel.Stats.Text = string.format("Level %d  •  Money %d\nCrystal: %s\nMastery: Lv.%d  XP %d\nAchievements: %d  •  Title: %s", level, money, crystal, masteryLevel, masteryXP, achievementCount, title ~= "" and title or "None")
-	panel.Mastery.Text = string.format("Ability: %s  •  Cooldown baseline %.1fs", crystalConfigEntry and crystalConfigEntry.Name or "Ability", required / 100)
+	panel.Mastery.Text = string.format("Ability: %s  •  Cooldown baseline %.1fs", crystalConfigEntry and crystalConfigEntry.Name or "Ability", crystalConfigEntry and crystalConfigEntry.Cooldown or 0)
 	panel.Progress.Text = string.format("Inventory items: %d", inventory and (function()
 		local count = 0
 		for _, amount in pairs(inventory) do count += tonumber(amount) or 0 end
@@ -244,16 +242,7 @@ local function refreshHud()
 	end
 end
 
-local function scheduleQuestRefresh()
-	if questRefreshQueued or questRefreshBusy then return end
-	questRefreshQueued = true
-	task.delay(0.1, function()
-		questRefreshQueued = false
-		if player.Parent then refreshQuests() end
-	end)
-end
-
-function refreshQuests()
+local function refreshQuests()
 	if questRefreshBusy then return end
 	questRefreshBusy = true
 	local ok, result = pcall(function()
@@ -266,6 +255,15 @@ function refreshQuests()
 	if quest then
 		quest.Text = result.Text or ""
 	end
+end
+
+local function scheduleQuestRefresh()
+	if questRefreshQueued or questRefreshBusy then return end
+	questRefreshQueued = true
+	task.delay(0.1, function()
+		questRefreshQueued = false
+		if player.Parent then refreshQuests() end
+	end)
 end
 
 local function refreshBoss()
