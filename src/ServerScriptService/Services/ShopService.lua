@@ -1,11 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
+local ShopConfig = require(ReplicatedStorage.Config.ShopConfig)
 
 local ShopService = {}
-
-local Offers = {
-	HealthPotion = { ItemId = "HealthPotion", Price = 75, MaxPerPurchase = 10 },
-}
+local Offers = ShopConfig.Offers
 
 local function finiteNumber(value)
 	local number = tonumber(value)
@@ -21,8 +19,8 @@ function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyServi
 	local offer = Offers[itemId]
 	if not offer then return false, "Item is not for sale." end
 	local numericAmount = finiteNumber(amount) or 1
-	amount = math.clamp(math.floor(numericAmount), 1, offer.MaxPerPurchase)
-	local total = math.max(0, offer.Price) * amount
+	amount = math.clamp(math.floor(numericAmount), 1, math.max(1, math.floor(finiteNumber(offer.MaxPerPurchase) or 1)))
+	local total = math.max(0, finiteNumber(offer.Price) or 0) * amount
 	if not EconomyService.CanAfford(profile, total) then return false, "Not enough Money." end
 
 	InventoryService.GetInventory(profile)
