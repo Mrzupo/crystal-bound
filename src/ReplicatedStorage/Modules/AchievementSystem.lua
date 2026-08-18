@@ -18,6 +18,11 @@ local ORDER = {
 	"LEVEL_20",
 }
 
+local VALID_TITLES = {}
+for _, definition in pairs(Definitions) do
+	if definition.Title then VALID_TITLES[definition.Title] = true end
+end
+
 function AchievementSystem.Get(id) return Definitions[id] end
 function AchievementSystem.GetAll() return Definitions end
 function AchievementSystem.Has(profile, id) return table.find(profile.Achievements or {}, id) ~= nil end
@@ -31,6 +36,13 @@ function AchievementSystem.Unlock(profile, id)
 end
 function AchievementSystem.Check(profile)
 	profile.Achievements = profile.Achievements or {}; profile.Titles = profile.Titles or {}; profile.Stats = profile.Stats or {}
+	local validTitles = {}
+	for _, title in ipairs(profile.Titles) do
+		if type(title) == "string" and VALID_TITLES[title] and not table.find(validTitles, title) then
+			table.insert(validTitles, title)
+		end
+	end
+	profile.Titles = validTitles
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	local mastery = profile.CrystalMastery or {}
 	local ancient = (profile.Stats.AncientGolemsDefeated or 0) > 0 and (profile.Stats.CrystalBatsDefeated or 0) > 0
