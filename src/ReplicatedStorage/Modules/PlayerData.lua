@@ -1,5 +1,6 @@
 local PlayerData = {}
 local InventoryConfig = require(game.ReplicatedStorage.Config.InventoryConfig)
+local XPConfig = require(game.ReplicatedStorage.Config.XPConfig)
 local QuestSystem = require(script.Parent.QuestSystem)
 
 local VALID_CRYSTALS = {
@@ -96,8 +97,9 @@ function PlayerData.Reconcile(data)
 
 	merge(data, defaults)
 
-	data.Level = clampInt(data.Level, 1, 1000, defaults.Level)
+	data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)
 	data.Experience = clampInt(data.Experience, 0, 1000000000, defaults.Experience)
+	if data.Level >= XPConfig.MaxLevel then data.Experience = 0 end
 	data.Money = clampInt(data.Money, 0, 1000000, defaults.Money)
 
 	data.Crystals = type(data.Crystals) == "table" and data.Crystals or clone(defaults.Crystals)
@@ -112,6 +114,7 @@ function PlayerData.Reconcile(data)
 		local mastery = type(data.CrystalMastery[crystalId]) == "table" and data.CrystalMastery[crystalId] or {}
 		mastery.Level = clampInt(mastery.Level, 1, 10, 1)
 		mastery.XP = clampInt(mastery.XP, 0, 100000000, 0)
+		if mastery.Level >= 10 then mastery.XP = 0 end
 		data.CrystalMastery[crystalId] = mastery
 	end
 
@@ -133,9 +136,7 @@ function PlayerData.Reconcile(data)
 	for _, questId in ipairs(data.CompletedQuests) do completedSet[questId] = true end
 	local filteredActive = {}
 	for _, questId in ipairs(data.ActiveQuests) do
-		if not completedSet[questId] and #filteredActive == 0 then
-			table.insert(filteredActive, questId)
-		end
+		if not completedSet[questId] and #filteredActive == 0 then table.insert(filteredActive, questId) end
 	end
 	data.ActiveQuests = filteredActive
 
@@ -154,9 +155,7 @@ function PlayerData.Reconcile(data)
 
 	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
 	data.DailyBounty.Date = type(data.DailyBounty.Date) == "string" and data.DailyBounty.Date or ""
-	if not VALID_BOUNTY_ENEMIES[data.DailyBounty.EnemyType] then
-		data.DailyBounty.EnemyType = defaults.DailyBounty.EnemyType
-	end
+	if not VALID_BOUNTY_ENEMIES[data.DailyBounty.EnemyType] then data.DailyBounty.EnemyType = defaults.DailyBounty.EnemyType end
 	data.DailyBounty.Goal = clampInt(data.DailyBounty.Goal, 1, 100, defaults.DailyBounty.Goal)
 	data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, data.DailyBounty.Goal, 0)
 	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, 100000, defaults.DailyBounty.RewardMoney)
