@@ -1,6 +1,15 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
+local function openDialog(player, npcId)
+	player:SetAttribute("OpenNPCDialog", nil)
+	task.defer(function()
+		if player.Parent then
+			player:SetAttribute("OpenNPCDialog", npcId)
+		end
+	end)
+end
+
 local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
 	prompt:SetAttribute("CrystalBoundMenuBound", true)
@@ -8,7 +17,7 @@ local function bindPrompt(prompt)
 	if not model then return end
 	prompt.Triggered:Connect(function(player)
 		if model.Name == "CrystalKeeper" or model.Name == "MaterialTrader" then
-			player:SetAttribute("OpenNPCDialog", model.Name)
+			openDialog(player, model.Name)
 		end
 	end)
 end
