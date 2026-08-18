@@ -39,8 +39,28 @@ local priorities = {
 	ProfileLoadFailed = 11,
 }
 
+local MAX_VISIBLE = 8
+
+local function trimOldMessages()
+	local labels = {}
+	for _, child in ipairs(container:GetChildren()) do
+		if child:IsA("TextLabel") then
+			table.insert(labels, child)
+		end
+	end
+	if #labels < MAX_VISIBLE then return end
+	table.sort(labels, function(a, b)
+		return a.LayoutOrder > b.LayoutOrder
+	end)
+	for index = MAX_VISIBLE, #labels do
+		local label = labels[index]
+		if label and label.Parent then label:Destroy() end
+	end
+end
+
 local function show(text, priority)
 	if type(text) ~= "string" or text == "" then return end
+	trimOldMessages()
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromOffset(520, 34)
 	label.BackgroundTransparency = 0.18
