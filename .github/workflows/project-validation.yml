@@ -170,3 +170,48 @@ jobs:
                   print(f" - {name}")
               raise SystemExit(1)
           print("Remote references validated.")
+
+      - name: Validate balancing invariants
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          root = Path("src")
+          xp = (root / "ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
+          crystal = (root / "ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
+          mastery = (root / "ReplicatedStorage/Config/CrystalUpgradeConfig.lua").read_text(encoding="utf-8")
+          enemies = (root / "ReplicatedStorage/Config/EnemyConfig.lua").read_text(encoding="utf-8")
+          bosses = (root / "ReplicatedStorage/Config/BossConfig.lua").read_text(encoding="utf-8")
+          economy = (root / "ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
+
+          problems = []
+          max_level_match = re.search(r'MaxLevel\s*=\s*(\d+)', xp)
+          if not max_level_match or int(max_level_match.group(1)) <= 0:
+              problems.append("XPConfig.MaxLevel must be a positive integer")
+
+          for label, text in (("CrystalConfig", crystal), ("CrystalUpgradeConfig", mastery)):
+              numbers = [float(value) for value in re.findall(r'=\s*(-?\d+(?:\.\d+)?)', text)]
+              if any(value < 0 for value in numbers):
+                  problems.append(f"{label} contains a negative numeric config value")
+
+          for label, text in (("EnemyConfig", enemies), ("BossConfig", bosses)):
+              pairs = re.findall(r'(Health|XP|Money|AttackDamage|AttackCooldown|DropChance)\s*=\s*([0-9]+(?:\.[0-9]+)?)', text)
+              for key, raw in pairs:
+                  value = float(raw)
+                  if key in {"Health", "XP", "Money", "AttackDamage", "AttackCooldown"} and value < 0:
+                      problems.append(f"{label} has negative {key}")
+                  if key == "DropChance" and not 0 <= value <= 1:
+                      problems.append(f"{label} has invalid DropChance {value}")
+
+          limits = re.findall(r'(MinMoney|MaxMoney)\s*=\s*([0-9]+)', economy)
+          limit_map = {key: int(value) for key, value in limits}
+          if "MinMoney" in limit_map and "MaxMoney" in limit_map and limit_map["MinMoney"] > limit_map["MaxMoney"]:
+              problems.append("EconomyConfig MinMoney must not exceed MaxMoney")
+
+          if problems:
+              print("Balancing invariant problems:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Balancing invariants validated.")
