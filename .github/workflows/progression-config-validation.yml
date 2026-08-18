@@ -1,0 +1,38 @@
+name: Progression Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-progression-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate XP and economy bounds
+        shell: python
+        run: |
+          from pathlib import Path
+
+          xp = Path("src/ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
+          economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
+          xp_service = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
+
+          problems = []
+          for marker in ["MaxLevel = 100", "BaseXP = 100", "Growth = 1.25"]:
+              if marker not in xp:
+                  problems.append(f"XPConfig missing expected marker: {marker}")
+          for marker in ["MinMoney = 0", "MaxMoney = 1000000000"]:
+              if marker not in economy:
+                  problems.append(f"EconomyConfig missing expected marker: {marker}")
+          if "math.min(1000000000" not in xp_service:
+              problems.append("XPService must cap accumulated XP")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("XP and economy progression bounds validated.")
