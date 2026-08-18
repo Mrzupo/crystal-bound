@@ -1,0 +1,28 @@
+name: Final Damage Authority
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce single TakeDamage authority and known damage types
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files = list(Path('src').rglob('*.lua'))
+          offenders = []
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              if ':TakeDamage(' in text and path.as_posix() != 'src/ServerScriptService/Services/DamageService.lua':
+                  offenders.append(path.as_posix())
+          if offenders:
+              raise SystemExit('direct TakeDamage outside DamageService: ' + ', '.join(offenders))
+          damage_types = Path('src/ReplicatedStorage/Modules/Combat/DamageTypes.lua').read_text(encoding='utf-8')
+          for name in ['Physical', 'Crystal', 'BossShockwave', 'Environmental']:
+              if name not in damage_types:
+                  raise SystemExit(f'missing DamageType: {name}')
+          PY
