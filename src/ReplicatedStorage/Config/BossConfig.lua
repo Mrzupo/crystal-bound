@@ -13,6 +13,13 @@ return {
 		AbilityCooldown = 6,
 		AbilityRadius = 14,
 		AbilityDamage = 45,
+		Telegraph = {
+			Cooldown = 5.5,
+			Windup = 0.8,
+			Radius = 8,
+			Damage = 32,
+			TargetRange = 70,
+		},
 		Drop = "GuardianCore",
 	},
 }
