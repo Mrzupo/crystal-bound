@@ -52,6 +52,24 @@ jobs:
 
           print(f"Validated {len(referenced)} mapped files.")
 
+      - name: Validate active security modules
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          project = json.loads(Path("default.project.json").read_text(encoding="utf-8"))
+          server_scripts = project["tree"]["ServerScriptService"]
+          expected = "src/ServerScriptService/StatusSpeedGuardV2.server.lua"
+          actual = server_scripts.get("StatusSpeedGuardV2", {}).get("$path")
+          if actual != expected:
+              raise SystemExit(f"Rojo must load StatusSpeedGuardV2, found: {actual!r}")
+          if "StatusSpeedGuard" in server_scripts:
+              raise SystemExit("Legacy StatusSpeedGuard mapping must not be loaded")
+          if Path("src/ReplicatedStorage/Modules/SaveSystem.lua").exists():
+              raise SystemExit("Legacy unsafe SaveSystem.lua must not exist")
+          print("Active security modules validated.")
+
       - name: Validate JSON files
         shell: python
         run: |
