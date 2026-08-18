@@ -16,7 +16,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Crystal-specific server ability behavior is isolated in `CrystalAbilityService`.
 - `CombatService` handles validation, cooldowns, damage orchestration, feedback, progression and rewards; `CrystalAbilityService` handles TIDE heal and GALE splash behavior.
 - `CRYSTAL_POWER` progresses through `QuestSystem.Advance()` and only completes at its goal.
-- GALE splash uses `DamageService.ProcessDamage()` and returns verified hit results to `CombatService` for feedback/rewards.
+- `GALE` splash uses `DamageService.ProcessDamage()` and returns verified hit results to `CombatService` for feedback/rewards.
 - Invalid equipped crystals normalize to `EMBER`; unknown crystal mastery keys are removed during profile reconciliation.
 - `QuestRequest` has a dedicated weak-key rate limit inside the single Bootstrap handler.
 - RemoteEvent ownership and direct-damage rules are protected by CI contracts.
@@ -24,26 +24,20 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Server-generated Crystal combat VFX remain removed; presentation is client-side.
 - PC and mobile combat input defensively validate Enemy targets, living humanoids and local Crystal range before playing local presentation.
 - PC and mobile Ability input both honor the server-provided `AbilityCooldownEnd` plus a local cooldown guard. These checks are only presentation/input throttles and do not replace server validation.
-- `ClientBootstrap` uses `CrystalConfig.BasicAttack` (singular) and `CrystalConfig.Abilities` as defined by the config contract.
-- `CrystalConfig.UnlockLevels` is now the single source of truth for EMBER/TIDE/GALE level gates; Bootstrap no longer owns a separate unlock-level table.
-- `InventoryMenu` now consumes the shared `CrystalConfig.UnlockLevels` rather than a duplicated client unlock table.
-- `CrystalMastery.Upgrade()` is now the central mastery-level mutation; Bootstrap no longer increments mastery directly.
-- `crystal-config-validation.yml` protects the required UnlockLevels/BasicAttack/Abilities/Passives contract and prevents duplicate client/server unlock tables.
-- `progression-boundary.yml` protects AchievementSystem checking, Daily Bounty one-time claiming, Enemy reward guards and Boss reward guards.
-- `crystal-ability-boundary.yml` protects the server CrystalAbilityService boundary.
-- `pve-attacker-context-validation.yml` now protects NPC/Boss/status-effect attacker context.
-- NPC normal attacks and special attacks now carry the concrete NPC as attacker, use `Physical` damage and pass their real attack range; Emberling burn ticks preserve the NPC attacker context.
-- Guardian normal attacks and telegraphs now preserve the Guardian attacker and use `Physical` / `BossShockwave` damage types with explicit ranges.
-- `combat-validation-contract.yml` protects shared Hitbox/DamageService validation bounds.
-- `boss-client-contract.yml` protects the `CrystalGuardian` model identity between server and client.
-- `feedback-remote-direction-validation.yml` protects `CombatFeedback` as server-to-client only.
-- `client-presentation-authority-validation.yml` protects client combat presentation from gameplay authority references.
-- `presentation-asset-contract.yml` protects the six required Crystal animation/sound asset names.
-- `QuestMenu` now has a local load debounce so rapid open/refresh cycles do not create overlapping quest RemoteFunction calls.
-- AnimationController clears stale tracks on character generation changes and uses CrystalConfig cooldowns for local animation throttling.
-- VFXController uses authored Sound assets when available, with safe ID fallbacks and short-lived cosmetic parts.
-- Guardian BossBar work remains throttled to 0.1 s and currently resolves the server-spawned `CrystalGuardian` model name.
-- Cooldown UI remains idle-throttled (0.25 s idle / 0.1 s active).
+- `ClientBootstrap` uses `CrystalConfig.BasicAttack` and `CrystalConfig.Abilities` as defined by the config contract.
+- `CrystalConfig.UnlockLevels` is the single source of truth for EMBER/TIDE/GALE level gates; `InventoryMenu` also consumes the shared table.
+- `CrystalMastery.Upgrade()` is the central mastery-level mutation.
+- `QuestService.Complete()` now requires objective progress to reach the quest goal, except for the two explicit server-triggered one-step quests `FIRST_FIGHT` and `GUARDIAN_TRIAL`.
+- NPC normal attacks and special attacks carry the concrete NPC as attacker, use `Physical` damage and pass their real attack range; Emberling burn ticks preserve NPC attacker context.
+- Guardian normal attacks and telegraphs preserve the Guardian attacker and use `Physical` / `BossShockwave` damage types with explicit ranges.
+- `CrystalAbilityService` now defensively validates player/target instances plus finite/clamped damage and range inputs before executing server abilities.
+- Status effects have bounded Slow/Burn duration, tick count, damage and interval; tokenized callbacks prevent stale effect cleanup from cancelling newer effects.
+- Dodge validates finite vectors, resets on respawn, cleans state on leave and routes actual damage through `DamageService`.
+- Shop and Crafting transactions validate before mutation and roll back consumed resources or money when the final mutation fails.
+- Persistence reconciliation clamps Level/XP/Money/Inventory/Crystal ownership/mastery/quest state, while `SafeProfileStore` atomically claims and refreshes `SessionLock` ownership.
+- Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts.
+- `QuestHUDPresenter.client.lua` presents server-structured quest state; `QuestMenu` has a local load debounce.
+- Studio testing is documented in `STUDIO_PLAYTEST.md`.
 
 ## Security / authority contracts
 - `DamageService` is the only direct `Humanoid:TakeDamage()` path in `src`.
@@ -55,19 +49,20 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Critical RemoteFunctions have unique `OnServerInvoke` ownership.
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
+- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config and progression config are protected by dedicated CI workflows.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
 - No Luau interpreter is available here; validation is static/structural.
-- Latest GitHub combined status currently returns no statuses for the working commit; do not call CI green without a verified run.
+- Latest GitHub combined status may return no statuses for the working commit; do not call CI green without a verified run.
 - Actual authored Roblox Animation/Sound assets are still absent.
 - Presentation VFX are still placeholder-level.
 - `StatusSpeedGuard.server.lua` may physically exist but is not referenced by Rojo.
-- `ClientBootstrap` was recently simplified while fixing the Guardian model-name lookup; combat/input/remote behavior remains present, but the HUD layout differs from the older parent version and should be reviewed during Studio playtest.
+- `ClientBootstrap` was recently simplified while fixing the Guardian model-name lookup; the HUD layout should be reviewed during Studio playtest.
 
 ## Exact next steps
-1. Continue static auditing of `CrystalAnimationController`, `CrystalVFXController`, `CombatPresentation`, `CombatService`, `CrystalAbilityService`, `BossService`, `StatusEffectService`, `NPCService` and `default.project.json`.
-2. Verify all combat/damage/feedback/remote/progression/presentation CI contracts after further edits.
+1. Continue static auditing of `CombatService`, `CrystalAbilityService`, `BossService`, `StatusEffectService`, `NPCService`, menus and `default.project.json`.
+2. Verify all combat/damage/feedback/remote/progression/presentation/persistence CI contracts after further edits.
 3. Add authored Animation/Sound objects under the configured asset names.
 4. Build the first real EMBER Basic + Flame Burst assets, then repeat for TIDE and GALE.
 5. Keep animation markers presentation-only; never make them gameplay authority.
