@@ -15,8 +15,8 @@ local DailyBountyService = require(script.Parent.DailyBountyService)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 
 local CombatService = {}
-local cooldowns = {}
-local nextRequest = {}
+local cooldowns = setmetatable({}, { __mode = "k" })
+local nextRequest = setmetatable({}, { __mode = "k" })
 
 local REQUEST_INTERVAL = 0.03
 local VALID_ACTIONS = { Basic = true, Ability = true }
@@ -84,7 +84,7 @@ local function giveLoot(player, profile, targetModel, crystalId)
 	local itemId = enemyConfig and enemyConfig.Drop
 	if not itemId then itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId] end
 	if not itemId then return false end
-	local chance = enemyConfig and tonumber(enemyConfig.DropChance) or 1
+	local chance = math.clamp(tonumber(enemyConfig and enemyConfig.DropChance) or 1, 0, 1)
 	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
 	local added = InventoryService.AddItem(profile, itemId, 1)
 	if added > 0 then
