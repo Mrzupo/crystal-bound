@@ -15,11 +15,15 @@ jobs:
         run: |
           from pathlib import Path
           config = Path("src/ReplicatedStorage/Config/CraftingConfig.lua").read_text(encoding="utf-8")
+          inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
           service = Path("src/ServerScriptService/Services/CraftingService.lua").read_text(encoding="utf-8")
           ui = Path("src/StarterPlayer/StarterPlayerScripts/CraftingMenu.client.lua").read_text(encoding="utf-8")
           for marker in ("HealthPotion", "EmberShard", "TidePearl", "Inputs"):
               if marker not in config:
                   raise SystemExit(f"CraftingConfig missing {marker}")
+          for marker in ("HealthPotion", "EmberShard", "TidePearl"):
+              if marker not in inventory:
+                  raise SystemExit(f"InventoryConfig missing crafting item {marker}")
           if "CraftingConfig" not in service or "CraftingConfig" not in ui:
               raise SystemExit("Server and UI must consume shared CraftingConfig")
           print("Crafting configuration contract validated.")
