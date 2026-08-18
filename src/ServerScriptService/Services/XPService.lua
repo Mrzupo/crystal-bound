@@ -3,8 +3,14 @@ local XPConfig = require(ReplicatedStorage.Config.XPConfig)
 
 local XPService = {}
 
+local function finiteNumber(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
+
 function XPService.AddXP(profile, amount)
-	amount = math.max(0, tonumber(amount) or 0)
+	amount = math.max(0, finiteNumber(amount) or 0)
 	local levelsGained = 0
 	if profile.Level >= XPConfig.MaxLevel then
 		profile.Experience = 0
