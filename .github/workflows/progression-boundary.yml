@@ -1,0 +1,43 @@
+name: Progression Boundary Audit
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-progression-boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate progression contracts
+        shell: python
+        run: |
+          from pathlib import Path
+
+          player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          bounty_service = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          combat_service = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          boss_service = Path("src/ServerScriptService/Services/BossService.lua").read_text(encoding="utf-8")
+          achievement_system = Path("src/ReplicatedStorage/Modules/AchievementSystem.lua").read_text(encoding="utf-8")
+
+          problems = []
+          if "AchievementSystem.Check(profile)" not in player_service:
+              problems.append("PlayerService.Sync must check achievements")
+          if "bounty.Claimed" not in bounty_service or "bounty.Claimed = true" not in bounty_service:
+              problems.append("DailyBounty must guard its reward with Claimed")
+          if "DeathRewarded" not in combat_service:
+              problems.append("Enemy defeat rewards must have a DeathRewarded guard")
+          if "Rewarded" not in boss_service:
+              problems.append("Boss rewards must have a Rewarded guard")
+          if "function AchievementSystem.Check" not in achievement_system:
+              problems.append("AchievementSystem.Check is missing")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("Progression boundaries validated.")
