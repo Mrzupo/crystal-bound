@@ -1,0 +1,30 @@
+name: Consumable Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-consumables:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared health potion config
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+          config = Path("src/ReplicatedStorage/Config/ConsumableConfig.lua").read_text(encoding="utf-8")
+          inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
+          remote = Path("src/ServerScriptService/UseItemRemote.server.lua").read_text(encoding="utf-8")
+          ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
+          if "HealthPotion" not in config or not re.search(r"HealAmount\s*=\s*[1-9]\d*", config):
+              raise SystemExit("ConsumableConfig must define a positive HealthPotion HealAmount")
+          if "HealthPotion" not in inventory:
+              raise SystemExit("InventoryConfig must contain HealthPotion")
+          if "ConsumableConfig" not in remote or "ConsumableConfig" not in ui:
+              raise SystemExit("UseItemRemote and ShopMenu must consume shared ConsumableConfig")
+          if "+ 60" in remote or "restored 60 HP" in remote:
+              raise SystemExit("UseItemRemote must not hardcode potion healing")
+          print("Consumable config contract validated.")
