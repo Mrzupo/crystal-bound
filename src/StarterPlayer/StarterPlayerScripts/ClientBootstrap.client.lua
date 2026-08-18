@@ -7,6 +7,7 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local combatRemote = remotes:WaitForChild("CombatRequest")
 local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
+local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
 local xpChanged = remotes:WaitForChild("XPChanged")
 local levelUp = remotes:WaitForChild("LevelUp")
 local moneyChanged = remotes:WaitForChild("MoneyChanged")
@@ -299,7 +300,9 @@ inventoryRequest:FireServer()
 player:GetMouse().Button1Down:Connect(function()
 	local target = getTargetFromMouse()
 	if target then
-		crystalAnimationController.Play("Basic")
+		local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
+		crystalAnimationController.Play("Basic", crystal)
+		crystalVFXController.Play("Basic", crystal)
 		combatRemote:FireServer("Basic", target)
 	end
 end)
@@ -309,7 +312,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if input.KeyCode == Enum.KeyCode.Q then
 		local target = getTargetFromMouse()
 		if target then
-			crystalAnimationController.Play("Ability")
+			local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
+			crystalAnimationController.Play("Ability", crystal)
+			crystalVFXController.Play("Ability", crystal)
 			combatRemote:FireServer("Ability", target)
 		end
 	elseif input.KeyCode == Enum.KeyCode.Z then
