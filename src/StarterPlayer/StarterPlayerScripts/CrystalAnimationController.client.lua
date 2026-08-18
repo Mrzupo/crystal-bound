@@ -162,14 +162,13 @@ function Controller.Play(action, crystalId)
 	if action ~= "Basic" and action ~= "Ability" then return false end
 	if not animator or not humanoid or humanoid.Health <= 0 then return false end
 
-	local key = crystalId .. ":" .. action
 	local now = os.clock()
-	if now < (lastPlay[key] or 0) then return false end
+	if now < (lastPlay[action] or 0) then return false end
 
 	local track, definition = loadTrack(crystalId, action)
 	if not track or not definition then return false end
 
-	lastPlay[key] = now + getLocalCooldown(crystalId, action)
+	lastPlay[action] = now + getLocalCooldown(crystalId, action)
 	for _, other in pairs(tracks) do
 		if other ~= track and other.IsPlaying then
 			stopTrack(other, finiteNumber(definition.FadeTime, 0.08))
