@@ -47,16 +47,20 @@
 - `CrystalUpgradeConfig` steuert Mastery-Level, XP-Kosten und Ressourcen-Kosten.
 - `EnemyConfig` enthält Balancing, Spezialwerte und Drop-Chancen für alle aktuellen Gegnertypen.
 - `NPCService` verwaltet Gegnererstellung, eindeutige Namen, Visual Styles, Health Bars, Leash-Verhalten, Pathfinding-Fallback und Spezialangriffe.
+- `NPCService` leitet normale und spezielle Spieler-Schäden jetzt über `DodgeService` und begrenzt Spezialangriffe auf sinnvolle Nahkampfreichweiten.
 - `CombatService` verwendet gegnerspezifische XP-, Geld-, Loot- und Masterywerte, markiert den letzten Boss-Angreifer korrekt, validiert Reichweite serverseitig und verarbeitet Krits, Bounty und Drop-Chancen.
-- `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu und respektiert Dodge-Invulnerability.
-- `DodgeService` schützt das komplette Character-Schadensfenster zentral über ein temporäres ForceField und räumt Player-State beim Verlassen auf.
+- `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu, respektiert Dodge-Invulnerability und validiert Range/Amount finite-sicher.
+- `DamageValidators` weist jetzt auch nicht-endliche Schadenswerte explizit ab.
+- `DodgeService` schützt das komplette Character-Schadensfenster zentral über ein temporäres ForceField, validiert Bewegungs-/Schadenswerte finite-sicher und setzt Dodge-State bei Respawn zurück.
+- `StatusEffectService` verhindert Slow/Burn während eines aktiven Dodge-Fensters und erhält aktives Slow bei Player-Syncs.
+- `StatusSpeedGuardV2` hält aktive Slow-Effekte nach Crystal-/Mastery-Syncs stabil, ohne pro Respawn zusätzliche Player-Connections zu erzeugen.
 - `BossArena` leitet Phasen-Hazard-Schaden über `DodgeService`.
 - `BossTelegraph` bricht verzögerte Boss-Angriffe ab, wenn der Guardian während des Telegraphs verschwindet oder stirbt.
 - `AIPathService` nutzt einen Weak-Key-Cache, gedrosselte Pfadberechnung und verarbeitet Jump-Waypoints auch beim Erreichen gespeicherter Waypoints.
 - `PlayerService` verwendet den sicheren Session-locked Profile Store, schützt Save/Remove vor Race Conditions und synchronisiert Daily-Bounty-/Progressionsattribute.
+- `SafeProfileStore` nutzt Profil-Snapshots beim Save und verweigert beschädigte DataStore-Werte statt sie mit frischen Daten zu überschreiben.
 - `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand, Session-Lock und Daily-Bounty-Daten während der Migration.
 - `CraftingRemote` und `ShopRemote` verlangen jetzt die nötige Nähe zum Material Trader und räumen Request-State beim Player-Leave auf.
-- `StatusEffectService` erhält aktives Slow bei Player-Syncs und stellt nach Ablauf die aktuelle Crystal-/Mastery-WalkSpeed wieder her.
 - `EconomyService`, `InventoryService`, `XPService` und `CrystalMastery` filtern nicht-endliche Eingabewerte und schützen Limits serverseitig.
 - `StatusMessages` erlaubt wiederholt auftretende identische Meldungen nach Ablauf des aktuellen Anzeigefensters.
 - `WorldDecor` und `WorldTheme` decken alle vier aktuellen Inseln ab.
