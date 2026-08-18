@@ -3,9 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local animationConfig = require(ReplicatedStorage.Config.CrystalAnimationConfig)
+local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 
 local Controller = {}
 local tracks = {}
+local lastPlay = {}
 local humanoid
 local animator
 local characterConnection
@@ -17,6 +19,17 @@ local function normalizeAnimationId(value)
 	if value:match("^rbxassetid://%d+$") then return value end
 	local numeric = value:match("^%d+$")
 	return numeric and ("rbxassetid://" .. numeric) or nil
+end
+
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if not number or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
+local function getLocalCooldown(crystalId, action)
+	local config = action == "Ability" and crystalConfig.Abilities[crystalId] or crystalConfig.BasicAttack[crystalId]
+	return math.max(0, finiteNumber(config and config.Cooldown, 0))
 end
 
 local function stopTrack(track, fadeTime)
@@ -31,6 +44,7 @@ local function clearTracks()
 		track:Destroy()
 	end
 	table.clear(tracks)
+	table.clear(lastPlay)
 end
 
 local function disconnectCharacterSignals()
@@ -135,17 +149,22 @@ function Controller.Play(action, crystalId)
 	if action ~= "Basic" and action ~= "Ability" then return false end
 	if not animator or not humanoid or humanoid.Health <= 0 then return false end
 
+	local key = crystalId .. ":" .. action
+	local now = os.clock()
+	if now < (lastPlay[key] or 0) then return false end
+
 	local track, definition = loadTrack(crystalId, action)
 	if not track or not definition then return false end
 
+	lastPlay[key] = now + getLocalCooldown(crystalId, action)
 	for _, other in pairs(tracks) do
 		if other ~= track and other.IsPlaying then
-			stopTrack(other, tonumber(definition.FadeTime) or 0.08)
+			stopTrack(other, finiteNumber(definition.FadeTime, 0.08))
 		end
 	end
 
-	local fadeTime = math.max(0, tonumber(definition.FadeTime) or 0.08)
-	local playbackSpeed = math.max(0.05, tonumber(definition.PlaybackSpeed) or 1)
+	local fadeTime = math.max(0, finiteNumber(definition.FadeTime, 0.08))
+	local playbackSpeed = math.max(0.05, finiteNumber(definition.PlaybackSpeed, 1))
 	track:Play(fadeTime, 1, playbackSpeed)
 	return true
 end
