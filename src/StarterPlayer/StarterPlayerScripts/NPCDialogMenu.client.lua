@@ -63,23 +63,27 @@ end
 
 local function showNextLine()
 	if #currentLines == 0 then return end
-	line.Text = currentLines[currentIndex]
+	line.Text = tostring(currentLines[currentIndex] or "")
 	currentIndex = currentIndex % #currentLines + 1
 end
 
 local function openDialog(npcId)
-	local data = dialogRequest:InvokeServer(npcId)
-	if not data then return end
-	currentLines = data.Lines or {}
+	local ok, data = pcall(function() return dialogRequest:InvokeServer(npcId) end)
+	if not ok or type(data) ~= "table" then
+		panel.Visible = false
+		return
+	end
+	currentLines = type(data.Lines) == "table" and data.Lines or {}
 	currentIndex = 1
 	title.Text = data.Name or npcId
 	showNextLine()
 	clearOptions()
-	for index, option in ipairs(data.Options or {}) do
+	for index, option in ipairs(type(data.Options) == "table" and data.Options or {}) do
+		if type(option) ~= "table" then continue end
 		local button = Instance.new("TextButton")
 		button.Position = UDim2.fromOffset((index - 1) * 190, 0)
 		button.Size = UDim2.fromOffset(176, 38)
-		button.Text = option.Label or option.Id
+		button.Text = option.Label or option.Id or "Option"
 		button.Font = Enum.Font.GothamBold
 		button.TextSize = 13
 		button.Parent = options
