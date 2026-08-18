@@ -75,6 +75,9 @@ jobs:
           presentation = (root / "src/StarterPlayer/StarterPlayerScripts/CombatPresentation.client.lua").read_text(encoding="utf-8")
           animation = (root / "src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua").read_text(encoding="utf-8")
           vfx = (root / "src/StarterPlayer/StarterPlayerScripts/CrystalVFXController.client.lua").read_text(encoding="utf-8")
+          damage_service = (root / "src/ServerScriptService/Services/DamageService.lua").read_text(encoding="utf-8")
+          validators = (root / "src/ReplicatedStorage/Modules/Combat/DamageValidators.lua").read_text(encoding="utf-8")
+          damage_types = (root / "src/ReplicatedStorage/Modules/Combat/DamageTypes.lua").read_text(encoding="utf-8")
 
           if "CombatFeedback" not in combat_service:
               problems.append("CombatService must publish confirmed CombatFeedback")
@@ -84,6 +87,10 @@ jobs:
               problems.append("Client combat presentation must never call TakeDamage")
           if "LastHitCritical" in combat_service or "LastHitCrystal" in combat_service or "LastAttackerUserId" in combat_service:
               problems.append("CombatService must not use mutable NPC LastHit presentation attributes")
+          if "Environmental" not in damage_types or "request.DamageType ~= DamageTypes.Environmental" not in validators:
+              problems.append("Environmental damage must remain an explicit approved damage type")
+          if "DamageType == DamageTypes.Environmental and request.Attacker == nil" not in damage_service:
+              problems.append("DamageService must keep attacker-less damage restricted to Environmental")
 
           if problems:
               print("Combat presentation contract problems:")
