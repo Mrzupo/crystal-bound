@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local PlayerService = require(script.Parent.Services.PlayerService)
 local InventoryService = require(script.Parent.Services.InventoryService)
+local ConsumableConfig = require(ReplicatedStorage.Config.ConsumableConfig)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local remote = remotes:FindFirstChild("UseItemRequest") or Instance.new("RemoteEvent")
@@ -12,7 +13,8 @@ local NEXT_USE = setmetatable({}, { __mode = "k" })
 local USE_INTERVAL = 0.2
 
 remote.OnServerEvent:Connect(function(player, itemId)
-	if itemId ~= "HealthPotion" then return end
+	local potion = ConsumableConfig.HealthPotion
+	if type(itemId) ~= "string" or itemId ~= potion.ItemId then return end
 	local now = os.clock()
 	if now < (NEXT_USE[player] or 0) then return end
 	NEXT_USE[player] = now + USE_INTERVAL
@@ -32,10 +34,11 @@ remote.OnServerEvent:Connect(function(player, itemId)
 		player:SetAttribute("ShopMessage", "Unable to consume Health Potion safely.")
 		return
 	end
-	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 60)
+	local healAmount = math.max(0, tonumber(potion.HealAmount) or 0)
+	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + healAmount)
 	PlayerService.Sync(player)
 	remotes.InventoryChanged:FireClient(player, profile.Inventory)
-	player:SetAttribute("ShopMessage", "Health Potion restored 60 HP.")
+	player:SetAttribute("ShopMessage", string.format("Health Potion restored %d HP.", healAmount))
 end)
 
 Players.PlayerRemoving:Connect(function(player)
