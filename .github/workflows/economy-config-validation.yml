@@ -1,0 +1,25 @@
+name: Economy Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-economy-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate economy bounds and starting state
+        shell: python
+        run: |
+          from pathlib import Path
+          economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
+          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          required = ("StartingMoney = 100", "MinMoney = 0", "MaxMoney = 1000000000")
+          for marker in required:
+              if marker not in economy:
+                  raise SystemExit(f"EconomyConfig missing {marker}")
+          if "Money = EconomyConfig.StartingMoney" not in player_data:
+              raise SystemExit("PlayerData must consume EconomyConfig.StartingMoney")
+          print("Economy config contract validated.")
