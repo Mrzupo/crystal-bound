@@ -1,3 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
+
 local AchievementSystem = {}
 
 local Definitions = {
@@ -21,6 +24,12 @@ local ORDER = {
 local VALID_TITLES = {}
 for _, definition in pairs(Definitions) do
 	if definition.Title then VALID_TITLES[definition.Title] = true end
+end
+
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
 end
 
 function AchievementSystem.Get(id) return Definitions[id] end
@@ -53,24 +62,25 @@ function AchievementSystem.Unlock(profile, id)
 	return definition
 end
 function AchievementSystem.Check(profile)
-	profile.Achievements = profile.Achievements or {}; profile.Titles = profile.Titles or {}; profile.Stats = profile.Stats or {}
+	profile.Achievements = profile.Achievements or {}
+	profile.Titles = profile.Titles or {}
+	profile.Stats = profile.Stats or {}
 	local validTitles = {}
 	for _, title in ipairs(profile.Titles) do
-		if type(title) == "string" and AchievementSystem.IsValidTitle(title) and not table.find(validTitles, title) then
-			table.insert(validTitles, title)
-		end
+		if AchievementSystem.IsValidTitle(title) and not table.find(validTitles, title) then table.insert(validTitles, title) end
 	end
 	profile.Titles = validTitles
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	local mastery = profile.CrystalMastery or {}
-	local ancient = (profile.Stats.AncientGolemsDefeated or 0) > 0 and (profile.Stats.CrystalBatsDefeated or 0) > 0
+	local masteryMaxLevel = math.max(1, math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel, 10)))
+	local ancient = (finiteNumber(profile.Stats.AncientGolemsDefeated, 0) > 0) and (finiteNumber(profile.Stats.CrystalBatsDefeated, 0) > 0)
 	local checks = {
-		FIRST_BLOOD = (profile.Stats.EnemiesDefeated or 0) >= 1,
-		CRYSTAL_KEEPER = table.find(owned, "EMBER") and table.find(owned, "TIDE") and table.find(owned, "GALE"),
-		MASTER_OF_ONE = (mastery.EMBER and mastery.EMBER.Level >= 10) or (mastery.TIDE and mastery.TIDE.Level >= 10) or (mastery.GALE and mastery.GALE.Level >= 10),
-		GUARDIAN_SLAYER = (profile.Stats.BossesDefeated or 0) >= 1,
+		FIRST_BLOOD = finiteNumber(profile.Stats.EnemiesDefeated, 0) >= 1,
+		CRYSTAL_KEEPER = table.find(owned, "EMBER") ~= nil and table.find(owned, "TIDE") ~= nil and table.find(owned, "GALE") ~= nil,
+		MASTER_OF_ONE = (mastery.EMBER and finiteNumber(mastery.EMBER.Level, 0) >= masteryMaxLevel) or (mastery.TIDE and finiteNumber(mastery.TIDE.Level, 0) >= masteryMaxLevel) or (mastery.GALE and finiteNumber(mastery.GALE.Level, 0) >= masteryMaxLevel),
+		GUARDIAN_SLAYER = finiteNumber(profile.Stats.BossesDefeated, 0) >= 1,
 		ANCIENT_EXPLORER = ancient,
-		LEVEL_20 = profile.Level >= 20,
+		LEVEL_20 = finiteNumber(profile.Level, 0) >= 20,
 	}
 	local unlocked = {}
 	for _, id in ipairs(ORDER) do
