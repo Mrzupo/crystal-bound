@@ -75,7 +75,8 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	crystalId = normalizeCrystalId(crystalId)
 	local mastery = ensure(profile, crystalId)
 	if mastery.Level >= Config.MaxLevel then return {} end
-	local base = Config.BaseCosts[crystalId] or {}
+	local base = type(Config.BaseCosts) == "table" and Config.BaseCosts[crystalId] or nil
+	if type(base) ~= "table" or next(base) == nil then return nil end
 	local cost = {}
 	local multiplier = math.max(1, mastery.Level)
 	for itemId, amount in pairs(base) do
