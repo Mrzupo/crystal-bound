@@ -1,0 +1,47 @@
+name: Crystal Bound RemoteEvent Ownership Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-remote-events:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure single server owner for critical RemoteEvents
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src/ServerScriptService")
+          targets = {
+              "CombatRequest": ".OnServerEvent",
+              "ShopRequest": ".OnServerEvent",
+              "CraftingRequest": ".OnServerEvent",
+              "UseItemRequest": ".OnServerEvent",
+              "DodgeRequest": ".OnServerEvent",
+              "QuestRequest": ".OnServerEvent",
+          }
+
+          counts = {key: [] for key in targets}
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              for key, marker in targets.items():
+                  if f"{key}{marker}" in text:
+                      counts[key].append(str(path))
+
+          problems = []
+          for key, paths in counts.items():
+              if len(paths) != 1:
+                  problems.append(f"{key} must have exactly one server OnServerEvent owner; found {len(paths)}: {paths}")
+
+          if problems:
+              for problem in problems:
+                  print(problem)
+              raise SystemExit(1)
+
+          print("Critical RemoteEvent ownership validated.")
