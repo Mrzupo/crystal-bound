@@ -1,4 +1,5 @@
 return {
+	MaxPerCraft = 10,
 	Recipes = {
 		HealthPotion = {
 			Output = "HealthPotion",
