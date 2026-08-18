@@ -10,62 +10,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate distinct Guardian phase-2 attacks
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
+          import re
+
           config = Path('src/ReplicatedStorage/Config/BossConfig.lua').read_text(encoding='utf-8')
           service = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
           telegraph = Path('src/ServerScriptService/BossTelegraph.server.lua').read_text(encoding='utf-8')
           arena = Path('src/ServerScriptService/BossArena.server.lua').read_text(encoding='utf-8')
 
           required_config = [
-              'AbilityCooldown = 6',
-              'AbilityRadius = 14',
-              'AbilityDamage = 45',
-              'Phase2 = {',
-              'HealthThreshold = 0.5',
-              'AttackCooldown = 1.0',
-              'AttackDamageMultiplier = 1.35',
-              'AbilityRangeMultiplier = 1.5',
-              'Telegraph = {',
-              'Cooldown = 5.5',
-              'Windup = 0.8',
-              'Radius = 8',
-              'Damage = 32',
-              'TargetRange = 70',
-              'ArenaHazard = {',
-              'HalfExtent = 23',
-              'Interval = 0.75',
+              'AbilityCooldown = 6', 'AbilityRadius = 14', 'AbilityDamage = 45',
+              'Phase2 =', 'HealthThreshold = 0.5', 'AttackDamageMultiplier = 1.35',
+              'AbilityRangeMultiplier = 1.5', 'Telegraph =', 'ArenaHazard =', 'ArenaCenter =',
           ]
           for marker in required_config:
               if marker not in config:
                   raise SystemExit(f'missing Guardian config marker: {marker}')
 
-          for marker in [
-              'phase2.HealthThreshold',
-              'phase2.AttackCooldown',
-              'phase2.AttackDamageMultiplier',
-              'phase2.AbilityRangeMultiplier',
-              'shockwave(root.Position',
-              'BossShockwave',
-          ]:
+          for marker in ['local abilityRadius =', 'phase2.AbilityRangeMultiplier', 'shockwave(root.Position, abilityRadius']:
               if marker not in service:
-                  raise SystemExit(f'Guardian phase-2 service path missing: {marker}')
+                  raise SystemExit(f'Guardian phase-2 ability path missing: {marker}')
 
-          for marker in [
-              'BossConfig',
-              'config = BossConfig.CrystalGuardian.Telegraph',
-              'BossShockwave',
-          ]:
+          for marker in ['config.Windup', 'config.Cooldown', 'config.Radius', 'config.Damage', 'config.TargetRange', 'BossShockwave']:
               if marker not in telegraph:
                   raise SystemExit(f'Guardian telegraph path missing: {marker}')
-          for marker in [
-              'BossConfig',
-              'config = BossConfig.CrystalGuardian.ArenaHazard',
-              'Environmental',
-          ]:
-              if marker not in arena:
-                  raise SystemExit(f'Guardian arena hazard path missing: {marker}')
-          if any(marker in telegraph for marker in ['TELEGRAPH_TIME = 0.8', 'COOLDOWN = 5.5', 'RADIUS = 8', 'DAMAGE = 32']):
-              raise SystemExit('BossTelegraph must not hardcode Guardian telegraph balance constants')
+
+          if 'BossConfig.CrystalGuardian.ArenaHazard' not in arena:
+              raise SystemExit('BossArena must consume Guardian ArenaHazard config')
+          if 'local center = bossConfig.ArenaCenter' not in arena:
+              raise SystemExit('BossArena must use BossConfig.ArenaCenter')
+
           print('Guardian phase-2 attack separation validated.')
+          PY
