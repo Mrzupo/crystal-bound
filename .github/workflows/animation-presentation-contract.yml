@@ -1,0 +1,40 @@
+name: Animation Presentation Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-animation-presentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate animation/VFX authority boundary
+        shell: python
+        run: |
+          from pathlib import Path
+          animation = Path("src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua").read_text(encoding="utf-8")
+          vfx = Path("src/StarterPlayer/StarterPlayerScripts/CrystalVFXController.client.lua").read_text(encoding="utf-8")
+          for name, text in [("animation", animation), ("vfx", vfx)]:
+              if "FireServer" in text or "InvokeServer" in text or "TakeDamage" in text:
+                  raise SystemExit(f"{name} controller contains gameplay authority call")
+          required_animation = [
+              "function Controller.Play(action, crystalId)",
+              "clearTracks()",
+              "generation += 1",
+              "track.Priority = Enum.AnimationPriority.Action",
+          ]
+          required_vfx = [
+              "CanCollide = false",
+              "CanQuery = false",
+              "CanTouch = false",
+              "Debris:AddItem(part, 0.22)",
+          ]
+          for marker in required_animation:
+              if marker not in animation:
+                  raise SystemExit(f"Missing animation marker: {marker}")
+          for marker in required_vfx:
+              if marker not in vfx:
+                  raise SystemExit(f"Missing VFX marker: {marker}")
+          print("Animation/VFX presentation contract validated.")
