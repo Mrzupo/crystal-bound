@@ -10,21 +10,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate distinct Guardian phase-2 attacks
+        shell: python
         run: |
-          python - <<'PY'
           from pathlib import Path
           config = Path('src/ReplicatedStorage/Config/BossConfig.lua').read_text(encoding='utf-8')
           service = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
           telegraph = Path('src/ServerScriptService/BossTelegraph.server.lua').read_text(encoding='utf-8')
-          required_config = ['AbilityCooldown = 6', 'AbilityRadius = 14', 'AbilityDamage = 45']
+          required_config = [
+              'AbilityCooldown = 6',
+              'AbilityRadius = 14',
+              'AbilityDamage = 45',
+              'Telegraph = {',
+              'Cooldown = 5.5',
+              'Windup = 0.8',
+              'Radius = 8',
+              'Damage = 32',
+              'TargetRange = 70',
+          ]
           for marker in required_config:
               if marker not in config:
-                  raise SystemExit(f'missing Guardian AoE config marker: {marker}')
-          for marker in ['shockwave(root.Position, config.AbilityRadius, config.AbilityDamage, model)', 'BossShockwave']:
+                  raise SystemExit(f'missing Guardian attack config marker: {marker}')
+          for marker in [
+              'shockwave(root.Position, config.AbilityRadius, config.AbilityDamage, model)',
+              'BossShockwave',
+          ]:
               if marker not in service:
                   raise SystemExit(f'Guardian AoE path missing: {marker}')
-          for marker in ['TELEGRAPH_TIME = 0.8', 'COOLDOWN = 5.5', 'RADIUS = 8', 'DAMAGE = 32', 'BossShockwave']:
+          for marker in [
+              'BossConfig',
+              'config = BossConfig.CrystalGuardian.Telegraph',
+              'BossShockwave',
+          ]:
               if marker not in telegraph:
                   raise SystemExit(f'Guardian telegraph path missing: {marker}')
+          if 'TELEGRAPH_TIME = 0.8' in telegraph or 'COOLDOWN = 5.5' in telegraph or 'RADIUS = 8' in telegraph or 'DAMAGE = 32' in telegraph:
+              raise SystemExit('BossTelegraph must not hardcode Guardian telegraph balance constants')
           print('Guardian phase-2 attack separation validated.')
-          PY
