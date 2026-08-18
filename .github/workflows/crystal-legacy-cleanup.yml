@@ -32,15 +32,28 @@ jobs:
                   print(f" - {path}")
               raise SystemExit(1)
 
+          forbidden_imports = (
+              "CrystalDefinitions",
+              "CrystalTypes",
+              "CrystalUtils",
+              "BaseCrystal",
+              "AbilityRegistry",
+              "PassiveRegistry",
+          )
+          offenders = []
+          for path in Path("src").rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              for name in forbidden_imports:
+                  if f"require({name}" in text or f'require(script.Parent.{name})' in text:
+                      offenders.append(f"{path}: {name}")
+          if offenders:
+              print("Legacy Crystal imports remain:")
+              for offender in offenders:
+                  print(f" - {offender}")
+              raise SystemExit(1)
+
           project = Path("default.project.json").read_text(encoding="utf-8")
-          for name in (
-              "CrystalDefinitions.lua",
-              "CrystalTypes.lua",
-              "CrystalUtils.lua",
-              "BaseCrystal.lua",
-              "AbilityRegistry.lua",
-              "PassiveRegistry.lua",
-          ):
+          for name in forbidden_imports:
               if name in project:
                   raise SystemExit(f"legacy Crystal mapping remains in default.project.json: {name}")
 
