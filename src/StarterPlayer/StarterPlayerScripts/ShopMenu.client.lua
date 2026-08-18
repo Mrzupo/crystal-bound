@@ -10,6 +10,7 @@ local shopRequest = remotes:WaitForChild("ShopRequest")
 local useItemRequest = remotes:WaitForChild("UseItemRequest")
 local inventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 local shopConfig = require(ReplicatedStorage.Config.ShopConfig)
+local consumableConfig = require(ReplicatedStorage.Config.ConsumableConfig)
 
 local sellable = {}
 for _, itemId in ipairs(shopConfig.SellOrder or {}) do
@@ -26,6 +27,7 @@ end
 
 local rarityOrder = inventoryConfig.Rarities or {}
 local potionOffer = shopConfig.Offers.HealthPotion
+local potionConfig = consumableConfig.HealthPotion
 local inventory = {}
 local open = false
 
@@ -119,7 +121,7 @@ local function ensureGui()
 	use.Font = Enum.Font.GothamBold
 	use.TextSize = 12
 	use.Parent = potion
-	use.Activated:Connect(function() useItemRequest:FireServer("HealthPotion") end)
+	use.Activated:Connect(function() useItemRequest:FireServer(potionConfig.ItemId) end)
 
 	local list = Instance.new("Frame")
 	list.Name = "List"
@@ -188,8 +190,9 @@ local function refresh()
 			row.Sell.TextTransparency = amount > 0 and 0 or 0.5
 		end
 	end
-	local potionAmount = math.max(0, math.floor(tonumber(inventory[potionOffer.ItemId]) or 0))
-	panel.PotionOffer.Label.Text = string.format("%s  •  %s  •  %d Money  •  Owned: %d", inventoryConfig.GetItemConfig(potionOffer.ItemId).Name, inventoryConfig.GetItemConfig(potionOffer.ItemId).Rarity, potionOffer.Price, potionAmount)
+	local potionItem = inventoryConfig.GetItemConfig(potionConfig.ItemId)
+	local potionAmount = math.max(0, math.floor(tonumber(inventory[potionConfig.ItemId]) or 0))
+	panel.PotionOffer.Label.Text = string.format("%s  •  %s  •  %d Money  •  Heal +%d HP  •  Owned: %d", potionItem.Name, potionItem.Rarity, potionOffer.Price, math.max(0, tonumber(potionConfig.HealAmount) or 0), potionAmount)
 	panel.PotionOffer.Use.Active = potionAmount > 0
 	panel.PotionOffer.Use.TextTransparency = potionAmount > 0 and 0 or 0.5
 end
