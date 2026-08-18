@@ -12,6 +12,15 @@ local function clearForceField(character)
 	if forceField then forceField:Destroy() end
 end
 
+local function finiteComponent(value)
+	return type(value) == "number" and value == value and value < math.huge and value > -math.huge
+end
+
+local function validDirection(direction)
+	if typeof(direction) ~= "Vector3" then return false end
+	return finiteComponent(direction.X) and finiteComponent(direction.Y) and finiteComponent(direction.Z)
+end
+
 function DodgeService.TryDodge(player, direction)
 	if not player or not player:IsA("Player") then return false, "Invalid player" end
 	local character = player.Character
@@ -23,9 +32,14 @@ function DodgeService.TryDodge(player, direction)
 	local nextReady = cooldowns[player] or 0
 	if now < nextReady then return false, "Dodge on cooldown" end
 
-	local requested = typeof(direction) == "Vector3" and direction or Vector3.new(0, 0, -1)
+	local requested = validDirection(direction) and direction or Vector3.new(0, 0, -1)
 	local flat = Vector3.new(requested.X, 0, requested.Z)
-	if flat.Magnitude < 0.1 then flat = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z) end
+	if not finiteComponent(flat.X) or not finiteComponent(flat.Z) or flat.Magnitude < 0.1 then
+		flat = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
+	end
+	if flat.Magnitude < 0.1 or not finiteComponent(flat.X) or not finiteComponent(flat.Z) then
+		flat = Vector3.new(0, 0, -1)
+	end
 	flat = flat.Unit
 
 	cooldowns[player] = now + COOLDOWN
