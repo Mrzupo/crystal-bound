@@ -27,7 +27,14 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Perform a dodge during an incoming hit.
 - Expected: invalid/out-of-range/Player targets deal no damage; dodged hits return zero applied damage.
 
-## 4. Enemy AI
+## 4. Quest security
+- Start `FIRST_FIGHT` and defeat the Training Dummy; confirm the one-step server trigger completes it once.
+- Attempt to complete an active multi-step quest before its goal; expected: completion is refused and no XP/Money reward is granted.
+- Advance a normal quest to its exact goal; expected: it completes once and rewards exactly once.
+- Re-trigger the same completion event; expected: no duplicate reward.
+- Confirm Guardian completion is only possible through the intended server trigger.
+
+## 5. Enemy AI
 - Pull an Emberling away from spawn.
 - Confirm it leashes back toward home.
 - Test Emberling special attack and burn.
@@ -35,8 +42,9 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Test Galewisp movement/special.
 - Test Crystal Bat and Ancient Golem attacks.
 - Defeat each enemy and confirm XP, Money, loot, quest progress and bounty progress are applied once.
+- Confirm dead enemies stop AI/status callbacks before respawn.
 
-## 5. Guardian
+## 6. Guardian
 - Bring Guardian below 50% HP.
 - Confirm phase changes to 2.
 - Confirm boss bar tracks `CrystalGuardian`.
@@ -46,7 +54,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Defeat Guardian.
 - Confirm Guardian reward/quest/achievement state is granted once and the boss respawns on schedule.
 
-## 6. Persistence
+## 7. Persistence
 - Change level, money, inventory, crystal mastery and quest state.
 - Leave the server normally.
 - Rejoin.
@@ -56,22 +64,32 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Force heartbeat/save failure only in a controlled test environment.
 - Confirm the server does not silently release a lost lock.
 
-## 7. UI / mobile
+## 8. Transactions
+- Buy Health Potions with enough Money; confirm Money decreases exactly once and inventory increases exactly once.
+- Attempt a purchase over the maximum stack; expected: no Money loss.
+- Attempt crafting without enough materials; expected: no materials lost.
+- Force a failed output insertion in a controlled test; expected: all consumed crafting inputs are restored.
+
+## 9. UI / mobile
 - Open Inventory, Quest, Shop, Crafting, Daily Bounty and Achievement menus.
 - Switch crystals through UI and hotkeys.
 - Verify quest HUD text matches the active quest and progress.
+- Open/close Quest rapidly; expected: no duplicate request storm or stale UI overwrite.
 - Test mobile ATK/Q/target selection.
 - Confirm local animations/VFX never decide damage.
 
-## 8. Asset pass
+## 10. Asset pass
 - Insert the authored animation objects under the six configured names.
 - Insert authored sounds under the corresponding sound asset names.
 - Verify no fallback asset errors are produced.
 - Test one EMBER Basic and Flame Burst ability first.
 - Then repeat the same contract for TIDE and GALE.
 
-## 9. Regression checks
+## 11. Regression checks
 - Confirm no duplicate `OnServerInvoke` handlers exist.
 - Confirm no direct `Humanoid:TakeDamage()` exists outside `DamageService`.
+- Confirm no quest reward is granted on an incomplete objective.
+- Confirm no Daily Bounty or Achievement reward can be granted twice.
+- Confirm no duplicate NPC/Boss instances appear after respawn.
 - Confirm `main` remains untouched.
 - Record every runtime failure with exact script name, event/action, reproduction steps and expected vs actual behavior.
