@@ -17,12 +17,14 @@ local NPCService = require(script.Parent.Services.NPCService)
 local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
 local AUTOSAVE_INTERVAL = 60
 local NPC_INTERACTION_RANGE = 14
+local QUEST_REQUEST_INTERVAL = 0.15
 local INVENTORY_REQUEST_INTERVAL = 0.1
 local CRYSTAL_REQUEST_INTERVAL = 0.12
 local CRYSTAL_UPGRADE_INTERVAL = 0.25
-local nextInventoryRequest = {}
-local nextCrystalRequest = {}
-local nextCrystalUpgradeRequest = {}
+local nextQuestRequest = setmetatable({}, { __mode = "k" })
+local nextInventoryRequest = setmetatable({}, { __mode = "k" })
+local nextCrystalRequest = setmetatable({}, { __mode = "k" })
+local nextCrystalUpgradeRequest = setmetatable({}, { __mode = "k" })
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -45,6 +47,10 @@ end
 
 remotes.CombatRequest.OnServerEvent:Connect(function(player, action, target) CombatService.HandleRequest(player, action, target) end)
 remotes.QuestRequest.OnServerEvent:Connect(function(player, action, questId)
+	local now = os.clock()
+	if now < (nextQuestRequest[player] or 0) then return end
+	nextQuestRequest[player] = now + QUEST_REQUEST_INTERVAL
+
 	local profile = PlayerService.GetProfile(player)
 	if profile and action == "Start" and type(questId) == "string" then
 		if not isNearNPC(player, "CrystalKeeper") then
@@ -123,7 +129,7 @@ local function spawnSimpleNPC(npcs,name,position,objectText,actionText,callback)
 end
 local function spawnQuestGiver(npcs) spawnSimpleNPC(npcs,"CrystalKeeper",Vector3.new(12,3,-2),"Crystal Keeper","Talk",function() end) end
 local function spawnTrader(npcs) spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end) end
-local function spawnEnemy(npcs,typeId,position,uniqueName) if npcs:FindFirstChild(uniqueName) then return end; NPCService.CreateEnemy(typeId,position,npcs,function(_,config) task.delay(config.Respawn,function() if npcs.Parent then spawnEnemy(npcs,typeId,position,uniqueName) end end) end,uniqueName) end
+local function spawnEnemy(npcs,typeId,position,uniqueName) if npcs:FindFirstChild(uniqueName) then return end; NPCService.CreateEnemy(typeId,position,npcs,function(_,config) task.delay(config.Respawn,function() if npcs.Parent then spawnEnemy(npcs,typeId,position,uniqueName) end end,uniqueName) end,uniqueName) end
 local npcs,islands,spawnFolder=ensureWorldFolders(); local starterIsland=createIsland(islands,"StarterIsland",Vector3.new(0,0,0),Vector3.new(120,2,120)); local tideIsland=createIsland(islands,"TideIsland",Vector3.new(170,0,0),Vector3.new(100,2,100)); local windIsland=createIsland(islands,"WindIsland",Vector3.new(330,0,0),Vector3.new(110,2,110)); local ancientIsland=createIsland(islands,"AncientRuins",Vector3.new(500,0,0),Vector3.new(130,2,130))
 createSpawn(spawnFolder); createPortal(starterIsland,"TidePortal",Vector3.new(52,5,0),Vector3.new(120,4,0),4); createPortal(tideIsland,"StarterPortal",Vector3.new(118,5,0),Vector3.new(48,4,0),1); createPortal(tideIsland,"WindPortal",Vector3.new(218,5,0),Vector3.new(280,4,0),10); createPortal(windIsland,"TideReturnPortal",Vector3.new(278,5,0),Vector3.new(210,4,0),1); createPortal(windIsland,"AncientPortal",Vector3.new(390,5,0),Vector3.new(440,4,0),15); createPortal(ancientIsland,"WindReturnPortal",Vector3.new(440,5,50),Vector3.new(380,4,0),1)
 spawnQuestGiver(npcs); spawnTrader(npcs); spawnEnemy(npcs,"TrainingDummy",Vector3.new(0,1,-12),"TrainingDummy"); spawnEnemy(npcs,"Emberling",Vector3.new(30,1,-18),"EmberlingA"); spawnEnemy(npcs,"Emberling",Vector3.new(-30,1,-18),"EmberlingB"); spawnEnemy(npcs,"Tidecrawler",Vector3.new(160,1,-12),"TidecrawlerA"); spawnEnemy(npcs,"Tidecrawler",Vector3.new(190,1,15),"TidecrawlerB"); spawnEnemy(npcs,"Galewisp",Vector3.new(300,1,-18),"GalewispA"); spawnEnemy(npcs,"Galewisp",Vector3.new(340,1,20),"GalewispB"); spawnEnemy(npcs,"Galewisp",Vector3.new(370,1,-10),"GalewispC"); spawnEnemy(npcs,"CrystalBat",Vector3.new(475,1,-20),"CrystalBatA"); spawnEnemy(npcs,"CrystalBat",Vector3.new(525,1,-10),"CrystalBatB"); spawnEnemy(npcs,"AncientGolem",Vector3.new(500,1,25),"AncientGolemA"); if not npcs:FindFirstChild("CrystalGuardian") then BossService.CreateGuardian(Vector3.new(330,1,0),npcs,"CrystalGuardian") end
@@ -135,5 +141,5 @@ local function initializePlayer(player)
 	end
 	if not QuestSystem.IsActive(profile,"FIRST_FIGHT") and not QuestSystem.IsCompleted(profile,"FIRST_FIGHT") then QuestService.Start(player,profile,"FIRST_FIGHT") end
 end
-Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end)
-task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end end end)
+Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextQuestRequest[player] = nil; nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end)
+task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); nextQuestRequest[player] = nil; nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end end end)
