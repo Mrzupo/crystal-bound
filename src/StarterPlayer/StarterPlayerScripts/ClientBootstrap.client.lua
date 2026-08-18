@@ -16,11 +16,12 @@ local levelUp = remotes:WaitForChild("LevelUp")
 local inventoryChanged = remotes:WaitForChild("InventoryChanged")
 local crystalUpgradeRequest = remotes:WaitForChild("CrystalUpgradeRequest")
 local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+local shopConfig = require(ReplicatedStorage.Config.ShopConfig)
 local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
 local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
 
 local crystalOrder = { "EMBER", "TIDE", "GALE" }
-local sellOrder = { "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard" }
+local sellOrder = shopConfig.SellOrder or {}
 local inventory = {}
 local questRefreshBusy = false
 local questRefreshQueued = false
@@ -181,7 +182,7 @@ local function refreshHud()
 	local inv = panel:FindFirstChild("Inventory")
 	if inv then
 		local lines = {}
-		for _, itemId in ipairs({ "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard" }) do
+		for _, itemId in ipairs(sellOrder) do
 			local amount = tonumber(inventory[itemId]) or 0
 			table.insert(lines, itemId .. ": " .. tostring(amount))
 		end
