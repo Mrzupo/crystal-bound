@@ -32,7 +32,10 @@ local function getNearestPlayer(position, maxDistance)
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if humanoid and humanoid.Health > 0 and root then
 			local distance = (root.Position - position).Magnitude
-			if distance < nearestDistance then nearestDistance = distance; nearestCharacter = character end
+			if distance < nearestDistance then
+				nearestDistance = distance
+				nearestCharacter = character
+			end
 		end
 	end
 	return nearestCharacter, nearestDistance
@@ -61,20 +64,40 @@ local function attachHealthBar(model, humanoid, root)
 	local existing = root:FindFirstChild("EnemyHealthBar")
 	if existing then existing:Destroy() end
 	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "EnemyHealthBar"; billboard.Adornee = root; billboard.Size = UDim2.fromOffset(150, 34); billboard.StudsOffset = Vector3.new(0, 6.5, 0); billboard.AlwaysOnTop = true; billboard.Parent = root
+	billboard.Name = "EnemyHealthBar"
+	billboard.Adornee = root
+	billboard.Size = UDim2.fromOffset(150, 34)
+	billboard.StudsOffset = Vector3.new(0, 6.5, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Parent = root
 	local back = Instance.new("Frame")
-	back.Name = "Back"; back.Size = UDim2.new(1, 0, 0, 10); back.Position = UDim2.fromOffset(0, 20); back.BackgroundTransparency = 0.2; back.Parent = billboard; Instance.new("UICorner", back).CornerRadius = UDim.new(0, 4)
+	back.Name = "Back"
+	back.Size = UDim2.new(1, 0, 0, 10)
+	back.Position = UDim2.fromOffset(0, 20)
+	back.BackgroundTransparency = 0.2
+	back.Parent = billboard
+	Instance.new("UICorner", back).CornerRadius = UDim.new(0, 4)
 	local fill = Instance.new("Frame")
-	fill.Name = "Fill"; fill.Size = UDim2.fromScale(1, 1); fill.Parent = back; Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.Parent = back
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
 	local title = Instance.new("TextLabel")
-	title.Name = "Title"; title.Size = UDim2.new(1, 0, 0, 18); title.BackgroundTransparency = 1; title.Font = Enum.Font.GothamBold; title.TextSize = 12; title.Text = humanoid.DisplayName; title.Parent = billboard
+	title.Name = "Title"
+	title.Size = UDim2.new(1, 0, 0, 18)
+	title.BackgroundTransparency = 1
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 12
+	title.Text = humanoid.DisplayName
+	title.Parent = billboard
 	local function update()
 		local ratio = math.clamp(humanoid.Health / math.max(1, humanoid.MaxHealth), 0, 1)
 		fill.Size = UDim2.fromScale(ratio, 1)
 		title.Text = string.format("%s  %d/%d", humanoid.DisplayName, math.max(0, math.floor(humanoid.Health)), math.floor(humanoid.MaxHealth))
 		billboard.Enabled = humanoid.Health > 0
 	end
-	humanoid.HealthChanged:Connect(update); update()
+	humanoid.HealthChanged:Connect(update)
+	update()
 end
 
 local function applyVisualStyle(typeId, body, head)
@@ -87,64 +110,97 @@ local function applyVisualStyle(typeId, body, head)
 		AncientGolem = { Color = Color3.fromRGB(110, 105, 95), Material = Enum.Material.Rock, BodySize = Vector3.new(4.5, 5.5, 3.8), HeadSize = Vector3.new(3, 3, 3), HeadShape = Enum.PartType.Block },
 	}
 	local config = style[typeId] or style.TrainingDummy
-	body.Size = config.BodySize; head.Size = config.HeadSize; head.Shape = config.HeadShape
-	body.Color = config.Color; head.Color = config.Color; body.Material = config.Material; head.Material = config.Material
+	body.Size = config.BodySize
+	head.Size = config.HeadSize
+	head.Shape = config.HeadShape
+	body.Color = config.Color
+	head.Color = config.Color
+	body.Material = config.Material
+	head.Material = config.Material
 	if typeId == "Galewisp" or typeId == "CrystalBat" then
-		local light = Instance.new("PointLight"); light.Color = config.Color; light.Range = 8; light.Brightness = 1.5; light.Parent = head
+		local light = Instance.new("PointLight")
+		light.Color = config.Color
+		light.Range = 8
+		light.Brightness = 1.5
+		light.Parent = head
 	end
 	if typeId == "Emberling" or typeId == "Tidecrawler" or typeId == "AncientGolem" then
-		local aura = Instance.new("SelectionBox"); aura.Name = "CrystalAura"; aura.Adornee = body; aura.LineThickness = 0.03; aura.SurfaceTransparency = 1; aura.Color3 = config.Color; aura.Parent = body
+		local aura = Instance.new("SelectionBox")
+		aura.Name = "CrystalAura"
+		aura.Adornee = body
+		aura.LineThickness = 0.03
+		aura.SurfaceTransparency = 1
+		aura.Color3 = config.Color
+		aura.Parent = body
 	end
 end
 
 local function emitSpecialEffect(position, color, radius)
 	local part = Instance.new("Part")
-	part.Anchored = true; part.CanCollide = false; part.CanTouch = false; part.CanQuery = false; part.Shape = Enum.PartType.Ball; part.Material = Enum.Material.Neon; part.Color = color; part.Size = Vector3.new(2, 2, 2); part.CFrame = CFrame.new(position); part.Transparency = 0.2; part.Parent = workspace
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Shape = Enum.PartType.Ball
+	part.Material = Enum.Material.Neon
+	part.Color = color
+	part.Size = Vector3.new(2, 2, 2)
+	part.CFrame = CFrame.new(position)
+	part.Transparency = 0.2
+	part.Parent = workspace
 	TweenService:Create(part, TweenInfo.new(0.3), { Size = Vector3.new(radius, radius, radius), Transparency = 1 }):Play()
-	task.delay(0.35, function() if part.Parent then part:Destroy() end end)
+	task.delay(0.35, function()
+		if part.Parent then part:Destroy() end
+	end)
 end
 
-local function damagePlayer(player, humanoid, amount)
+local function damagePlayer(player, humanoid, amount, attacker, damageType, range)
 	if not player or not humanoid or humanoid.Health <= 0 then return false end
-	return DodgeService.ApplyDamage(player, humanoid, math.max(0, amount))
+	return DodgeService.ApplyDamage(player, humanoid, math.max(0, amount), attacker, damageType or "Physical", range)
 end
 
 local function specialAttack(typeId, model, character, targetHumanoid, targetRoot, root)
-	local baseDamage = EnemyConfig.Get(typeId).AttackDamage
+	local config = EnemyConfig.Get(typeId)
+	local baseDamage = config.AttackDamage
 	local player = character and Players:GetPlayerFromCharacter(character)
 	if not player then return end
 	if typeId == "Emberling" then
-		if (targetRoot.Position - root.Position).Magnitude <= 14 then
+		local range = 14
+		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(255, 90, 30), 6)
-			damagePlayer(player, targetHumanoid, baseDamage + 6)
-			StatusEffectService.ApplyBurn(targetHumanoid, 2, 3, 0.6)
+			damagePlayer(player, targetHumanoid, baseDamage + 6, model, "Physical", range)
+			StatusEffectService.ApplyBurn(targetHumanoid, 2, 3, 0.6, model, range)
 		end
 	elseif typeId == "Tidecrawler" then
-		if (targetRoot.Position - root.Position).Magnitude <= 10 then
+		local range = 10
+		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
-			damagePlayer(player, targetHumanoid, baseDamage + 3)
+			damagePlayer(player, targetHumanoid, baseDamage + 3, model, "Physical", range)
 			StatusEffectService.ApplySlow(targetHumanoid, 0.65, 1.5)
 		end
 	elseif typeId == "Galewisp" then
 		local direction = targetRoot.Position - root.Position
-		if direction.Magnitude > 0.1 and direction.Magnitude <= 18 then
+		local range = 18
+		if direction.Magnitude > 0.1 and direction.Magnitude <= range then
 			emitSpecialEffect(root.Position, Color3.fromRGB(175, 120, 255), 8)
 			model:PivotTo(CFrame.lookAt(targetRoot.Position - direction.Unit * 4, targetRoot.Position))
-			damagePlayer(player, targetHumanoid, baseDamage + 8)
+			damagePlayer(player, targetHumanoid, baseDamage + 8, model, "Physical", range)
 		end
 	elseif typeId == "CrystalBat" then
-		if (targetRoot.Position - root.Position).Magnitude <= 12 then
+		local range = 12
+		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(80, 255, 240), 5)
-			damagePlayer(player, targetHumanoid, baseDamage + 5)
+			damagePlayer(player, targetHumanoid, baseDamage + 5, model, "Physical", range)
 		end
 	elseif typeId == "AncientGolem" then
+		local range = 10
 		emitSpecialEffect(root.Position, Color3.fromRGB(150, 140, 125), 12)
 		for _, otherPlayer in ipairs(Players:GetPlayers()) do
 			local otherCharacter = otherPlayer.Character
 			local otherHumanoid = otherCharacter and otherCharacter:FindFirstChildOfClass("Humanoid")
 			local otherRoot = otherCharacter and otherCharacter:FindFirstChild("HumanoidRootPart")
-			if otherHumanoid and otherHumanoid.Health > 0 and otherRoot and (otherRoot.Position - root.Position).Magnitude <= 10 then
-				damagePlayer(otherPlayer, otherHumanoid, baseDamage + 10)
+			if otherHumanoid and otherHumanoid.Health > 0 and otherRoot and (otherRoot.Position - root.Position).Magnitude <= range then
+				damagePlayer(otherPlayer, otherHumanoid, baseDamage + 10, model, "Physical", range)
 			end
 		end
 	end
@@ -157,7 +213,9 @@ function NPCService.StartEnemyAI(model)
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
 	if not humanoid or not root or config.AggroRange <= 0 then return end
 	local homePosition = root.Position
-	model:SetAttribute("HomeX", homePosition.X); model:SetAttribute("HomeY", homePosition.Y); model:SetAttribute("HomeZ", homePosition.Z)
+	model:SetAttribute("HomeX", homePosition.X)
+	model:SetAttribute("HomeY", homePosition.Y)
+	model:SetAttribute("HomeZ", homePosition.Z)
 	task.spawn(function()
 		local nextAttack, nextSpecial = 0, os.clock() + 3
 		local leashDistance = math.max(config.AggroRange * 1.8, 50)
@@ -174,11 +232,13 @@ function NPCService.StartEnemyAI(model)
 						if steer.Magnitude > 0.1 then
 							local step = math.min(0.9, direction.Magnitude)
 							local nextPosition = root.Position + steer.Unit * step
-							if (nextPosition - homePosition).Magnitude <= leashDistance then model:PivotTo(CFrame.lookAt(nextPosition, targetRoot.Position)) end
+							if (nextPosition - homePosition).Magnitude <= leashDistance then
+								model:PivotTo(CFrame.lookAt(nextPosition, targetRoot.Position))
+							end
 						end
 					elseif os.clock() >= nextAttack then
 						nextAttack = os.clock() + math.max(0.25, config.AttackCooldown)
-						damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage)
+						damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage, model, "Physical", config.AttackRange)
 					end
 					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" and distance <= math.max(config.AttackRange * 2, 10) then
 						nextSpecial = os.clock() + 6
@@ -208,21 +268,58 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local config = EnemyConfig.Get(typeId)
 	local model = Instance.new("Model")
 	model.Name = uniqueName or config.DisplayName:gsub("%s+", "")
-	model:SetAttribute("Enemy", true); model:SetAttribute("EnemyType", typeId); model:SetAttribute("RewardXP", config.XP); model:SetAttribute("RewardMoney", config.Money)
-	model:SetAttribute("SpawnX", position.X); model:SetAttribute("SpawnY", position.Y); model:SetAttribute("SpawnZ", position.Z); model.Parent = parent
-	local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Size = Vector3.new(2, 2, 1); root.Position = position + Vector3.new(0, 3, 0); root.Transparency = 1; root.Anchored = true; root.CanCollide = false; root.Parent = model
-	local body = Instance.new("Part"); body.Name = "Body"; body.Size = Vector3.new(3, 4, 2); body.Position = position + Vector3.new(0, 4, 0); body.Anchored = true; body.Parent = model
-	local head = Instance.new("Part"); head.Name = "Head"; head.Shape = Enum.PartType.Ball; head.Size = Vector3.new(2, 2, 2); head.Position = position + Vector3.new(0, 7, 0); head.Anchored = true; head.Parent = model
+	model:SetAttribute("Enemy", true)
+	model:SetAttribute("EnemyType", typeId)
+	model:SetAttribute("RewardXP", config.XP)
+	model:SetAttribute("RewardMoney", config.Money)
+	model:SetAttribute("SpawnX", position.X)
+	model:SetAttribute("SpawnY", position.Y)
+	model:SetAttribute("SpawnZ", position.Z)
+	model.Parent = parent
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 2, 1)
+	root.Position = position + Vector3.new(0, 3, 0)
+	root.Transparency = 1
+	root.Anchored = true
+	root.CanCollide = false
+	root.Parent = model
+	local body = Instance.new("Part")
+	body.Name = "Body"
+	body.Size = Vector3.new(3, 4, 2)
+	body.Position = position + Vector3.new(0, 4, 0)
+	body.Anchored = true
+	body.Parent = model
+	local head = Instance.new("Part")
+	head.Name = "Head"
+	head.Shape = Enum.PartType.Ball
+	head.Size = Vector3.new(2, 2, 2)
+	head.Position = position + Vector3.new(0, 7, 0)
+	head.Anchored = true
+	head.Parent = model
 	applyVisualStyle(typeId, body, head)
-	local humanoid = Instance.new("Humanoid"); humanoid.MaxHealth = config.Health; humanoid.Health = config.Health; humanoid.DisplayName = config.DisplayName; humanoid.Parent = model
-	local weldA = Instance.new("WeldConstraint"); weldA.Part0 = root; weldA.Part1 = body; weldA.Parent = root
-	local weldB = Instance.new("WeldConstraint"); weldB.Part0 = body; weldB.Part1 = head; weldB.Parent = body
-	model.PrimaryPart = root; attachHealthBar(model, humanoid, root)
+	local humanoid = Instance.new("Humanoid")
+	humanoid.MaxHealth = config.Health
+	humanoid.Health = config.Health
+	humanoid.DisplayName = config.DisplayName
+	humanoid.Parent = model
+	local weldA = Instance.new("WeldConstraint")
+	weldA.Part0 = root
+	weldA.Part1 = body
+	weldA.Parent = root
+	local weldB = Instance.new("WeldConstraint")
+	weldB.Part0 = body
+	weldB.Part1 = head
+	weldB.Parent = body
+	model.PrimaryPart = root
+	attachHealthBar(model, humanoid, root)
 	humanoid.Died:Connect(function()
 		AIPathService.Clear(model)
 		StatusEffectService.Clear(humanoid)
 		if onDeath then onDeath(model, config) end
-		task.delay(1.5, function() if model.Parent then model:Destroy() end end)
+		task.delay(1.5, function()
+			if model.Parent then model:Destroy() end
+		end)
 	end)
 	NPCService.StartEnemyAI(model)
 	return model
