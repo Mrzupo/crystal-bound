@@ -5,8 +5,8 @@ local XPConfig = require(game.ReplicatedStorage.Config.XPConfig)
 local CrystalConfig = require(game.ReplicatedStorage.Config.CrystalConfig)
 local CrystalUpgradeConfig = require(game.ReplicatedStorage.Config.CrystalUpgradeConfig)
 local WorldConfig = require(game.ReplicatedStorage.Config.WorldConfig)
-local AchievementSystem = require(script.Parent.AchievementSystem)
-local QuestSystem = require(script.Parent.QuestSystem)
+local AchievementSystem = require(game.ReplicatedStorage.Modules.AchievementSystem)
+local QuestSystem = require(game.ReplicatedStorage.Modules.QuestSystem)
 
 local VALID_BOUNTY_ENEMIES = {
 	Emberling = true,
@@ -108,6 +108,7 @@ function PlayerData.Reconcile(data)
 	data = type(data) == "table" and data or {}
 	local oldVersion = tonumber(data.Version) or 0
 	local masteryMaxLevel = math.max(1, math.floor(tonumber(CrystalUpgradeConfig.MaxLevel) or 10))
+	local masteryMaxXP = math.max(0, math.floor(tonumber(CrystalUpgradeConfig.MaxExperience) or 100000000))
 
 	local function merge(target, fallback)
 		for key, value in pairs(fallback) do
@@ -136,7 +137,7 @@ function PlayerData.Reconcile(data)
 		local source = type(sourceMastery[crystalId]) == "table" and sourceMastery[crystalId] or {}
 		local mastery = {
 			Level = clampInt(source.Level, 1, masteryMaxLevel, 1),
-			XP = clampInt(source.XP, 0, 100000000, 0),
+			XP = clampInt(source.XP, 0, masteryMaxXP, 0),
 		}
 		if mastery.Level >= masteryMaxLevel then mastery.XP = 0 end
 		normalizedMastery[crystalId] = mastery
