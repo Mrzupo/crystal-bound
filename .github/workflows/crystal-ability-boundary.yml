@@ -20,6 +20,8 @@ jobs:
           combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
           ability = Path("src/ServerScriptService/Services/CrystalAbilityService.lua")
           ability_text = ability.read_text(encoding="utf-8") if ability.is_file() else ""
+          mastery = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           rojo = Path("default.project.json").read_text(encoding="utf-8")
 
           problems = []
@@ -29,6 +31,12 @@ jobs:
               problems.append("CombatService must depend on CrystalAbilityService")
           if "function CrystalAbilityService.Execute" not in ability_text:
               problems.append("CrystalAbilityService.Execute is missing")
+          if "function CrystalMastery.Upgrade" not in mastery:
+              problems.append("CrystalMastery.Upgrade is missing")
+          if "CrystalMastery.Upgrade(profile, crystalId)" not in bootstrap:
+              problems.append("Bootstrap must use CrystalMastery.Upgrade")
+          if "mastery.Level += 1" in bootstrap:
+              problems.append("Bootstrap must not mutate mastery level directly")
           if "CrystalAbilityService" not in rojo:
               problems.append("CrystalAbilityService is missing from default.project.json")
           if "if crystalId == \"TIDE\"" in combat or "elseif crystalId == \"GALE\"" in combat:
@@ -39,4 +47,4 @@ jobs:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("Crystal ability service boundary validated.")
+          print("Crystal ability/mastery service boundary validated.")
