@@ -68,6 +68,9 @@ function QuestSystem.CanStart(profile, questId)
 	if QuestSystem.IsActive(profile, questId) or QuestSystem.IsCompleted(profile, questId) then
 		return false, "Quest already started or completed."
 	end
+	if #(profile.ActiveQuests or {}) > 0 then
+		return false, "Finish your active quest first."
+	end
 	if (profile.Level or 1) < (definition.MinLevel or 1) then
 		return false, string.format("Reach level %d.", definition.MinLevel or 1)
 	end
