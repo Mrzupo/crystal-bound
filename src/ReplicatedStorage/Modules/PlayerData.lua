@@ -19,6 +19,15 @@ local VALID_ACHIEVEMENTS = {
 	LEVEL_20 = true,
 }
 
+local ACHIEVEMENT_TITLES = {
+	FIRST_BLOOD = "Fighter",
+	CRYSTAL_KEEPER = "Crystal Keeper",
+	MASTER_OF_ONE = "Crystal Master",
+	GUARDIAN_SLAYER = "Guardian Slayer",
+	ANCIENT_EXPLORER = "Ruins Explorer",
+	LEVEL_20 = "Veteran",
+}
+
 local VALID_TITLES = {
 	Fighter = true,
 	["Crystal Keeper"] = true,
@@ -93,7 +102,7 @@ end
 
 function PlayerData.new()
 	return {
-		Version = 12,
+		Version = 13,
 		Level = 1,
 		Experience = 0,
 		Crystals = { Owned = { "EMBER" }, Equipped = "EMBER" },
@@ -157,8 +166,16 @@ function PlayerData.Reconcile(data)
 	data.Stats.AncientGolemsDefeated = clampInt(data.Stats.AncientGolemsDefeated, 0, 100000000, 0)
 	data.Stats.CrystalBatsDefeated = clampInt(data.Stats.CrystalBatsDefeated, 0, 100000000, 0)
 
-	data.Titles = normalizeList(data.Titles, function(title) return VALID_TITLES[title] end)
 	data.Achievements = normalizeList(data.Achievements, function(id) return VALID_ACHIEVEMENTS[id] end)
+	local achievementSet = {}
+	for _, achievementId in ipairs(data.Achievements) do achievementSet[achievementId] = true end
+	data.Titles = normalizeList(data.Titles, function(title)
+		if not VALID_TITLES[title] then return false end
+		for achievementId, expectedTitle in pairs(ACHIEVEMENT_TITLES) do
+			if expectedTitle == title and achievementSet[achievementId] then return true end
+		end
+		return false
+	end)
 	data.Inventory = normalizeInventory(data.Inventory)
 	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
 	data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)
