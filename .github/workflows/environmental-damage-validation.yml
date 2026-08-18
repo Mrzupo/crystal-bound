@@ -16,7 +16,7 @@ jobs:
           damage = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
           status = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
           arena = Path('src/ServerScriptService/BossArena.server.lua').read_text(encoding='utf-8')
-          if 'DamageType.Environmental and request.Attacker == nil' not in damage:
+          if 'DamageType == DamageTypes.Environmental and request.Attacker == nil' not in damage:
               raise SystemExit('DamageService missing explicit attacker-less Environmental gate')
           if 'DamageType = DamageTypes.Environmental' not in status:
               raise SystemExit('StatusEffectService environmental burn path missing explicit type')
