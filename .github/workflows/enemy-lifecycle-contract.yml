@@ -1,0 +1,31 @@
+name: Enemy Lifecycle Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-enemy-lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate enemy lifecycle guards
+        shell: python
+        run: |
+          from pathlib import Path
+          npc = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
+          checks = [
+              ("enemy model tagged", 'model:SetAttribute("Enemy", true)'),
+              ("enemy type stored", 'model:SetAttribute("EnemyType", typeId)'),
+              ("AI only while alive", "while model.Parent and humanoid.Health > 0 do"),
+              ("AI clears path state", "AIPathService.Clear(model)"),
+              ("AI clears status effects", "StatusEffectService.Clear(humanoid)"),
+              ("death destroys model", "task.delay(1.5, function()"),
+          ]
+          failures = [name for name, marker in checks if marker not in npc]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Enemy lifecycle contract validated.")
