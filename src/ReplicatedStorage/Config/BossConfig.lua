@@ -13,12 +13,23 @@ return {
 		AbilityCooldown = 6,
 		AbilityRadius = 14,
 		AbilityDamage = 45,
+		Phase2 = {
+			HealthThreshold = 0.5,
+			AttackCooldown = 1.0,
+			AttackDamageMultiplier = 1.35,
+			AbilityRangeMultiplier = 1.5,
+		},
 		Telegraph = {
 			Cooldown = 5.5,
 			Windup = 0.8,
 			Radius = 8,
 			Damage = 32,
 			TargetRange = 70,
+		},
+		ArenaHazard = {
+			Damage = 4,
+			HalfExtent = 23,
+			Interval = 0.75,
 		},
 		Drop = "GuardianCore",
 	},
