@@ -2,6 +2,12 @@ local Config = require(game.ReplicatedStorage.Config.CrystalUpgradeConfig)
 
 local CrystalMastery = {}
 
+local function finiteNumber(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
+
 local function ensure(profile, crystalId)
 	profile.CrystalMastery = profile.CrystalMastery or {}
 	local mastery = profile.CrystalMastery[crystalId]
@@ -9,8 +15,8 @@ local function ensure(profile, crystalId)
 		mastery = { Level = 1, XP = 0 }
 		profile.CrystalMastery[crystalId] = mastery
 	end
-	mastery.Level = math.clamp(math.floor(tonumber(mastery.Level) or 1), 1, Config.MaxLevel)
-	mastery.XP = math.max(0, math.floor(tonumber(mastery.XP) or 0))
+	mastery.Level = math.clamp(math.floor(finiteNumber(mastery.Level) or 1), 1, Config.MaxLevel)
+	mastery.XP = math.max(0, math.floor(finiteNumber(mastery.XP) or 0))
 	if mastery.Level >= Config.MaxLevel then mastery.XP = 0 end
 	return mastery
 end
@@ -20,7 +26,10 @@ function CrystalMastery.Get(profile, crystalId)
 end
 
 function CrystalMastery.GetRequiredXP(level)
-	return math.floor(Config.BaseXP * (math.max(1, level) ^ Config.Growth))
+	local safeLevel = math.max(1, math.floor(finiteNumber(level) or 1))
+	local growth = math.max(0, finiteNumber(Config.Growth) or 0)
+	local baseXP = math.max(0, finiteNumber(Config.BaseXP) or 0)
+	return math.floor(baseXP * (safeLevel ^ growth))
 end
 
 function CrystalMastery.AddXP(profile, crystalId, amount)
@@ -29,7 +38,7 @@ function CrystalMastery.AddXP(profile, crystalId, amount)
 		mastery.XP = 0
 		return mastery.Level, mastery.XP, 0
 	end
-	mastery.XP = math.min(100000000, mastery.XP + math.max(0, math.floor(tonumber(amount) or 0)))
+	mastery.XP = math.min(100000000, mastery.XP + math.max(0, math.floor(finiteNumber(amount) or 0)))
 	local levels = 0
 	while mastery.Level < Config.MaxLevel do
 		local required = CrystalMastery.GetRequiredXP(mastery.Level)
@@ -46,10 +55,10 @@ function CrystalMastery.GetBonuses(profile, crystalId)
 	local mastery = ensure(profile, crystalId)
 	local extra = mastery.Level - 1
 	return {
-		DamageMultiplier = 1 + extra * Config.DamagePerLevel,
-		AbilityDamageMultiplier = 1 + extra * Config.AbilityDamagePerLevel,
-		MaxHealthBonus = extra * Config.HealthPerLevel,
-		WalkSpeedBonus = extra * Config.SpeedPerLevel,
+		DamageMultiplier = 1 + extra * (finiteNumber(Config.DamagePerLevel) or 0),
+		AbilityDamageMultiplier = 1 + extra * (finiteNumber(Config.AbilityDamagePerLevel) or 0),
+		MaxHealthBonus = extra * (finiteNumber(Config.HealthPerLevel) or 0),
+		WalkSpeedBonus = extra * (finiteNumber(Config.SpeedPerLevel) or 0),
 	}
 end
 
@@ -60,7 +69,8 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	local cost = {}
 	local multiplier = mastery.Level
 	for itemId, amount in pairs(base) do
-		cost[itemId] = amount * multiplier
+		local safeAmount = math.max(0, math.floor(finiteNumber(amount) or 0))
+		cost[itemId] = safeAmount * multiplier
 	end
 	return cost
 end
