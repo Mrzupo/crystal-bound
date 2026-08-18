@@ -1,0 +1,39 @@
+name: Achievement Canonical Source Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-achievement-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate centralized achievement definitions
+        shell: python
+        run: |
+          from pathlib import Path
+          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          menu = Path("src/StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua").read_text(encoding="utf-8")
+          system = Path("src/ReplicatedStorage/Modules/AchievementSystem.lua").read_text(encoding="utf-8")
+          for marker in ("GetOrdered", "IsValidTitle", "AchievementSystem.Get"):
+              if marker not in system:
+                  raise SystemExit(f"AchievementSystem missing canonical API: {marker}")
+          if "AchievementSystem = require(script.Parent.AchievementSystem)" not in player_data:
+              raise SystemExit("PlayerData must consume AchievementSystem")
+          if "AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)" not in menu:
+              raise SystemExit("AchievementMenu must consume AchievementSystem")
+          forbidden = ("FIRST_BLOOD =", "CRYSTAL_KEEPER =", "MASTER_OF_ONE =", "GUARDIAN_SLAYER =", "ANCIENT_EXPLORER =", "LEVEL_20 =")
+          duplicate_locations = []
+          for path in (Path("src/ReplicatedStorage/Modules/PlayerData.lua"), Path("src/StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua")):
+              text = path.read_text(encoding="utf-8")
+              for marker in forbidden:
+                  if marker in text:
+                      duplicate_locations.append(f"{path}: {marker}")
+          if duplicate_locations:
+              print("Hard-coded achievement definition remnants:")
+              for item in duplicate_locations:
+                  print(f" - {item}")
+              raise SystemExit(1)
+          print("Achievement canonical source contract validated.")
