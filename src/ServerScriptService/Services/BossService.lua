@@ -154,9 +154,10 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 						nextAttack = os.clock() + attackCooldown
 						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", config.AttackRange)
 					end
-					if os.clock() >= nextAbility and nearestDistance <= config.AbilityRadius * (phase == 2 and phase2.AbilityRangeMultiplier or 1) then
+					local abilityRadius = math.max(0, finiteNumber(config.AbilityRadius, 0)) * (phase == 2 and phase2.AbilityRangeMultiplier or 1)
+					if os.clock() >= nextAbility and nearestDistance <= abilityRadius then
 						nextAbility = os.clock() + math.max(0.1, finiteNumber(config.AbilityCooldown, 6))
-						shockwave(root.Position, math.max(0, finiteNumber(config.AbilityRadius, 0)), math.max(0, finiteNumber(config.AbilityDamage, 0)), model)
+						shockwave(root.Position, abilityRadius, math.max(0, finiteNumber(config.AbilityDamage, 0)), model)
 					end
 				end
 			end
