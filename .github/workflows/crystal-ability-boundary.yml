@@ -19,6 +19,7 @@ jobs:
 
           combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
           ability = Path("src/ServerScriptService/Services/CrystalAbilityService.lua")
+          ability_text = ability.read_text(encoding="utf-8") if ability.is_file() else ""
           rojo = Path("default.project.json").read_text(encoding="utf-8")
 
           problems = []
@@ -26,11 +27,10 @@ jobs:
               problems.append("CrystalAbilityService.lua is missing")
           if "CrystalAbilityService" not in combat:
               problems.append("CombatService must depend on CrystalAbilityService")
-          if "function CrystalAbilityService.Execute" not in ability.read_text(encoding="utf-8"):
+          if "function CrystalAbilityService.Execute" not in ability_text:
               problems.append("CrystalAbilityService.Execute is missing")
-          for marker in ("CrystalAbilityService":):
-              if marker not in rojo:
-                  problems.append("CrystalAbilityService is missing from default.project.json")
+          if "CrystalAbilityService" not in rojo:
+              problems.append("CrystalAbilityService is missing from default.project.json")
           if "if crystalId == \"TIDE\"" in combat or "elseif crystalId == \"GALE\"" in combat:
               problems.append("Crystal-specific special branches must live in CrystalAbilityService")
 
