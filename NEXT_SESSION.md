@@ -3,11 +3,11 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **410 commits ahead, 13 commits behind** `main`
+- Current compare: **410 commits ahead, 13 commits behind** `main` before the latest session commits.
 - `main` has not been merged/overwritten.
 
 ## Current state
-The branch contains the complete Rojo project foundation plus the current gameplay stack. The repository is now in a **hardening + integration** phase rather than a blank-project phase.
+The branch contains the complete Rojo project foundation plus the current gameplay stack. The repository is now in a **hardening + integration + combat presentation** phase rather than a blank-project phase.
 
 The current master design context is authoritative: Crystal Bound is an original PvE-first open-world action RPG; the White Queen intro, first-loss setup, Ancient Crystal lore, Ancient-as-category (not rarity), Common→Divine rarity ladder, multiple-world long-term mystery, and no-Codex working mode must remain intact.
 
@@ -48,7 +48,16 @@ The current master design context is authoritative: Crystal Bound is an original
 - `remote-handler-validation.yml` checks unique `OnServerInvoke` ownership.
 - `StatusSpeedGuardV2` is the active Rojo speed guard; legacy V1 is not loaded by `default.project.json`.
 - The old unsafe `SaveSystem.lua` is not loaded/used.
-- `ClientBootstrap.client.lua` now throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
+- `ClientBootstrap.client.lua` throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
+- Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs for EMBER/TIDE/GALE.
+- Added `CrystalAnimationController.client.lua`, which owns client-side `Animator`/`AnimationTrack` loading, priority, fade and playback.
+- Wired Basic click and Q Ability input through `CrystalAnimationController` before the existing `CombatRequest`; server validation and damage authority were not changed.
+- Registered the new animation config/controller in `default.project.json`.
+
+## Animation status
+The animation architecture is now in place, but the asset IDs are intentionally empty until real Roblox animations are published. Therefore this is **not yet a claim of real in-game attack animations**. The controller safely no-ops when an ID is missing.
+
+Next presentation task is to create/publish the actual EMBER Basic + Flame Burst animations first, then TIDE and GALE. Keep asset IDs out of `CombatService` and never let animation timing determine server damage authority.
 
 ## Quality assessment
 - **Architecture:** strong for a prototype; server authority is clear and gameplay services are separated.
@@ -60,15 +69,18 @@ The current master design context is authoritative: Crystal Bound is an original
 ## Known limitations
 - No real Roblox Studio runtime/playtest has been executed in this environment.
 - No Luau interpreter is available here, so Luau syntax has only been statically/structurally reviewed, not executed.
-- GitHub Actions must be checked on the actual latest commit before claiming CI is green; the current head has no reported status entries.
+- GitHub Actions must be checked on the actual latest commit before claiming CI is green; the current head has not been verified as CI-green in this session.
 - `src/ServerScriptService/StatusSpeedGuard.server.lua` may still physically exist as a legacy file, but it is not referenced by `default.project.json`.
+- Actual Roblox animation asset IDs are not available yet.
 
-## Exact next step
-1. Re-check current commit/status and RemoteFunction handler ownership.
-2. Review `CooldownAuthority.client.lua` and the main client HUD for remaining duplicate render/update work.
-3. Keep the combat pipeline server-authoritative while preparing the animation architecture.
-4. Design the first real attack/ability animation layer for EMBER/TIDE/GALE without changing the established combat validation pipeline.
-5. Then prepare asset-based VFX/particles and the first Roblox Studio runtime/playtest.
+## Exact next steps
+1. Verify the latest branch commit and CI status.
+2. Audit `CrystalAnimationController.client.lua` and the Rojo mapping for syntax/reference issues.
+3. Create the first real EMBER attack/ability animation assets and wire their published IDs into `CrystalAnimationConfig.lua`.
+4. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
+5. Add crystal-specific client VFX/audio presentation after EMBER animation playback is stable.
+6. Repeat the same presentation contract for TIDE and GALE.
+7. Then prepare the first Roblox Studio runtime/playtest and record actual combat/animation issues.
 
 ## Do not do
 - Do not merge this branch into `main` yet.
@@ -76,6 +88,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - Do not reintroduce the legacy SaveSystem or legacy StatusSpeedGuard into Rojo.
 - Do not claim runtime-tested or CI-green without a verified GitHub status.
 - Do not change the White Queen intro, first-loss setup, Ancient Crystal lore, or the long-term secret second-world plan without explicit project-owner approval.
+- Do not put gameplay authority into client animation markers.
 
 ## Useful files
 - `default.project.json`
@@ -88,5 +101,8 @@ The current master design context is authoritative: Crystal Bound is an original
 - `src/ServerScriptService/Services/CombatService.lua`
 - `src/ServerScriptService/Services/PlayerService.lua`
 - `src/ReplicatedStorage/Modules/PlayerData.lua`
+- `src/ReplicatedStorage/Config/CrystalConfig.lua`
+- `src/ReplicatedStorage/Config/CrystalAnimationConfig.lua`
 - `src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua`
+- `src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua`
 - `src/StarterPlayer/StarterPlayerScripts/CooldownAuthority.client.lua`
