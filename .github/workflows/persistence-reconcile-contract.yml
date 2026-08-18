@@ -1,0 +1,31 @@
+name: Persistence Reconcile Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate profile reconciliation boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ReplicatedStorage/Modules/PlayerData.lua').read_text(encoding='utf-8')
+          required = [
+              'data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel',
+              'data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney',
+              'data.CrystalMastery = normalizedMastery',
+              'data.Inventory = normalizeInventory(data.Inventory)',
+              'data.ActiveQuests = filteredActive',
+              'data.UnlockedIslands = normalizeList(data.UnlockedIslands',
+              'data.SessionLock = { JobId = jobId, Timestamp = sessionTimestamp }',
+              'data.Version = defaults.Version',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing persistence reconcile contract: ' + ', '.join(missing))
+          print('Persistence reconcile contract validated.')
+          PY
