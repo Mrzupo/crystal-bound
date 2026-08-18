@@ -166,7 +166,7 @@ local function ensureGui()
 	hint.Position = UDim2.fromOffset(18, 432)
 	hint.Size = UDim2.fromOffset(564, 24)
 	hint.BackgroundTransparency = 1
-	hint.Text = "O = Händler   •   P = Potion benutzen (global)"
+	hint.Text = "O = Händler   •   P = Potion benutzen"
 	hint.Font = Enum.Font.Gotham
 	hint.TextSize = 13
 	hint.TextXAlignment = Enum.TextXAlignment.Right
@@ -177,6 +177,11 @@ end
 
 local gui = ensureGui()
 local panel = gui.Panel
+
+local function usePotion()
+	if (tonumber(inventory[potionConfig.ItemId]) or 0) <= 0 then return end
+	useItemRequest:FireServer(potionConfig.ItemId)
+end
 
 local function refresh()
 	for _, item in ipairs(sellable) do
@@ -214,6 +219,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.O then
 		if open then open = false; panel.Visible = false else openMenu() end
+	elseif input.KeyCode == Enum.KeyCode.P then
+		usePotion()
 	end
 end)
 
