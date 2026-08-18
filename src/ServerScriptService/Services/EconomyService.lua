@@ -10,17 +10,15 @@ local function finiteNumber(value)
 	return number
 end
 
-local function positiveInteger(value)
+local function nonNegativeInteger(value)
 	local number = finiteNumber(value)
-	if number == nil then return nil end
-	number = math.floor(number)
-	if number <= 0 then return nil end
+	if number == nil or number < 0 or number % 1 ~= 0 then return nil end
 	return number
 end
 
 function EconomyService.AddMoney(profile, amount)
-	amount = finiteNumber(amount)
-	if amount == nil or amount < 0 then return false, 0 end
+	amount = nonNegativeInteger(amount)
+	if amount == nil then return false, 0 end
 	local before = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 	profile.Money = before
 	local nextMoney = math.clamp(before + amount, Config.MinMoney, Config.MaxMoney)
@@ -29,8 +27,8 @@ function EconomyService.AddMoney(profile, amount)
 end
 
 function EconomyService.RemoveMoney(profile, amount)
-	amount = finiteNumber(amount)
-	if amount == nil or amount < 0 then return false end
+	amount = nonNegativeInteger(amount)
+	if amount == nil then return false end
 	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 	profile.Money = current
 	if current < amount then return false end
@@ -45,8 +43,8 @@ function EconomyService.GetMoney(profile)
 end
 
 function EconomyService.CanAfford(profile, amount)
-	amount = finiteNumber(amount)
-	if amount == nil or amount < 0 then return false end
+	amount = nonNegativeInteger(amount)
+	if amount == nil then return false end
 	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 	profile.Money = current
 	return current >= amount
@@ -54,13 +52,13 @@ end
 
 function EconomyService.GetSellPrice(itemId)
 	local item = InventoryConfig.GetItemConfig(itemId)
-	local price = item and finiteNumber(item.SellPrice) or 0
-	return math.max(0, price)
+	local price = item and nonNegativeInteger(item.SellPrice) or 0
+	return math.max(0, price or 0)
 end
 
 function EconomyService.SellItem(profile, itemId, amount, InventoryService)
-	amount = positiveInteger(amount)
-	if not amount then return false, 0 end
+	amount = nonNegativeInteger(amount)
+	if not amount or amount <= 0 then return false, 0 end
 	local price = EconomyService.GetSellPrice(itemId)
 	if price <= 0 or not InventoryService.HasItem(profile, itemId, amount) then
 		return false, 0
