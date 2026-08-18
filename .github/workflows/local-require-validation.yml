@@ -21,7 +21,7 @@ jobs:
           problems = []
 
           def resolve(source, chain):
-              current = source.parent
+              current = source
               parts = chain.split(".")[1:]
               for part in parts:
                   if part == "Parent":
