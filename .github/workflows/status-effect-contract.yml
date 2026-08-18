@@ -1,0 +1,32 @@
+name: Status Effect Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-status-effects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate status effect bounds and damage routing
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
+          checks = [
+              ("slow lower bound", "math.clamp(tonumber(multiplier) or 0.8, 0.2, 1)",),
+              ("slow duration bound", "math.clamp(tonumber(duration) or 1, 0.1, 10)",),
+              ("burn damage bound", "math.clamp(tonumber(damagePerTick) or 3, 1, 100)",),
+              ("burn tick bound", "math.clamp(math.floor(tonumber(ticks) or 3), 1, 10)",),
+              ("burn interval bound", "math.clamp(tonumber(interval) or 0.7, 0.2, 3)",),
+              ("burn uses central damage path", "DamageService.ProcessDamage({",),
+              ("burn preserves attacker argument", "attacker, \"Physical\", range",),
+          ]
+          failures = [name for name, marker in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Status effect contract validated.")
