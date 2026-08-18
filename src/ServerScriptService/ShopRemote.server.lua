@@ -9,6 +9,9 @@ local remote = remotes:FindFirstChild("ShopRequest") or Instance.new("RemoteEven
 remote.Name = "ShopRequest"
 remote.Parent = remotes
 
+local NEXT_REQUEST = {}
+local REQUEST_INTERVAL = 0.15
+
 local function isNearTrader(player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -19,8 +22,13 @@ local function isNearTrader(player)
 end
 
 remote.OnServerEvent:Connect(function(player, action, itemId, amount)
+	if action ~= "Buy" then return end
+	local now = os.clock()
+	if now < (NEXT_REQUEST[player] or 0) then return end
+	NEXT_REQUEST[player] = now + REQUEST_INTERVAL
+
 	local profile = PlayerService.GetProfile(player)
-	if not profile or action ~= "Buy" then return end
+	if not profile then return end
 	if not isNearTrader(player) then
 		player:SetAttribute("ShopMessage", "You need to be near the Material Trader.")
 		return
