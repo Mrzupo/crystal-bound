@@ -1,5 +1,6 @@
 return {
 	MaxLevel = 10,
+	MaxExperience = 100000000,
 	BaseXP = 100,
 	Growth = 1.35,
 	DamagePerLevel = 0.06,
