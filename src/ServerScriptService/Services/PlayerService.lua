@@ -4,8 +4,8 @@ local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
-local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 local DailyBountyService = require(script.Parent.DailyBountyService)
+local EconomyService = require(script.Parent.EconomyService)
 
 local PlayerService = { Profiles = {}, CharacterConnections = {}, Operations = {} }
 local OPERATION_TIMEOUT = 10
@@ -46,9 +46,7 @@ local function syncTitleTag(character, title)
 	end
 	local expectedText = "< " .. title .. " >"
 	local label = tag and tag:FindFirstChild("Label")
-	if tag and label and label:IsA("TextLabel") and label.Text == expectedText then
-		return
-	end
+	if tag and label and label:IsA("TextLabel") and label.Text == expectedText then return end
 	if tag then tag:Destroy() end
 	tag = Instance.new("BillboardGui")
 	tag.Name = "CrystalBoundTitle"
@@ -69,18 +67,14 @@ end
 local function acquireOperation(player)
 	local started = os.clock()
 	while PlayerService.Operations[player] do
-		if os.clock() - started >= OPERATION_TIMEOUT then
-			return false
-		end
+		if os.clock() - started >= OPERATION_TIMEOUT then return false end
 		task.wait(0.05)
 	end
 	PlayerService.Operations[player] = true
 	return true
 end
 
-local function releaseOperation(player)
-	PlayerService.Operations[player] = nil
-end
+local function releaseOperation(player) PlayerService.Operations[player] = nil end
 
 function PlayerService.GetProfile(player) return PlayerService.Profiles[player] end
 
@@ -115,19 +109,18 @@ function PlayerService.Sync(player)
 	local profile = PlayerService.Profiles[player]; if not profile then return end
 	local newlyUnlocked = AchievementSystem.Check(profile)
 	for _, definition in ipairs(newlyUnlocked) do
-		profile.Money = math.clamp((profile.Money or 0) + (definition.RewardMoney or 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
+		EconomyService.AddMoney(profile, definition.RewardMoney or 0)
 		player:SetAttribute("AchievementMessage", "Achievement unlocked: " .. definition.Name)
 	end
 	local bounty = DailyBountyService.Refresh(profile)
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
 		local level = leaderstats:FindFirstChild("Level"); local money = leaderstats:FindFirstChild("Money")
-		if level then level.Value = profile.Level end; if money then money.Value = profile.Money end
+		if level then level.Value = profile.Level end
+		if money then money.Value = profile.Money end
 	end
 	local crystalId = CrystalSystem.GetEquipped(profile) or DEFAULT_CRYSTAL
-	if profile.Crystals.Equipped ~= crystalId then
-		profile.Crystals.Equipped = crystalId
-	end
+	if profile.Crystals.Equipped ~= crystalId then profile.Crystals.Equipped = crystalId end
 	local passive = CrystalSystem.GetPassive(crystalId)
 	local mastery = CrystalMastery.Get(profile, crystalId)
 	local masteryBonuses = CrystalMastery.GetBonuses(profile, crystalId)
@@ -153,9 +146,7 @@ function PlayerService.Sync(player)
 	player:SetAttribute("DailyBountyClaimed", bounty.Claimed)
 
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
-	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do
-		player:SetAttribute("Owns_" .. id, table.find(owned, id) ~= nil)
-	end
+	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do player:SetAttribute("Owns_" .. id, table.find(owned, id) ~= nil) end
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -173,11 +164,8 @@ function PlayerService.Sync(player)
 		local oldHealth = humanoid.Health
 		humanoid.MaxHealth = maxHealth
 		if oldHealth > 0 then
-			if oldMax ~= maxHealth then
-				humanoid.Health = math.clamp((oldHealth / oldMax) * maxHealth, 1, maxHealth)
-			elseif oldHealth > maxHealth then
-				humanoid.Health = maxHealth
-			end
+			if oldMax ~= maxHealth then humanoid.Health = math.clamp((oldHealth / oldMax) * maxHealth, 1, maxHealth)
+			elseif oldHealth > maxHealth then humanoid.Health = maxHealth end
 		end
 		player:SetAttribute("Health", math.max(0, humanoid.Health))
 		player:SetAttribute("MaxHealth", maxHealth)
@@ -203,20 +191,13 @@ function PlayerService.Remove(player)
 	if not PlayerService.Profiles[player] then return true end
 	if not acquireOperation(player) then return false end
 	local profile = PlayerService.Profiles[player]
-	if not profile then
-		releaseOperation(player)
-		return true
-	end
-
+	if not profile then releaseOperation(player); return true end
 	PlayerService.Sync(player)
 	local saved = SafeProfileStore.Save(player, profile) == true
 	player:SetAttribute("LastSaveOk", saved)
 	if not saved then
 		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
-		if PlayerService.CharacterConnections[player] then
-			PlayerService.CharacterConnections[player]:Disconnect()
-			PlayerService.CharacterConnections[player] = nil
-		end
+		if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
 		PlayerService.Profiles[player] = nil
 		releaseOperation(player)
 		return false
