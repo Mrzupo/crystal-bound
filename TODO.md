@@ -112,7 +112,13 @@
 - [x] Duplicate Cooldown UI entfernt
 - [x] Clientseitige Animation-Controller-Architektur für Basic/Ability vorbereitet
 - [x] Animation-Konfiguration pro Kristall getrennt von Gameplay-Konfiguration
-- [x] Mobile und PC teilen denselben lokalen Animation/VFX-Presentation-Contract
+- [x] Server-owned Animator für Player-Characters auf initialem Spawn und Respawn
+- [x] Client-Animationscontroller erstellt keinen lokalen Animator mehr
+- [x] Invalid Crystal-Ability-Damage-Fallbacks werden abgelehnt statt künstlich 1 Schaden zu erzeugen
+
+## Offene Designentscheidungen
+
+- [ ] **Crystal-Beschaffung festlegen:** Aktuell schaltet `CrystalChanged` TIDE/GALE beim Erreichen des Level-Gates automatisch frei. Der Master-Kontext sieht Kristall-Beschaffung über Mining, Ausgraben, Bosse, Dungeons, Welt-Events und Quests vor. Vor dem Ausbau weiterer Crystal-Content-Systeme muss entschieden werden, ob die Level-Freischaltung nur eine frühe Prototyp-Regel bleibt oder durch ein echtes Discovery-/Acquisition-System ersetzt/ergänzt wird.
 
 ## Nächste Systeme
 
