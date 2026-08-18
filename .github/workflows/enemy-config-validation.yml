@@ -19,6 +19,7 @@ jobs:
           import re
 
           text = Path("src/ReplicatedStorage/Config/EnemyConfig.lua").read_text(encoding="utf-8")
+          npc = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
           required = [
               "AttackRange =",
               "AttackDamage =",
@@ -27,12 +28,18 @@ jobs:
               "DropChance =",
               "Special =",
               "Cooldown =",
+              "Range =",
           ]
           problems = [marker for marker in required if marker not in text]
           if problems:
               for problem in problems:
                   print(f" - EnemyConfig missing field: {problem}")
               raise SystemExit(1)
+
+          if "local specialRange =" not in npc or "distance <= specialRange" not in npc:
+              raise SystemExit("NPCService must trigger specials from configured Special.Range")
+          if "distance <= math.max(config.AttackRange * 2, 10)" in npc:
+              raise SystemExit("NPCService must not use the old AttackRange*2 special trigger")
 
           # Keep authored examples within sane combat bounds.
           numeric_fields = re.findall(r"AttackRange = ([0-9.]+).*?AttackDamage = ([0-9.]+).*?AttackCooldown = ([0-9.]+)", text)
@@ -49,4 +56,4 @@ jobs:
               if cooldown < 0.1 or cooldown > 60:
                   raise SystemExit("Enemy Special cooldown is outside 0.1..60")
 
-          print("EnemyConfig combat bounds validated.")
+          print("EnemyConfig combat bounds and special trigger contract validated.")
