@@ -23,10 +23,24 @@ local function getRoot(instance)
 	return nil
 end
 
+local function isValidAttacker(instance)
+	if not instance or not instance:IsA("Instance") then return false end
+	if instance:IsA("Player") then
+		return instance.Parent ~= nil
+	end
+	if instance:IsA("Model") then
+		return instance:IsDescendantOf(workspace)
+			and instance:GetAttribute("Enemy") == true
+			and instance:FindFirstChildOfClass("Humanoid") ~= nil
+	end
+	return false
+end
+
 function DamageService.ValidateRequest(request)
 	return Validators.IsValid(request)
 		and typeof(request.Target) == "Instance"
 		and typeof(request.Attacker) == "Instance"
+		and isValidAttacker(request.Attacker)
 end
 
 function DamageService.CanDamage(request)
