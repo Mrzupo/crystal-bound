@@ -1,0 +1,34 @@
+name: Combat Feedback Direction Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-feedback-direction:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate CombatFeedback has no server receive handler
+        shell: python
+        run: |
+          from pathlib import Path
+
+          paths = [
+              Path("src/ServerScriptService/CombatFeedbackRemote.server.lua"),
+              Path("src/ServerScriptService/Bootstrap.server.lua"),
+          ]
+          text = "\n".join(path.read_text(encoding="utf-8") for path in paths if path.is_file())
+          problems = []
+          if "CombatFeedback.OnServerEvent" in text:
+              problems.append("CombatFeedback must not accept client events")
+          if "CombatFeedback.OnServerInvoke" in text:
+              problems.append("CombatFeedback must not accept client invokes")
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("CombatFeedback remains server-to-client-only.")
