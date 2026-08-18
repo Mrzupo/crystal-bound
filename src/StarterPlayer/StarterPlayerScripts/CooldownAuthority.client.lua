@@ -3,13 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+local active = false
 
 local function refresh()
 	local gui = player:FindFirstChild("PlayerGui")
 	local main = gui and gui:FindFirstChild("MainUI")
 	local panel = main and main:FindFirstChild("Info")
 	local label = panel and panel:FindFirstChild("Cooldown")
-	if not label then return end
+	if not label then return false end
 
 	local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
 	local endTime = tonumber(player:GetAttribute("AbilityCooldownEnd")) or 0
@@ -22,14 +23,28 @@ local function refresh()
 	else
 		label.Text = string.format("Q Ability: READY • %s", name)
 	end
+	return remaining > 0
 end
 
-player:GetAttributeChangedSignal("AbilityCooldownEnd"):Connect(refresh)
-player:GetAttributeChangedSignal("EquippedCrystal"):Connect(refresh)
+local function refreshOnStateChange()
+	active = refresh()
+end
+
+player:GetAttributeChangedSignal("AbilityCooldownEnd"):Connect(refreshOnStateChange)
+player:GetAttributeChangedSignal("EquippedCrystal"):Connect(refreshOnStateChange)
+player.CharacterAdded:Connect(function()
+	task.defer(refreshOnStateChange)
+end)
+
+refreshOnStateChange()
 
 task.spawn(function()
 	while player.Parent do
-		refresh()
-		task.wait(0.05)
+		if active then
+			active = refresh()
+			task.wait(0.1)
+		else
+			task.wait(0.25)
+		end
 	end
 end)
