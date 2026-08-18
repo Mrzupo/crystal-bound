@@ -245,12 +245,15 @@ jobs:
           from pathlib import Path
 
           text = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
-          rarities = {name: int(value) for name, value in re.findall(r'(Common|Uncommon|Rare|Epic|Legendary)\s*=\s*(\d+)', text)}
+          rarity_names = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine"]
+          rarities = {name: int(value) for name, value in re.findall(r'(%s)\s*=\s*(\d+)' % "|".join(rarity_names), text)}
           items = re.findall(r'([A-Za-z0-9_]+)\s*=\s*\{\s*Id\s*=\s*"([A-Za-z0-9_]+)"\s*,\s*Name\s*=\s*"[^"]+"\s*,\s*Type\s*=\s*"([A-Za-z]+)"\s*,\s*Rarity\s*=\s*"([A-Za-z]+)"\s*,\s*MaxStackSize\s*=\s*(-?\d+)\s*,\s*SellPrice\s*=\s*(-?\d+)\s*\}', text)
 
           problems = []
-          if sorted(rarities.values()) != [1, 2, 3, 4, 5]:
-              problems.append("Inventory rarities must map to 1..5")
+          if sorted(rarities.values()) != list(range(1, len(rarity_names) + 1)):
+              problems.append("Inventory rarities must map to Common=1 through Divine=7")
+          if set(rarities) != set(rarity_names):
+              problems.append(f"Inventory rarities mismatch: expected {rarity_names}, found {sorted(rarities)}")
           for key, item_id, item_type, rarity, max_stack, sell_price in items:
               if key != item_id:
                   problems.append(f"Inventory key/id mismatch for {key}/{item_id}")
