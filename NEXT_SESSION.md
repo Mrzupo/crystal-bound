@@ -18,6 +18,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `CRYSTAL_POWER` progresses through `QuestSystem.Advance()` and only completes at its goal.
 - `GALE` splash uses `DamageService.ProcessDamage()` and returns verified hit results to `CombatService` for feedback/rewards.
 - Invalid equipped crystals normalize to `EMBER`; unknown crystal mastery keys are removed during profile reconciliation.
+- `CrystalSystem` and `CrystalMastery` now use the canonical `CrystalConfig` instead of removed legacy Crystal definition modules.
 - `QuestRequest` has a dedicated weak-key rate limit inside the single Bootstrap handler.
 - `GetPlayerData` and `GetQuestData` now also have dedicated weak-key server rate limits and PlayerRemoving cleanup.
 - RemoteEvent and RemoteFunction ownership/direction rules are protected by CI contracts.
@@ -71,7 +72,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
 - No Luau interpreter is available here; validation is static/structural.
-- Current GitHub Actions status may have no run yet for the latest commit; do not call CI green without a verified run.
+- Current GitHub Actions status may have no run yet for the latest commit; do not call CI green without verified evidence.
 - Actual authored Roblox Animation/Sound assets are still absent.
 - Presentation VFX are still placeholder-level.
 - `ClientBootstrap` was recently simplified while fixing the Guardian model-name lookup; the HUD layout should be reviewed during Studio playtest.
