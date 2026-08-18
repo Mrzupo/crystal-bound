@@ -1,0 +1,30 @@
+name: Boss Attack Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate distinct Guardian phase-2 attacks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          config = Path('src/ReplicatedStorage/Config/BossConfig.lua').read_text(encoding='utf-8')
+          service = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
+          telegraph = Path('src/ServerScriptService/BossTelegraph.server.lua').read_text(encoding='utf-8')
+          required_config = ['AbilityCooldown = 6', 'AbilityRadius = 14', 'AbilityDamage = 45']
+          for marker in required_config:
+              if marker not in config:
+                  raise SystemExit(f'missing Guardian AoE config marker: {marker}')
+          for marker in ['shockwave(root.Position, config.AbilityRadius, config.AbilityDamage, model)', 'BossShockwave']:
+              if marker not in service:
+                  raise SystemExit(f'Guardian AoE path missing: {marker}')
+          for marker in ['TELEGRAPH_TIME = 0.8', 'COOLDOWN = 5.5', 'RADIUS = 8', 'DAMAGE = 32', 'BossShockwave']:
+              if marker not in telegraph:
+                  raise SystemExit(f'Guardian telegraph path missing: {marker}')
+          print('Guardian phase-2 attack separation validated.')
+          PY
