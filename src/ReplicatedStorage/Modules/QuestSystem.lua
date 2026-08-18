@@ -27,6 +27,33 @@ function QuestSystem.GetDefinitions()
 	return Definitions
 end
 
+function QuestSystem.GetChainOrder()
+	local ordered = {}
+	local current = nil
+	local roots = {}
+	for id, definition in pairs(Definitions) do
+		if not definition.Requires then table.insert(roots, id) end
+	end
+	table.sort(roots, function(a, b)
+		return (Definitions[a].MinLevel or 1) < (Definitions[b].MinLevel or 1)
+	end)
+	current = roots[1]
+	local seen = {}
+	while current and not seen[current] do
+		seen[current] = true
+		table.insert(ordered, current)
+		local nextId
+		for id, definition in pairs(Definitions) do
+			if definition.Requires == current then
+				nextId = id
+				break
+			end
+		end
+		current = nextId
+	end
+	return ordered
+end
+
 function QuestSystem.IsActive(profile, questId)
 	return table.find(profile.ActiveQuests or {}, questId) ~= nil
 end
