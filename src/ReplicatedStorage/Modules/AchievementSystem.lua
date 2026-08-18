@@ -9,6 +9,15 @@ local Definitions = {
 	LEVEL_20 = { Name = "Veteran", Requirement = "Reach level 20.", RewardMoney = 1000, Title = "Veteran" },
 }
 
+local ORDER = {
+	"FIRST_BLOOD",
+	"CRYSTAL_KEEPER",
+	"MASTER_OF_ONE",
+	"GUARDIAN_SLAYER",
+	"ANCIENT_EXPLORER",
+	"LEVEL_20",
+}
+
 function AchievementSystem.Get(id) return Definitions[id] end
 function AchievementSystem.GetAll() return Definitions end
 function AchievementSystem.Has(profile, id) return table.find(profile.Achievements or {}, id) ~= nil end
@@ -34,7 +43,12 @@ function AchievementSystem.Check(profile)
 		LEVEL_20 = profile.Level >= 20,
 	}
 	local unlocked = {}
-	for id, condition in pairs(checks) do if condition then local definition = AchievementSystem.Unlock(profile, id); if definition then table.insert(unlocked, definition) end end end
+	for _, id in ipairs(ORDER) do
+		if checks[id] then
+			local definition = AchievementSystem.Unlock(profile, id)
+			if definition then table.insert(unlocked, definition) end
+		end
+	end
 	return unlocked
 end
 return AchievementSystem
