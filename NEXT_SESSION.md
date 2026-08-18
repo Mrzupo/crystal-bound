@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: verify exact count with GitHub compare; branch remains ahead and 13 commits behind `main`.
+- Current compare: verify exact count with GitHub compare; branch remains ahead and diverged from `main`.
 - `main` has not been merged/overwritten.
 
 ## Current state
@@ -19,7 +19,8 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `GALE` splash uses `DamageService.ProcessDamage()` and returns verified hit results to `CombatService` for feedback/rewards.
 - Invalid equipped crystals normalize to `EMBER`; unknown crystal mastery keys are removed during profile reconciliation.
 - `QuestRequest` has a dedicated weak-key rate limit inside the single Bootstrap handler.
-- RemoteEvent ownership and direct-damage rules are protected by CI contracts.
+- `GetPlayerData` and `GetQuestData` now also have dedicated weak-key server rate limits and PlayerRemoving cleanup.
+- RemoteEvent and RemoteFunction ownership/direction rules are protected by CI contracts.
 - Server-confirmed `CombatFeedback` remains the sole authoritative source for hit presentation.
 - Server-generated Crystal combat VFX remain removed; presentation is client-side.
 - PC and mobile combat input defensively validate Enemy targets, living humanoids and local Crystal range before playing local presentation.
@@ -30,13 +31,15 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `QuestService.Complete()` now requires objective progress to reach the quest goal, except for the two explicit server-triggered one-step quests `FIRST_FIGHT` and `GUARDIAN_TRIAL`.
 - NPC normal attacks and special attacks carry the concrete NPC as attacker, use `Physical` damage and pass their real attack range; Emberling burn ticks preserve NPC attacker context.
 - Guardian normal attacks and telegraphs preserve the Guardian attacker and use `Physical` / `BossShockwave` damage types with explicit ranges.
-- `CrystalAbilityService` now defensively validates player/target instances plus finite/clamped damage and range inputs before executing server abilities.
+- `CrystalAbilityService` defensively validates player/target instances plus finite/clamped damage and range inputs before executing server abilities.
 - Status effects have bounded Slow/Burn duration, tick count, damage and interval; tokenized callbacks prevent stale effect cleanup from cancelling newer effects.
 - Dodge validates finite vectors, resets on respawn, cleans state on leave and routes actual damage through `DamageService`.
 - Shop and Crafting transactions validate before mutation and roll back consumed resources or money when the final mutation fails.
 - Persistence reconciliation clamps Level/XP/Money/Inventory/Crystal ownership/mastery/quest state, while `SafeProfileStore` atomically claims and refreshes `SessionLock` ownership.
 - Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts.
-- `QuestHUDPresenter.client.lua` presents server-structured quest state; `QuestMenu` has a local load debounce.
+- `QuestHUDPresenter.client.lua` presents server-structured quest state and reasserts the HUD state after the legacy Bootstrap quest refresh path; `QuestMenu` has a local load debounce.
+- `default.project.json` now identifies the DataModel as `Crystal Bound` and includes all current controllers/services/assets.
+- `InventoryConfig` now defines the official `Common → Uncommon → Rare → Epic → Legendary → Mythic → Divine` rarity ladder; `Ancient` remains outside rarity semantics.
 - Studio testing is documented in `STUDIO_PLAYTEST.md`.
 
 ## Security / authority contracts
@@ -46,15 +49,15 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Server-only weak-state attacker attribution uses immutable UserIds for player attackers.
 - Environmental damage is the only attacker-less damage type.
 - `CombatFeedback` is server-published only.
-- Critical RemoteFunctions have unique `OnServerInvoke` ownership.
+- Critical RemoteFunctions have unique `OnServerInvoke` ownership and server rate limits.
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
-- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config and progression config are protected by dedicated CI workflows.
+- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config, progression config, rarity semantics and project identity are protected by dedicated CI workflows.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
 - No Luau interpreter is available here; validation is static/structural.
-- Latest GitHub combined status may return no statuses for the working commit; do not call CI green without a verified run.
+- Current GitHub Actions status may have no run yet for the latest commit; do not call CI green without a verified run.
 - Actual authored Roblox Animation/Sound assets are still absent.
 - Presentation VFX are still placeholder-level.
 - `StatusSpeedGuard.server.lua` may physically exist but is not referenced by Rojo.
