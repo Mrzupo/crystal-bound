@@ -94,11 +94,14 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
 	if not isNearNPC(player, "CrystalKeeper") then player:SetAttribute("CrystalMessage", "Go to the Crystal Keeper to upgrade your crystal."); return end
 	local profile = PlayerService.GetProfile(player); if not profile or not CrystalService.OwnsCrystal(profile, crystalId) then return end
-	local mastery = CrystalMastery.Get(profile, crystalId); if mastery.Level >= 10 then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
+	local mastery = CrystalMastery.Get(profile, crystalId)
+	if mastery.Level >= 10 then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
 	local cost = CrystalMastery.GetUpgradeCost(profile, crystalId)
 	for itemId, amount in pairs(cost) do if not InventoryService.HasItem(profile, itemId, amount) then player:SetAttribute("CrystalMessage", string.format("Need %d %s to upgrade.", amount, itemId)); return end end
 	for itemId, amount in pairs(cost) do InventoryService.RemoveItem(profile, itemId, amount) end
-	mastery.Level += 1; mastery.XP = 0; PlayerService.Sync(player); remotes.InventoryChanged:FireClient(player, profile.Inventory); remotes.CrystalMasteryChanged:FireClient(player, crystalId, mastery.Level, mastery.XP); player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, mastery.Level))
+	local upgraded, newLevel = CrystalMastery.Upgrade(profile, crystalId)
+	if not upgraded then return end
+	PlayerService.Sync(player); remotes.InventoryChanged:FireClient(player, profile.Inventory); remotes.CrystalMasteryChanged:FireClient(player, crystalId, newLevel, 0); player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, newLevel))
 end)
 
 remotes.GetPlayerData.OnServerInvoke = function(player) local profile = PlayerService.GetProfile(player); if not profile then return nil end; return { Level = profile.Level, Experience = profile.Experience, Money = profile.Money, Crystals = profile.Crystals, CrystalMastery = profile.CrystalMastery, Inventory = profile.Inventory, Achievements = profile.Achievements, Titles = profile.Titles } end
@@ -142,4 +145,4 @@ local function initializePlayer(player)
 	if not QuestSystem.IsActive(profile,"FIRST_FIGHT") and not QuestSystem.IsCompleted(profile,"FIRST_FIGHT") then QuestService.Start(player,profile,"FIRST_FIGHT") end
 end
 Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextQuestRequest[player] = nil; nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end)
-task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); nextQuestRequest[player] = nil; nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; PlayerService.Remove(player) end end end)
+task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do PlayerService.Save(player) end end end)
