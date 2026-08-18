@@ -1,0 +1,25 @@
+name: Portal Level Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate portal gates against WorldConfig
+        shell: python
+        run: |
+          from pathlib import Path
+          world = Path('src/ReplicatedStorage/Config/WorldConfig.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          required = ['Level = 1', 'Level = 4', 'Level = 10', 'Level = 15']
+          for marker in required:
+              if marker not in world:
+                  raise SystemExit(f'missing WorldConfig level marker: {marker}')
+          for marker in ['TidePortal', ',0),4)', 'WindPortal', ',0),10)', 'AncientPortal', ',0),15)']:
+              if marker not in bootstrap:
+                  raise SystemExit(f'portal contract marker missing: {marker}')
+          print('World/portal level contract validated.')
