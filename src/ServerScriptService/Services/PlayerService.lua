@@ -4,9 +4,11 @@ local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
+local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 local DailyBountyService = require(script.Parent.DailyBountyService)
 
-local PlayerService = { Profiles = {}, CharacterConnections = {} }
+local PlayerService = { Profiles = {}, CharacterConnections = {}, Operations = {} }
+local OPERATION_TIMEOUT = 10
 
 local function setupLeaderstats(player, profile)
 	local leaderstats = player:FindFirstChild("leaderstats") or Instance.new("Folder")
@@ -63,6 +65,22 @@ local function syncTitleTag(character, title)
 	label.Parent = tag
 end
 
+local function acquireOperation(player)
+	local started = os.clock()
+	while PlayerService.Operations[player] do
+		if os.clock() - started >= OPERATION_TIMEOUT then
+			return false
+		end
+		task.wait(0.05)
+	end
+	PlayerService.Operations[player] = true
+	return true
+end
+
+local function releaseOperation(player)
+	PlayerService.Operations[player] = nil
+end
+
 function PlayerService.GetProfile(player) return PlayerService.Profiles[player] end
 
 function PlayerService.Load(player)
@@ -96,7 +114,7 @@ function PlayerService.Sync(player)
 	local profile = PlayerService.Profiles[player]; if not profile then return end
 	local newlyUnlocked = AchievementSystem.Check(profile)
 	for _, definition in ipairs(newlyUnlocked) do
-		profile.Money = math.min(1000000, (profile.Money or 0) + (definition.RewardMoney or 0))
+		profile.Money = math.clamp((profile.Money or 0) + (definition.RewardMoney or 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
 		player:SetAttribute("AchievementMessage", "Achievement unlocked: " .. definition.Name)
 	end
 	local bounty = DailyBountyService.Refresh(profile)
@@ -157,16 +175,31 @@ function PlayerService.Sync(player)
 end
 
 function PlayerService.Save(player)
-	local profile = PlayerService.Profiles[player]; if not profile then return false end
-	PlayerService.Sync(player)
-	local ok = SafeProfileStore.Save(player, profile)
-	player:SetAttribute("LastSaveOk", ok == true)
+	if not PlayerService.Profiles[player] then return false end
+	if not acquireOperation(player) then return false end
+	local ok = false
+	local profile = PlayerService.Profiles[player]
+	if profile then
+		PlayerService.Sync(player)
+		ok = SafeProfileStore.Save(player, profile) == true
+		player:SetAttribute("LastSaveOk", ok)
+	end
+	releaseOperation(player)
 	return ok
 end
 
 function PlayerService.Remove(player)
 	if not PlayerService.Profiles[player] then return true end
-	local saved = PlayerService.Save(player)
+	if not acquireOperation(player) then return false end
+	local profile = PlayerService.Profiles[player]
+	if not profile then
+		releaseOperation(player)
+		return true
+	end
+
+	PlayerService.Sync(player)
+	local saved = SafeProfileStore.Save(player, profile) == true
+	player:SetAttribute("LastSaveOk", saved)
 	if not saved then
 		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
 		if PlayerService.CharacterConnections[player] then
@@ -174,12 +207,14 @@ function PlayerService.Remove(player)
 			PlayerService.CharacterConnections[player] = nil
 		end
 		PlayerService.Profiles[player] = nil
+		releaseOperation(player)
 		return false
 	end
 
 	SafeProfileStore.Release(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
 	PlayerService.Profiles[player] = nil
+	releaseOperation(player)
 	return true
 end
 
