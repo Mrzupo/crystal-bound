@@ -1,0 +1,30 @@
+name: Quest Completion Boundary
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-quest-completion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate quest completion guard
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/QuestService.lua").read_text(encoding="utf-8")
+          checks = [
+              ("completion reads progress", "local progress = QuestSystem.GetProgress(profile, questId)"),
+              ("completion checks goal", "local reachedGoal = progress >= (definition.Goal or 0)"),
+              ("explicit server triggers", "SERVER_TRIGGERED_SINGLE_STEP"),
+              ("completion remains idempotent", "if not QuestSystem.Complete(profile, questId) then return false end"),
+              ("completion rewards only after successful completion", "XPService.AddXP(profile, definition.XP)"),
+          ]
+          failures = [name for name, marker in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Quest completion boundary validated.")
