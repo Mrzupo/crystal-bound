@@ -28,7 +28,8 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	if not recipe then return false, "Recipe not found." end
 	amount = positiveInteger(amount)
 	if not amount then return false, "Craft amount must be a positive integer." end
-	amount = math.min(amount, 10)
+	local maxPerCraft = positiveInteger(CraftingConfig.MaxPerCraft) or 1
+	if amount > maxPerCraft then return false, "Craft amount exceeds the per-request limit." end
 
 	InventoryService.GetInventory(profile)
 	local outputConfig = InventoryConfig.GetItemConfig(recipe.Output)
