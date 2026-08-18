@@ -35,6 +35,17 @@ local function cleanupHumanoidConnections(player)
 	PlayerService.HumanoidConnections[player] = nil
 end
 
+local function ensureAnimator(character)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return nil end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	return animator
+end
+
 local function bindHumanoid(player, humanoid)
 	cleanupHumanoidConnections(player)
 	if not humanoid then return end
@@ -116,13 +127,18 @@ function PlayerService.Load(player)
 		task.defer(function()
 			if not PlayerService.Profiles[player] then return end
 			local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+			if humanoid then ensureAnimator(character) end
 			PlayerService.Sync(player)
 			bindHumanoid(player, humanoid)
 			player:SetAttribute("DeathMessage", "")
 		end)
 	end)
 	PlayerService.Sync(player)
-	if player.Character then bindHumanoid(player, player.Character:FindFirstChildOfClass("Humanoid")) end
+	if player.Character then
+		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid then ensureAnimator(player.Character) end
+		bindHumanoid(player, humanoid)
+	end
 	return profile
 end
 
@@ -172,6 +188,7 @@ function PlayerService.Sync(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
+		ensureAnimator(character)
 		local baseWalkSpeed = BASE_WALK_SPEED + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
 		local slowMultiplier = tonumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"))
 		if type(slowMultiplier) == "number" and slowMultiplier == slowMultiplier and slowMultiplier ~= math.huge and slowMultiplier ~= -math.huge then
