@@ -1,0 +1,44 @@
+name: Menu Attribute Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-menu-attributes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared menu attributes
+        shell: python
+        run: |
+          from pathlib import Path
+          root = Path("src")
+          files = {
+              "dialog": root / "StarterPlayer/StarterPlayerScripts/NPCDialogMenu.client.lua",
+              "touch": root / "StarterPlayer/StarterPlayerScripts/TouchMenus.client.lua",
+              "bridge": root / "ServerScriptService/NPCMenuBridge.server.lua",
+          }
+          text = {key: path.read_text(encoding="utf-8") for key, path in files.items()}
+          attributes = [
+              "OpenQuestMenu",
+              "OpenShopMenu",
+              "OpenCrystalMenu",
+              "OpenCraftingMenu",
+              "OpenAchievementMenu",
+              "OpenNPCDialog",
+          ]
+          problems = []
+          for attribute in attributes:
+              if attribute not in text["touch"] and attribute != "OpenNPCDialog":
+                  problems.append(f"TouchMenus missing {attribute}")
+              if attribute in {"OpenQuestMenu", "OpenShopMenu", "OpenCrystalMenu", "OpenCraftingMenu"} and attribute not in text["dialog"]:
+                  problems.append(f"NPCDialogMenu missing {attribute}")
+              if attribute == "OpenNPCDialog" and attribute not in text["bridge"]:
+                  problems.append("NPCMenuBridge missing OpenNPCDialog")
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Menu attribute contract validated.")
