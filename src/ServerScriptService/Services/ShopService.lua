@@ -18,9 +18,14 @@ end
 function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyService)
 	local offer = Offers[itemId]
 	if not offer then return false, "Item is not for sale." end
+	if type(offer.ItemId) ~= "string" or offer.ItemId ~= itemId or not InventoryConfig.GetItemConfig(itemId) then
+		return false, "Shop offer is invalid."
+	end
+	local price = finiteNumber(offer.Price)
+	if not price or price <= 0 then return false, "Shop offer is invalid." end
 	local numericAmount = finiteNumber(amount) or 1
 	amount = math.clamp(math.floor(numericAmount), 1, math.max(1, math.floor(finiteNumber(offer.MaxPerPurchase) or 1)))
-	local total = math.max(0, finiteNumber(offer.Price) or 0) * amount
+	local total = price * amount
 	if not EconomyService.CanAfford(profile, total) then return false, "Not enough Money." end
 
 	InventoryService.GetInventory(profile)
