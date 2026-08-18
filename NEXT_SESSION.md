@@ -48,6 +48,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - `CombatService` has a small request-rate guard in addition to action cooldowns.
 - `QuestRequest` now has a dedicated weak-key rate-limit gate in its single Bootstrap handler.
 - `CRYSTAL_POWER` quest progression is now advanced with `QuestSystem.Advance()` on a real Ability use and only completes when its goal is reached; it is no longer blindly completed on every Ability hit.
+- Crystal Ability special effects now live in the server-only `CrystalAbilityService`; `CombatService` handles validation/cooldowns/orchestration while the ability service handles TIDE heal and GALE splash behavior.
 - GALE splash damage goes through `DamageService.ProcessDamage()` rather than bypassing the central damage validator.
 - Guardian shockwave NPC damage now also goes through `DamageService.ProcessDamage()` instead of a direct `Humanoid:TakeDamage()` path.
 - Burn damage now goes through `DamageService.ProcessDamage()` for NPC targets instead of bypassing the central damage validator.
@@ -112,7 +113,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - Actual Roblox animation and sound assets are not available yet.
 
 ## Exact next steps
-1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua`, `BossService.lua`, `StatusEffectService.lua` and final Rojo mapping.
+1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua`, `CrystalAbilityService.lua`, `BossService.lua`, `StatusEffectService.lua` and final Rojo mapping.
 2. Validate the combat-presentation, damage-path, direct-damage, feedback-authority and RemoteEvent-ownership CI contracts after subsequent changes.
 3. Add the actual authored `Animation`/`Sound` objects under the configured asset names.
 4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire them into the asset folders or IDs.
@@ -144,6 +145,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - `.github/workflows/remote-rate-limit-validation.yml`
 - `src/ServerScriptService/Bootstrap.server.lua`
 - `src/ServerScriptService/Services/CombatService.lua`
+- `src/ServerScriptService/Services/CrystalAbilityService.lua`
 - `src/ServerScriptService/Services/DamageService.lua`
 - `src/ServerScriptService/Services/DodgeService.lua`
 - `src/ServerScriptService/Services/NPCService.lua`
