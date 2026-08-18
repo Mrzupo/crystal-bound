@@ -1,7 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Debris = game:GetService("Debris")
-local TweenService = game:GetService("TweenService")
 local DamageService = require(script.Parent.DamageService)
 local PlayerService = require(script.Parent.PlayerService)
 local XPService = require(script.Parent.XPService)
@@ -15,55 +13,42 @@ local CombatModifierService = require(script.Parent.CombatModifierService)
 local DailyBountyService = require(script.Parent.DailyBountyService)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 local HitboxService = require(ReplicatedStorage.Modules.Combat.HitboxService)
+
 local CombatService = {}
 local cooldowns = {}
 local nextRequest = {}
 
 local REQUEST_INTERVAL = 0.03
-local CRYSTAL_COLORS = { EMBER = Color3.fromRGB(255, 90, 35), TIDE = Color3.fromRGB(45, 150, 255), GALE = Color3.fromRGB(170, 120, 255) }
 local VALID_ACTIONS = { Basic = true, Ability = true }
 
 local function getCharacter(instance)
-	if instance:IsA("Player") then return instance.Character elseif instance:IsA("Model") then return instance end
+	if instance:IsA("Player") then return instance.Character end
+	if instance:IsA("Model") then return instance end
+	return nil
 end
 
 local function isPlayerTarget(target)
 	return target:IsA("Player") or (target:IsA("Model") and Players:GetPlayerFromCharacter(target) ~= nil)
 end
 
-local function makeEffect(name, position, size, color, duration)
-	local effect = Instance.new("Part")
-	effect.Name = name; effect.Anchored = true; effect.CanCollide = false; effect.CanQuery = false; effect.CanTouch = false
-	effect.Material = Enum.Material.Neon; effect.Color = color; effect.Transparency = 0.1; effect.Size = size; effect.CFrame = CFrame.new(position); effect.Parent = workspace
-	return effect, duration or 0.3
-end
-
-local function emitCombatEffect(crystalId, targetModel, ability, critical)
-	local root = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
-	if not root then return end
-	local color = CRYSTAL_COLORS[crystalId] or CRYSTAL_COLORS.EMBER
-	local effect, duration = makeEffect(ability and "CrystalAbilityEffect" or "CrystalHitEffect", root.Position, ability and Vector3.new(5, 5, 5) or Vector3.new(2, 2, 2), color, 0.25)
-	effect.Shape = Enum.PartType.Ball
-	TweenService:Create(effect, TweenInfo.new(duration), { Size = ability and Vector3.new(11, 11, 11) or Vector3.new(4, 4, 4), Transparency = 1 }):Play(); Debris:AddItem(effect, duration + 0.05)
-	if critical then
-		local crit, critDuration = makeEffect("CriticalHit", root.Position + Vector3.new(0, 2, 0), Vector3.new(1.5, 1.5, 1.5), Color3.fromRGB(255, 230, 70), 0.35)
-		crit.Shape = Enum.PartType.Ball
-		TweenService:Create(crit, TweenInfo.new(critDuration), { Size = Vector3.new(6, 6, 6), Transparency = 1 }):Play(); Debris:AddItem(crit, critDuration + 0.05)
-	end
-	if not ability then return end
-	if crystalId == "EMBER" then
-		local ring, ringDuration = makeEffect("EmberBurst", root.Position, Vector3.new(1, 0.6, 1), color, 0.35); ring.Shape = Enum.PartType.Cylinder; ring.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, 0, math.rad(90)); TweenService:Create(ring, TweenInfo.new(ringDuration), { Size = Vector3.new(1, 12, 12), Transparency = 1 }):Play(); Debris:AddItem(ring, ringDuration + 0.05)
-	elseif crystalId == "TIDE" then
-		for index = 1, 3 do local orb, orbDuration = makeEffect("TideOrb", root.Position + Vector3.new((index - 2) * 2.5, 1 + index * 0.25, 0), Vector3.new(1.2, 1.2, 1.2), color, 0.5); orb.Shape = Enum.PartType.Ball; TweenService:Create(orb, TweenInfo.new(orbDuration), { Position = root.Position + Vector3.new((index - 2) * 4, 4 + index, 0), Transparency = 1 }):Play(); Debris:AddItem(orb, orbDuration + 0.05) end
-	elseif crystalId == "GALE" then
-		for index = 1, 2 do local slash, slashDuration = makeEffect("GaleSlash", root.Position, Vector3.new(0.5, 7, 0.5), color, 0.3); slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(25 * index)); TweenService:Create(slash, TweenInfo.new(slashDuration), { Size = Vector3.new(0.5, 11, 0.5), Transparency = 1 }):Play(); Debris:AddItem(slash, slashDuration + 0.05) end
-	end
+local function markConfirmedHit(targetModel, player, crystalId, critical)
+	targetModel:SetAttribute("LastAttackerUserId", player.UserId)
+	targetModel:SetAttribute("LastHitCritical", critical == true)
+	targetModel:SetAttribute("LastHitCrystal", crystalId)
+	task.delay(0.25, function()
+		if targetModel.Parent then
+			targetModel:SetAttribute("LastHitCritical", false)
+			targetModel:SetAttribute("LastHitCrystal", "")
+		end
+	end)
 end
 
 local function fireProgress(player, levelsGained, mastery)
-	local profile = PlayerService.GetProfile(player); if not profile then return end
+	local profile = PlayerService.GetProfile(player)
+	if not profile then return end
 	PlayerService.Sync(player)
-	local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if not remotes then return end
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	if not remotes then return end
 	if remotes:FindFirstChild("XPChanged") then remotes.XPChanged:FireClient(player, profile.Experience, profile.Level) end
 	if remotes:FindFirstChild("MoneyChanged") then remotes.MoneyChanged:FireClient(player, profile.Money) end
 	if remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
@@ -94,7 +79,10 @@ local function giveLoot(player, profile, targetModel, crystalId)
 	local chance = enemyConfig and tonumber(enemyConfig.DropChance) or 1
 	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
 	local added = InventoryService.AddItem(profile, itemId, 1)
-	if added > 0 then player:SetAttribute("LootMessage", "Loot: " .. itemId); return true end
+	if added > 0 then
+		player:SetAttribute("LootMessage", "Loot: " .. itemId)
+		return true
+	end
 	player:SetAttribute("LootMessage", "Inventory full: " .. itemId)
 	return false
 end
@@ -107,9 +95,14 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	local xpGain = enemyConfig and enemyConfig.XP or (action == "Ability" and 40 or 25)
 	local moneyGain = enemyConfig and enemyConfig.Money or (action == "Ability" and 20 or 10)
 	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
-	EconomyService.AddMoney(profile, moneyGain); giveLoot(player, profile, targetModel, crystalId)
+	EconomyService.AddMoney(profile, moneyGain)
+	giveLoot(player, profile, targetModel, crystalId)
 	profile.Stats.EnemiesDefeated = (profile.Stats.EnemiesDefeated or 0) + 1
-	if enemyType == "AncientGolem" then profile.Stats.AncientGolemsDefeated = (profile.Stats.AncientGolemsDefeated or 0) + 1 elseif enemyType == "CrystalBat" then profile.Stats.CrystalBatsDefeated = (profile.Stats.CrystalBatsDefeated or 0) + 1 end
+	if enemyType == "AncientGolem" then
+		profile.Stats.AncientGolemsDefeated = (profile.Stats.AncientGolemsDefeated or 0) + 1
+	elseif enemyType == "CrystalBat" then
+		profile.Stats.CrystalBatsDefeated = (profile.Stats.CrystalBatsDefeated or 0) + 1
+	end
 	DailyBountyService.AddProgress(player, profile, enemyType, EconomyService, PlayerService)
 	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
 	advanceEnemyQuest(player, profile, enemyType)
@@ -120,7 +113,8 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 end
 
 local function applyGaleSplash(player, centerModel, damage, range)
-	local centerRoot = centerModel:FindFirstChild("HumanoidRootPart") or centerModel.PrimaryPart; if not centerRoot then return end
+	local centerRoot = centerModel:FindFirstChild("HumanoidRootPart") or centerModel.PrimaryPart
+	if not centerRoot then return end
 	local profile = PlayerService.GetProfile(player)
 	for _, enemy in ipairs(HitboxService.GetEnemyModels(centerRoot.Position, 12, centerModel)) do
 		local humanoid = enemy:FindFirstChildOfClass("Humanoid")
@@ -132,8 +126,11 @@ local function applyGaleSplash(player, centerModel, damage, range)
 				Range = range,
 				DamageType = "CrystalAbilitySplash",
 			})
-			if result.Success and humanoid.Health <= 0 and profile then
-				rewardDefeat(player, profile, enemy, "Ability", "GALE")
+			if result.Success then
+				markConfirmedHit(enemy, player, "GALE", false)
+				if humanoid.Health <= 0 and profile then
+					rewardDefeat(player, profile, enemy, "Ability", "GALE")
+				end
 			end
 		end
 	end
@@ -141,9 +138,15 @@ end
 
 local function applyAbilitySpecial(player, profile, crystalId, targetModel, abilityDamage, abilityRange)
 	if crystalId == "TIDE" then
-		local character = player.Character; local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if humanoid and humanoid.Health > 0 then humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 30); player:SetAttribute("CrystalMessage", "Tidal Pulse restored health.") end
-	elseif crystalId == "GALE" then applyGaleSplash(player, targetModel, abilityDamage, abilityRange) end
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.Health > 0 then
+			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 30)
+			player:SetAttribute("CrystalMessage", "Tidal Pulse restored health.")
+		end
+	elseif crystalId == "GALE" then
+		applyGaleSplash(player, targetModel, abilityDamage, abilityRange)
+	end
 end
 
 function CombatService.HandleRequest(player, action, target)
@@ -151,32 +154,52 @@ function CombatService.HandleRequest(player, action, target)
 	local requestNow = os.clock()
 	if requestNow < (nextRequest[player] or 0) then return end
 	nextRequest[player] = requestNow + REQUEST_INTERVAL
-	local profile = PlayerService.GetProfile(player); if not profile or not profile.Crystals then return end
+
+	local profile = PlayerService.GetProfile(player)
+	if not profile or not profile.Crystals then return end
 	if typeof(target) ~= "Instance" or target == player or isPlayerTarget(target) then return end
+
 	local crystalId = profile.Crystals.Equipped
-	local config = action == "Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId); if not config then return end
+	local config = action == "Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId)
+	if not config then return end
+
 	cooldowns[player] = cooldowns[player] or {}
-	local now = requestNow; if now < (cooldowns[player][action] or 0) then return end
-	local targetModel = getCharacter(target); if not targetModel then return end
+	local now = requestNow
+	if now < (cooldowns[player][action] or 0) then return end
+
+	local targetModel = getCharacter(target)
+	if not targetModel then return end
 	if not HitboxService.IsWithinRange(player, targetModel, config.Range) then return end
-	local humanoid = targetModel:FindFirstChildOfClass("Humanoid"); if not humanoid or humanoid.Health <= 0 then return end
-	local passive = CrystalSystem.GetPassive(crystalId); local mastery = CrystalMastery.GetBonuses(profile, crystalId)
+
+	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return end
+
+	local passive = CrystalSystem.GetPassive(crystalId)
+	local mastery = CrystalMastery.GetBonuses(profile, crystalId)
 	local multiplier = math.max(0.1, tonumber(passive.DamageMultiplier) or 1) * mastery.DamageMultiplier
 	if action == "Ability" then multiplier *= mastery.AbilityDamageMultiplier end
 	local critical, criticalMultiplier = CombatModifierService.RollCritical(profile, crystalId)
 	multiplier *= criticalMultiplier
 	local damage = (config.Damage + math.max(0, (profile.Stats.Damage or 0) - 10)) * multiplier
-	local result = DamageService.ProcessDamage({ Attacker = player, Target = targetModel, Amount = damage, Range = config.Range, DamageType = "Crystal" }); if not result.Success then return end
-	targetModel:SetAttribute("LastAttackerUserId", player.UserId)
-	targetModel:SetAttribute("LastHitCritical", critical == true)
+
+	local result = DamageService.ProcessDamage({
+		Attacker = player,
+		Target = targetModel,
+		Amount = damage,
+		Range = config.Range,
+		DamageType = "Crystal",
+	})
+	if not result.Success then return end
+
+	markConfirmedHit(targetModel, player, crystalId, critical)
 	cooldowns[player][action] = now + config.Cooldown
 	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
-	task.delay(0.2, function()
-		if targetModel.Parent then targetModel:SetAttribute("LastHitCritical", false) end
-	end)
-	emitCombatEffect(crystalId, targetModel, action == "Ability", critical)
+
 	if critical then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
-	if action == "Ability" then applyAbilitySpecial(player, profile, crystalId, targetModel, damage, config.Range); completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
+	if action == "Ability" then
+		applyAbilitySpecial(player, profile, crystalId, targetModel, damage, config.Range)
+		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
+	end
 	if humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
 
