@@ -71,7 +71,7 @@ local function setPhaseHazard(enabled)
 			hazard.Color = Color3.fromRGB(255, 90, 120)
 			hazard.Transparency = 0.25
 			hazard.Parent = arena
-			hazardParts[index] = hazard
+		hazardParts[index] = hazard
 			TweenService:Create(hazard, TweenInfo.new(0.4), { Transparency = 0.05 }):Play()
 		end
 	else
@@ -94,7 +94,7 @@ local function applyHazardDamage()
 		if humanoid and humanoid.Health > 0 and root then
 			local offset = root.Position - center
 			if math.abs(offset.X) <= 23 and math.abs(offset.Z) <= 23 then
-				DodgeService.ApplyDamage(player, humanoid, 4)
+				DodgeService.ApplyDamage(player, humanoid, 4, nil, "Environmental", 0)
 			end
 		end
 	end
