@@ -7,6 +7,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm profile load succeeds and no legacy save warning appears.
 - Confirm `Crystal Bound client ready` appears on the client.
 - Confirm the four islands, NPC folder and Guardian spawn exist.
+- Confirm world decoration and themes initialize only once.
 
 ## 2. Crystal flow
 - Start as EMBER.
@@ -43,11 +44,13 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Test Crystal Bat and Ancient Golem attacks.
 - Defeat each enemy and confirm XP, Money, loot, quest progress and bounty progress are applied once.
 - Confirm dead enemies stop AI/status callbacks before respawn.
+- Confirm each enemy respawns exactly once and no duplicate named instances appear.
 
 ## 6. Guardian
 - Bring Guardian below 50% HP.
 - Confirm phase changes to 2.
 - Confirm boss bar tracks `CrystalGuardian`.
+- Verify the boss-centered Phase-2 AoE and the separate targeted telegraph are distinct attacks.
 - Wait for telegraph and dodge out of the radius.
 - Expected: no damage and no false impact message after a dodge.
 - Stay in the telegraph and confirm `BossShockwave` damage.
@@ -64,11 +67,14 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Force heartbeat/save failure only in a controlled test environment.
 - Confirm the server does not silently release a lost lock.
 
-## 8. Transactions
+## 8. Transactions / Consumables
 - Buy Health Potions with enough Money; confirm Money decreases exactly once and inventory increases exactly once.
 - Attempt a purchase over the maximum stack; expected: no Money loss.
 - Attempt crafting without enough materials; expected: no materials lost.
 - Force a failed output insertion in a controlled test; expected: all consumed crafting inputs are restored.
+- Use a Health Potion below max HP; expected: exactly one potion is consumed and HP increases by up to 60 without exceeding MaxHealth.
+- Try to use a Health Potion at full HP or without inventory; expected: no item is consumed.
+- Spam potion use; expected: the 0.2-second server gate prevents duplicate consumption.
 
 ## 9. UI / mobile
 - Open Inventory, Quest, Shop, Crafting, Daily Bounty and Achievement menus.
@@ -76,6 +82,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Verify quest HUD text matches the active quest and progress.
 - Open/close Quest rapidly; expected: no duplicate request storm or stale UI overwrite.
 - Test mobile ATK/Q/target selection.
+- Test mobile dodge and verify the same server cooldown/invulnerability behavior as PC.
 - Confirm local animations/VFX never decide damage.
 
 ## 10. Asset pass
@@ -91,5 +98,6 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm no quest reward is granted on an incomplete objective.
 - Confirm no Daily Bounty or Achievement reward can be granted twice.
 - Confirm no duplicate NPC/Boss instances appear after respawn.
+- Confirm the official rarity ladder is Common → Divine and Ancient is not a rarity.
 - Confirm `main` remains untouched.
 - Record every runtime failure with exact script name, event/action, reproduction steps and expected vs actual behavior.
