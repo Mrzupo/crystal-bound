@@ -85,7 +85,7 @@ local function cast()
 		local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
 		local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
 		if currentHumanoid and currentRoot and currentHumanoid.Health > 0 and (currentRoot.Position - position).Magnitude <= RADIUS then
-			local applied = DodgeService.ApplyDamage(player, currentHumanoid, DAMAGE)
+			local applied = DodgeService.ApplyDamage(player, currentHumanoid, DAMAGE, currentGuardian, "BossShockwave", RADIUS)
 			if applied then
 				player:SetAttribute("BossMessage", "Guardian Impact!")
 			end
@@ -107,4 +107,4 @@ task.spawn(function()
 		end
 		task.wait(RUN_INTERVAL)
 	end
-end)
+end
