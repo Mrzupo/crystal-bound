@@ -13,6 +13,7 @@ local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 local NPCService = require(script.Parent.Services.NPCService)
 
 local AUTOSAVE_INTERVAL = 60
@@ -98,7 +99,7 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
 	if not isNearNPC(player, "CrystalKeeper") then player:SetAttribute("CrystalMessage", "Go to the Crystal Keeper to upgrade your crystal."); return end
 	local profile = PlayerService.GetProfile(player); if not profile or not CrystalService.OwnsCrystal(profile, crystalId) then return end
-	local mastery = CrystalMastery.Get(profile, crystalId); if mastery.Level >= 10 then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
+	local mastery = CrystalMastery.Get(profile, crystalId); if mastery.Level >= CrystalUpgradeConfig.MaxLevel then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
 	local cost = CrystalMastery.GetUpgradeCost(profile, crystalId)
 	if type(cost) ~= "table" then
 		player:SetAttribute("CrystalMessage", "Crystal upgrade configuration is unavailable.")
