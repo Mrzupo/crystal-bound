@@ -42,6 +42,14 @@ local function isValidAttacker(instance)
 	return false
 end
 
+local function rememberAttacker(targetModel, attacker)
+	if attacker:IsA("Player") then
+		lastAttackers[targetModel] = { Kind = "Player", UserId = attacker.UserId }
+	else
+		lastAttackers[targetModel] = { Kind = "Model", Instance = attacker }
+	end
+end
+
 function DamageService.ValidateRequest(request)
 	if not Validators.IsValid(request) then return false end
 	if typeof(request.Target) ~= "Instance" then return false end
@@ -70,8 +78,15 @@ end
 
 function DamageService.GetLastAttacker(targetModel)
 	if not targetModel or not targetModel:IsA("Model") then return nil end
-	local attacker = lastAttackers[targetModel]
-	if attacker and attacker.Parent then return attacker end
+	local record = lastAttackers[targetModel]
+	if not record then return nil end
+	if record.Kind == "Player" then
+		local player = Players:GetPlayerByUserId(record.UserId)
+		if player then return player end
+	elseif record.Kind == "Model" then
+		local model = record.Instance
+		if model and model.Parent then return model end
+	end
 	lastAttackers[targetModel] = nil
 	return nil
 end
@@ -118,7 +133,7 @@ function DamageService.ProcessDamage(request)
 	humanoid:TakeDamage(amount)
 	local applied = math.max(0, before - humanoid.Health)
 	if applied > 0 and request.Attacker then
-		lastAttackers[targetModel] = request.Attacker
+		rememberAttacker(targetModel, request.Attacker)
 	end
 	return DamageResult.new(true, applied, applied > 0 and "Damage applied" or "No damage applied")
 end
