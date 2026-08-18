@@ -19,6 +19,22 @@ local VALID_ACHIEVEMENTS = {
 	LEVEL_20 = true,
 }
 
+local VALID_TITLES = {
+	Fighter = true,
+	["Crystal Keeper"] = true,
+	["Crystal Master"] = true,
+	["Guardian Slayer"] = true,
+	["Ruins Explorer"] = true,
+	Veteran = true,
+}
+
+local VALID_ISLANDS = {
+	STARTER = true,
+	TIDE = true,
+	WIND = true,
+	ANCIENT = true,
+}
+
 local VALID_BOUNTY_ENEMIES = {
 	Emberling = true,
 	Tidecrawler = true,
@@ -141,7 +157,7 @@ function PlayerData.Reconcile(data)
 	data.Stats.AncientGolemsDefeated = clampInt(data.Stats.AncientGolemsDefeated, 0, 100000000, 0)
 	data.Stats.CrystalBatsDefeated = clampInt(data.Stats.CrystalBatsDefeated, 0, 100000000, 0)
 
-	data.Titles = normalizeList(data.Titles)
+	data.Titles = normalizeList(data.Titles, function(title) return VALID_TITLES[title] end)
 	data.Achievements = normalizeList(data.Achievements, function(id) return VALID_ACHIEVEMENTS[id] end)
 	data.Inventory = normalizeInventory(data.Inventory)
 	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
@@ -165,7 +181,7 @@ function PlayerData.Reconcile(data)
 	end
 	data.QuestProgress = normalizedProgress
 
-	data.UnlockedIslands = normalizeList(data.UnlockedIslands)
+	data.UnlockedIslands = normalizeList(data.UnlockedIslands, function(islandId) return VALID_ISLANDS[islandId] end)
 	if not table.find(data.UnlockedIslands, "STARTER") then table.insert(data.UnlockedIslands, "STARTER") end
 
 	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
