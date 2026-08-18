@@ -7,16 +7,20 @@
 - [x] Autosave alle 60 Sekunden
 - [x] Session-Locking mit Timeout und Release beim Server-Shutdown
 - [x] Separater Session-Heartbeat gegen Lock-Ablauf bei Save-Ausfällen
+- [x] Explizite SessionLock-Daten-Reconciliation
 - [x] Sicherer Profil-Ladefehlerpfad ohne leeres Fallback-Profil
 - [x] Persistente Daten-Normalisierung für Zahlen, Kristalle, Inventar, Quests und Daily Bounty
 - [x] Validierung der Daily-Bounty-Gegner bei Save-Migration
+- [x] Economy-/Save-Cap ist an EconomyConfig gekoppelt
 - [x] XP- und Levelsystem mit sauberem Max-Level-Cap
 - [x] Geldsystem
 - [x] Inventar + Material-Loot
+- [x] Vollstack-/Loot-Fallback-Feedback
 - [x] Materialverkauf beim Material Trader
 - [x] Kauf-Shop mit Health Potion
 - [x] Crafting mit Health-Potion-Rezept und Stack-Kapazitätsprüfung
 - [x] Servervalidierte Consumable-Nutzung
+- [x] Server-Rate-Limits für Shop, Crafting, Inventory und Consumables
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
 - [x] Crystal-Passiveffekte
@@ -27,7 +31,9 @@
 - [x] Serverseitige Enemy/Boss-Target-Whitelist
 - [x] Serverseitige Distanz-/Hitbox-Prüfung
 - [x] Serverautorisierte kritische Treffer
+- [x] Krit-State-Cleanup nach Treffern
 - [x] Serverautorisierter Dodge mit globalem ForceField-Schutz
+- [x] Dodge-Remote-Eingabevalidierung
 - [x] Serverseitige Ability-Cooldown-Anzeige im HUD
 - [x] Combat-Cooldowns werden erst nach erfolgreicher Schadensvalidierung verbraucht
 - [x] Damage Numbers + Cooldown-Feedback
@@ -50,6 +56,7 @@
 - [x] Crystal Guardian Boss
 - [x] Guardian-Arena mit Phase-2-Hazard
 - [x] Telegraphierte Phase-2-Bossattacke
+- [x] Guardian Quest Reward über zentralen QuestService
 - [x] Starter Island
 - [x] Tide Island
 - [x] Wind Island
@@ -57,6 +64,7 @@
 - [x] Levelgesperrte Portale
 - [x] Questdefinitionen + Fortschritt
 - [x] Servervalidierte Questvoraussetzungen
+- [x] Zentralisierter Quest-Completion-/Reward-Pfad
 - [x] Automatische Questkette bis Ancient Ruins
 - [x] Automatischer Queststart nach erreichter Levelvoraussetzung
 - [x] Quest Journal
@@ -66,9 +74,11 @@
 - [x] Tägliche Bounty mit persistentem Fortschritt
 - [x] NPC-Dialoge mit servervalidierten Menü-Optionen
 - [x] NPC-Dialoge als zentraler Einstieg zu Quest/Crystal/Shop/Inventory/Crafting
+- [x] Legacy-NPC-Remote entfernt
 - [x] HUD für Progression, Loot, Quests, Bounty und Crafting
 - [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge/Bounty/Crafting-Feedback
 - [x] Spieler-HP + Death/Respawn-Feedback
+- [x] Doppelte Player-Health-Camera-Shake-Logik entfernt
 - [x] Inventory-/Crystal-GUI
 - [x] Item-Raritäten
 - [x] Gegnerabhängige Drop-Chancen
@@ -79,8 +89,11 @@
 - [x] Welt-Dekoration für alle aktuellen Inseln
 - [x] Modulare Welt-Themes
 - [x] Rojo-/default.project.json-Struktur für alle Erweiterungen
+- [x] Unsicheres Legacy-SaveSystem entfernt
 - [x] GitHub-CI für JSON-, Rojo- und häufige Luau-Require-Pfad-Validierung
 - [x] GitHub-CI für Cross-File-Gameplay-Referenzen
+- [x] GitHub-CI für Remote-Referenzen
+- [x] GitHub-CI für Balancing-Invarianten
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 - [x] Duplicate Cooldown UI entfernt
 
