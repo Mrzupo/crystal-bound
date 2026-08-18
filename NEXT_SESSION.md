@@ -41,11 +41,13 @@ The current master design context is authoritative: Crystal Bound is an original
 - `HitboxService` rejects invalid/negative/non-finite radius values.
 - `CombatModifierService` finite-safely normalizes mastery level before critical calculation.
 - `CombatService` has a small request-rate guard in addition to action cooldowns.
-- `CombatService` now records confirmed hit presentation state only after `DamageService.ProcessDamage()` succeeds.
 - GALE splash damage goes through `DamageService.ProcessDamage()` rather than bypassing the central damage validator.
 - Server-side procedural Combat VFX were removed from `CombatService`; the server no longer creates transient VFX Parts/Tweens for crystal hits.
-- Confirmed hit state (`LastHitCrystal`, `LastHitCritical`, `LastAttackerUserId`) is replicated from the server to support client presentation without moving gameplay authority client-side.
-- `CombatPresentation.client.lua` now renders crystal-specific confirmed impact flashes/impacts from the replicated hit state.
+- Added a dedicated `CombatFeedback` RemoteEvent for server-confirmed hit presentation.
+- `CombatService` fires `CombatFeedback` only after `DamageService.ProcessDamage()` succeeds and includes the verified target, attacker id, action, crystal id, critical state and applied damage amount.
+- `CombatPresentation.client.lua` consumes only the server-confirmed `CombatFeedback` event for damage numbers, hit flashes, impact visuals and crystal-specific ability accents.
+- NPC-side `LastHitCrystal` / `LastHitCritical` / `LastAttackerUserId` presentation attributes are no longer used by the combat presentation path.
+- Added `combat-presentation-validation.yml` to guard the client/server presentation boundary, required mappings and the absence of client-side `TakeDamage()`.
 - `ClientBootstrap.client.lua` throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
 - Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs for EMBER/TIDE/GALE.
 - Added `CrystalAnimationController.client.lua`, which owns client-side `Animator`/`AnimationTrack` loading, priority, fade and playback.
@@ -55,14 +57,14 @@ The current master design context is authoritative: Crystal Bound is an original
 - VFX configuration now lives beside animation configuration, including optional sound IDs, presentation scale and offsets.
 - VFX playback has a small local presentation guard to avoid excessive local burst/sound allocation during input spam.
 - Wired Basic/Q presentation animation + VFX on PC and mobile before the existing `CombatRequest`; these effects are cosmetic only.
-- Registered the animation/VFX controllers and presentation config in `default.project.json`.
+- Registered the animation/VFX controllers, presentation config and `CombatFeedback` remote mapping in `default.project.json`.
 
 ## Animation/VFX status
 The animation architecture is in place, but the asset IDs are intentionally empty until real Roblox animations are published. Therefore this is **not yet a claim of real in-game attack animations**. The controller safely no-ops when an ID is missing.
 
 The VFX layer is deliberately placeholder-level: it provides immediate crystal identity without pretending to be final asset-based particles. Optional sound hooks also remain empty until authored Roblox assets exist.
 
-The confirmed-hit presentation is now explicitly client-side: the server validates damage and records the result; the client turns that replicated result into visuals. Animation timing still never determines damage authority.
+The confirmed-hit presentation is now explicitly client-side: the server validates damage and publishes only the verified result; the client turns that result into visuals. Animation timing still never determines damage authority.
 
 ## Quality assessment
 - **Architecture:** strong for a prototype; server authority is clear and gameplay services are separated.
@@ -79,12 +81,13 @@ The confirmed-hit presentation is now explicitly client-side: the server validat
 - Actual Roblox animation asset IDs are not available yet.
 
 ## Exact next steps
-1. Audit the refined `CrystalVFXController.client.lua`, `CombatPresentation.client.lua` and final Rojo mapping.
-2. Add authored asset folders/lookup contracts for crystal VFX and sounds without moving gameplay authority client-side.
-3. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire their IDs into `CrystalAnimationConfig.lua`.
-4. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
-5. Repeat the same presentation contract for TIDE and GALE.
-6. Prepare the first Roblox Studio runtime/playtest and record actual combat/animation issues.
+1. Continue auditing the refined `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua` and final Rojo mapping.
+2. Validate the new combat-presentation CI contract after subsequent changes.
+3. Add authored asset folders/lookup contracts for crystal VFX and sounds without moving gameplay authority client-side.
+4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire their IDs into `CrystalAnimationConfig.lua`.
+5. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
+6. Repeat the same presentation contract for TIDE and GALE.
+7. Prepare the first Roblox Studio runtime/playtest and record actual combat/animation issues.
 
 ## Do not do
 - Do not merge this branch into `main` yet.
@@ -102,10 +105,12 @@ The confirmed-hit presentation is now explicitly client-side: the server validat
 - `NEXT_SESSION.md`
 - `.github/workflows/project-validation.yml`
 - `.github/workflows/remote-handler-validation.yml`
+- `.github/workflows/combat-presentation-validation.yml`
 - `src/ServerScriptService/Bootstrap.server.lua`
 - `src/ServerScriptService/Services/CombatService.lua`
 - `src/ServerScriptService/Services/DamageService.lua`
 - `src/ServerScriptService/Services/PlayerService.lua`
+- `src/ServerScriptService/CombatFeedbackRemote.server.lua`
 - `src/ReplicatedStorage/Modules/PlayerData.lua`
 - `src/ReplicatedStorage/Config/CrystalConfig.lua`
 - `src/ReplicatedStorage/Config/CrystalAnimationConfig.lua`
