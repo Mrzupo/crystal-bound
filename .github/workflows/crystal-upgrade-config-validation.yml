@@ -13,6 +13,7 @@ jobs:
       - name: Validate Crystal mastery costs
         shell: python
         run: |
+          import re
           from pathlib import Path
           config = Path("src/ReplicatedStorage/Config/CrystalUpgradeConfig.lua").read_text(encoding="utf-8")
           required = {
@@ -23,4 +24,17 @@ jobs:
           for crystal, item in required.items():
               if crystal not in config or item not in config:
                   raise SystemExit(f"Missing mastery cost definition for {crystal}: {item}")
+
+          max_level = re.search(r"MaxLevel\s*=\s*(\d+)", config)
+          max_xp = re.search(r"MaxExperience\s*=\s*(\d+)", config)
+          if not max_level or int(max_level.group(1)) <= 0:
+              raise SystemExit("MaxLevel must be a positive integer")
+          if not max_xp or int(max_xp.group(1)) <= 0:
+              raise SystemExit("MaxExperience must be a positive integer")
+
+          base_costs = config.split("BaseCosts", 1)[1] if "BaseCosts" in config else ""
+          costs = re.findall(r"(EmberShard|TidePearl|GaleFeather)\s*=\s*(\d+)", base_costs)
+          if len(costs) != 3 or any(int(amount) <= 0 for _, amount in costs):
+              raise SystemExit("Every crystal mastery base cost must be present and positive")
+
           print("Crystal upgrade config validated.")
