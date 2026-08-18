@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **778 commits ahead, 28 commits behind** `main` (verified with GitHub compare).
+- Current compare: **780 commits ahead, 28 commits behind** `main` (verified with GitHub compare).
 - `main` has not been merged/overwritten.
 
 ## Current state
@@ -35,6 +35,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - NPC normal attacks and special attacks carry the concrete NPC as attacker, use `Physical` damage and pass their real attack range; Emberling burn ticks preserve NPC attacker context.
 - Guardian normal attacks and telegraphs preserve the Guardian attacker and use `Physical` / `BossShockwave` damage types with explicit ranges.
 - `CrystalAbilityService` defensively validates player/target instances plus finite/clamped damage and range inputs before executing server abilities.
+- Invalid Crystal ability damage inputs are rejected instead of receiving an artificial fallback damage value.
 - Status effects have bounded Slow/Burn duration, tick count, damage and interval; tokenized callbacks prevent stale effect cleanup from cancelling newer effects.
 - Dodge validates finite vectors, resets on respawn, cleans state on leave and routes actual damage through `DamageService`.
 - `DodgeService.ApplyDamage()` requires an explicit positive range for non-environmental attacker damage; the old 1000-stud fallback is restricted away from PvE attackers.
@@ -58,7 +59,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - `default.project.json` identifies the DataModel as `Crystal Bound` and no longer maps removed legacy Crystal modules or root runtime stubs.
 - `CrystalAnimationConfig` has a six-entry presentation contract for EMBER/TIDE/GALE Basic/Ability actions.
 - `CrystalAnimationController` local cooldowns are keyed by Crystal + Action.
-- **Animation ownership fix:** the client animation controller no longer creates a local `Animator`. `PlayerService` now ensures the character has a server-owned `Animator` on initial character load, respawn and normal sync, so client-loaded player animations can replicate correctly.
+- **Animation ownership fix:** the client animation controller no longer creates a local `Animator`. `PlayerService` ensures the character has a server-owned `Animator` on initial character load, respawn and normal sync so client-loaded player animations can replicate correctly.
 - Unreferenced legacy Crystal modules were removed; `CrystalAbilityService` is the active server ability layer.
 - WorldDecor/WorldTheme are one-shot/idempotent; portal gates use central WorldConfig.
 - Enemy lifecycle, AI cleanup, status cleanup and respawn callback behavior are protected by contracts.
@@ -84,17 +85,20 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - No Luau interpreter is available here; validation is static/structural.
 - The latest commit currently has **no verified Combined Status checks** available through the connector; do not call CI green without a verified status.
 - The Actions run helper available here only exposes PR-triggered workflow runs, so absence from that helper is not proof that push-triggered CI never ran.
+- A direct local `git clone` could not be performed because this environment could not resolve `github.com`; repository-wide inspection therefore relied on the GitHub connector/tree plus targeted file audits.
 - Actual authored Roblox Animation/Sound assets are still absent.
 - Presentation VFX are still placeholder-level.
 - `ClientBootstrap` HUD layout should be reviewed during Studio playtest.
+- **Design decision still open:** TIDE/GALE currently auto-unlock at their level gates, while the master design context lists Mining, Digging, Bosses, Dungeons, World Events and Quests as planned Crystal acquisition activities. Do not silently change this; decide whether level-gated unlocks are prototype-only or part of the final acquisition design.
 
 ## Exact next steps
-1. Continue static auditing of `CombatService`, `CrystalAbilityService`, `BossService`, `StatusEffectService`, `NPCService`, menus and `default.project.json`.
+1. Continue static auditing of `CombatService`, `CrystalAbilityService`, `BossService`, `StatusEffectService`, `NPCService`, menus and `default.project.json` only where a concrete issue remains.
 2. Verify combat/damage/feedback/remote/progression/presentation/persistence contracts after further edits.
 3. Add authored Animation/Sound objects under the configured asset names.
 4. Build the first real EMBER Basic + Flame Burst assets, then repeat for TIDE and GALE.
 5. Keep animation markers presentation-only; never make them gameplay authority.
-6. Prepare the first Roblox Studio runtime playtest and record actual Output/runtime issues.
+6. Resolve the Crystal acquisition design decision before building Mining/Excavation/advanced Crystal content.
+7. Prepare the first Roblox Studio runtime playtest and record actual Output/runtime issues.
 
 ## Do not do
 - Do not merge into `main`.
