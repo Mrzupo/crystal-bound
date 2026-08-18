@@ -1,4 +1,9 @@
 return {
+	UnlockLevels = {
+		EMBER = 1,
+		TIDE = 3,
+		GALE = 5,
+	},
 	BasicAttack = {
 		EMBER = { Damage = 14, Range = 16, Cooldown = 0.55 },
 		TIDE = { Damage = 12, Range = 17, Cooldown = 0.65 },
