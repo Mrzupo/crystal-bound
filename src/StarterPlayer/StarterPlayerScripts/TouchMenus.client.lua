@@ -14,14 +14,7 @@ local function openByAttribute(attributeName)
 	player:SetAttribute(attributeName, os.clock())
 end
 
-local function toggle(screenGuiName)
-	local target = player.PlayerGui:FindFirstChild(screenGuiName)
-	if not target then return end
-	local panel = target:FindFirstChild("Panel")
-	if panel then panel.Visible = not panel.Visible end
-end
-
-local function makeButton(name, text, index, targetGui, attributeName)
+local function makeButton(name, text, index, attributeName)
 	local button = Instance.new("TextButton")
 	button.Name = name
 	button.Position = UDim2.fromOffset(18 + (index - 1) * 82, 68)
@@ -32,20 +25,14 @@ local function makeButton(name, text, index, targetGui, attributeName)
 	button.TextSize = 12
 	button.Parent = gui
 	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
-	button.Activated:Connect(function()
-		if attributeName then
-			openByAttribute(attributeName)
-		else
-			toggle(targetGui)
-		end
-	end)
+	button.Activated:Connect(function() openByAttribute(attributeName) end)
 end
 
-makeButton("Inventory", "Items", 1, "CrystalMenu", "OpenCrystalMenu")
-makeButton("Quests", "Quests", 2, "QuestMenu", "OpenQuestMenu")
-makeButton("Shop", "Shop", 3, "ShopMenu", "OpenShopMenu")
-makeButton("Achievements", "Goals", 4, "AchievementMenu", nil)
-makeButton("Crafting", "Craft", 5, "CraftingMenu", "OpenCraftingMenu")
+makeButton("Inventory", "Items", 1, "OpenCrystalMenu")
+makeButton("Quests", "Quests", 2, "OpenQuestMenu")
+makeButton("Shop", "Shop", 3, "OpenShopMenu")
+makeButton("Achievements", "Goals", 4, "OpenAchievementMenu")
+makeButton("Crafting", "Craft", 5, "OpenCraftingMenu")
 
 local hint = Instance.new("TextLabel")
 hint.Name = "Hint"
