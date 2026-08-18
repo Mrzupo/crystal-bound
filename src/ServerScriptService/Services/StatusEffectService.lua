@@ -18,8 +18,15 @@ local function getCurrentBaseWalkSpeed(humanoid, fallback)
 	return fallback or humanoid.WalkSpeed
 end
 
+local function getPlayer(humanoid)
+	local character = humanoid and humanoid.Parent
+	return character and Players:GetPlayerFromCharacter(character)
+end
+
 function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	if not humanoid or humanoid.Health <= 0 then return false end
+	local player = getPlayer(humanoid)
+	if player and DodgeService.IsInvulnerable(player) then return false end
 	multiplier = math.clamp(tonumber(multiplier) or 0.8, 0.2, 1)
 	duration = math.clamp(tonumber(duration) or 1, 0.1, 10)
 	local state = stateFor(humanoid)
@@ -41,6 +48,8 @@ end
 
 function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval)
 	if not humanoid or humanoid.Health <= 0 then return false end
+	local player = getPlayer(humanoid)
+	if player and DodgeService.IsInvulnerable(player) then return false end
 	damagePerTick = math.clamp(tonumber(damagePerTick) or 3, 1, 100)
 	ticks = math.clamp(math.floor(tonumber(ticks) or 3), 1, 10)
 	interval = math.clamp(tonumber(interval) or 0.7, 0.2, 3)
