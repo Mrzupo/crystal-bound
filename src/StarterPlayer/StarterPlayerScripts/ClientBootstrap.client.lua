@@ -21,6 +21,8 @@ local crystalOrder = { "EMBER", "TIDE", "GALE" }
 local sellOrder = { "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard" }
 local questRefreshQueued = false
 local questRefreshBusy = false
+local lastBossRefresh = 0
+local BOSS_REFRESH_INTERVAL = 0.1
 
 local function getTargetFromMouse()
 	local hit = player:GetMouse().Target
@@ -235,6 +237,9 @@ local function scheduleQuestRefresh()
 end
 
 local function refreshBoss()
+	local now = os.clock()
+	if now - lastBossRefresh < BOSS_REFRESH_INTERVAL then return end
+	lastBossRefresh = now
 	local folder = workspace:FindFirstChild("NPCs")
 	local boss = folder and folder:FindFirstChild("CrystalGuardian")
 	local humanoid = boss and boss:FindFirstChildOfClass("Humanoid")
