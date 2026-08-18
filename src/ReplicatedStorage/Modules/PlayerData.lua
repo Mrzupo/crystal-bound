@@ -2,6 +2,7 @@ local PlayerData = {}
 local InventoryConfig = require(game.ReplicatedStorage.Config.InventoryConfig)
 local EconomyConfig = require(game.ReplicatedStorage.Config.EconomyConfig)
 local XPConfig = require(game.ReplicatedStorage.Config.XPConfig)
+local CrystalUpgradeConfig = require(game.ReplicatedStorage.Config.CrystalUpgradeConfig)
 local QuestSystem = require(script.Parent.QuestSystem)
 
 local VALID_CRYSTALS = {
@@ -124,6 +125,7 @@ function PlayerData.Reconcile(data)
 	local defaults = PlayerData.new()
 	data = type(data) == "table" and data or {}
 	local oldVersion = tonumber(data.Version) or 0
+	local masteryMaxLevel = math.max(1, math.floor(tonumber(CrystalUpgradeConfig.MaxLevel) or 10))
 
 	local function merge(target, fallback)
 		for key, value in pairs(fallback) do
@@ -154,10 +156,10 @@ function PlayerData.Reconcile(data)
 	for crystalId in pairs(VALID_CRYSTALS) do
 		local source = type(sourceMastery[crystalId]) == "table" and sourceMastery[crystalId] or {}
 		local mastery = {
-			Level = clampInt(source.Level, 1, 10, 1),
+			Level = clampInt(source.Level, 1, masteryMaxLevel, 1),
 			XP = clampInt(source.XP, 0, 100000000, 0),
 		}
-		if mastery.Level >= 10 then mastery.XP = 0 end
+		if mastery.Level >= masteryMaxLevel then mastery.XP = 0 end
 		normalizedMastery[crystalId] = mastery
 	end
 	data.CrystalMastery = normalizedMastery
