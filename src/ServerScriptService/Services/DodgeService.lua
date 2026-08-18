@@ -1,12 +1,15 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DamageService = require(script.Parent.DamageService)
+local DodgeConfig = require(ReplicatedStorage.Config.DodgeConfig)
 
 local DodgeService = {}
-local cooldowns = {}
+local cooldowns = setmetatable({}, { __mode = "k" })
 
-local COOLDOWN = 2.5
-local INVULNERABILITY = 0.45
-local BOOST = 42
+local COOLDOWN = math.max(0.1, tonumber(DodgeConfig.Cooldown) or 2.5)
+local INVULNERABILITY = math.clamp(tonumber(DodgeConfig.Invulnerability) or 0.45, 0.05, 2)
+local BOOST = math.clamp(tonumber(DodgeConfig.Boost) or 42, 1, 100)
+local MAX_DIRECTION_MAGNITUDE = math.max(1, tonumber(DodgeConfig.MaxDirectionMagnitude) or 1000)
 
 local function clearForceField(character)
 	local forceField = character and character:FindFirstChild("CrystalBoundDodgeForceField")
@@ -19,7 +22,8 @@ end
 
 local function validDirection(direction)
 	if typeof(direction) ~= "Vector3" then return false end
-	return finiteComponent(direction.X) and finiteComponent(direction.Y) and finiteComponent(direction.Z)
+	if not finiteComponent(direction.X) or not finiteComponent(direction.Y) or not finiteComponent(direction.Z) then return false end
+	return direction.Magnitude <= MAX_DIRECTION_MAGNITUDE
 end
 
 local function finiteDamage(value)
@@ -39,12 +43,13 @@ function DodgeService.TryDodge(player, direction)
 	local nextReady = cooldowns[player] or 0
 	if now < nextReady then return false, "Dodge on cooldown" end
 
-	local requested = validDirection(direction) and direction or Vector3.new(0, 0, -1)
+	local requested = direction
+	if requested ~= nil and not validDirection(requested) then
+		return false, "Invalid direction"
+	end
+	requested = validDirection(requested) and requested or Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
 	local flat = Vector3.new(requested.X, 0, requested.Z)
 	if not finiteComponent(flat.X) or not finiteComponent(flat.Z) or flat.Magnitude < 0.1 then
-		flat = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
-	end
-	if flat.Magnitude < 0.1 or not finiteComponent(flat.X) or not finiteComponent(flat.Z) then
 		flat = Vector3.new(0, 0, -1)
 	end
 	flat = flat.Unit
