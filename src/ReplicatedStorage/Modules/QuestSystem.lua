@@ -16,7 +16,10 @@ local function safeAmount(amount, fallback)
 	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
 		return fallback or 0
 	end
-	return math.max(0, math.floor(value))
+	if value < 0 or value % 1 ~= 0 then
+		return nil
+	end
+	return value
 end
 
 function QuestSystem.GetDefinition(id)
@@ -119,6 +122,9 @@ function QuestSystem.Advance(profile, questId, amount)
 	end
 	profile.QuestProgress = profile.QuestProgress or {}
 	local safeIncrement = safeAmount(amount, 1)
+	if safeIncrement == nil then
+		return false, QuestSystem.GetProgress(profile, questId), definition.Goal
+	end
 	profile.QuestProgress[questId] = math.min(definition.Goal, QuestSystem.GetProgress(profile, questId) + safeIncrement)
 	return profile.QuestProgress[questId] >= definition.Goal, profile.QuestProgress[questId], definition.Goal
 end
