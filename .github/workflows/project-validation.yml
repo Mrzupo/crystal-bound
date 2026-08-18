@@ -148,9 +148,8 @@ jobs:
           from pathlib import Path
 
           root = Path("src")
-          project = (Path("default.project.json")).read_text(encoding="utf-8")
+          project = Path("default.project.json").read_text(encoding="utf-8")
           remote_names = set(re.findall(r'"([A-Za-z0-9_]+)": \{"\$className": "Remote(?:Event|Function)"\}', project))
-
           patterns = [
               re.compile(r'Remotes:WaitForChild\("([A-Za-z0-9_]+)"\)'),
               re.compile(r'Remotes:FindFirstChild\("([A-Za-z0-9_]+)"\)'),
@@ -158,19 +157,16 @@ jobs:
               re.compile(r'remotes:FindFirstChild\("([A-Za-z0-9_]+)"\)'),
               re.compile(r'remotes\.([A-Za-z0-9_]+)\b'),
           ]
-
-          ignore = {"Parent", "Name"}
+          ignore = {"Parent", "Name", "WaitForChild", "FindFirstChild"}
           referenced = set()
           for path in root.rglob("*.lua"):
               text = path.read_text(encoding="utf-8")
               for pattern in patterns:
                   referenced.update(pattern.findall(text))
-
           missing = sorted(name for name in referenced if name not in remote_names and name not in ignore)
           if missing:
               print("Remote names referenced by Luau but not declared in default.project.json:")
               for name in missing:
                   print(f" - {name}")
               raise SystemExit(1)
-
           print("Remote references validated.")
