@@ -149,14 +149,18 @@ function PlayerData.Reconcile(data)
 		data.Crystals.Equipped = "EMBER"
 	end
 
-	data.CrystalMastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or clone(defaults.CrystalMastery)
+	local sourceMastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or {}
+	local normalizedMastery = {}
 	for crystalId in pairs(VALID_CRYSTALS) do
-		local mastery = type(data.CrystalMastery[crystalId]) == "table" and data.CrystalMastery[crystalId] or {}
-		mastery.Level = clampInt(mastery.Level, 1, 10, 1)
-		mastery.XP = clampInt(mastery.XP, 0, 100000000, 0)
+		local source = type(sourceMastery[crystalId]) == "table" and sourceMastery[crystalId] or {}
+		local mastery = {
+			Level = clampInt(source.Level, 1, 10, 1),
+			XP = clampInt(source.XP, 0, 100000000, 0),
+		}
 		if mastery.Level >= 10 then mastery.XP = 0 end
-		data.CrystalMastery[crystalId] = mastery
+		normalizedMastery[crystalId] = mastery
 	end
+	data.CrystalMastery = normalizedMastery
 
 	data.Stats = type(data.Stats) == "table" and data.Stats or clone(defaults.Stats)
 	data.Stats.Damage = clampInt(data.Stats.Damage, 0, 100000, defaults.Stats.Damage)
