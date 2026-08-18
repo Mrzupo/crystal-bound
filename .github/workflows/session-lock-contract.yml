@@ -1,0 +1,32 @@
+name: Session Lock Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-session-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate heartbeat lock protection
+        shell: python
+        run: |
+          from pathlib import Path
+          heartbeat = Path("src/ServerScriptService/SessionHeartbeat.server.lua").read_text(encoding="utf-8")
+          store = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
+          checks = [
+              ("heartbeat interval", "local HEARTBEAT_INTERVAL = 45", heartbeat),
+              ("consecutive failure cap", "local MAX_CONSECUTIVE_FAILURES = 2", heartbeat),
+              ("heartbeat refresh", "SafeProfileStore.Refresh(player)", heartbeat),
+              ("player kick on repeated lock loss", "player:Kick", heartbeat),
+              ("save checks session lock owner", "lock.JobId ~= SESSION_ID", store),
+              ("load refuses active foreign lock", "age < SESSION_TIMEOUT", store),
+          ]
+          failures = [name for name, marker, text in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Session lock contract validated.")
