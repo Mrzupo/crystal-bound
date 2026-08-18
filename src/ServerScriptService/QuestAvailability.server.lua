@@ -11,13 +11,21 @@ if not remote then
 	remote.Parent = remotes
 end
 
+local REQUEST_INTERVAL = 0.2
+local nextRequest = {}
+
 remote.OnServerInvoke = function(player)
 	if not player or not player:IsA("Player") then return {} end
+	local now = os.clock()
+	if now < (nextRequest[player] or 0) then
+		return {}
+	end
+	nextRequest[player] = now + REQUEST_INTERVAL
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return {} end
 	return QuestSystem.GetAvailable(profile)
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	-- RemoteFunction remains shared; profiles are owned by PlayerService.
+	nextRequest[player] = nil
 end)
