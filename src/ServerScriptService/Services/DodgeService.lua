@@ -21,6 +21,12 @@ local function validDirection(direction)
 	return finiteComponent(direction.X) and finiteComponent(direction.Y) and finiteComponent(direction.Z)
 end
 
+local function finiteDamage(value)
+	local amount = tonumber(value)
+	if not finiteComponent(amount) then return nil end
+	return amount
+end
+
 function DodgeService.TryDodge(player, direction)
 	if not player or not player:IsA("Player") then return false, "Invalid player" end
 	local character = player.Character
@@ -74,7 +80,9 @@ function DodgeService.ApplyDamage(player, humanoid, amount)
 		player:SetAttribute("DodgeMessage", "Dodged!")
 		return false
 	end
-	humanoid:TakeDamage(math.max(0, tonumber(amount) or 0))
+	local damage = finiteDamage(amount)
+	if not damage or damage <= 0 then return false end
+	humanoid:TakeDamage(math.clamp(damage, 0, 1000))
 	return true
 end
 
