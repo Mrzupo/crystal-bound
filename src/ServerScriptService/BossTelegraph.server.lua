@@ -63,6 +63,10 @@ end
 local function cast()
 	local player = getTarget()
 	if not player then return end
+	local guardian = NPCs:FindFirstChild("CrystalGuardian")
+	local guardianHumanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
+	if not guardianHumanoid or guardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then return end
+
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -71,6 +75,11 @@ local function cast()
 	local position = root.Position
 	createTelegraph(position)
 	task.delay(TELEGRAPH_TIME, function()
+		local currentGuardian = NPCs:FindFirstChild("CrystalGuardian")
+		local currentGuardianHumanoid = currentGuardian and currentGuardian:FindFirstChildOfClass("Humanoid")
+		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (currentGuardian:GetAttribute("BossPhase") or 1) < 2 then
+			return
+		end
 		if not player.Parent then return end
 		local currentCharacter = player.Character
 		local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
