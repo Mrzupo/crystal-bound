@@ -39,8 +39,8 @@
 - Shop-GUI mit Verkauf und Kaufangebot.
 - Mobile Touch Controls mit echter Kamera-/Touch-Zielauswahl.
 - Mobile Dodge-, Inventory-, Quest-, Shop- und Achievement-Steuerung.
-- GitHub-CI zur JSON-, Rojo-Dateipfad-, Remote-, Gameplay-, Profil-Migrations- und Balancing-Validierung.
-- Serverseitiger Rate-Limiter für PlayerData-/QuestData-RemoteFunctions.
+- GitHub-CI zur JSON-, Rojo-Dateipfad-, Remote-, Gameplay-, Profil-Migrations-, `TakeDamage()`- und Balancing-Validierung.
+- CI-Regel zur eindeutigen `OnServerInvoke`-Besitzerschaft von Player-/Quest-Data-RemoteFunctions.
 
 ### Changed
 
@@ -66,6 +66,7 @@
 - `StatusMessages` erlaubt wiederholt auftretende identische Meldungen nach Ablauf des aktuellen Anzeigefensters.
 - Portal-Cooldowns nutzen Weak Keys für lange Serverlaufzeiten.
 - `default.project.json` lädt ausschließlich `StatusSpeedGuardV2`; der Legacy-Guard und das alte SaveSystem bleiben außerhalb von Rojo.
+- Der separate `DataQueryRateLimit`-Server wurde entfernt, weil `Bootstrap` bereits der alleinige `OnServerInvoke`-Handler für diese RemoteFunctions ist; ein zusätzlicher Handler hätte eine Race-/Override-Quelle geschaffen.
 - `TODO.md` wurde an den tatsächlichen Entwicklungsstand angepasst.
 
 ### Notes
