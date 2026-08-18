@@ -1,0 +1,32 @@
+name: Dodge Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-dodge-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate dodge bounds
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
+          checks = [
+              ("cooldown", "local COOLDOWN = 2.5"),
+              ("invulnerability", "local INVULNERABILITY = 0.45"),
+              ("boost", "local BOOST = 42"),
+              ("finite direction", "return finiteComponent(direction.X) and finiteComponent(direction.Y) and finiteComponent(direction.Z)"),
+              ("central damage", "local result = DamageService.ProcessDamage(request)"),
+              ("respawn reset", "player.CharacterAdded:Connect(function()"),
+              ("player cleanup", "Players.PlayerRemoving:Connect(function(player)"),
+          ]
+          failures = [name for name, marker in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Dodge contract validated.")
