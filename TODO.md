@@ -96,10 +96,12 @@
 - [x] GitHub-CI für Balancing-Invarianten
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 - [x] Duplicate Cooldown UI entfernt
+- [x] Clientseitige Animation-Controller-Architektur für Basic/Ability vorbereitet
+- [x] Animation-Konfiguration pro Kristall getrennt von Gameplay-Konfiguration
 
 ## Nächste Systeme
 
-- [ ] echte Attack-/Ability-Animationen
+- [ ] echte Attack-/Ability-Animationen mit veröffentlichten Roblox-Assets
 - [ ] echte Asset-basierte VFX/Particles statt prozeduraler Placeholder
 - [ ] weitere Boss-Mechaniken außerhalb des Guardian-Phasen-Systems
 - [ ] fortgeschrittenes Navigation-/Pathfinding-Tuning für komplexes Terrain
