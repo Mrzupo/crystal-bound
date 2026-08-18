@@ -17,6 +17,8 @@ local NPCService = require(script.Parent.Services.NPCService)
 local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
 local AUTOSAVE_INTERVAL = 60
 local NPC_INTERACTION_RANGE = 14
+local INVENTORY_REQUEST_INTERVAL = 0.1
+local nextInventoryRequest = {}
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -26,7 +28,7 @@ local function ensureRemote(className, name)
 	local remote = Instance.new(className); remote.Name = name; remote.Parent = remotes
 	return remote
 end
-for _, name in ipairs({ "CombatRequest", "QuestRequest", "NPCRequest", "InventoryRequest", "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged", "CrystalMasteryChanged", "CrystalUpgradeRequest" }) do ensureRemote("RemoteEvent", name) end
+for _, name in ipairs({ "CombatRequest", "QuestRequest", "InventoryRequest", "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged", "CrystalMasteryChanged", "CrystalUpgradeRequest" }) do ensureRemote("RemoteEvent", name) end
 ensureRemote("RemoteFunction", "GetPlayerData"); ensureRemote("RemoteFunction", "GetQuestData")
 local remotes = ReplicatedStorage.Remotes
 
@@ -51,6 +53,10 @@ remotes.QuestRequest.OnServerEvent:Connect(function(player, action, questId)
 end)
 
 remotes.InventoryRequest.OnServerEvent:Connect(function(player, action, itemId, amount)
+	local now = os.clock()
+	if now < (nextInventoryRequest[player] or 0) then return end
+	nextInventoryRequest[player] = now + INVENTORY_REQUEST_INTERVAL
+
 	local profile = PlayerService.GetProfile(player); if not profile then return end
 	if action == "Sell" and type(itemId) == "string" then
 		if not isNearNPC(player, "MaterialTrader") then player:SetAttribute("ShopMessage", "You need to be near the Material Trader."); return end
@@ -119,5 +125,5 @@ local function initializePlayer(player)
 	end
 	if not QuestSystem.IsActive(profile,"FIRST_FIGHT") and not QuestSystem.IsCompleted(profile,"FIRST_FIGHT") then QuestService.Start(player,profile,"FIRST_FIGHT") end
 end
-Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); PlayerService.Remove(player) end)
-task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); PlayerService.Remove(player) end end end)
+Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; PlayerService.Remove(player) end)
+task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then PlayerService.Save(player) end end end end); game:BindToClose(function() for _,player in ipairs(Players:GetPlayers()) do if PlayerService.GetProfile(player) then CombatService.CleanupPlayer(player); nextInventoryRequest[player] = nil; PlayerService.Remove(player) end end end)
