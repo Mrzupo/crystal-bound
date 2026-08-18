@@ -1,5 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
+local XPService = require(script.Parent.XPService)
+local EconomyService = require(script.Parent.EconomyService)
+local PlayerService = require(script.Parent.PlayerService)
 
 local QuestService = {}
 
@@ -42,13 +45,19 @@ function QuestService.Start(player, profile, questId)
 	return started
 end
 
-function QuestService.Complete(player, profile, questId, XPService, EconomyService, PlayerService)
+function QuestService.Complete(player, profile, questId, message)
 	local definition = QuestSystem.GetDefinition(questId)
-	if not definition or not QuestSystem.Complete(profile, questId) then return false end
+	if not definition or not QuestSystem.IsActive(profile, questId) then return false end
+	if not QuestSystem.Complete(profile, questId) then return false end
+
 	XPService.AddXP(profile, definition.XP)
 	EconomyService.AddMoney(profile, definition.Money)
 	PlayerService.Sync(player)
 	sync(player, profile)
+	if player then
+		player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!"))
+	end
+	QuestService.TryStartNext(player, profile)
 	return true
 end
 
