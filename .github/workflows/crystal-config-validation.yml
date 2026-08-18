@@ -20,7 +20,9 @@ jobs:
           config = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
           inventory_ui = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          system = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
           required = {
+              "Definitions": ("EMBER =", "TIDE =", "GALE ="),
               "UnlockLevels": ("EMBER = 1", "TIDE = 3", "GALE = 5"),
               "BasicAttack": ("EMBER =", "TIDE =", "GALE ="),
               "Abilities": ("EMBER =", "TIDE =", "GALE ="),
@@ -44,6 +46,8 @@ jobs:
               problems.append("InventoryMenu must not hardcode an unlock table")
           if "local crystalRequirements = {" in bootstrap:
               problems.append("Bootstrap must not hardcode a crystal unlock table")
+          if "CrystalConfig.Definitions[id]" not in system:
+              problems.append("CrystalSystem must consume shared CrystalConfig.Definitions")
 
           if problems:
               for problem in problems:
