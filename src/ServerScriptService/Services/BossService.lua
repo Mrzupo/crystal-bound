@@ -142,9 +142,17 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		if player then
 			local PlayerService = require(script.Parent.PlayerService); local profile = PlayerService.GetProfile(player)
 			if profile then
-				XPService.AddXP(profile, config.XP); EconomyService.AddMoney(profile, config.Money); InventoryService.AddItem(profile, config.Drop, 1); profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
+				XPService.AddXP(profile, config.XP)
+				EconomyService.AddMoney(profile, config.Money)
+				local coreAdded = InventoryService.AddItem(profile, config.Drop, 1)
+				profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
 				if QuestSystem.IsActive(profile, "GUARDIAN_TRIAL") then QuestSystem.Complete(profile, "GUARDIAN_TRIAL"); XPService.AddXP(profile, 2200); EconomyService.AddMoney(profile, 1500); QuestService.TryStartNext(player, profile) end
-				PlayerService.Sync(player); player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
+				PlayerService.Sync(player)
+				if coreAdded > 0 then
+					player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
+				else
+					player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core stack is full.")
+				end
 				local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
 			end
 		end
