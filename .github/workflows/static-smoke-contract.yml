@@ -1,0 +1,58 @@
+name: Static Gameplay Smoke Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  gameplay-smoke-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate critical gameplay wiring
+        shell: python
+        run: |
+          from pathlib import Path
+
+          checks = {
+              "combat": [
+                  "src/ServerScriptService/Services/CombatService.lua",
+                  "DamageService.ProcessDamage",
+                  "CrystalAbilityService.Execute",
+                  "QuestSystem.Advance",
+              ],
+              "damage": [
+                  "src/ServerScriptService/Services/DamageService.lua",
+                  "Humanoid:TakeDamage",
+                  "GetLastAttacker",
+                  "DodgeInvulnerable",
+              ],
+              "boss": [
+                  "src/ServerScriptService/Services/BossService.lua",
+                  "CrystalGuardian",
+                  "BossShockwave",
+                  "Rewarded",
+              ],
+              "client": [
+                  "src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua",
+                  "Controller.Play",
+                  "CharacterAdded",
+              ],
+          }
+
+          problems = []
+          for name, entries in checks.items():
+              path = Path(entries[0])
+              text = path.read_text(encoding="utf-8")
+              for marker in entries[1:]:
+                  if marker not in text:
+                      problems.append(f"{name}: missing {marker}")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Critical gameplay smoke contract validated.")
