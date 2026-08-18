@@ -10,6 +10,15 @@ local VALID_CRYSTALS = {
 	GALE = true,
 }
 
+local VALID_ACHIEVEMENTS = {
+	FIRST_BLOOD = true,
+	CRYSTAL_KEEPER = true,
+	MASTER_OF_ONE = true,
+	GUARDIAN_SLAYER = true,
+	ANCIENT_EXPLORER = true,
+	LEVEL_20 = true,
+}
+
 local VALID_BOUNTY_ENEMIES = {
 	Emberling = true,
 	Tidecrawler = true,
@@ -133,7 +142,7 @@ function PlayerData.Reconcile(data)
 	data.Stats.CrystalBatsDefeated = clampInt(data.Stats.CrystalBatsDefeated, 0, 100000000, 0)
 
 	data.Titles = normalizeList(data.Titles)
-	data.Achievements = normalizeList(data.Achievements)
+	data.Achievements = normalizeList(data.Achievements, function(id) return VALID_ACHIEVEMENTS[id] end)
 	data.Inventory = normalizeInventory(data.Inventory)
 	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
 	data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)
