@@ -11,13 +11,22 @@ local CRYSTAL_COLORS = {
 	GALE = Color3.fromRGB(175, 255, 235),
 }
 
+local MAX_PRESENTATION_DISTANCE = 220
+
 local function getRoot(model)
 	return model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
 end
 
+local function isLocallyRelevant(model, root)
+	local character = player.Character
+	local localRoot = character and character:FindFirstChild("HumanoidRootPart")
+	if not localRoot or not root then return false end
+	return (localRoot.Position - root.Position).Magnitude <= MAX_PRESENTATION_DISTANCE
+end
+
 local function createDamageNumber(model, amount, critical)
 	local root = getRoot(model)
-	if not root then return end
+	if not root or not isLocallyRelevant(model, root) then return end
 	local safeAmount = math.max(0, tonumber(amount) or 0)
 	if safeAmount <= 0 then return end
 
@@ -50,7 +59,9 @@ local function createDamageNumber(model, amount, critical)
 end
 
 local function flashTarget(model, crystalId, critical)
-	if not model or not model.Parent then return end
+	local root = getRoot(model)
+	if not root or not isLocallyRelevant(model, root) then return end
+
 	local old = model:FindFirstChild("CrystalBoundHitFlash")
 	if old then old:Destroy() end
 
@@ -79,7 +90,7 @@ end
 
 local function createCrystalImpact(model, crystalId, action, critical)
 	local root = getRoot(model)
-	if not root then return end
+	if not root or not isLocallyRelevant(model, root) then return end
 
 	local baseColor = CRYSTAL_COLORS[crystalId] or CRYSTAL_COLORS.EMBER
 	local color = critical and Color3.fromRGB(255, 230, 90) or baseColor
@@ -112,7 +123,7 @@ end
 
 local function createAbilityAccent(model, crystalId)
 	local root = getRoot(model)
-	if not root then return end
+	if not root or not isLocallyRelevant(model, root) then return end
 
 	local color = CRYSTAL_COLORS[crystalId] or CRYSTAL_COLORS.EMBER
 	if crystalId == "EMBER" then
@@ -221,6 +232,9 @@ combatFeedback.OnClientEvent:Connect(function(targetModel, attackerUserId, actio
 
 	local safeAmount = tonumber(amount) or 0
 	if safeAmount <= 0 or safeAmount ~= safeAmount or safeAmount == math.huge or safeAmount == -math.huge then return end
+
+	local root = getRoot(targetModel)
+	if not root or not isLocallyRelevant(targetModel, root) then return end
 
 	createDamageNumber(targetModel, safeAmount, critical == true)
 	flashTarget(targetModel, crystalId, critical == true)
