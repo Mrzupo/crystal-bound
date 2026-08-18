@@ -11,14 +11,46 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local combatRemote = remotes:WaitForChild("CombatRequest")
 local crystalChanged = remotes:WaitForChild("CrystalChanged")
+local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
 local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
 
 local selectedTarget = nil
 local selectedTargetExpires = 0
+local localAbilityReadyAt = 0
 
 local function getEquippedCrystal()
-	return player:GetAttribute("EquippedCrystal") or "EMBER"
+	local crystalId = player:GetAttribute("EquippedCrystal")
+	if type(crystalId) ~= "string" or not crystalConfig.Abilities[crystalId] then
+		return "EMBER"
+	end
+	return crystalId
+end
+
+local function getTargetRange(action)
+	local crystalId = getEquippedCrystal()
+	local config = action == "Ability" and crystalConfig.Abilities[crystalId] or crystalConfig.BasicAttack[crystalId]
+	return config and tonumber(config.Range) or nil
+end
+
+local function canPresentCombat(action, target)
+	if not target then return false end
+	local range = getTargetRange(action)
+	if not range or range <= 0 then return false end
+	local character = player.Character
+	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+	local targetRoot = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
+	if not playerRoot or not targetRoot then return false end
+	if (playerRoot.Position - targetRoot.Position).Magnitude > range then return false end
+	if action == "Ability" then
+		local now = os.clock()
+		local cooldownEnd = tonumber(player:GetAttribute("AbilityCooldownEnd")) or 0
+		if now < math.max(cooldownEnd, localAbilityReadyAt) then return false end
+		local crystalId = getEquippedCrystal()
+		local cooldown = tonumber(crystalConfig.Abilities[crystalId].Cooldown) or 0
+		localAbilityReadyAt = now + math.max(0, cooldown)
+	end
+	return true
 end
 
 local function playPresentation(action)
@@ -96,7 +128,7 @@ end
 
 makeButton("Attack", "ATK", UDim2.new(1, -95, 1, -100), UDim2.fromOffset(86, 86), function()
 	local hit = getTarget()
-	if hit then
+	if hit and canPresentCombat("Basic", hit) then
 		playPresentation("Basic")
 		combatRemote:FireServer("Basic", hit)
 	end
@@ -104,7 +136,7 @@ end)
 
 makeButton("Ability", "Q", UDim2.new(1, -195, 1, -165), UDim2.fromOffset(74, 74), function()
 	local hit = getTarget()
-	if hit then
+	if hit and canPresentCombat("Ability", hit) then
 		playPresentation("Ability")
 		combatRemote:FireServer("Ability", hit)
 	end
