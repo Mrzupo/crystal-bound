@@ -35,15 +35,19 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Status effects have bounded Slow/Burn duration, tick count, damage and interval; tokenized callbacks prevent stale effect cleanup from cancelling newer effects.
 - Dodge validates finite vectors, resets on respawn, cleans state on leave and routes actual damage through `DamageService`.
 - Shop, Crafting and Health Potion transactions validate before mutation and protect their mutation paths with server rate limits; Crafting and Shop roll back failed final mutations.
+- Economy sell accounting now reports the **actual** Money delta after MaxMoney clamping rather than the requested sale value.
+- `StatusSpeedGuardV2` now tracks and disconnects per-player event connections on Leave/Respawn, removing a connection leak.
 - Persistence reconciliation clamps Level/XP/Money/Inventory/Crystal ownership/mastery/quest state, while `SafeProfileStore` atomically claims and refreshes `SessionLock` ownership.
+- SessionLock age now clamps future timestamps to avoid clock-skew extending a lock incorrectly.
 - Daily Bounty and Achievement rewards are idempotent and now have explicit reward contracts.
 - `QuestHUDPresenter.client.lua` presents server-structured quest state and is now event-driven rather than polling once per second; `QuestMenu` has a local load debounce.
+- `StatusMessages.client.lua` now preserves high-priority messages when the HUD overflows.
 - `default.project.json` now identifies the DataModel as `Crystal Bound` and includes all current controllers/services/assets.
 - `InventoryConfig` now defines the official `Common → Uncommon → Rare → Epic → Legendary → Mythic → Divine` rarity ladder; `Ancient` remains outside rarity semantics.
 - WorldDecor/WorldTheme are one-shot/idempotent initialization scripts; portal level gates are protected by a WorldConfig/Bootstrap contract.
 - Enemy death cleanup, AI termination, status cleanup and respawn callback behavior are protected by a dedicated lifecycle contract.
 - The legacy `StatusSpeedGuard.server.lua` duplicate was removed; `StatusSpeedGuardV2.server.lua` is the sole runtime implementation.
-- Studio testing is documented in `STUDIO_PLAYTEST.md` and now covers Consumables, World initialization, Boss Phase 2 and Enemy lifecycle regressions.
+- Studio testing is documented in `STUDIO_PLAYTEST.md` and now covers Consumables, World initialization, Boss Phase 2, Enemy lifecycle and HUD regressions.
 
 ## Security / authority contracts
 - `DamageService` is the only direct `Humanoid:TakeDamage()` path in `src`.
@@ -55,7 +59,7 @@ The authoritative design context remains intact: PvE-first open-world action RPG
 - Critical RemoteFunctions have unique `OnServerInvoke` ownership and server rate limits.
 - Critical RemoteEvents have unique server handler ownership.
 - Shop/Crafting/Consumable/Dodge/Quest/NPC remotes have request limits and relevant validation.
-- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle and project identity are protected by dedicated CI workflows.
+- Quest completion, reward idempotency, persistence session locks, status-effect bounds, Dodge bounds, transaction rollback, enemy config, progression config, rarity semantics, world initialization, portal levels, enemy lifecycle, player-health sync and project identity are protected by dedicated CI workflows.
 
 ## Quality / limitations
 - No real Roblox Studio runtime playtest has been executed in this environment.
