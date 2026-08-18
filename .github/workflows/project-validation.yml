@@ -189,6 +189,31 @@ jobs:
               raise SystemExit(1)
           print("Remote references validated.")
 
+      - name: Validate profile migration ids
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          achievement = Path("src/ReplicatedStorage/Modules/AchievementSystem.lua").read_text(encoding="utf-8")
+          world = Path("src/ReplicatedStorage/Config/WorldConfig.lua").read_text(encoding="utf-8")
+
+          titles = set(re.findall(r'Title\s*=\s*"([^"]+)"', achievement))
+          migration_titles = set(re.findall(r'\[?"?([^"=\]\n]+)"?\]?\s*=\s*true', player_data.split('local VALID_ISLANDS', 1)[0].split('local VALID_TITLES', 1)[1])) if 'local VALID_TITLES' in player_data else set()
+          islands = set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*\{', world, re.MULTILINE))
+          migration_islands = set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*true', player_data.split('local VALID_BOUNTY_ENEMIES', 1)[0].split('local VALID_ISLANDS', 1)[1], re.MULTILINE)) if 'local VALID_ISLANDS' in player_data else set()
+
+          missing_titles = sorted(titles - migration_titles)
+          missing_islands = sorted(islands - migration_islands)
+          if missing_titles or missing_islands:
+              if missing_titles:
+                  print("Titles missing from PlayerData migration whitelist:", missing_titles)
+              if missing_islands:
+                  print("Islands missing from PlayerData migration whitelist:", missing_islands)
+              raise SystemExit(1)
+          print("Profile migration ids validated.")
+
       - name: Validate balancing invariants
         shell: python
         run: |
