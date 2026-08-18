@@ -1,8 +1,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local Validators = require(ReplicatedStorage.Modules.Combat.DamageValidators)
 local DamageResult = require(ReplicatedStorage.Modules.Combat.DamageResult)
 
 local DamageService = {}
+
+local function finiteNumber(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
 
 local function getRoot(instance)
 	if not instance or not instance:IsA("Instance") then return nil end
@@ -29,7 +36,8 @@ function DamageService.CanDamage(request)
 	local attackerRoot = getRoot(request.Attacker)
 	local targetRoot = getRoot(request.Target)
 	if not attackerRoot or not targetRoot then return false end
-	local maxRange = tonumber(request.Range) or 16
+	local maxRange = finiteNumber(request.Range)
+	if not maxRange or maxRange <= 0 or maxRange > 1000 then return false end
 	return (attackerRoot.Position - targetRoot.Position).Magnitude <= maxRange
 end
 
@@ -54,7 +62,7 @@ function DamageService.ProcessDamage(request)
 		return DamageResult.new(false, 0, "Target has no living humanoid")
 	end
 
-	local amount = math.clamp(tonumber(request.Amount) or 0, 0, 1000)
+	local amount = math.clamp(finiteNumber(request.Amount) or 0, 0, 1000)
 	if amount <= 0 then
 		return DamageResult.new(false, 0, "Invalid damage")
 	end
@@ -62,7 +70,7 @@ function DamageService.ProcessDamage(request)
 	if targetModel:GetAttribute("DodgeInvulnerable") == true then
 		return DamageResult.new(true, 0, "Dodged")
 	end
-	local owner = game:GetService("Players"):GetPlayerFromCharacter(targetModel)
+	local owner = Players:GetPlayerFromCharacter(targetModel)
 	if owner and owner:GetAttribute("DodgeInvulnerable") == true then
 		return DamageResult.new(true, 0, "Dodged")
 	end
