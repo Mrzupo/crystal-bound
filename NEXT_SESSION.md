@@ -3,11 +3,13 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **408 commits ahead, 13 commits behind** `main`
+- Current compare: **410 commits ahead, 13 commits behind** `main`
 - `main` has not been merged/overwritten.
 
 ## Current state
 The branch contains the complete Rojo project foundation plus the current gameplay stack. The repository is now in a **hardening + integration** phase rather than a blank-project phase.
+
+The current master design context is authoritative: Crystal Bound is an original PvE-first open-world action RPG; the White Queen intro, first-loss setup, Ancient Crystal lore, Ancient-as-category (not rarity), Common→Divine rarity ladder, multiple-world long-term mystery, and no-Codex working mode must remain intact.
 
 ## Implemented systems
 - PlayerData schema reconciliation and persistent SafeProfileStore
@@ -46,6 +48,7 @@ The branch contains the complete Rojo project foundation plus the current gamepl
 - `remote-handler-validation.yml` checks unique `OnServerInvoke` ownership.
 - `StatusSpeedGuardV2` is the active Rojo speed guard; legacy V1 is not loaded by `default.project.json`.
 - The old unsafe `SaveSystem.lua` is not loaded/used.
+- `ClientBootstrap.client.lua` now throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
 
 ## Quality assessment
 - **Architecture:** strong for a prototype; server authority is clear and gameplay services are separated.
@@ -57,23 +60,22 @@ The branch contains the complete Rojo project foundation plus the current gamepl
 ## Known limitations
 - No real Roblox Studio runtime/playtest has been executed in this environment.
 - No Luau interpreter is available here, so Luau syntax has only been statically/structurally reviewed, not executed.
-- GitHub Actions must be checked on the actual latest commit before claiming CI is green.
+- GitHub Actions must be checked on the actual latest commit before claiming CI is green; the current head has no reported status entries.
 - `src/ServerScriptService/StatusSpeedGuard.server.lua` may still physically exist as a legacy file, but it is not referenced by `default.project.json`.
-- `ClientBootstrap.client.lua` still updates the Guardian BossBar from `RenderStepped`; this is the next concrete performance fix.
 
 ## Exact next step
-1. Re-check current branch compare and commit/status.
-2. Fix the `ClientBootstrap` BossBar render loop: update on a small timed interval instead of every RenderStepped frame.
-3. Re-check `CooldownAuthority.client.lua` and the main client HUD for duplicate render/update work.
-4. Verify the unique RemoteFunction handler rule remains intact.
-5. Then move to real attack/ability animation architecture.
-6. After animation/VFX work, perform the first real Roblox Studio runtime/playtest and fix Output/runtime errors.
+1. Re-check current commit/status and RemoteFunction handler ownership.
+2. Review `CooldownAuthority.client.lua` and the main client HUD for remaining duplicate render/update work.
+3. Keep the combat pipeline server-authoritative while preparing the animation architecture.
+4. Design the first real attack/ability animation layer for EMBER/TIDE/GALE without changing the established combat validation pipeline.
+5. Then prepare asset-based VFX/particles and the first Roblox Studio runtime/playtest.
 
 ## Do not do
 - Do not merge this branch into `main` yet.
 - Do not create a second `OnServerInvoke` handler for an existing RemoteFunction.
 - Do not reintroduce the legacy SaveSystem or legacy StatusSpeedGuard into Rojo.
 - Do not claim runtime-tested or CI-green without a verified GitHub status.
+- Do not change the White Queen intro, first-loss setup, Ancient Crystal lore, or the long-term secret second-world plan without explicit project-owner approval.
 
 ## Useful files
 - `default.project.json`
