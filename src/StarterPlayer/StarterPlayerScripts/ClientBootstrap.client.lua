@@ -6,213 +6,160 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local combatRemote = remotes:WaitForChild("CombatRequest")
+local crystalChanged = remotes:WaitForChild("CrystalChanged")
+local inventoryRequest = remotes:WaitForChild("InventoryRequest")
+local getQuestData = remotes:WaitForChild("GetQuestData")
+local xpChanged = remotes:WaitForChild("XPChanged")
+local moneyChanged = remotes:WaitForChild("MoneyChanged")
+local crystalMasteryChanged = remotes:WaitForChild("CrystalMasteryChanged")
+local levelUp = remotes:WaitForChild("LevelUp")
+local inventoryChanged = remotes:WaitForChild("InventoryChanged")
+local crystalUpgradeRequest = remotes:WaitForChild("CrystalUpgradeRequest")
+local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local crystalAnimationController = require(script.Parent:WaitForChild("CrystalAnimationController"))
 local crystalVFXController = require(script.Parent:WaitForChild("CrystalVFXController"))
-local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
-local xpChanged = remotes:WaitForChild("XPChanged")
-local levelUp = remotes:WaitForChild("LevelUp")
-local moneyChanged = remotes:WaitForChild("MoneyChanged")
-local inventoryChanged = remotes:WaitForChild("InventoryChanged")
-local inventoryRequest = remotes:WaitForChild("InventoryRequest")
-local crystalChanged = remotes:WaitForChild("CrystalChanged")
-local crystalMasteryChanged = remotes:WaitForChild("CrystalMasteryChanged")
-local crystalUpgradeRequest = remotes:WaitForChild("CrystalUpgradeRequest")
-local getQuestData = remotes:WaitForChild("GetQuestData")
 
-local inventory = {}
 local crystalOrder = { "EMBER", "TIDE", "GALE" }
 local sellOrder = { "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard" }
-local questRefreshQueued = false
+local inventory = {}
 local questRefreshBusy = false
+local questRefreshQueued = false
 local lastBossRefresh = 0
 local BOSS_REFRESH_INTERVAL = 0.1
 local localAbilityReadyAt = 0
 
-local function getTargetFromMouse()
-	local hit = player:GetMouse().Target
-	if not hit then return nil end
-	local target = hit:FindFirstAncestorOfClass("Model")
-	if not target or target:GetAttribute("Enemy") ~= true then return nil end
-	local humanoid = target:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then return nil end
-	return target
+local function ensureHud()
+	local playerGui = player:WaitForChild("PlayerGui")
+	local gui = playerGui:FindFirstChild("CrystalBoundHUD")
+	if gui then return gui end
+
+	gui = Instance.new("ScreenGui")
+	gui.Name = "CrystalBoundHUD"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.Parent = playerGui
+
+	local panel = Instance.new("Frame")
+	panel.Name = "Panel"
+	panel.AnchorPoint = Vector2.new(0, 0)
+	panel.Position = UDim2.fromOffset(18, 18)
+	panel.Size = UDim2.fromOffset(330, 160)
+	panel.BackgroundTransparency = 0.18
+	panel.Parent = gui
+	Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
+
+	local function label(name, position, size)
+		local item = Instance.new("TextLabel")
+		item.Name = name
+		item.Position = position
+		item.Size = size
+		item.BackgroundTransparency = 1
+		item.Font = Enum.Font.GothamBold
+		item.TextSize = 14
+		item.TextXAlignment = Enum.TextXAlignment.Left
+		item.Parent = panel
+		return item
+	end
+
+	label("Stats", UDim2.fromOffset(12, 10), UDim2.fromOffset(306, 62))
+	label("Mastery", UDim2.fromOffset(12, 74), UDim2.fromOffset(306, 26))
+	label("Progress", UDim2.fromOffset(12, 102), UDim2.fromOffset(306, 22))
+	label("Cooldown", UDim2.fromOffset(12, 126), UDim2.fromOffset(306, 22))
+	label("Inventory", UDim2.fromOffset(360, 10), UDim2.fromOffset(260, 140))
+	label("Quest", UDim2.new(0, 18, 1, -80), UDim2.fromOffset(480, 44))
+
+	local boss = Instance.new("Frame")
+	boss.Name = "BossBar"
+	boss.AnchorPoint = Vector2.new(0.5, 0)
+	boss.Position = UDim2.new(0.5, 0, 0, 18)
+	boss.Size = UDim2.fromOffset(420, 58)
+	boss.BackgroundTransparency = 0.2
+	boss.Visible = false
+	boss.Parent = gui
+	Instance.new("UICorner", boss).CornerRadius = UDim.new(0, 10)
+
+	local bossName = Instance.new("TextLabel")
+	bossName.Name = "Name"
+	bossName.Position = UDim2.fromOffset(10, 5)
+	bossName.Size = UDim2.new(1, -20, 0, 20)
+	bossName.BackgroundTransparency = 1
+	bossName.Font = Enum.Font.GothamBold
+	bossName.TextSize = 15
+	bossName.Parent = boss
+
+	local hpBack = Instance.new("Frame")
+	hpBack.Name = "HPBack"
+	hpBack.Position = UDim2.fromOffset(10, 29)
+	hpBack.Size = UDim2.new(1, -20, 0, 20)
+	hpBack.Parent = boss
+	Instance.new("UICorner", hpBack).CornerRadius = UDim.new(0, 6)
+
+	local hpFill = Instance.new("Frame")
+	hpFill.Name = "HPFill"
+	hpFill.Size = UDim2.fromScale(1, 1)
+	hpFill.Parent = hpBack
+	Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0, 6)
+
+	local hpText = Instance.new("TextLabel")
+	hpText.Name = "HPText"
+	hpText.Size = UDim2.fromScale(1, 1)
+	hpText.BackgroundTransparency = 1
+	hpText.Font = Enum.Font.GothamBold
+	hpText.TextSize = 12
+	hpText.Parent = hpBack
+
+	return gui
 end
 
 local function getEquippedCrystal()
 	local crystalId = player:GetAttribute("EquippedCrystal")
-	if type(crystalId) ~= "string" or not crystalConfig.Abilities[crystalId] then
-		return "EMBER"
-	end
+	if type(crystalId) ~= "string" or not crystalConfig.Abilities[crystalId] then return "EMBER" end
 	return crystalId
 end
 
-local function getCombatConfig(action)
+local function getTargetRange(action)
 	local crystalId = getEquippedCrystal()
-	local group = action == "Ability" and crystalConfig.Abilities or crystalConfig.BasicAttack
-	return crystalId, group and group[crystalId]
+	local config = action == "Ability" and crystalConfig.Abilities[crystalId] or crystalConfig.BasicAttack[crystalId]
+	return config and tonumber(config.Range) or nil
+end
+
+local function getTargetFromMouse()
+	local mouse = player:GetMouse()
+	local target = mouse.Target
+	if not target then return nil end
+	local model = target:FindFirstAncestorOfClass("Model")
+	if not model or model:GetAttribute("Enemy") ~= true then return nil end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return nil end
+	return model
 end
 
 local function canPresentCombat(action, target)
-	if not target then return false end
-	local _, config = getCombatConfig(action)
-	if not config then return false end
+	local range = getTargetRange(action)
+	if not target or not range or range <= 0 then return false end
 	local character = player.Character
 	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
 	local targetRoot = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
 	if not playerRoot or not targetRoot then return false end
-	local range = tonumber(config.Range)
-	if not range or range <= 0 then return false end
 	if (playerRoot.Position - targetRoot.Position).Magnitude > range then return false end
 	if action == "Ability" then
 		local now = os.clock()
 		local cooldownEnd = tonumber(player:GetAttribute("AbilityCooldownEnd")) or 0
 		if now < math.max(cooldownEnd, localAbilityReadyAt) then return false end
-		local cooldown = tonumber(config.Cooldown) or 0
+		local crystalId = getEquippedCrystal()
+		local cooldown = tonumber(crystalConfig.Abilities[crystalId].Cooldown) or 0
 		localAbilityReadyAt = now + math.max(0, cooldown)
 	end
 	return true
 end
 
-local function ensureHud()
-	local playerGui = player:WaitForChild("PlayerGui")
-	local gui = playerGui:FindFirstChild("MainUI")
-	if not gui then
-		gui = Instance.new("ScreenGui")
-		gui.Name = "MainUI"
-		gui.ResetOnSpawn = false
-		gui.IgnoreGuiInset = true
-		gui.Parent = playerGui
-	end
-	local panel = gui:FindFirstChild("Info")
-	if not panel then
-		panel = Instance.new("Frame")
-		panel.Name = "Info"
-		panel.Position = UDim2.fromOffset(16, 16)
-		panel.Size = UDim2.fromOffset(430, 336)
-		panel.BackgroundTransparency = 0.15
-		panel.Parent = gui
-		Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
-
-		local stats = Instance.new("TextLabel")
-		stats.Name = "Stats"
-		stats.Position = UDim2.fromOffset(12, 10)
-		stats.Size = UDim2.fromOffset(406, 95)
-		stats.BackgroundTransparency = 1
-		stats.TextXAlignment = Enum.TextXAlignment.Left
-		stats.TextYAlignment = Enum.TextYAlignment.Top
-		stats.TextWrapped = true
-		stats.Font = Enum.Font.GothamMedium
-		stats.TextSize = 18
-		stats.Parent = panel
-
-		local mastery = Instance.new("TextLabel")
-		mastery.Name = "Mastery"
-		mastery.Position = UDim2.fromOffset(12, 103)
-		mastery.Size = UDim2.fromOffset(406, 42)
-		mastery.BackgroundTransparency = 1
-		mastery.TextXAlignment = Enum.TextXAlignment.Left
-		mastery.TextYAlignment = Enum.TextYAlignment.Top
-		mastery.TextWrapped = true
-		mastery.Font = Enum.Font.GothamBold
-		mastery.TextSize = 15
-		mastery.Parent = panel
-
-		local progress = Instance.new("TextLabel")
-		progress.Name = "Progress"
-		progress.Position = UDim2.fromOffset(12, 146)
-		progress.Size = UDim2.fromOffset(406, 32)
-		progress.BackgroundTransparency = 1
-		progress.TextXAlignment = Enum.TextXAlignment.Left
-		progress.Font = Enum.Font.Gotham
-		progress.TextSize = 14
-		progress.Parent = panel
-
-		local cooldown = Instance.new("TextLabel")
-		cooldown.Name = "Cooldown"
-		cooldown.Position = UDim2.fromOffset(12, 178)
-		cooldown.Size = UDim2.fromOffset(406, 34)
-		cooldown.BackgroundTransparency = 1
-		cooldown.TextXAlignment = Enum.TextXAlignment.Left
-		cooldown.Font = Enum.Font.GothamBold
-		cooldown.TextSize = 15
-		cooldown.Parent = panel
-
-		local inv = Instance.new("TextLabel")
-		inv.Name = "Inventory"
-		inv.Position = UDim2.fromOffset(12, 213)
-		inv.Size = UDim2.fromOffset(406, 110)
-		inv.BackgroundTransparency = 1
-		inv.TextXAlignment = Enum.TextXAlignment.Left
-		inv.TextYAlignment = Enum.TextYAlignment.Top
-		inv.TextWrapped = true
-		inv.Font = Enum.Font.Gotham
-		inv.TextSize = 14
-		inv.Parent = panel
-
-		local quest = Instance.new("TextLabel")
-		quest.Name = "Quest"
-		quest.Position = UDim2.fromOffset(16, 350)
-		quest.Size = UDim2.fromOffset(700, 160)
-		quest.BackgroundTransparency = 0.15
-		quest.TextXAlignment = Enum.TextXAlignment.Left
-		quest.TextYAlignment = Enum.TextYAlignment.Top
-		quest.TextWrapped = true
-		quest.Font = Enum.Font.GothamMedium
-		quest.TextSize = 16
-		quest.Parent = gui
-		Instance.new("UICorner", quest).CornerRadius = UDim.new(0, 10)
-
-		local boss = Instance.new("Frame")
-		boss.Name = "BossBar"
-		boss.AnchorPoint = Vector2.new(0.5, 0)
-		boss.Position = UDim2.new(0.5, 0, 0, 78)
-		boss.Size = UDim2.fromOffset(620, 72)
-		boss.BackgroundTransparency = 0.12
-		boss.Visible = false
-		boss.Parent = gui
-		Instance.new("UICorner", boss).CornerRadius = UDim.new(0, 10)
-
-		local bossName = Instance.new("TextLabel")
-		bossName.Name = "Name"
-		bossName.Position = UDim2.fromOffset(12, 6)
-		bossName.Size = UDim2.fromOffset(596, 24)
-		bossName.BackgroundTransparency = 1
-		bossName.Font = Enum.Font.GothamBold
-		bossName.TextSize = 18
-		bossName.Parent = boss
-
-		local hpBack = Instance.new("Frame")
-		hpBack.Name = "HPBack"
-		hpBack.Position = UDim2.fromOffset(12, 38)
-		hpBack.Size = UDim2.fromOffset(596, 22)
-		hpBack.BackgroundTransparency = 0.12
-		hpBack.Parent = boss
-		Instance.new("UICorner", hpBack).CornerRadius = UDim.new(0, 6)
-
-		local hpFill = Instance.new("Frame")
-		hpFill.Name = "HPFill"
-		hpFill.Size = UDim2.fromScale(1, 1)
-		hpFill.Parent = hpBack
-		Instance.new("UICorner", hpFill).CornerRadius = UDim.new(0, 6)
-
-		local hpText = Instance.new("TextLabel")
-		hpText.Name = "HPText"
-		hpText.Size = UDim2.fromScale(1, 1)
-		hpText.BackgroundTransparency = 1
-		hpText.Font = Enum.Font.GothamBold
-		hpText.TextSize = 13
-		hpText.Parent = hpBack
-	end
-	return gui
-end
-
 local function refreshHud()
 	local gui = ensureHud()
-	local panel = gui:FindFirstChild("Info")
+	local panel = gui:FindFirstChild("Panel")
 	if not panel then return end
 	local level = player:GetAttribute("Level") or 1
 	local money = player:GetAttribute("Money") or 0
-	local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
+	local crystal = getEquippedCrystal()
 	local masteryLevel = player:GetAttribute("CrystalMasteryLevel") or 1
 	local masteryXP = player:GetAttribute("CrystalMasteryXP") or 0
 	local achievementCount = player:GetAttribute("AchievementCount") or 0
@@ -245,16 +192,12 @@ end
 local function refreshQuests()
 	if questRefreshBusy then return end
 	questRefreshBusy = true
-	local ok, result = pcall(function()
-		return getQuestData:InvokeServer()
-	end)
+	local ok, result = pcall(function() return getQuestData:InvokeServer() end)
 	questRefreshBusy = false
 	if not ok or type(result) ~= "table" then return end
 	local gui = ensureHud()
 	local quest = gui:FindFirstChild("Quest")
-	if quest then
-		quest.Text = result.Text or ""
-	end
+	if quest then quest.Text = result.Text or "" end
 end
 
 local function scheduleQuestRefresh()
@@ -274,13 +217,10 @@ local function refreshBoss()
 	local bossBar = gui:FindFirstChild("BossBar")
 	if not bossBar then return end
 	local npcFolder = workspace:FindFirstChild("NPCs")
-	local boss = npcFolder and npcFolder:FindFirstChild("Crystal Guardian")
+	local boss = npcFolder and npcFolder:FindFirstChild("CrystalGuardian")
 	if not boss then bossBar.Visible = false return end
 	local humanoid = boss:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then
-		bossBar.Visible = false
-		return
-	end
+	if not humanoid or humanoid.Health <= 0 then bossBar.Visible = false return end
 	bossBar.Visible = true
 	local phase = boss:GetAttribute("BossPhase") or 1
 	bossBar.Name.Text = string.format("Crystal Guardian  •  Phase %d", phase)
@@ -296,16 +236,8 @@ for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", 
 	end)
 end
 
-xpChanged.OnClientEvent:Connect(function()
-	refreshHud()
-	scheduleQuestRefresh()
-end)
-
-moneyChanged.OnClientEvent:Connect(function()
-	refreshHud()
-	scheduleQuestRefresh()
-end)
-
+xpChanged.OnClientEvent:Connect(function() refreshHud(); scheduleQuestRefresh() end)
+moneyChanged.OnClientEvent:Connect(function() refreshHud(); scheduleQuestRefresh() end)
 crystalMasteryChanged.OnClientEvent:Connect(function(crystalId, level, xp)
 	if crystalId == player:GetAttribute("EquippedCrystal") then
 		player:SetAttribute("CrystalMasteryLevel", level or 1)
@@ -313,17 +245,11 @@ crystalMasteryChanged.OnClientEvent:Connect(function(crystalId, level, xp)
 	end
 	refreshHud()
 end)
-
 levelUp.OnClientEvent:Connect(function(level)
 	player:SetAttribute("QuestMessage", string.format("Level Up! Level %d", tonumber(level) or (player:GetAttribute("Level") or 1)))
-	refreshHud()
-	scheduleQuestRefresh()
+	refreshHud(); scheduleQuestRefresh()
 end)
-
-inventoryChanged.OnClientEvent:Connect(function(data)
-	inventory = type(data) == "table" and data or {}
-	refreshHud()
-end)
+inventoryChanged.OnClientEvent:Connect(function(data) inventory = type(data) == "table" and data or {}; refreshHud() end)
 
 refreshHud()
 refreshQuests()
@@ -349,30 +275,18 @@ UserInputService.InputBegan:Connect(function(input, processed)
 			crystalVFXController.Play("Ability", crystal)
 			combatRemote:FireServer("Ability", target)
 		end
-	elseif input.KeyCode == Enum.KeyCode.Z then
-		crystalChanged:FireServer(crystalOrder[1])
-	elseif input.KeyCode == Enum.KeyCode.X then
-		crystalChanged:FireServer(crystalOrder[2])
-	elseif input.KeyCode == Enum.KeyCode.C then
-		crystalChanged:FireServer(crystalOrder[3])
-	elseif input.KeyCode == Enum.KeyCode.E then
-		inventoryRequest:FireServer()
-		refreshQuests()
-	elseif input.KeyCode == Enum.KeyCode.Four then
-		inventoryRequest:FireServer("Sell", sellOrder[1], 1)
-	elseif input.KeyCode == Enum.KeyCode.Five then
-		inventoryRequest:FireServer("Sell", sellOrder[2], 1)
-	elseif input.KeyCode == Enum.KeyCode.Six then
-		inventoryRequest:FireServer("Sell", sellOrder[3], 1)
-	elseif input.KeyCode == Enum.KeyCode.Seven then
-		inventoryRequest:FireServer("Sell", sellOrder[4], 1)
-	elseif input.KeyCode == Enum.KeyCode.Eight then
-		inventoryRequest:FireServer("Sell", sellOrder[5], 1)
-	elseif input.KeyCode == Enum.KeyCode.U then
-		crystalUpgradeRequest:FireServer(player:GetAttribute("EquippedCrystal") or "EMBER")
+	elseif input.KeyCode == Enum.KeyCode.Z then crystalChanged:FireServer(crystalOrder[1])
+	elseif input.KeyCode == Enum.KeyCode.X then crystalChanged:FireServer(crystalOrder[2])
+	elseif input.KeyCode == Enum.KeyCode.C then crystalChanged:FireServer(crystalOrder[3])
+	elseif input.KeyCode == Enum.KeyCode.E then inventoryRequest:FireServer(); refreshQuests()
+	elseif input.KeyCode == Enum.KeyCode.Four then inventoryRequest:FireServer("Sell", sellOrder[1], 1)
+	elseif input.KeyCode == Enum.KeyCode.Five then inventoryRequest:FireServer("Sell", sellOrder[2], 1)
+	elseif input.KeyCode == Enum.KeyCode.Six then inventoryRequest:FireServer("Sell", sellOrder[3], 1)
+	elseif input.KeyCode == Enum.KeyCode.Seven then inventoryRequest:FireServer("Sell", sellOrder[4], 1)
+	elseif input.KeyCode == Enum.KeyCode.Eight then inventoryRequest:FireServer("Sell", sellOrder[5], 1)
+	elseif input.KeyCode == Enum.KeyCode.U then crystalUpgradeRequest:FireServer(player:GetAttribute("EquippedCrystal") or "EMBER")
 	end
 end)
 
 RunService.RenderStepped:Connect(refreshBoss)
-
 print("Crystal Bound client ready")
