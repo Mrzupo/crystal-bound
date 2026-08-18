@@ -1,5 +1,4 @@
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DamageService = require(script.Parent.DamageService)
 
 local DodgeService = {}
@@ -84,15 +83,15 @@ function DodgeService.ApplyDamage(player, humanoid, amount, attacker, damageType
 	end
 	local damage = finiteDamage(amount)
 	if not damage or damage <= 0 then return false end
-	if not attacker or not attacker:IsA("Instance") then return false end
 
-	local result = DamageService.ProcessDamage({
+	local request = {
 		Attacker = attacker,
 		Target = player,
 		Amount = math.clamp(damage, 0, 1000),
 		Range = range or 1000,
-		DamageType = damageType or "Physical",
-	})
+		DamageType = damageType or (attacker and "Physical" or "Environmental"),
+	}
+	local result = DamageService.ProcessDamage(request)
 	return result.Success and result.Amount > 0
 end
 
