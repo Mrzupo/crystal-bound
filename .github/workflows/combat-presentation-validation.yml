@@ -48,12 +48,38 @@ jobs:
                   problems.append(f"Missing combat presentation file: {relative}")
 
           config = (root / "src/ReplicatedStorage/Config/CrystalAnimationConfig.lua").read_text(encoding="utf-8")
-          for crystal in ("EMBER", "TIDE", "GALE"):
+          expected_assets = {
+              "EMBER": {"Basic": "EMBER_Basic", "Ability": "EMBER_FlameBurst"},
+              "TIDE": {"Basic": "TIDE_Basic", "Ability": "TIDE_TidalPulse"},
+              "GALE": {"Basic": "GALE_Basic", "Ability": "GALE_GaleStrike"},
+          }
+          asset_names = []
+          sound_names = []
+          for crystal, actions in expected_assets.items():
               if not re.search(rf"\b{crystal}\s*=\s*\{{", config):
                   problems.append(f"Missing presentation config for {crystal}")
-              for action in ("Basic", "Ability"):
-                  if not re.search(rf"{action}\s*=\s*\{{", config):
-                      problems.append(f"Missing {action} presentation config")
+              for action, asset_name in actions.items():
+                  block = re.search(rf"{action}\s*=\s*\{{(.*?)\n\s*\},", config, re.DOTALL)
+                  if not block:
+                      problems.append(f"Missing {crystal} {action} presentation block")
+                      continue
+                  body = block.group(1)
+                  if f'AssetName = "{asset_name}"' not in body:
+                      problems.append(f"Unexpected {crystal} {action} AssetName")
+                  if f'SoundAssetName = "{asset_name}"' not in body:
+                      problems.append(f"Unexpected {crystal} {action} SoundAssetName")
+                  asset_names.append(asset_name)
+                  sound_names.append(asset_name)
+
+          if len(asset_names) != len(set(asset_names)):
+              problems.append("Animation AssetName values must be unique")
+          if len(sound_names) != len(set(sound_names)):
+              problems.append("SoundAssetName values must be unique")
+
+          animations_path = tree["ReplicatedStorage"]["Assets"]["Animations"]
+          sounds_path = tree["ReplicatedStorage"]["Assets"]["Sounds"]
+          if not isinstance(animations_path, dict) or not isinstance(sounds_path, dict):
+              problems.append("ReplicatedStorage.Assets.Animations and Sounds must remain mapped folders")
 
           combat_service = (root / "src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
           presentation = (root / "src/StarterPlayer/StarterPlayerScripts/CombatPresentation.client.lua").read_text(encoding="utf-8")
