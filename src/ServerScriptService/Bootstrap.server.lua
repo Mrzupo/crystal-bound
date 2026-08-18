@@ -16,10 +16,11 @@ local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 local WorldConfig = require(ReplicatedStorage.Config.WorldConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
 local NPCService = require(script.Parent.Services.NPCService)
 
 local AUTOSAVE_INTERVAL = 60
-local NPC_INTERACTION_RANGE = 14
+local NPC_INTERACTION_RANGE = math.max(1, tonumber(InteractionConfig.NPCInteractionRange) or 14)
 local QUEST_REQUEST_INTERVAL = 0.15
 local INVENTORY_REQUEST_INTERVAL = 0.1
 local CRYSTAL_REQUEST_INTERVAL = 0.12
