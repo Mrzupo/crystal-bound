@@ -10,7 +10,7 @@ local remote = remotes:FindFirstChild("ShopRequest") or Instance.new("RemoteEven
 remote.Name = "ShopRequest"
 remote.Parent = remotes
 
-local NEXT_REQUEST = {}
+local NEXT_REQUEST = setmetatable({}, { __mode = "k" })
 local REQUEST_INTERVAL = 0.15
 
 local function isNearTrader(player)
@@ -41,8 +41,4 @@ remote.OnServerEvent:Connect(function(player, action, itemId, amount)
 		remotes.InventoryChanged:FireClient(player, profile.Inventory)
 		remotes.MoneyChanged:FireClient(player, profile.Money)
 	end
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-	NEXT_REQUEST[player] = nil
 end)
