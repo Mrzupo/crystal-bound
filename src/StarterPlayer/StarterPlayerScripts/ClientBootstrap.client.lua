@@ -19,6 +19,8 @@ local getQuestData = remotes:WaitForChild("GetQuestData")
 local inventory = {}
 local crystalOrder = { "EMBER", "TIDE", "GALE" }
 local sellOrder = { "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard" }
+local questRefreshQueued = false
+local questRefreshBusy = false
 
 local function getTargetFromMouse()
 	local hit = player:GetMouse().Target
@@ -192,21 +194,44 @@ local function refreshHud()
 end
 
 local function refreshQuests()
+	if questRefreshBusy then
+		questRefreshQueued = true
+		return
+	end
+	questRefreshBusy = true
 	local ok, data = pcall(function() return getQuestData:InvokeServer() end)
-	if not ok or not data then return end
-	local lines = { "Quests" }
-	if #data.Active == 0 then
-		table.insert(lines, "No active quests.")
-	else
-		for _, id in ipairs(data.Active) do
-			local definition = data.Definitions[id]
-			local progress = data.Progress and data.Progress[id] or 0
-			if definition then
-				table.insert(lines, string.format("• %s: %s (%d/%d)", definition.Name, definition.Description, progress, definition.Goal))
+	if ok and data then
+		local lines = { "Quests" }
+		if #data.Active == 0 then
+			table.insert(lines, "No active quests.")
+		else
+			for _, id in ipairs(data.Active) do
+				local definition = data.Definitions[id]
+				local progress = data.Progress and data.Progress[id] or 0
+				if definition then
+					table.insert(lines, string.format("• %s: %s (%d/%d)", definition.Name, definition.Description, progress, definition.Goal))
+				end
 			end
 		end
+		questLabel.Text = table.concat(lines, "\n")
 	end
-	questLabel.Text = table.concat(lines, "\n")
+	questRefreshBusy = false
+	if questRefreshQueued then
+		questRefreshQueued = false
+		task.delay(0.15, refreshQuests)
+	end
+end
+
+local function scheduleQuestRefresh()
+	if questRefreshQueued or questRefreshBusy then
+		questRefreshQueued = true
+		return
+	end
+	questRefreshQueued = true
+	task.delay(0.12, function()
+		questRefreshQueued = false
+		refreshQuests()
+	end)
 end
 
 local function refreshBoss()
@@ -228,18 +253,18 @@ end
 for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", "CrystalMasteryLevel", "CrystalMasteryXP", "AchievementCount", "Title" }) do
 	player:GetAttributeChangedSignal(attribute):Connect(function()
 		refreshHud()
-		refreshQuests()
+		scheduleQuestRefresh()
 	end)
 end
 
 xpChanged.OnClientEvent:Connect(function()
 	refreshHud()
-	refreshQuests()
+	scheduleQuestRefresh()
 end)
 
 moneyChanged.OnClientEvent:Connect(function()
 	refreshHud()
-	refreshQuests()
+	scheduleQuestRefresh()
 end)
 
 crystalMasteryChanged.OnClientEvent:Connect(function(crystalId, level, xp)
@@ -253,7 +278,7 @@ end)
 levelUp.OnClientEvent:Connect(function(level)
 	player:SetAttribute("QuestMessage", string.format("Level Up! Level %d", tonumber(level) or (player:GetAttribute("Level") or 1)))
 	refreshHud()
-	refreshQuests()
+	scheduleQuestRefresh()
 end)
 
 inventoryChanged.OnClientEvent:Connect(function(data)
