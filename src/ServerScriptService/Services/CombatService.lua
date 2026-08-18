@@ -69,6 +69,15 @@ local function advanceEnemyQuest(player, profile, enemyType)
 	end
 end
 
+local function advanceAbilityQuest(player, profile)
+	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return end
+	local complete, progress, goal = QuestSystem.Advance(profile, "CRYSTAL_POWER", 1)
+	player:SetAttribute("QuestProgress", string.format("Crystal Power: %d/%d", progress, goal))
+	if complete then
+		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
+	end
+end
+
 local function giveLoot(player, profile, targetModel, crystalId)
 	local enemyType = targetModel:GetAttribute("EnemyType")
 	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
@@ -197,7 +206,7 @@ function CombatService.HandleRequest(player, action, target)
 	if critical and result.Amount > 0 then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
 	if action == "Ability" then
 		applyAbilitySpecial(player, profile, crystalId, targetModel, damage, config.Range)
-		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
+		advanceAbilityQuest(player, profile)
 	end
 	if result.Amount > 0 and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
