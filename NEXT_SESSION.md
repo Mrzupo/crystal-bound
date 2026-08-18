@@ -35,6 +35,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - World decoration/themes
 - GitHub CI for Rojo mapping, JSON, require paths, gameplay references, remote references, profile migration IDs, balancing invariants and reviewed direct `TakeDamage()` paths
 - CI guard ensuring `RemoteFunction.OnServerInvoke` ownership is unique
+- Repo-wide direct damage audit that permits `Humanoid:TakeDamage()` only inside `DamageService`
 
 ## Important recent fixes
 - `PlayerData` whitelists valid Titles and `UnlockedIslands` during reconciliation.
@@ -59,6 +60,7 @@ The current master design context is authoritative: Crystal Bound is an original
 - NPC-side `LastHitCrystal` / `LastHitCritical` / `LastAttackerUserId` presentation attributes are no longer used by the combat presentation path.
 - Added `combat-presentation-validation.yml` to guard the client/server presentation boundary, required mappings, authored asset naming contracts and the absence of client-side `TakeDamage()`.
 - Added `damage-path-validation.yml` to explicitly protect reviewed Boss/Combat damage boundaries.
+- Added `direct-damage-audit.yml` to reject any direct `Humanoid:TakeDamage()` call outside `DamageService` across the whole `src` tree.
 - `ClientBootstrap.client.lua` throttles Guardian BossBar work to a 0.1-second interval instead of doing the expensive BossBar lookup/update every rendered frame.
 - Added `CrystalAnimationConfig.lua` as presentation-only configuration for Basic/Ability animation asset IDs, asset names, VFX values and sound asset names for EMBER/TIDE/GALE.
 - `CrystalAnimationController.client.lua` loads authored `Animation` objects from `ReplicatedStorage.Assets.Animations` by configured `AssetName` and safely falls back to `AnimationId`.
@@ -97,7 +99,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 
 ## Exact next steps
 1. Continue auditing `CrystalAnimationController.client.lua`, `CrystalVFXController.client.lua`, `CombatPresentation.client.lua`, `CombatService.lua`, `BossService.lua`, `StatusEffectService.lua` and final Rojo mapping.
-2. Validate the combat-presentation and damage-path CI contracts after subsequent changes.
+2. Validate the combat-presentation, damage-path and direct-damage CI contracts after subsequent changes.
 3. Add the actual authored `Animation`/`Sound` objects under the configured asset names.
 4. Create/publish the first real EMBER Basic + Flame Burst animation assets and wire them into the asset folders or IDs.
 5. Add animation markers/events only for presentation timing; never use client markers as proof of damage.
@@ -122,6 +124,7 @@ The VFX layer is deliberately placeholder-level: it provides immediate crystal i
 - `.github/workflows/remote-handler-validation.yml`
 - `.github/workflows/combat-presentation-validation.yml`
 - `.github/workflows/damage-path-validation.yml`
+- `.github/workflows/direct-damage-audit.yml`
 - `src/ServerScriptService/Bootstrap.server.lua`
 - `src/ServerScriptService/Services/CombatService.lua`
 - `src/ServerScriptService/Services/DamageService.lua`
