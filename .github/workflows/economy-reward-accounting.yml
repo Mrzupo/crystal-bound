@@ -1,0 +1,27 @@
+name: Economy Reward Accounting
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate capped sale reward accounting
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/EconomyService.lua').read_text(encoding='utf-8')
+          required = [
+              'local before = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)',
+              'return nextMoney, nextMoney - before',
+              'local _, earned = EconomyService.AddMoney(profile, requestedEarned)',
+              'return true, earned',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing economy reward accounting contract: ' + ', '.join(missing))
+          print('Economy reward accounting contract validated.')
+          PY
