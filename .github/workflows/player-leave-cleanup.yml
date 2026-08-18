@@ -1,0 +1,34 @@
+name: Player Leave Cleanup
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-leave-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate cleanup paths
+        shell: python
+        run: |
+          from pathlib import Path
+          combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          cleanup = Path("src/ServerScriptService/CombatCleanup.server.lua").read_text(encoding="utf-8")
+          dodge = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          checks = [
+              ("combat cleanup clears cooldowns", "cooldowns[player] = nil", combat),
+              ("combat cleanup clears requests", "nextRequest[player] = nil", combat),
+              ("cleanup hub listens for leave", "Players.PlayerRemoving:Connect", cleanup),
+              ("dodge cleanup clears cooldown", "cooldowns[player] = nil", dodge),
+              ("remote function cleanup clears player data", "nextPlayerDataRequest[player] = nil", bootstrap),
+              ("remote function cleanup clears quest data", "nextQuestDataRequest[player] = nil", bootstrap),
+          ]
+          failures = [name for name, marker, text in checks if marker not in text]
+          if failures:
+              for failure in failures:
+                  print(" -", failure)
+              raise SystemExit(1)
+          print("Player leave cleanup validated.")
