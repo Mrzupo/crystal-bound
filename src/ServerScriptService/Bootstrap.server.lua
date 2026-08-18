@@ -12,9 +12,9 @@ local BossService = require(script.Parent.Services.BossService)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
+local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local NPCService = require(script.Parent.Services.NPCService)
 
-local crystalRequirements = { EMBER = 1, TIDE = 3, GALE = 5 }
 local AUTOSAVE_INTERVAL = 60
 local NPC_INTERACTION_RANGE = 14
 local QUEST_REQUEST_INTERVAL = 0.15
@@ -81,7 +81,7 @@ remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
 	nextCrystalRequest[player] = now + CRYSTAL_REQUEST_INTERVAL
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
 	local profile = PlayerService.GetProfile(player); if not profile then return end
-	local requiredLevel = crystalRequirements[crystalId] or math.huge
+	local requiredLevel = (CrystalConfig.UnlockLevels and CrystalConfig.UnlockLevels[crystalId]) or math.huge
 	if profile.Level < requiredLevel then player:SetAttribute("CrystalMessage", string.format("%s unlocks at level %d", crystalId, requiredLevel)); return end
 	if not CrystalService.OwnsCrystal(profile, crystalId) then CrystalService.UnlockCrystal(profile, crystalId) end
 	if CrystalService.EquipCrystal(profile, crystalId) then local mastery = CrystalMastery.Get(profile, crystalId); PlayerService.Sync(player); player:SetAttribute("CrystalMessage", crystalId .. " equipped"); remotes.CrystalMasteryChanged:FireClient(player, crystalId, mastery.Level, mastery.XP) end
@@ -94,13 +94,15 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
 	if not isNearNPC(player, "CrystalKeeper") then player:SetAttribute("CrystalMessage", "Go to the Crystal Keeper to upgrade your crystal."); return end
 	local profile = PlayerService.GetProfile(player); if not profile or not CrystalService.OwnsCrystal(profile, crystalId) then return end
-	local mastery = CrystalMastery.Get(profile, crystalId)
-	if mastery.Level >= 10 then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
+	local mastery = CrystalMastery.Get(profile, crystalId); if mastery.Level >= 10 then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
 	local cost = CrystalMastery.GetUpgradeCost(profile, crystalId)
 	for itemId, amount in pairs(cost) do if not InventoryService.HasItem(profile, itemId, amount) then player:SetAttribute("CrystalMessage", string.format("Need %d %s to upgrade.", amount, itemId)); return end end
 	for itemId, amount in pairs(cost) do InventoryService.RemoveItem(profile, itemId, amount) end
 	local upgraded, newLevel = CrystalMastery.Upgrade(profile, crystalId)
-	if not upgraded then return end
+	if not upgraded then
+		for itemId, amount in pairs(cost) do InventoryService.AddItem(profile, itemId, amount) end
+		return
+	end
 	PlayerService.Sync(player); remotes.InventoryChanged:FireClient(player, profile.Inventory); remotes.CrystalMasteryChanged:FireClient(player, crystalId, newLevel, 0); player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, newLevel))
 end)
 
