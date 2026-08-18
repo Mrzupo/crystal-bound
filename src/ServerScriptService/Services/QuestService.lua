@@ -6,17 +6,6 @@ local PlayerService = require(script.Parent.PlayerService)
 
 local QuestService = {}
 
-local QuestOrder = {
-	"FIRST_FIGHT",
-	"CRYSTAL_POWER",
-	"HUNT_EMBERLINGS",
-	"TIDE_EXPEDITION",
-	"WIND_TRIAL",
-	"GUARDIAN_TRIAL",
-	"GOLEM_HUNT",
-	"BAT_HUNT",
-}
-
 local SERVER_TRIGGERED_SINGLE_STEP = {
 	FIRST_FIGHT = true,
 	GUARDIAN_TRIAL = true,
@@ -77,7 +66,7 @@ function QuestService.Complete(player, profile, questId, message)
 end
 
 function QuestService.TryStartNext(player, profile)
-	for _, questId in ipairs(QuestOrder) do
+	for _, questId in ipairs(QuestSystem.GetChainOrder()) do
 		local allowed = QuestSystem.CanStart(profile, questId)
 		if allowed then
 			return QuestService.Start(player, profile, questId)
