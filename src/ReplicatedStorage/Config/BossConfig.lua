@@ -6,6 +6,7 @@ return {
 		XP = 1800,
 		Money = 1200,
 		Respawn = 90,
+		ArenaCenter = Vector3.new(330, 1, 0),
 		AggroRange = 65,
 		AttackRange = 9,
 		AttackDamage = 28,
