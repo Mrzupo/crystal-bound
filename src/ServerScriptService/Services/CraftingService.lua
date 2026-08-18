@@ -30,22 +30,33 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 		return false, string.format("Not enough inventory space for %dx %s.", outputAmount, recipe.Output)
 	end
 
+	local consumed = {}
 	for itemId, required in pairs(recipe.Inputs) do
-		if not InventoryService.HasItem(profile, itemId, required * amount) then
-			return false, string.format("Need %d %s to craft %dx %s.", required * amount, itemId, amount, outputId)
+		local totalRequired = required * amount
+		if not InventoryService.HasItem(profile, itemId, totalRequired) then
+			return false, string.format("Need %d %s to craft %dx %s.", totalRequired, itemId, amount, outputId)
 		end
 	end
 
 	for itemId, required in pairs(recipe.Inputs) do
-		if not InventoryService.RemoveItem(profile, itemId, required * amount) then
+		local totalRequired = required * amount
+		if not InventoryService.RemoveItem(profile, itemId, totalRequired) then
+			for rollbackId, rollbackAmount in pairs(consumed) do
+				InventoryService.AddItem(profile, rollbackId, rollbackAmount)
+			end
 			return false, "Crafting could not consume all materials safely."
 		end
+		consumed[itemId] = totalRequired
 	end
 
 	local added = InventoryService.AddItem(profile, recipe.Output, outputAmount)
-	if added < currentOutput + outputAmount then
+	if added ~= outputAmount then
+		for itemId, consumedAmount in pairs(consumed) do
+			InventoryService.AddItem(profile, itemId, consumedAmount)
+		end
 		return false, "Crafting output could not be added safely."
 	end
+
 	return true, string.format("Crafted %dx %s.", outputAmount, outputId)
 end
 
