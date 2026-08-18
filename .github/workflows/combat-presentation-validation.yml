@@ -1,0 +1,78 @@
+name: Crystal Bound Combat Presentation Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-combat-presentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate combat presentation contract
+        shell: python
+        run: |
+          import json
+          import re
+          from pathlib import Path
+
+          root = Path(".")
+          project = json.loads((root / "default.project.json").read_text(encoding="utf-8"))
+          tree = project["tree"]
+          remotes = tree["ReplicatedStorage"]["Remotes"]
+          server = tree["ServerScriptService"]
+          starter = tree["StarterPlayer"]["StarterPlayerScripts"]
+
+          problems = []
+
+          if remotes.get("CombatFeedback", {}).get("$className") != "RemoteEvent":
+              problems.append("CombatFeedback must be a RemoteEvent in default.project.json")
+          if server.get("CombatFeedbackRemote", {}).get("$path") != "src/ServerScriptService/CombatFeedbackRemote.server.lua":
+              problems.append("CombatFeedbackRemote server bootstrap is not mapped")
+          if starter.get("CombatPresentation", {}).get("$path") != "src/StarterPlayer/StarterPlayerScripts/CombatPresentation.client.lua":
+              problems.append("CombatPresentation mapping is incorrect")
+
+          required_files = [
+              "src/ServerScriptService/Services/CombatService.lua",
+              "src/ServerScriptService/CombatFeedbackRemote.server.lua",
+              "src/StarterPlayer/StarterPlayerScripts/CombatPresentation.client.lua",
+              "src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua",
+              "src/StarterPlayer/StarterPlayerScripts/CrystalVFXController.client.lua",
+              "src/ReplicatedStorage/Config/CrystalAnimationConfig.lua",
+          ]
+          for relative in required_files:
+              if not (root / relative).is_file():
+                  problems.append(f"Missing combat presentation file: {relative}")
+
+          config = (root / "src/ReplicatedStorage/Config/CrystalAnimationConfig.lua").read_text(encoding="utf-8")
+          for crystal in ("EMBER", "TIDE", "GALE"):
+              if not re.search(rf"\b{crystal}\s*=\s*\{{", config):
+                  problems.append(f"Missing presentation config for {crystal}")
+              for action in ("Basic", "Ability"):
+                  if not re.search(rf"{action}\s*=\s*\{{", config):
+                      problems.append(f"Missing {action} presentation config")
+
+          combat_service = (root / "src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          presentation = (root / "src/StarterPlayer/StarterPlayerScripts/CombatPresentation.client.lua").read_text(encoding="utf-8")
+          animation = (root / "src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua").read_text(encoding="utf-8")
+          vfx = (root / "src/StarterPlayer/StarterPlayerScripts/CrystalVFXController.client.lua").read_text(encoding="utf-8")
+
+          if "CombatFeedback" not in combat_service:
+              problems.append("CombatService must publish confirmed CombatFeedback")
+          if "CombatRequest" in presentation:
+              problems.append("CombatPresentation must not submit CombatRequest")
+          if ":TakeDamage(" in presentation or ":TakeDamage(" in animation or ":TakeDamage(" in vfx:
+              problems.append("Client combat presentation must never call TakeDamage")
+          if "LastHitCritical" in combat_service or "LastHitCrystal" in combat_service or "LastAttackerUserId" in combat_service:
+              problems.append("CombatService must not use mutable NPC LastHit presentation attributes")
+
+          if problems:
+              print("Combat presentation contract problems:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          print("Combat presentation contract validated.")
