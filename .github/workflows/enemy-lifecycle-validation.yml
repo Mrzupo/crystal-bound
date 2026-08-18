@@ -1,0 +1,28 @@
+name: Enemy Lifecycle Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate enemy death cleanup contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/NPCService.lua').read_text(encoding='utf-8')
+          required = [
+              'humanoid.Died:Connect(function()',
+              'AIPathService.Clear(model)',
+              'StatusEffectService.Clear(humanoid)',
+              'if onDeath then onDeath(model, config) end',
+              'if model.Parent then model:Destroy() end',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing enemy lifecycle guard: ' + ', '.join(missing))
+          print('Enemy lifecycle contract validated.')
+          PY
