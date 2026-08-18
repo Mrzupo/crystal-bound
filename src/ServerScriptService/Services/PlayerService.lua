@@ -156,7 +156,14 @@ function PlayerService.Sync(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = 16 + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
+		local baseWalkSpeed = 16 + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
+		local slowMultiplier = tonumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"))
+		if type(slowMultiplier) == "number" and slowMultiplier == slowMultiplier and slowMultiplier ~= math.huge and slowMultiplier ~= -math.huge then
+			slowMultiplier = math.clamp(slowMultiplier, 0.2, 1)
+			humanoid.WalkSpeed = math.max(6, baseWalkSpeed * slowMultiplier)
+		else
+			humanoid.WalkSpeed = baseWalkSpeed
+		end
 		local maxHealth = 100 + (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus
 		local oldMax = math.max(1, humanoid.MaxHealth)
 		local oldHealth = humanoid.Health
