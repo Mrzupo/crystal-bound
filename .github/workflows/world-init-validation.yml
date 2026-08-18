@@ -1,0 +1,27 @@
+name: World Initialization Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate world initialization contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          decor = Path('src/ServerScriptService/WorldDecor.server.lua').read_text(encoding='utf-8')
+          theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
+          for marker in ['StarterDecorReady', 'TideDecorReady', 'WindDecorReady', 'DecorReady']:
+              if marker not in decor:
+                  raise SystemExit(f'missing world decor idempotency marker: {marker}')
+          for island in ['StarterIsland', 'TideIsland', 'WindIsland', 'AncientRuins']:
+              if island not in theme:
+                  raise SystemExit(f'missing world theme: {island}')
+          if 'while ' in theme:
+              raise SystemExit('WorldTheme must not contain a permanent loop')
+          print('World initialization contracts validated.')
+          PY
