@@ -1,0 +1,26 @@
+name: Status Speed Guard Lifecycle
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate connection cleanup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
+          required = [
+              'local connections = setmetatable({}, { __mode = "k" })',
+              'Players.PlayerRemoving:Connect(cleanup)',
+              'if connection.Connected then connection:Disconnect() end',
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit('StatusSpeedGuardV2 lifecycle contract missing: ' + ', '.join(missing))
+          print('Status speed guard lifecycle validated.')
+          PY
