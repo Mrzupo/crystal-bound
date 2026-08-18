@@ -3,48 +3,11 @@ local InventoryConfig = require(game.ReplicatedStorage.Config.InventoryConfig)
 local EconomyConfig = require(game.ReplicatedStorage.Config.EconomyConfig)
 local XPConfig = require(game.ReplicatedStorage.Config.XPConfig)
 local CrystalUpgradeConfig = require(game.ReplicatedStorage.Config.CrystalUpgradeConfig)
+local AchievementSystem = require(script.Parent.AchievementSystem)
 local QuestSystem = require(script.Parent.QuestSystem)
 
-local VALID_CRYSTALS = {
-	EMBER = true,
-	TIDE = true,
-	GALE = true,
-}
-
-local VALID_ACHIEVEMENTS = {
-	FIRST_BLOOD = true,
-	CRYSTAL_KEEPER = true,
-	MASTER_OF_ONE = true,
-	GUARDIAN_SLAYER = true,
-	ANCIENT_EXPLORER = true,
-	LEVEL_20 = true,
-}
-
-local ACHIEVEMENT_TITLES = {
-	FIRST_BLOOD = "Fighter",
-	CRYSTAL_KEEPER = "Crystal Keeper",
-	MASTER_OF_ONE = "Crystal Master",
-	GUARDIAN_SLAYER = "Guardian Slayer",
-	ANCIENT_EXPLORER = "Ruins Explorer",
-	LEVEL_20 = "Veteran",
-}
-
-local VALID_TITLES = {
-	Fighter = true,
-	["Crystal Keeper"] = true,
-	["Crystal Master"] = true,
-	["Guardian Slayer"] = true,
-	["Ruins Explorer"] = true,
-	Veteran = true,
-}
-
-local VALID_ISLANDS = {
-	STARTER = true,
-	TIDE = true,
-	WIND = true,
-	ANCIENT = true,
-}
-
+local VALID_CRYSTALS = { EMBER = true, TIDE = true, GALE = true }
+local VALID_ISLANDS = { STARTER = true, TIDE = true, WIND = true, ANCIENT = true }
 local VALID_BOUNTY_ENEMIES = {
 	Emberling = true,
 	Tidecrawler = true,
@@ -67,13 +30,11 @@ end
 local function clampInt(value, minimum, maximum, fallback)
 	local number = tonumber(value)
 	if not isFiniteNumber(number) then return fallback end
-	number = math.floor(number)
-	return math.clamp(number, minimum, maximum)
+	return math.clamp(math.floor(number), minimum, maximum)
 end
 
 local function normalizeList(list, validator)
-	local result = {}
-	local seen = {}
+	local result, seen = {}, {}
 	if type(list) ~= "table" then return result end
 	for _, value in ipairs(list) do
 		if type(value) == "string" and (not validator or validator(value)) and not seen[value] then
@@ -99,6 +60,19 @@ end
 
 local function isQuestId(value)
 	return type(value) == "string" and QuestSystem.GetDefinition(value) ~= nil
+end
+
+local function isAchievementId(value)
+	return type(value) == "string" and AchievementSystem.Get(value) ~= nil
+end
+
+local function titleMatchesAchievement(title, unlocked)
+	if not AchievementSystem.IsValidTitle(title) then return false end
+	for achievementId in pairs(unlocked) do
+		local definition = AchievementSystem.Get(achievementId)
+		if definition and definition.Title == title then return true end
+	end
+	return false
 end
 
 function PlayerData.new()
@@ -136,7 +110,6 @@ function PlayerData.Reconcile(data)
 			end
 		end
 	end
-
 	merge(data, defaults)
 
 	data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)
@@ -147,9 +120,7 @@ function PlayerData.Reconcile(data)
 	data.Crystals = type(data.Crystals) == "table" and data.Crystals or clone(defaults.Crystals)
 	data.Crystals.Owned = normalizeList(data.Crystals.Owned, function(id) return VALID_CRYSTALS[id] end)
 	if not table.find(data.Crystals.Owned, "EMBER") then table.insert(data.Crystals.Owned, "EMBER") end
-	if not VALID_CRYSTALS[data.Crystals.Equipped] or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then
-		data.Crystals.Equipped = "EMBER"
-	end
+	if not VALID_CRYSTALS[data.Crystals.Equipped] or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then data.Crystals.Equipped = "EMBER" end
 
 	local sourceMastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or {}
 	local normalizedMastery = {}
@@ -172,16 +143,10 @@ function PlayerData.Reconcile(data)
 	data.Stats.AncientGolemsDefeated = clampInt(data.Stats.AncientGolemsDefeated, 0, 100000000, 0)
 	data.Stats.CrystalBatsDefeated = clampInt(data.Stats.CrystalBatsDefeated, 0, 100000000, 0)
 
-	data.Achievements = normalizeList(data.Achievements, function(id) return VALID_ACHIEVEMENTS[id] end)
+	data.Achievements = normalizeList(data.Achievements, isAchievementId)
 	local achievementSet = {}
 	for _, achievementId in ipairs(data.Achievements) do achievementSet[achievementId] = true end
-	data.Titles = normalizeList(data.Titles, function(title)
-		if not VALID_TITLES[title] then return false end
-		for achievementId, expectedTitle in pairs(ACHIEVEMENT_TITLES) do
-			if expectedTitle == title and achievementSet[achievementId] then return true end
-		end
-		return false
-	end)
+	data.Titles = normalizeList(data.Titles, function(title) return titleMatchesAchievement(title, achievementSet) end)
 	data.Inventory = normalizeInventory(data.Inventory)
 	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
 	data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)
@@ -222,11 +187,7 @@ function PlayerData.Reconcile(data)
 	else
 		local jobId = type(data.SessionLock.JobId) == "string" and data.SessionLock.JobId or ""
 		local sessionTimestamp = clampInt(data.SessionLock.Timestamp, 0, 4102444800, 0)
-		if jobId == "" or sessionTimestamp <= 0 then
-			data.SessionLock = nil
-		else
-			data.SessionLock = { JobId = jobId, Timestamp = sessionTimestamp }
-		end
+		data.SessionLock = jobId ~= "" and sessionTimestamp > 0 and { JobId = jobId, Timestamp = sessionTimestamp } or nil
 	end
 
 	data.Version = defaults.Version
