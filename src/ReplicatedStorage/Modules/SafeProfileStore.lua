@@ -88,7 +88,6 @@ function SafeProfileStore.Save(player, profile)
 		return false, "Invalid profile"
 	end
 
-	local payload = PlayerData.Reconcile(clone(profile))
 	local key = tostring(player.UserId)
 	local saved = false
 	local ok, result = retry(function()
@@ -100,6 +99,7 @@ function SafeProfileStore.Save(player, profile)
 			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID then
 				return current
 			end
+			local payload = PlayerData.Reconcile(clone(profile))
 			payload.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }
 			saved = true
 			return payload
