@@ -16,16 +16,18 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
           config = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
           inventory_ui = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           system = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
+          ability_service = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
           required = {
               "Definitions": ("EMBER =", "TIDE =", "GALE ="),
               "UnlockLevels": ("EMBER = 1", "TIDE = 3", "GALE = 5"),
               "BasicAttack": ("EMBER =", "TIDE =", "GALE ="),
-              "Abilities": ("EMBER =", "TIDE =", "GALE ="),
+              "Abilities": ("EMBER =", "TIDE =", "GALE=".replace("=", " =")),
               "Passives": ("EMBER =", "TIDE =", "GALE ="),
           }
 
@@ -37,6 +39,14 @@ jobs:
               for marker in markers:
                   if marker not in config:
                       problems.append(f"CrystalConfig {section} is missing marker {marker}")
+
+          tide_block = re.search(r'TIDE\s*=\s*\{(?P<body>.*?)\n\s*\}', config, re.S)
+          if not tide_block or not re.search(r'HealAmount\s*=\s*([0-9]+(?:\.[0-9]+)?)', tide_block.group("body")):
+              problems.append("CrystalConfig TIDE ability must define HealAmount")
+          if "CrystalConfig.Abilities.TIDE" not in ability_service:
+              problems.append("CrystalAbilityService must consume shared TIDE ability config")
+          if "HealAmount" not in ability_service:
+              problems.append("CrystalAbilityService must consume configured HealAmount")
 
           if "local unlockLevels = crystalConfig.UnlockLevels" not in inventory_ui:
               problems.append("InventoryMenu must consume shared CrystalConfig.UnlockLevels")
