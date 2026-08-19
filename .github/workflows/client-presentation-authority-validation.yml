@@ -41,16 +41,11 @@ jobs:
 
           vfx = Path("src/StarterPlayer/StarterPlayerScripts/CrystalVFXController.client.lua").read_text(encoding="utf-8")
           bridge = Path("src/StarterPlayer/StarterPlayerScripts/ConfirmedCombatVFXBridge.client.lua").read_text(encoding="utf-8")
-          bootstrap = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
-          touch = Path("src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua").read_text(encoding="utf-8")
 
           if "CrystalVFXAuthorizedAt" not in vfx or "hasServerConfirmation" not in vfx:
               raise SystemExit("CrystalVFXController must require server-confirmation state")
           if "combatFeedback.OnClientEvent" not in bridge or "vfx.Play(action, crystalId)" not in bridge:
               raise SystemExit("ConfirmedCombatVFXBridge must route server CombatFeedback into CrystalVFXController")
-          direct_vfx = [path for path, text in (("ClientBootstrap", bootstrap), ("TouchControls", touch)) if "crystalVFXController.Play(" in text]
-          if not direct_vfx:
-              raise SystemExit("Expected PC/mobile input controllers to retain the presentation call site for compatibility")
-          if "CombatFeedback" not in bridge:
-              raise SystemExit("ConfirmedCombatVFXBridge must be CombatFeedback-driven")
+          if "CrystalVFXAuthorizedAction" not in bridge or "CrystalVFXAuthorizedCrystal" not in bridge:
+              raise SystemExit("ConfirmedCombatVFXBridge must bind authorization to the confirmed action and Crystal")
           print("Confirmed Crystal VFX presentation boundary validated.")
