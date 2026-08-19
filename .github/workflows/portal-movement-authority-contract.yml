@@ -17,35 +17,48 @@ jobs:
 
           guard = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          world_theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
+          world_config = Path('src/ReplicatedStorage/Config/WorldConfig.lua').read_text(encoding='utf-8')
           movement = Path('src/ReplicatedStorage/Config/MovementConfig.lua').read_text(encoding='utf-8')
 
           required_guard = [
               'PortalMovementGraceUntil',
               'PortalExpectedDestination',
               'PORTAL_ARRIVAL_TOLERANCE',
-              'PORTAL_DESTINATIONS',
-              'Workspace.DescendantAdded:Connect(attachPortal)',
-              'armPortalArrival(player, destination)',
-              'MovementConfig.GraceDuration',
+              'local function isValidPortalArrival(player, root, now)',
+              'local function consumePortalArrival(player)',
           ]
           missing = [marker for marker in required_guard if marker not in guard]
           if missing:
               raise SystemExit('missing portal movement guard markers: ' + ', '.join(missing))
 
           for marker in (
-              'TidePortal = Vector3.new(120, 4, 0)',
-              'StarterPortal = Vector3.new(48, 4, 0)',
-              'WindPortal = Vector3.new(280, 4, 0)',
-              'TideReturnPortal = Vector3.new(210, 4, 0)',
-              'AncientPortal = Vector3.new(440, 4, 0)',
-              'WindReturnPortal = Vector3.new(380, 4, 0)',
+              'TidePortal = { Destination = Vector3.new(120, 4, 0)',
+              'StarterPortal = { Destination = Vector3.new(48, 4, 0)',
+              'WindPortal = { Destination = Vector3.new(280, 4, 0)',
+              'TideReturnPortal = { Destination = Vector3.new(210, 4, 0)',
+              'AncientPortal = { Destination = Vector3.new(440, 4, 0)',
+              'WindReturnPortal = { Destination = Vector3.new(380, 4, 0)',
           ):
-              if marker not in guard:
-                  raise SystemExit('portal destination missing from movement guard: ' + marker)
+              if marker not in world_theme:
+                  raise SystemExit('portal destination missing from WorldTheme authority: ' + marker)
 
+          for marker in (
+              'createPortal(starterIsland,"TidePortal",Vector3.new(52,5,0),Vector3.new(120,4,0)',
+              'createPortal(tideIsland,"StarterPortal",Vector3.new(118,5,0),Vector3.new(48,4,0)',
+              'createPortal(tideIsland,"WindPortal",Vector3.new(218,5,0),Vector3.new(280,4,0)',
+              'createPortal(windIsland,"TideReturnPortal",Vector3.new(278,5,0),Vector3.new(210,4,0)',
+              'createPortal(windIsland,"AncientPortal",Vector3.new(390,5,0),Vector3.new(440,4,0)',
+              'createPortal(ancientIsland,"WindReturnPortal",Vector3.new(440,5,50),Vector3.new(380,4,0',
+          ):
+              if marker not in bootstrap:
+                  raise SystemExit('Bootstrap portal definition drifted: ' + marker)
+
+          if 'WorldConfig.Islands.TIDE.Level' not in world_theme or 'WorldConfig.Islands.WIND.Level' not in world_theme or 'WorldConfig.Islands.ANCIENT.Level' not in world_theme:
+              raise SystemExit('WorldTheme portal authority must consume canonical WorldConfig level gates')
           if 'root.CFrame=CFrame.new(destination)' not in bootstrap and 'root.CFrame = CFrame.new(destination)' not in bootstrap:
               raise SystemExit('Bootstrap portal teleport path is missing')
-          if 'GraceDuration =' not in movement:
-              raise SystemExit('MovementConfig must expose canonical GraceDuration')
+          if 'GraceDuration =' not in movement or 'PortalArrivalTolerance =' not in movement:
+              raise SystemExit('MovementConfig must expose canonical portal movement bounds')
 
-          print('Portal movement authority integration validated.')
+          print('Portal movement authority integration and cross-file destinations validated.')
