@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate canonical enemy reward source and idempotency
+      - name: Validate canonical enemy reward source, idempotency and attacker identity
         shell: python
         run: |
           from pathlib import Path
 
           enemy = Path('src/ReplicatedStorage/Config/EnemyConfig.lua').read_text(encoding='utf-8')
           combat = Path('src/ServerScriptService/Services/CombatService.lua').read_text(encoding='utf-8')
+          damage = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
           if 'TrainingDummy = ' not in enemy or 'Drop = nil' not in enemy:
               raise SystemExit('TrainingDummy must remain explicitly non-dropping')
           for marker in (
@@ -37,14 +38,19 @@ jobs:
               if marker in combat:
                   raise SystemExit(f'Implicit fallback reward still present: {marker}')
 
-          idempotency = (
+          for marker in (
               'targetModel:GetAttribute("DeathRewarded") == true',
               'targetModel:SetAttribute("DeathRewarded", true)',
-          )
-          for marker in idempotency:
+              'local function rewardDefeat',
+          ):
               if marker not in combat:
                   raise SystemExit(f'Combat reward idempotency marker missing: {marker}')
 
-          if 'local function rewardDefeat' not in combat:
-              raise SystemExit('CombatService rewardDefeat owner missing')
-          print('Canonical combat reward source and idempotency contract validated.')
+          for marker in (
+              'lastAttackers[targetModel] = { Kind = "Player", Instance = attacker, UserId = attacker.UserId }',
+              'Players:GetPlayerByUserId(record.UserId) == player',
+              'model:IsDescendantOf(npcFolder)',
+          ):
+              if marker not in damage:
+                  raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
+          print('Canonical combat reward source, idempotency and attacker-session contract validated.')
