@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1073 commits ahead, 29 commits behind** `main`.
-`main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
+Current compare: **1081 commits ahead, 30 commits behind** `main`.
+`main` remains at verified commit `94b6f8c1ca4146017a389a977cd528c90b7cd9aa`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -17,8 +17,10 @@ Current compare: **1073 commits ahead, 29 commits behind** `main`.
 - `DamageService` restricts NPC attackers and non-player targets to the server-managed `Workspace.NPCs` tree and rejects Player-vs-Player damage.
 - Last-attacker records pin Player attribution to the concrete Player instance/session and reject stale rejoin sessions before combat rewards are credited.
 - Lethal damage records the attacker before `Humanoid:TakeDamage()` so `Died` callbacks can attribute the final hit; zero-applied damage restores the previous attribution.
+- Normal enemy reward processing explicitly clears attacker attribution after successful defeat rewards; respawned NPC instances cannot inherit old attacker records.
 - Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
 - `DodgeService` runtime config is finite-safe; direction magnitude and attacker ranges are bounded before movement or damage are applied.
+- NPC damage paths require the attacker model to still be parented, marked `Enemy`, and alive before damage is applied.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
 - Shop purchase totals are finite, positive and bounded by canonical `EconomyConfig.MaxMoney` before the money mutation phase.
@@ -51,6 +53,7 @@ Current compare: **1073 commits ahead, 29 commits behind** `main`.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
+- Enemy lifecycle CI now protects both death cleanup and attacker-liveness checks.
 - Session heartbeat failure state uses weak keys; heartbeat kicks after two consecutive refresh failures to protect the save-session lock.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
 - Final player removal treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
@@ -63,6 +66,9 @@ Current compare: **1073 commits ahead, 29 commits behind** `main`.
 - Position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
 - Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
 - WorldTheme mirrors the server portal cooldown, uses a pre-touch server position snapshot, and only arms portal grace after the character is observed near the configured destination; rejected/cooldown touches cannot grant grace.
+- Bootstrap portal creation is now presentation/definition-only; it no longer registers a second `Touched` teleport handler or directly changes player `CFrame`.
+- `WorldTheme.server.lua` is the canonical server owner for portal touch, level gate, destination verification and movement-grace authorization.
+- Portal movement CI explicitly rejects any Bootstrap portal `Touched`/teleport authority drift.
 - Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the observed-arrival candidate/cooldown flow.
 - MovementConfig CI bounds WalkSpeed, Slow, observed-position, grace and portal-arrival parameters.
 - Dodge has no generic movement/teleport grace path; its server velocity remains subject to the same positional authority.
@@ -86,7 +92,7 @@ Current compare: **1073 commits ahead, 29 commits behind** `main`.
 - `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract protects that boundary.
 - AI path destinations are finite-validated, quantized, cached by weak Model keys, recomputed at a bounded interval, and explicitly cleared when NPCs die; the AI-path contract protects those lifecycle/resource invariants.
 - `contract-path-validation.yml` validates workflow-referenced repository paths.
-- Studio playtest checklist now explicitly covers portal cooldown/arrival grace, stale portal authorization, malformed CrystalMastery mutation IDs, movement correction, normal multiplayer contention, Damage bounds and transaction rollbacks.
+- Studio playtest checklist explicitly covers portal cooldown/arrival grace, stale portal authorization, malformed CrystalMastery mutation IDs, movement correction, normal multiplayer contention, Damage bounds, NPC attacker liveness and transaction rollbacks.
 
 ## Important open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
