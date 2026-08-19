@@ -71,11 +71,11 @@ jobs:
               if marker not in bootstrap:
                   raise SystemExit('Bootstrap portal definition drifted: ' + marker)
 
+          if 'portal.Touched:Connect' in bootstrap or 'root.CFrame=CFrame.new(destination)' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
+              raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is the canonical owner')
           if 'WorldConfig.Islands.TIDE.Level' not in world_theme or 'WorldConfig.Islands.WIND.Level' not in world_theme or 'WorldConfig.Islands.ANCIENT.Level' not in world_theme:
               raise SystemExit('WorldTheme portal authority must consume canonical WorldConfig level gates')
-          if 'root.CFrame=CFrame.new(destination)' not in bootstrap and 'root.CFrame = CFrame.new(destination)' not in bootstrap:
-              raise SystemExit('Bootstrap portal teleport path is missing')
           if 'GraceDuration =' not in movement or 'PortalArrivalTolerance =' not in movement:
               raise SystemExit('MovementConfig must expose canonical portal movement bounds')
 
-          print('Portal movement authority, cooldown parity, pre-touch snapshot and observed-arrival grace validated.')
+          print('Single portal movement authority, cooldown parity, pre-touch snapshot and observed-arrival grace validated.')
