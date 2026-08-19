@@ -10,22 +10,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate server WalkSpeed authority
+      - name: Validate server WalkSpeed and position authority
         shell: python
         run: |
           import re
           from pathlib import Path
 
           server_guard = Path("src/ServerScriptService/StatusSpeedGuardV2.server.lua").read_text(encoding="utf-8")
+          movement_config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
+          portal_authority = Path("src/ServerScriptService/WorldTheme.server.lua").read_text(encoding="utf-8")
           required = [
               'local expected = math.max(MIN_WALK_SPEED, base)',
               'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
               'humanoid.WalkSpeed = expected',
               'humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()',
+              'local displacement = (root.Position - snapshot.Position).Magnitude',
+              'local allowed = MAX_OBSERVED_SPEED * sampleDt + EXTRA_DISTANCE_TOLERANCE',
+              'root.CFrame = CFrame.new(snapshot.Position)',
+              'root.AssemblyLinearVelocity = Vector3.zero',
+              'isValidPortalArrival(player, root, now)',
           ]
           missing = [marker for marker in required if marker not in server_guard]
           if missing:
-              raise SystemExit('Server WalkSpeed authority guard missing: ' + ', '.join(missing))
+              raise SystemExit('Server movement authority guard missing: ' + ', '.join(missing))
+
+          for marker in ('MaxObservedSpeed =', 'ExtraDistanceTolerance =', 'PositionCheckInterval =', 'PortalArrivalTolerance ='):
+              if marker not in movement_config:
+                  raise SystemExit(f'MovementConfig missing {marker}')
+
+          for marker in ('portalTargets =', 'PortalExpectedDestination', 'PortalMovementGraceUntil', 'PlayerService.GetProfile(player)'):
+              if marker not in portal_authority:
+                  raise SystemExit(f'Portal movement authority missing {marker}')
 
           client_writers = []
           assignment = re.compile(r'\.WalkSpeed\s*=')
