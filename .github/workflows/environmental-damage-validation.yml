@@ -19,8 +19,14 @@ jobs:
           if 'DamageType == DamageTypes.Environmental and request.Attacker == nil' not in damage:
               raise SystemExit('DamageService missing explicit attacker-less Environmental gate')
           if 'DamageType = DamageTypes.Environmental' not in status:
-              raise SystemExit('StatusEffectService environmental burn path missing explicit type')
-          if 'DodgeService.ApplyDamage(player, humanoid, 4)' not in arena:
-              raise SystemExit('BossArena expected environmental hazard call changed unexpectedly')
+              raise SystemExit('StatusEffectService environmental damage path missing explicit type')
+          required_arena = (
+              'DodgeService.ApplyDamage(player, humanoid, damage, nil, "Environmental", 0)',
+              'local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)',
+              'local halfExtent = math.clamp(finiteNumber(config.HalfExtent, 23), 0, 1000)',
+          )
+          for marker in required_arena:
+              if marker not in arena:
+                  raise SystemExit(f'BossArena environmental hazard marker missing: {marker}')
           print('Environmental damage boundaries validated.')
           PY
