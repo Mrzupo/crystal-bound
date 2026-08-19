@@ -45,15 +45,17 @@ jobs:
 
           required_mastery_markers = [
               "local function validCrystalId(crystalId)",
-              "required >= 1 or required % 1 ~= 0",
+              "if not validCrystalId(crystalId) then",
               "type(CrystalConfig.Definitions[crystalId]) == \"table\"",
               "type(CrystalConfig.BasicAttack[crystalId]) == \"table\"",
               "type(CrystalConfig.Abilities[crystalId]) == \"table\"",
               "type(CrystalConfig.Passives[crystalId]) == \"table\"",
-              "return validCrystalId(crystalId) and crystalId or DEFAULT_CRYSTAL",
+              "function CrystalMastery.AddXP",
+              "function CrystalMastery.GetUpgradeCost",
+              "function CrystalMastery.Upgrade",
           ]
           missing = [marker for marker in required_mastery_markers if marker not in mastery]
           if missing:
-              raise SystemExit("CrystalMastery complete-ID validation missing: " + ", ".join(missing))
+              raise SystemExit("CrystalMastery mutation boundary missing: " + ", ".join(missing))
 
-          print("Crystal upgrade config, material ownership and complete CrystalMastery ID boundary validated.")
+          print("Crystal upgrade config, material ownership and mutation ID boundary validated.")
