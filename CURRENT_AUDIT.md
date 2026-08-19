@@ -30,7 +30,7 @@ Base: `main`
 - Session heartbeat failure state uses weak keys.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
 - Final player removal now treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
-- `StatusSpeedGuardV2` now continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, closing the client-side speed override gap.
+- `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active and immediately corrects server-observed `WalkSpeed` property changes.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
@@ -38,7 +38,7 @@ Base: `main`
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
 - `crystal-service-ownership.yml` protects the Crystal ownership boundary.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, and StatusSpeedGuard baseline enforcement.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, and StatusSpeedGuard baseline + immediate correction enforcement.
 - Studio playtest checklist now explicitly covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, and the new baseline WalkSpeed enforcement.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
