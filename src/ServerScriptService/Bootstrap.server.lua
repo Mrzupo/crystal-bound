@@ -36,14 +36,27 @@ local nextQuestDataRequest = setmetatable({}, { __mode = "k" })
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-	if not remotes then remotes = Instance.new("Folder"); remotes.Name = "Remotes"; remotes.Parent = ReplicatedStorage end
+	if not remotes then
+		remotes = Instance.new("Folder")
+		remotes.Name = "Remotes"
+		remotes.Parent = ReplicatedStorage
+	end
 	local existing = remotes:FindFirstChild(name)
-	if existing then return existing end
-	local remote = Instance.new(className); remote.Name = name; remote.Parent = remotes
+	if existing then
+		if existing.ClassName == className then return existing end
+		existing:Destroy()
+	end
+	local remote = Instance.new(className)
+	remote.Name = name
+	remote.Parent = remotes
 	return remote
 end
-for _, name in ipairs({ "CombatRequest", "QuestRequest", "InventoryRequest", "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged", "CrystalMasteryChanged", "CrystalUpgradeRequest" }) do ensureRemote("RemoteEvent", name) end
-ensureRemote("RemoteFunction", "GetPlayerData"); ensureRemote("RemoteFunction", "GetQuestData")
+
+for _, name in ipairs({ "CombatRequest", "QuestRequest", "InventoryRequest", "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged", "CrystalChanged", "CrystalMasteryChanged", "CrystalUpgradeRequest" }) do
+	ensureRemote("RemoteEvent", name)
+end
+ensureRemote("RemoteFunction", "GetPlayerData")
+ensureRemote("RemoteFunction", "GetQuestData")
 local remotes = ReplicatedStorage.Remotes
 
 local function isNearNPC(player, npcName, range)
