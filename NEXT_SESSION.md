@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **814 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **825 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains untouched.
 
 ## Current state
@@ -28,20 +28,21 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - One-shot confirmed Crystal VFX bridge.
 
 ## Latest hardening work
-- Removed Crystal-based fallback loot/XP/Money for unknown enemy types; enemy rewards must come from `EnemyConfig`.
-- Added CI reward contract for canonical enemy XP/Money/Loot values.
-- Clamped corrupted Inventory stacks before Add/Remove/Has.
+- Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
+- Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; no Crystal-based fallback rewards.
+- Inventory corrupt stacks are clamped before mutation.
 - Quest progress rejects invalid/non-finite/non-integer increments.
-- Crystal unlock boundary rejects malformed UnlockLevel configuration.
-- Daily Bounty Goal/Reward are canonicalized from `DailyBountyConfig` on refresh.
-- Guardian telegraph binds to exact Guardian instance.
+- Crystal unlock boundary rejects malformed unlock-level configuration.
+- Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`.
+- Guardian telegraph binds to the exact Guardian instance.
 - NPC Burn/Slow only apply after confirmed damage.
-- NPC dialog closes when transitioning into a destination menu.
-- NPC dialog options are covered by CI against real menu attributes.
-- Crystal VFX now requires one-shot server confirmation and supports late confirmation after Crystal switching.
-- Static smoke/presentation contracts cover Animator ownership and confirmed VFX.
-- README, DESIGN and TESTING were replaced because they had stale Crystal Fight/legacy architecture descriptions.
-- `CURRENT_AUDIT.md` records the latest review and remaining limitations.
+- NPC dialog closes when transitioning into destination menus.
+- Crystal VFX requires one-shot server confirmation and handles late confirmation after Crystal switching.
+- PlayerService Save/Remove guarantees operation-lock release and clears local state after final-save failures while retaining the persistent session lock.
+- SessionHeartbeat uses weak failure state.
+- CombatPresentation keeps one current Character HealthChanged listener across respawns.
+- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle and Quest completion boundaries.
+- README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
 ## Security / authority rules
 - `DamageService` is the only direct `Humanoid:TakeDamage()` path in `src`.
@@ -56,7 +57,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 ## Open decisions / limitations
 - No actual Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter is available here.
-- Latest Combined Status is not verified via the available GitHub connector.
+- Latest Combined Status is not verified through the available GitHub connector.
 - Authored Roblox Animation/Sound assets are still missing.
 - Current VFX remain procedural/placeholder-level.
 - TIDE/GALE currently use level-gated prototype unlocks, while the master design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as long-term Crystal acquisition activities. Decide the final model before building acquisition content.
