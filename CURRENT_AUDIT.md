@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1102 commits ahead, 43 commits behind** `main`.
-`main` remains at verified commit `83bac4017c769cb28381fc37c25e282d951e0d9d`.
+Current compare: **1104 commits ahead, 45 commits behind** `main`.
+`main` remains at verified commit `9d9921144a81a8ab309cbcfb59060506b8206aaa`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -87,6 +87,7 @@ Current compare: **1102 commits ahead, 43 commits behind** `main`.
 - RemoteEvent ownership covers all known mutating client-to-server RemoteEvents; RemoteFunction ownership separately covers `GetPlayerData`, `GetQuestData`, `GetAvailableQuests` and `NPCDialogRequest`.
 - NPC dialog config is constrained to the canonical CrystalKeeper/MaterialTrader option IDs, and the server read path enforces interaction distance plus request rate-limit cleanup.
 - World initialization CI validates the bounded portal tracking loop, cleanup on PlayerRemoving and definition-only Bootstrap portal ownership instead of incorrectly banning all `while` loops.
+- StatusEffect input CI validates bounded Slow/Burn duration, multiplier, damage, interval and integer tick-count parameters; lifecycle CI protects token cancellation and cleanup.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
