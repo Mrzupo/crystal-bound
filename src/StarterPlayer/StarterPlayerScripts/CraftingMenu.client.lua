@@ -10,10 +10,18 @@ local inventoryChanged = remotes:WaitForChild("InventoryChanged")
 local inventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 local craftingConfig = require(ReplicatedStorage.Config.CraftingConfig)
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local inventory = {}
 local open = false
 local recipeId = "HealthPotion"
-local recipe = craftingConfig.Recipes[recipeId]
+local recipe = type(craftingConfig.Recipes[recipeId]) == "table" and craftingConfig.Recipes[recipeId] or nil
 local outputItem = recipe and inventoryConfig.GetItemConfig(recipe.Output) or nil
 
 local gui = Instance.new("ScreenGui")
@@ -66,7 +74,11 @@ craft.Size = UDim2.fromOffset(484, 48)
 craft.Font = Enum.Font.GothamBold
 craft.TextSize = 16
 craft.Parent = panel
-craft.Activated:Connect(function() craftingRequest:FireServer("Craft", recipeId, 1) end)
+craft.Activated:Connect(function()
+	if type(recipeId) == "string" then
+		craftingRequest:FireServer("Craft", recipeId, 1)
+	end
+end)
 
 local hint = Instance.new("TextLabel")
 hint.Position = UDim2.fromOffset(18, 230)
@@ -80,9 +92,12 @@ hint.Parent = panel
 
 local function formatInputs()
 	local lines = {}
-	for itemId, amount in pairs((recipe and recipe.Inputs) or {}) do
-		local config = inventoryConfig.GetItemConfig(itemId)
-		table.insert(lines, string.format("%d %s", amount, config and config.Name or itemId))
+	for itemId, rawAmount in pairs((recipe and recipe.Inputs) or {}) do
+		local amount = finiteNumber(rawAmount, 0)
+		if type(itemId) == "string" and amount > 0 then
+			local config = inventoryConfig.GetItemConfig(itemId)
+			table.insert(lines, string.format("%d %s", math.floor(amount), config and config.Name or itemId))
+		end
 	end
 	table.sort(lines)
 	return table.concat(lines, " + ")
@@ -95,12 +110,17 @@ local function refresh()
 		craft.TextTransparency = 0.5
 		return
 	end
-	local outputAmount = math.max(1, math.floor(tonumber(recipe.Amount) or 1))
-	local currentOutput = math.max(0, math.floor(tonumber(inventory[recipe.Output]) or 0))
-	local maxStack = inventoryConfig.GetMaxStackSize(recipe.Output)
+	local outputAmount = math.max(1, math.floor(finiteNumber(recipe.Amount, 1)))
+	local currentOutput = math.max(0, math.floor(finiteNumber(inventory[recipe.Output], 0)))
+	local maxStack = math.max(1, math.floor(finiteNumber(inventoryConfig.GetMaxStackSize(recipe.Output), 1)))
 	local requirements = true
-	for itemId, amount in pairs(recipe.Inputs or {}) do
-		requirements = requirements and (math.max(0, math.floor(tonumber(inventory[itemId]) or 0)) >= amount)
+	for itemId, rawAmount in pairs(recipe.Inputs or {}) do
+		local amount = finiteNumber(rawAmount, 0)
+		if type(itemId) ~= "string" or amount <= 0 then
+			requirements = false
+			break
+		end
+		requirements = requirements and (math.max(0, math.floor(finiteNumber(inventory[itemId], 0))) >= math.floor(amount))
 	end
 	local outputSpace = currentOutput + outputAmount <= maxStack
 	recipeLabel.Text = string.format("%s • %s\nRezept: %s → %d %s\nBesitz: %d / %d %s", outputItem.Name, outputItem.Rarity, formatInputs(), outputAmount, outputItem.Name, currentOutput, maxStack, outputItem.Name)
