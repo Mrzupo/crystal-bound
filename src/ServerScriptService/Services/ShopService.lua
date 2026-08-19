@@ -19,8 +19,15 @@ local function positiveInteger(value)
 	return number
 end
 
+local function copyOffer(offer)
+	if type(offer) ~= "table" then return offer end
+	local result = {}
+	for key, value in pairs(offer) do result[key] = value end
+	return result
+end
+
 function ShopService.GetOffer(itemId)
-	return Offers[itemId]
+	return copyOffer(Offers[itemId])
 end
 
 function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyService)
@@ -53,7 +60,11 @@ function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyServi
 end
 
 function ShopService.GetOffers()
-	return Offers
+	local copy = {}
+	for itemId, offer in pairs(Offers) do
+		copy[itemId] = copyOffer(offer)
+	end
+	return copy
 end
 
 return ShopService
