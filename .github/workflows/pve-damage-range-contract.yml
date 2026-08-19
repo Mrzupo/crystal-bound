@@ -1,4 +1,5 @@
 name: PvE damage range contract
+
 on:
   push:
   pull_request:
@@ -14,8 +15,14 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           path = Path('src/ServerScriptService/Services/DodgeService.lua')
-          text = path.read_text()
-          assert 'if attacker and (not range or tonumber(range) <= 0) then return false end' in text
-          assert 'Range = range' in text
+          text = path.read_text(encoding='utf-8')
+          required = [
+              'local safeRange',
+              'if not safeRange or safeRange ~= safeRange or safeRange == math.huge or safeRange == -math.huge or safeRange <= 0 then',
+              'Range = safeRange',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('PvE damage range contract missing: ' + ', '.join(missing))
           print('PvE damage range contract OK')
           PY
