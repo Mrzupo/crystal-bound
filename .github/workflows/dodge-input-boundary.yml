@@ -17,6 +17,7 @@ jobs:
 
           service = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
           required = [
+              'local function finiteNumber(value, fallback)',
               'local function validDirection(direction)',
               'typeof(direction) ~= "Vector3"',
               'not finiteComponent(direction.X)',
@@ -24,8 +25,10 @@ jobs:
               'not finiteComponent(direction.Z)',
               'direction.Magnitude <= MAX_DIRECTION_MAGNITUDE',
               'if requested ~= nil and not validDirection(requested) then',
+              'MAX_DIRECTION_MAGNITUDE = math.clamp(finiteNumber(DodgeConfig.MaxDirectionMagnitude, 1000), 1, 10000)',
+              'safeRange = math.clamp(safeRange, 0.1, 1000)',
           ]
           missing = [marker for marker in required if marker not in service]
           if missing:
               raise SystemExit("missing Dodge input boundary contract markers: " + ", ".join(missing))
-          print("Dodge server input boundary contract validated.")
+          print("Dodge server input and runtime-config boundary contract validated.")
