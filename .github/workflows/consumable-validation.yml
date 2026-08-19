@@ -15,15 +15,18 @@ jobs:
           from pathlib import Path
           text = Path('src/ServerScriptService/UseItemRemote.server.lua').read_text(encoding='utf-8')
           required = [
-              'itemId ~= "HealthPotion"',
+              'local potion = ConsumableConfig.HealthPotion',
+              'if type(itemId) ~= "string" or itemId ~= potion.ItemId then return end',
               'USE_INTERVAL = 0.2',
               'InventoryService.HasItem(profile, itemId, 1)',
               'humanoid.Health >= humanoid.MaxHealth',
               'InventoryService.RemoveItem(profile, itemId, 1)',
-              'math.min(humanoid.MaxHealth, humanoid.Health + 60)',
+              'math.min(humanoid.MaxHealth, humanoid.Health + healAmount)',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing consumable guard: ' + ', '.join(missing))
+          if 'math.clamp(healAmount, 0.1, 1000)' not in text:
+              raise SystemExit('Health Potion heal amount must remain runtime bounded')
           print('Health Potion server contract validated.')
           PY
