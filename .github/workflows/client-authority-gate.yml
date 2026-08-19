@@ -1,0 +1,45 @@
+name: Client Gameplay Authority Gate
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-client-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject direct client Character gameplay mutations
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path("src/StarterPlayer/StarterPlayerScripts")
+          problems = []
+          for path in root.rglob("*.client.lua"):
+              text = path.read_text(encoding="utf-8")
+              forbidden = {
+                  "Health": r"\b(?:humanoid|Humanoid)\.Health\s*=",
+                  "MaxHealth": r"\b(?:humanoid|Humanoid)\.MaxHealth\s*=",
+                  "WalkSpeed": r"\b(?:humanoid|Humanoid)\.WalkSpeed\s*=",
+              }
+              for field, pattern in forbidden.items():
+                  if re.search(pattern, text):
+                      problems.append(f"{path}: direct client {field} assignment")
+
+          if problems:
+              print("Forbidden client gameplay-state mutations:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+
+          for required in (
+              "src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua",
+              "src/StarterPlayer/StarterPlayerScripts/DodgeControls.client.lua",
+          ):
+              if not Path(required).is_file():
+                  raise SystemExit(f"Missing active client input path: {required}")
+
+          print("Client gameplay-state authority gate validated.")
