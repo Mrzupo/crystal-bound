@@ -3,7 +3,13 @@ local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConf
 
 local AchievementSystem = {}
 
-local masteryMaxLevel = math.max(1, math.floor(tonumber(CrystalUpgradeConfig.MaxLevel) or 10))
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
+local masteryMaxLevel = math.clamp(math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel, 10)), 1, 100)
 
 local Definitions = {
 	FIRST_BLOOD = { Name = "First Blood", Requirement = "Defeat your first enemy.", RewardMoney = 50, Title = "Fighter" },
@@ -26,12 +32,6 @@ local ORDER = {
 local VALID_TITLES = {}
 for _, definition in pairs(Definitions) do
 	if definition.Title then VALID_TITLES[definition.Title] = true end
-end
-
-local function finiteNumber(value, fallback)
-	local number = tonumber(value)
-	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
-	return number
 end
 
 local function copyDefinition(definition)
@@ -83,8 +83,6 @@ function AchievementSystem.Check(profile)
 	profile.Titles = profile.Titles or {}
 	profile.Stats = profile.Stats or {}
 
-	-- Titles are canonical consequences of earned achievements; never trust a
-	-- standalone title from persisted data.
 	local canonicalTitles = {}
 	for _, achievementId in ipairs(profile.Achievements) do
 		local definition = Definitions[achievementId]
