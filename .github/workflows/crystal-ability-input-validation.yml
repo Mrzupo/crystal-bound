@@ -21,6 +21,7 @@ jobs:
           problems = []
           for marker in [
               "local function safePositive",
+              "return math.min(number, 1000)",
               "if not player or not player:IsA(\"Player\") then",
               "if not targetModel or not targetModel:IsA(\"Model\") then",
               "DamageType = \"CrystalAbilitySplash\"",
@@ -31,4 +32,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Crystal ability input guards validated.")
+          print("Crystal ability input and runtime bounds validated.")
