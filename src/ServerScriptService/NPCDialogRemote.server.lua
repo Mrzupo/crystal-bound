@@ -16,7 +16,14 @@ else
 end
 
 local REQUEST_INTERVAL = 0.2
-local NPC_INTERACTION_RANGE = math.max(1, tonumber(InteractionConfig.NPCInteractionRange) or 14)
+
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
+local NPC_INTERACTION_RANGE = math.clamp(finiteNumber(InteractionConfig.NPCInteractionRange, 14), 4, 50)
 local nextRequest = setmetatable({}, { __mode = "k" })
 
 local function isNearNPC(player, npcId)
