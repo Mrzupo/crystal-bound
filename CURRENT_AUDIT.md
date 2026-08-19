@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1006 commits ahead, 29 commits behind** `main`.
+Current compare: **1025 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -26,7 +26,10 @@ Current compare: **1006 commits ahead, 29 commits behind** `main`.
 - CrystalConfig CI enforces semantic Damage/Range/Cooldown/HealAmount/UnlockLevel bounds.
 - Combat modifier CI enforces Critical probability 0..1 and multiplier 1..10.
 - Economy config CI validates StartingMoney/MinMoney/MaxMoney relationships instead of hardcoding balance values.
+- Money mutations are owned by `EconomyService`; a server-side ownership contract rejects direct `profile.Money` mutations elsewhere in `ServerScriptService`.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
+- Inventory mutations are owned by `InventoryService`; a server-side ownership contract rejects direct `profile.Inventory[...]` mutations elsewhere in `ServerScriptService`.
+- Level/Experience mutations are owned by `XPService`; a server-side ownership contract protects the canonical progression path.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Quest completion is owned by `QuestService`; `QuestSystem.Complete()` has a dedicated single-owner regression contract.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
@@ -35,8 +38,8 @@ Current compare: **1006 commits ahead, 29 commits behind** `main`.
 - `CrystalService` is the sole server-facing Crystal ownership wrapper and delegates mutation to `CrystalSystem`.
 - Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
-- `CrystalAbilityService.Execute()` now independently verifies the active/owned Crystal, complete Crystal config, GALE enemy target context and player-to-target ability range before applying secondary effects.
-- Guardian creation is active in the loaded `BossTelegraph` runtime: a missing `CrystalGuardian` is created from canonical `BossConfig.CrystalGuardian.ArenaCenter`, while `BossService.CreateGuardian()` remains idempotent.
+- `CrystalAbilityService.Execute()` independently verifies the active/owned Crystal, complete Crystal config, GALE enemy target context and player-to-target ability range before applying secondary effects.
+- Guardian creation is active in the loaded `BossTelegraph` runtime: a missing/invalid `CrystalGuardian` identity is replaced and a canonical Guardian is created from `BossConfig.CrystalGuardian.ArenaCenter`; `BossService.CreateGuardian()` remains idempotent.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
@@ -47,8 +50,9 @@ Current compare: **1006 commits ahead, 29 commits behind** `main`.
 - The load lifecycle is checked again immediately after `Profiles[player]` is populated; a leave race removes the in-memory profile and releases the persistent lock before returning.
 - `SessionHeartbeat.server.lua` now registers `game:BindToClose()` and runs the canonical `PlayerService.Remove()` path for loaded profiles during server shutdown, with a bounded shutdown wait.
 - `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
-- `StatusSpeedGuardV2` now also applies conservative server-side position authority using observed displacement bounds and server rollback, without creating a second server entry-point.
-- A position correction now refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
+- `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback, without creating a second server entry-point.
+- A position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
+- Portal movement authority is cleared on Character respawn, preventing a stale portal grace from authorizing a new character instance.
 - Movement configuration centralizes observed-speed, displacement-tolerance, position-check interval and portal-arrival tolerance values.
 - Server portal movement grace is destination-bound: `WorldTheme.server.lua` only authorizes known portal destinations for players who meet the canonical level requirement, and `StatusSpeedGuardV2` accepts a large displacement only when the server-observed position lands near that expected destination.
 - Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates.
@@ -69,13 +73,14 @@ Current compare: **1006 commits ahead, 29 commits behind** `main`.
 - Portal contract verifies gates consume canonical `WorldConfig` level fields.
 - Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract now protects those invariants.
 - `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract now protects that boundary.
-- `movement-authority-contract.yml` protects both server WalkSpeed and position authority plus verified portal-arrival semantics and explicitly forbids generic movement grace.
-- `boss-creation-idempotency.yml` and `boss-active-spawn-contract.yml` protect Guardian creation ownership.
+- `movement-authority-contract.yml` protects WalkSpeed, position rollback, portal semantics, correction snapshots, respawn cleanup and absence of generic movement grace.
+- `boss-creation-idempotency.yml` and `boss-active-spawn-contract.yml` protect Guardian creation ownership and reserved identity.
 - `session-shutdown-contract.yml` protects the canonical server shutdown save/release path.
 - `quest-completion-ownership.yml` protects the single QuestSystem completion owner.
 - `crystal-ability-context-contract.yml` protects defense-in-depth Crystal ability validation.
 - `pve-damage-range-contract.yml` protects current-position range checks in both Dodge and central DamageService paths.
 - `combat-reward-contract.yml` protects canonical rewards, death idempotency and concrete attacker-session attribution.
+- `inventory-ownership-contract.yml` and `xp-ownership-contract.yml` protect canonical mutation owners for inventory and progression.
 - `contract-path-validation.yml` validates that workflow-referenced repository paths exist.
 - Stale CI contracts were corrected where they still asserted retired inline values or variable names; the active contracts now inspect current config-driven runtime paths.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
