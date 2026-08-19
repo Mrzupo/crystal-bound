@@ -1,0 +1,31 @@
+name: Health Authority Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-health-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server-only Humanoid health mutation
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          health_write = re.compile(r'\.(?:Health|MaxHealth)\s*=')
+          client_writers = []
+          for path in Path("src/StarterPlayer").rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if health_write.search(text):
+                  client_writers.append(str(path))
+          if client_writers:
+              raise SystemExit('Client scripts must not directly write Humanoid Health/MaxHealth: ' + ', '.join(client_writers))
+
+          player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          if "humanoid.MaxHealth =" not in player_service:
+              raise SystemExit("PlayerService must remain the canonical server owner for synced MaxHealth")
+          print('Health authority contract validated.')
