@@ -45,6 +45,9 @@
 - Dedicated `CombatFeedback` RemoteEvent für serverbestätigte Crystal-Hit-Presentation.
 - Clientseitige Crystal-Animation-, VFX- und Combat-Presentation-Layer für PC und Mobile.
 - `combat-presentation-validation.yml` als Regression-Guard für die Server-/Client-Presentation-Grenze.
+- `ConfirmedCombatVFXBridge.client.lua` als serverbestätigter, einmaliger VFX-Bridge für den lokalen Angreifer.
+- Zusätzliche CI-Verträge für Animator-Ownership, bestätigte Crystal-VFX, Crystal-Unlock-Gates, Achievement-Titel, NPC-Dialog-Optionen und Enemy-Respawn-Lifecycle.
+- `CURRENT_AUDIT.md` als aktueller Repository-Audit- und Übergabestand.
 
 ### Changed
 
@@ -56,7 +59,8 @@
 - `EnemyConfig` enthält Balancing, Spezialwerte und Drop-Chancen für alle aktuellen Gegnertypen.
 - `NPCService` verwaltet Gegnererstellung, eindeutige Namen, Visual Styles, Health Bars, Leash-Verhalten, Pathfinding-Fallback und Spezialangriffe.
 - `NPCService` leitet normale und spezielle Spieler-Schäden jetzt über `DodgeService` und begrenzt Spezialangriffe auf sinnvolle Nahkampfreichweiten.
-- `CombatService` verwendet gegnerspezifische XP-, Geld-, Loot- und Masterywerte, validiert Reichweite serverseitig und verarbeitet Krits, Bounty und Drop-Chancen.
+- `NPCService` wendet Burn/Slow nur noch an, wenn der eigentliche Treffer tatsächlich Schaden verursacht hat.
+- `CombatService` verwendet ausschließlich kanonische `EnemyConfig`-Werte für XP, Money und Loot; unbekannte Enemy-Typen und implizite Crystal-basierte Fallback-Rewards werden nicht mehr belohnt.
 - `CombatService` erzeugt keine serverseitigen kosmetischen Crystal-VFX mehr; bestätigte Treffer werden über `CombatFeedback` an Clients gemeldet.
 - `CombatService` leitet GALE-Splash-Schaden ebenfalls über `DamageService.ProcessDamage()`.
 - `CombatService` sendet für bestätigte Primär- und Splash-Hits den angewendeten Schaden, Crystal, Action und Critical-State als Presentation-Daten an Clients; diese Daten verändern keine Gameplay-Entscheidungen clientseitig.
@@ -64,15 +68,23 @@
 - `DamageService` lässt Schaden nur noch gegen Enemy-/Boss-Modelle zu, validiert außerdem den Angreifer als Player oder servermarkiertes Enemy/Boss-Modell und validiert Range/Amount finite-sicher.
 - `DamageValidators` weist nicht-endliche Schadenswerte und unbekannte DamageType-Werte explizit ab.
 - `BossService` routet Guardian-Shockwave-Schaden gegen NPCs über `DamageService` statt direkt `Humanoid:TakeDamage()` aufzurufen.
+- `BossTelegraph` bindet verzögerte Angriffe an die konkrete Guardian-Instanz, damit alte Telegraphen keine neue Bossinstanz treffen.
 - `DodgeService` schützt das komplette Character-Schadensfenster zentral über ein temporäres ForceField, validiert Bewegungs-/Schadenswerte finite-sicher und setzt Dodge-State bei Respawn zurück.
+- `DodgeService.ApplyDamage()` normalisiert Range-Werte vor jedem Vergleich und verweigert ungültige attacker-basierte Bereiche.
 - `StatusEffectService` verhindert Slow/Burn während eines aktiven Dodge-Fensters und erhält aktives Slow bei Player-Syncs.
 - `StatusSpeedGuardV2` hält aktive Slow-Effekte nach Crystal-/Mastery-Syncs stabil.
 - `BossArena` leitet Phasen-Hazard-Schaden über `DodgeService`.
-- `BossTelegraph` bricht verzögerte Boss-Angriffe ab, wenn der Guardian während des Telegraphs verschwindet oder stirbt.
 - `AIPathService` nutzt einen Weak-Key-Cache, gedrosselte Pfadberechnung und verarbeitet Jump-Waypoints auch beim Erreichen gespeicherter Waypoints.
 - `PlayerService` verwendet den sicheren Session-locked Profile Store, schützt Save/Remove vor Race Conditions und synchronisiert Daily-Bounty-/Progressionsattribute.
+- `PlayerService` erzeugt serverseitig den Character-Animator; `CrystalAnimationController` erstellt keinen lokalen Animator mehr.
 - `SafeProfileStore` nutzt Profil-Snapshots beim Save und verweigert beschädigte DataStore-Werte statt sie mit frischen Daten zu überschreiben.
 - `PlayerData` normalisiert Level, XP, Geld, Stats, Kristalle, Mastery, Inventar, Questzustand, Session-Lock, Daily-Bounty, Achievements, Titles und `UnlockedIslands` während der Migration.
+- Achievement Titles werden bei jeder Reconciliation aus tatsächlich verdienten Achievement-IDs abgeleitet.
+- `DailyBountyService` canonicalisiert bestehende Bounty Goal/Reward-Werte anhand des aktuellen `DailyBountyConfig` statt persistierte Rewardwerte blind zu vertrauen.
+- `QuestSystem` verwirft ungültige/nicht-endliche Quest-Progress-Increments statt sie als Standardfortschritt zu interpretieren.
+- `CrystalSystem.Unlock()` setzt das kanonische Crystal-Level-Gate selbst durch; Bootstrap ist nicht mehr die einzige Schutzgrenze.
+- `CrystalSystem.Unlock()` verweigert zusätzlich beschädigte/missing Unlock-Level-Konfigurationen statt auf unendliche Fallbackwerte zu laufen.
+- `InventoryService` klemmt korrumpierte Stackwerte vor Add/Remove/Has an die konfigurierten MaxStackSize-Grenzen.
 - `CraftingRemote` und `ShopRemote` verlangen die nötige Nähe zum Material Trader und räumen Request-State beim Player-Leave auf.
 - `EconomyService`, `InventoryService`, `XPService` und `CrystalMastery` filtern nicht-endliche Eingabewerte und schützen Limits serverseitig.
 - `StatusMessages` erlaubt wiederholt auftretende identische Meldungen nach Ablauf des aktuellen Anzeigefensters.
@@ -81,14 +93,16 @@
 - Der separate `DataQueryRateLimit`-Server wurde entfernt, weil `Bootstrap` bereits der alleinige `OnServerInvoke`-Handler für diese RemoteFunctions ist; ein zusätzlicher Handler hätte eine Race-/Override-Quelle geschaffen.
 - `ClientBootstrap.client.lua` begrenzt die teure Guardian-BossBar-Aktualisierung auf 0,1 Sekunden.
 - `CrystalAnimationController.client.lua` behandelt Character-Generationswechsel, stale Tracks und lokale Playback-Begrenzung.
-- `CrystalVFXController.client.lua` besitzt lokale Presentation-Gates und optionale Sound-Hooks.
+- `CrystalVFXController.client.lua` verlangt eine einmalige serverbestätigte CombatFeedback-Autorisierung und verbraucht diese nach dem Abspielen.
+- `ConfirmedCombatVFXBridge.client.lua` akzeptiert auch verspätete Bestätigungen nach einem Crystal-Wechsel, solange die Bestätigung vom Server für den tatsächlichen Angriff stammt.
 - `CombatPresentation.client.lua` wartet nicht mehr auf mutable NPC-Hit-Attributes, sondern verarbeitet ausschließlich das serverbestätigte `CombatFeedback`-Event.
 - `CombatPresentation.client.lua` verwirft lokal Präsentations-Spam oberhalb eines kleinen Event-Budgets und ignoriert Effekte außerhalb von 220 Studs.
-- `TODO.md` wurde an den tatsächlichen Entwicklungsstand angepasst.
+- `NPCDialogMenu.client.lua` schließt den Dialog beim Übergang in Quest/Crystal/Shop/Inventory/Crafting-Menüs.
+- `TODO.md`, `NEXT_SESSION.md` und `CURRENT_AUDIT.md` wurden an den aktuellen Entwicklungsstand angepasst.
 
 ### Notes
 
 - Die aktuellen VFX sind weiterhin prozedural und noch Placeholder-Level; finale ParticleEmitter, Trails, Sounds und authored Animationen benötigen echte Roblox-Assets.
 - Echte Attack-/Ability-Animationen, asset-basierte Partikel, noch komplexere Boss-Mechaniken, automatisierte Luau-Tests und ein echter Roblox-Studio-Playtest bleiben offen.
 - Der aktuelle GitHub-Branch ist absichtlich ein Entwicklungsbranch und wurde nicht nach `main` gemerged.
-- CI-Status darf nur nach einem tatsächlichen GitHub-Workflow-Lauf als grün bezeichnet werden; in dieser Session ist für den aktuellen Head kein kombinierter Status gemeldet worden.
+- CI-Status darf nur nach einem tatsächlichen GitHub-Workflow-Lauf als grün bezeichnet werden; für den geprüften aktuellen Head war kein kombinierter Status verfügbar.
