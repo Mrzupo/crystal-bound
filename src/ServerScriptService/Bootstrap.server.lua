@@ -109,10 +109,18 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 		return
 	end
 	for itemId, amount in pairs(cost) do if not InventoryService.HasItem(profile, itemId, amount) then player:SetAttribute("CrystalMessage", string.format("Need %d %s to upgrade.", amount, itemId)); return end end
-	for itemId, amount in pairs(cost) do InventoryService.RemoveItem(profile, itemId, amount) end
+	local removed = {}
+	for itemId, amount in pairs(cost) do
+		if not InventoryService.RemoveItem(profile, itemId, amount) then
+			for rollbackId, rollbackAmount in pairs(removed) do InventoryService.AddItem(profile, rollbackId, rollbackAmount) end
+			player:SetAttribute("CrystalMessage", "Crystal upgrade could not consume all materials safely.")
+			return
+		end
+		removed[itemId] = amount
+	end
 	local upgraded, newLevel = CrystalMastery.Upgrade(profile, crystalId)
 	if not upgraded then
-		for itemId, amount in pairs(cost) do InventoryService.AddItem(profile, itemId, amount) end
+		for itemId, amount in pairs(removed) do InventoryService.AddItem(profile, itemId, amount) end
 		return
 	end
 	PlayerService.Sync(player); remotes.InventoryChanged:FireClient(player, profile.Inventory); remotes.CrystalMasteryChanged:FireClient(player, crystalId, newLevel, 0); player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, newLevel))
@@ -177,14 +185,45 @@ createPortal(tideIsland,"WindPortal",Vector3.new(218,5,0),Vector3.new(280,4,0),w
 createPortal(windIsland,"TideReturnPortal",Vector3.new(278,5,0),Vector3.new(210,4,0),tideConfig.Level)
 createPortal(windIsland,"AncientPortal",Vector3.new(390,5,0),Vector3.new(440,4,0),ancientConfig.Level)
 createPortal(ancientIsland,"WindReturnPortal",Vector3.new(440,5,50),Vector3.new(380,4,0),windConfig.Level)
-spawnQuestGiver(npcs); spawnTrader(npcs); spawnEnemy(npcs,"TrainingDummy",Vector3.new(0,1,-12),"TrainingDummy"); spawnEnemy(npcs,"Emberling",Vector3.new(30,1,-18),"EmberlingA"); spawnEnemy(npcs,"Emberling",Vector3.new(-30,1,-18),"EmberlingB"); spawnEnemy(npcs,"Tidecrawler",Vector3.new(160,1,-12),"TidecrawlerA"); spawnEnemy(npcs,"Tidecrawler",Vector3.new(190,1,15),"TidecrawlerB"); spawnEnemy(npcs,"Galewisp",Vector3.new(300,1,-18),"GalewispA"); spawnEnemy(npcs,"Galewisp",Vector3.new(340,1,20),"GalewispB"); spawnEnemy(npcs,"Galewisp",Vector3.new(370,1,-10),"GalewispC"); spawnEnemy(npcs,"CrystalBat",Vector3.new(475,1,-20),"CrystalBatA"); spawnEnemy(npcs,"CrystalBat",Vector3.new(525,1,-10),"CrystalBatB"); spawnEnemy(npcs,"AncientGolem",Vector3.new(500,1,25),"AncientGolemA"); if not npcs:FindFirstChild("CrystalGuardian") then BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter,npcs,"CrystalGuardian") end
-local function initializePlayer(player)
+spawnQuestGiver(npcs); spawnTrader(npcs); spawnEnemy(npcs,"TrainingDummy",Vector3.new(0,1,-12),"TrainingDummy"); spawnEnemy(npcs,"Emberling",Vector3.new(30,1,-18),"EmberlingA"); spawnEnemy(npcs,"Emberling",Vector3.new(-30,1,-18),"EmberlingB"); spawnEnemy(npcs,"Tidecrawler",Vector3.new(160,1,-12),"TidecrawlerA"); spawnEnemy(npcs,"Tidecrawler",Vector3.new(190,1,15),"TidecrawlerB"); spawnEnemy(npcs,"Galewisp",Vector3.new(300,1,-18),"GalewispA"); spawnEnemy(npcs,"CrystalBat",Vector3.new(320,1,16),"CrystalBatA"); spawnEnemy(npcs,"AncientGolem",Vector3.new(455,1,0),"AncientGolemA")
+
+local function syncAllPlayerData()
+	for _, player in ipairs(Players:GetPlayers()) do
+		local profile = PlayerService.GetProfile(player)
+		if profile then PlayerService.Sync(player) end
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
 	local profile, reason = PlayerService.Load(player)
 	if not profile then
-		player:Kick("Crystal Bound could not load your profile safely. Please rejoin in a moment.")
+		player:Kick(reason or "Unable to load your Crystal Bound profile safely.")
 		return
 	end
-	if not QuestSystem.IsActive(profile,"FIRST_FIGHT") and not QuestSystem.IsCompleted(profile,"FIRST_FIGHT") then QuestService.Start(player,profile,"FIRST_FIGHT") end
-end
-Players.PlayerAdded:Connect(initializePlayer); for _,player in ipairs(Players:GetPlayers()) do initializePlayer(player) end; Players.PlayerRemoving:Connect(function(player) CombatService.CleanupPlayer(player); nextQuestRequest[player] = nil; nextInventoryRequest[player] = nil; nextCrystalRequest[player] = nil; nextCrystalUpgradeRequest[player] = nil; nextPlayerDataRequest[player] = nil; nextQuestDataRequest[player] = nil; PlayerService.Remove(player) end)
-task.spawn(function() while true do task.wait(AUTOSAVE_INTERVAL); for _,player in ipairs(Players:GetPlayers()) do PlayerService.Save(player) end end end)
+	PlayerService.Sync(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	if not PlayerService.Remove(player) then
+		warn(("Crystal Bound: player removal did not complete cleanly for %s"):format(player.Name))
+	end
+	nextQuestRequest[player] = nil
+	nextInventoryRequest[player] = nil
+	nextCrystalRequest[player] = nil
+	nextCrystalUpgradeRequest[player] = nil
+	nextPlayerDataRequest[player] = nil
+	nextQuestDataRequest[player] = nil
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(AUTOSAVE_INTERVAL)
+		for _, player in ipairs(Players:GetPlayers()) do
+			if PlayerService.GetProfile(player) then
+				PlayerService.Save(player)
+			end
+		end
+	end
+end)
+
+syncAllPlayerData()
