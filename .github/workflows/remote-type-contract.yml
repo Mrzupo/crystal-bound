@@ -36,8 +36,16 @@ jobs:
               if not isinstance(entry, dict) or entry.get("$className") != "RemoteFunction":
                   problems.append(f"{name} must be a RemoteFunction")
 
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          for marker in (
+              'if existing.ClassName ~= className then',
+              'error(("Crystal Bound: Remote %s has class %s, expected %s")',
+          ):
+              if marker not in bootstrap:
+                  problems.append(f"Bootstrap missing Remote type fail-fast marker: {marker}")
+
           if problems:
               for problem in problems:
                   print(problem)
               raise SystemExit(1)
-          print("Critical RemoteEvent/RemoteFunction types validated.")
+          print("Critical RemoteEvent/RemoteFunction types and Bootstrap fail-fast behavior validated.")
