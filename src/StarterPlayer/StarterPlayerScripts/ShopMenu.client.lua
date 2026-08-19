@@ -12,15 +12,23 @@ local inventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 local shopConfig = require(ReplicatedStorage.Config.ShopConfig)
 local consumableConfig = require(ReplicatedStorage.Config.ConsumableConfig)
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local sellable = {}
 for _, itemId in ipairs(shopConfig.SellOrder or {}) do
 	local item = inventoryConfig.GetItemConfig(itemId)
 	if item then
 		table.insert(sellable, {
 			Id = itemId,
-			Name = item.Name,
-			Rarity = item.Rarity,
-			Price = item.SellPrice,
+			Name = type(item.Name) == "string" and item.Name or itemId,
+			Rarity = type(item.Rarity) == "string" and item.Rarity or "Common",
+			Price = math.max(0, math.floor(finiteNumber(item.SellPrice, 0))),
 		})
 	end
 end
@@ -111,7 +119,11 @@ local function ensureGui()
 	buy.Font = Enum.Font.GothamBold
 	buy.TextSize = 13
 	buy.Parent = potion
-	buy.Activated:Connect(function() shopRequest:FireServer("Buy", potionOffer.ItemId, 1) end)
+	buy.Activated:Connect(function()
+		if type(potionOffer) == "table" and type(potionOffer.ItemId) == "string" then
+			shopRequest:FireServer("Buy", potionOffer.ItemId, 1)
+		end
+	end)
 
 	local use = Instance.new("TextButton")
 	use.Name = "Use"
@@ -121,7 +133,11 @@ local function ensureGui()
 	use.Font = Enum.Font.GothamBold
 	use.TextSize = 12
 	use.Parent = potion
-	use.Activated:Connect(function() useItemRequest:FireServer(potionConfig.ItemId) end)
+	use.Activated:Connect(function()
+		if type(potionConfig) == "table" and type(potionConfig.ItemId) == "string" then
+			useItemRequest:FireServer(potionConfig.ItemId)
+		end
+	end)
 
 	local list = Instance.new("Frame")
 	list.Name = "List"
@@ -179,25 +195,32 @@ local gui = ensureGui()
 local panel = gui.Panel
 
 local function usePotion()
-	if (tonumber(inventory[potionConfig.ItemId]) or 0) <= 0 then return end
-	useItemRequest:FireServer(potionConfig.ItemId)
+	local potionItemId = type(potionConfig) == "table" and potionConfig.ItemId
+	if type(potionItemId) ~= "string" then return end
+	if finiteNumber(inventory[potionItemId], 0) <= 0 then return end
+	useItemRequest:FireServer(potionItemId)
 end
 
 local function refresh()
 	for _, item in ipairs(sellable) do
 		local row = panel.List:FindFirstChild(item.Id)
 		if row then
-			local amount = math.max(0, math.floor(tonumber(inventory[item.Id]) or 0))
-			local rarityRank = math.max(1, math.floor(tonumber(rarityOrder[item.Rarity]) or 1))
+			local amount = math.max(0, math.floor(finiteNumber(inventory[item.Id], 0)))
+			local rarityRank = math.max(1, math.floor(finiteNumber(rarityOrder[item.Rarity], 1)))
 			row.Label.Text = string.format("%s  •  %s  •  %d owned  •  %d Money each", item.Name, item.Rarity, amount, item.Price)
 			row.Label.TextSize = 13 + math.min(3, rarityRank)
 			row.Sell.Active = amount > 0
 			row.Sell.TextTransparency = amount > 0 and 0 or 0.5
 		end
 	end
-	local potionItem = inventoryConfig.GetItemConfig(potionConfig.ItemId)
-	local potionAmount = math.max(0, math.floor(tonumber(inventory[potionConfig.ItemId]) or 0))
-	panel.PotionOffer.Label.Text = string.format("%s  •  %s  •  %d Money  •  Heal +%d HP  •  Owned: %d", potionItem.Name, potionItem.Rarity, potionOffer.Price, math.max(0, tonumber(potionConfig.HealAmount) or 0), potionAmount)
+	local potionItemId = type(potionConfig) == "table" and potionConfig.ItemId
+	local potionItem = type(potionItemId) == "string" and inventoryConfig.GetItemConfig(potionItemId) or nil
+	local potionAmount = math.max(0, math.floor(finiteNumber(potionItemId and inventory[potionItemId], 0)))
+	local potionName = potionItem and type(potionItem.Name) == "string" and potionItem.Name or "Health Potion"
+	local potionRarity = potionItem and type(potionItem.Rarity) == "string" and potionItem.Rarity or "Common"
+	local potionPrice = type(potionOffer) == "table" and math.max(0, math.floor(finiteNumber(potionOffer.Price, 0))) or 0
+	local healAmount = type(potionConfig) == "table" and math.max(0, math.floor(finiteNumber(potionConfig.HealAmount, 0))) or 0
+	panel.PotionOffer.Label.Text = string.format("%s  •  %s  •  %d Money  •  Heal +%d HP  •  Owned: %d", potionName, potionRarity, potionPrice, healAmount, potionAmount)
 	panel.PotionOffer.Use.Active = potionAmount > 0
 	panel.PotionOffer.Use.TextTransparency = potionAmount > 0 and 0 or 0.5
 end
