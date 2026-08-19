@@ -9,6 +9,14 @@ local valueLabel
 local deathLabel
 local lastHealth = nil
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
 	gui = playerGui:FindFirstChild("PlayerHealthUI")
@@ -75,12 +83,13 @@ end
 
 local function update()
 	ensureGui()
-	local health = math.max(0, tonumber(player:GetAttribute("Health")) or 0)
-	local maxHealth = math.max(1, tonumber(player:GetAttribute("MaxHealth")) or 100)
+	local health = math.max(0, finiteNumber(player:GetAttribute("Health"), 0))
+	local maxHealth = math.max(1, finiteNumber(player:GetAttribute("MaxHealth"), 100))
 	local ratio = math.clamp(health / maxHealth, 0, 1)
 	barFill.Size = UDim2.fromScale(ratio, 1)
 	valueLabel.Text = string.format("%d / %d", math.floor(health + 0.5), math.floor(maxHealth + 0.5))
-	local deathMessage = player:GetAttribute("DeathMessage") or ""
+	local rawDeathMessage = player:GetAttribute("DeathMessage")
+	local deathMessage = type(rawDeathMessage) == "string" and rawDeathMessage or ""
 	if deathMessage ~= "" then
 		deathLabel.Text = deathMessage
 		deathLabel.Visible = true
@@ -103,7 +112,7 @@ ensureGui()
 update()
 
 player:GetAttributeChangedSignal("Health"):Connect(function()
-	local health = tonumber(player:GetAttribute("Health")) or 0
+	local health = finiteNumber(player:GetAttribute("Health"), 0)
 	if health <= 0 then return end
 	local panel = gui and gui:FindFirstChild("HealthPanel")
 	if panel then
