@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1115 commits ahead, 30 commits behind** `main`.
+Current compare: **1120 commits ahead, 30 commits behind** `main`.
 `main` remains at verified commit `190d2cf706d3627b302bd123284c6259ab628ee2`.
 
 ## Verified
@@ -22,6 +22,8 @@ Current compare: **1115 commits ahead, 30 commits behind** `main`.
 - `DodgeService` runtime config is finite-safe; direction magnitude and attacker ranges are bounded before movement or damage are applied.
 - NPC damage paths require the attacker model to still be parented, marked `Enemy`, and alive before damage is applied.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
+- Health Potion usage validates canonical `ConsumableConfig` ItemId, player inventory ownership and non-full Health before consuming the item; heal amount is runtime-bounded 0.1..1000.
+- Consumable validation CI no longer relies on a hardcoded 60-HP heal or literal item ID; it enforces the canonical config-driven runtime path.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
 - Shop purchase totals are finite, positive and bounded by canonical `EconomyConfig.MaxMoney` before the money mutation phase.
 - Crafting CI validates every configured recipe input/output ID against `InventoryConfig`, not only a fixed allowlist.
