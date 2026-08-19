@@ -43,3 +43,7 @@ remote.OnServerEvent:Connect(function(player, action, outputId, amount)
 		remotes.InventoryChanged:FireClient(player, profile.Inventory)
 	end
 end)
+
+Players.PlayerRemoving:Connect(function(player)
+	NEXT_REQUEST[player] = nil
+end)
