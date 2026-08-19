@@ -5,6 +5,7 @@ local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 local ENFORCEMENT_INTERVAL = 0.25
 local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
 local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
+local MAX_WALK_SPEED_BONUS = math.clamp(tonumber(MovementConfig.MaxWalkSpeedBonus) or 20, 0, 100)
 local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier) or 0.2, 0.01, 1)
 local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
 local MAX_OBSERVED_SPEED = math.clamp(tonumber(MovementConfig.MaxObservedSpeed) or 90, 16, 200)
@@ -107,7 +108,8 @@ local function refresh(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
 
-	local base = BASE_WALK_SPEED + math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0))
+	local speedBonus = math.clamp(math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0)), 0, MAX_WALK_SPEED_BONUS)
+	local base = BASE_WALK_SPEED + speedBonus
 	local expected = math.max(MIN_WALK_SPEED, base)
 	local slow = finiteNumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"), nil)
 	if slow and slow > 0 then
