@@ -9,20 +9,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Require explicit attacker range in DodgeService
+      - name: Require explicit attacker range in DodgeService and central DamageService
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          path = Path('src/ServerScriptService/Services/DodgeService.lua')
-          text = path.read_text(encoding='utf-8')
-          required = [
+
+          dodge = Path('src/ServerScriptService/Services/DodgeService.lua').read_text(encoding='utf-8')
+          damage = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
+
+          required_dodge = [
               'local safeRange',
               'if not safeRange or safeRange ~= safeRange or safeRange == math.huge or safeRange == -math.huge or safeRange <= 0 then',
               'Range = safeRange',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required_dodge if marker not in dodge]
           if missing:
-              raise SystemExit('PvE damage range contract missing: ' + ', '.join(missing))
+              raise SystemExit('PvE damage range contract missing in DodgeService: ' + ', '.join(missing))
+
+          required_damage = [
+              'local maxRange = finiteNumber(request.Range)',
+              'if not maxRange or maxRange <= 0 or maxRange > 1000 then return false end',
+              'return (attackerRoot.Position - targetRoot.Position).Magnitude <= maxRange',
+          ]
+          missing = [marker for marker in required_damage if marker not in damage]
+          if missing:
+              raise SystemExit('Central DamageService range validation missing: ' + ', '.join(missing))
+
+          if 'Players:GetPlayerFromCharacter(attackerModel) and Players:GetPlayerFromCharacter(targetModel)' not in damage:
+              raise SystemExit('DamageService must retain the explicit PvP rejection boundary')
           print('PvE damage range contract OK')
           PY
