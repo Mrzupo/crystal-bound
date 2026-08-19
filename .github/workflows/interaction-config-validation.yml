@@ -26,4 +26,29 @@ jobs:
                   raise SystemExit(f"{path} must consume shared InteractionConfig")
           if "NPCInteractionRange" not in config:
               raise SystemExit("InteractionConfig must define NPC interaction range")
-          print("InteractionConfig contract validated.")
+
+      - name: Validate NPC dialog options map to real menu attributes
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          dialog = Path("src/ReplicatedStorage/Modules/NPCDialogConfig.lua").read_text(encoding="utf-8")
+          menu = Path("src/StarterPlayer/StarterPlayerScripts/NPCDialogMenu.client.lua").read_text(encoding="utf-8")
+          required_options = {"QUEST", "CRYSTAL", "SHOP", "INVENTORY", "CRAFT"}
+          declared = set(re.findall(r'Id = "([A-Z_]+)"', dialog))
+          missing = sorted(required_options - declared)
+          if missing:
+              raise SystemExit(f"NPCDialogConfig is missing required option IDs: {missing}")
+
+          option_to_attribute = {
+              "QUEST": "OpenQuestMenu",
+              "CRYSTAL": "OpenCrystalMenu",
+              "SHOP": "OpenShopMenu",
+              "INVENTORY": "OpenCrystalMenu",
+              "CRAFT": "OpenCraftingMenu",
+          }
+          for option, attribute in option_to_attribute.items():
+              if option in declared and attribute not in menu:
+                  raise SystemExit(f"NPCDialogMenu missing target attribute {attribute} for option {option}")
+          print("NPC dialog option target contract validated.")
