@@ -155,7 +155,12 @@ local function emitSpecialEffect(position, color, radius)
 end
 
 local function damagePlayer(player, humanoid, amount, attacker, damageType, range)
-	if not player or not humanoid or humanoid.Health <= 0 then return false end
+	if not player or not player.Parent or not humanoid or not humanoid.Parent or humanoid.Health <= 0 then return false end
+	if attacker and attacker:IsA("Model") then
+		if not attacker.Parent or attacker:GetAttribute("Enemy") ~= true then return false end
+		local attackerHumanoid = attacker:FindFirstChildOfClass("Humanoid")
+		if attackerHumanoid and attackerHumanoid.Health <= 0 then return false end
+	end
 	return DodgeService.ApplyDamage(player, humanoid, math.max(0, amount), attacker, damageType or "Physical", range)
 end
 
