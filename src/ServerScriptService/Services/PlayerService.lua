@@ -127,8 +127,27 @@ function PlayerService.Load(player)
 		return nil, reason
 	end
 
+	-- SafeProfileStore.Load can yield. If the player left during that yield, do not
+	-- install a live profile for a player who is already being removed; release the
+	-- session lock immediately instead of orphaning it until timeout.
+	if not player.Parent then
+		local released = SafeProfileStore.Release(player)
+		warn(("Crystal Bound: player %s left while profile loading; session lock release=%s."):format(player.Name, tostring(released)))
+		return nil, "Player left before profile load completed"
+	end
+
 	profile = PlayerData.Reconcile(profile)
 	PlayerService.Profiles[player] = profile
+
+	-- PlayerRemoving can race the load completion boundary. Check again after the
+	-- profile enters memory and release the persistent lock if the instance is gone.
+	if not player.Parent then
+		PlayerService.Profiles[player] = nil
+		local released = SafeProfileStore.Release(player)
+		warn(("Crystal Bound: player %s left during profile initialization; session lock release=%s."):format(player.Name, tostring(released)))
+		return nil, "Player left during profile initialization"
+	end
+
 	setupLeaderstats(player, profile)
 	cleanupHumanoidConnections(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
