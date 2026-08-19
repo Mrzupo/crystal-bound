@@ -15,6 +15,7 @@ Base: `main`
 - Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are now strict positive integers; fractional amounts are rejected instead of floored.
+- Crystal Mastery upgrades now verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Crystal unlock level gates are enforced in canonical `CrystalSystem.Unlock()`; malformed UnlockLevel configuration is rejected.
@@ -36,7 +37,7 @@ Base: `main`
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
 - `crystal-service-ownership.yml` protects the Crystal ownership boundary.
-- Additional contracts protect strict crafting input boundaries and final player-remove/session-release semantics.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, and Crystal upgrade material transaction rollback.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
