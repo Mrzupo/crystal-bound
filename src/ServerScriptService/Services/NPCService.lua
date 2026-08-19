@@ -169,15 +169,19 @@ local function specialAttack(typeId, model, character, targetHumanoid, targetRoo
 		local range = math.max(0, tonumber(special.Range) or 14)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(255, 90, 30), 6)
-			damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
-			StatusEffectService.ApplyBurn(targetHumanoid, special.BurnDamage, special.BurnTicks, special.BurnInterval, model, range)
+			local applied = damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
+			if applied then
+				StatusEffectService.ApplyBurn(targetHumanoid, special.BurnDamage, special.BurnTicks, special.BurnInterval, model, range)
+			end
 		end
 	elseif typeId == "Tidecrawler" then
 		local range = math.max(0, tonumber(special.Range) or 10)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
-			damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
-			StatusEffectService.ApplySlow(targetHumanoid, special.SlowMultiplier, special.SlowDuration)
+			local applied = damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
+			if applied then
+				StatusEffectService.ApplySlow(targetHumanoid, special.SlowMultiplier, special.SlowDuration)
+			end
 		end
 	elseif typeId == "Galewisp" then
 		local direction = targetRoot.Position - root.Position
