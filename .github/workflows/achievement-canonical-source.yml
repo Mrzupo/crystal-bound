@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate centralized achievement definitions
+      - name: Validate centralized achievement definitions and reward ownership
         shell: python
         run: |
           from pathlib import Path
           player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
           menu = Path("src/StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua").read_text(encoding="utf-8")
           system = Path("src/ReplicatedStorage/Modules/AchievementSystem.lua").read_text(encoding="utf-8")
+          server_root = Path("src/ServerScriptService")
           for marker in ("GetOrdered", "IsValidTitle", "AchievementSystem.Get"):
               if marker not in system:
                   raise SystemExit(f"AchievementSystem missing canonical API: {marker}")
@@ -41,4 +42,13 @@ jobs:
               raise SystemExit("AchievementSystem must derive Titles from earned Achievement IDs")
           if "profile.Titles = canonicalTitles" not in system:
               raise SystemExit("AchievementSystem must replace persisted Titles with canonical achievement-derived titles")
-          print("Achievement canonical source and title integrity contract validated.")
+
+          reward_owners = []
+          marker = "EconomyService.AddMoney(profile, definition.RewardMoney or 0)"
+          for path in server_root.rglob("*.lua"):
+              if marker in path.read_text(encoding="utf-8"):
+                  reward_owners.append(str(path))
+          if len(reward_owners) != 1 or reward_owners[0] != "src/ServerScriptService/Services/PlayerService.lua":
+              raise SystemExit(f"Achievement Money rewards must have exactly one server owner; found {reward_owners}")
+
+          print("Achievement canonical source, title integrity and reward ownership validated.")
