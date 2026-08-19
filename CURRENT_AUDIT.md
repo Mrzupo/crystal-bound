@@ -3,6 +3,8 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
+Current compare: **912 commits ahead, 29 commits behind** `main`.
+`main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -22,8 +24,8 @@ Base: `main`
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - `CrystalService.GetOwnedCrystals()` returns a copy instead of exposing the internal profile table.
-- Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs.
-- Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig` even for an existing same-day profile.
+- Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
+- Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig` even for an existing same-day profile; payout has one server owner and completion is claimed before payout.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
@@ -35,12 +37,11 @@ Base: `main`
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
 - NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
-- NPCMenuBridge now validates server-side interaction distance before opening NPC menus.
+- NPCMenuBridge validates server-side interaction distance before opening NPC menus.
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
-- Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
-- `crystal-service-ownership.yml` protects the Crystal ownership boundary.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, strict Crystal UnlockLevel/Mastery ID validation, and NPC menu interaction distance.
-- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement and the latest Crystal configuration/interaction cases.
+- Static smoke / presentation / reward / config CI contracts cover the canonical boundaries.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, strict Crystal UnlockLevel/Mastery ID validation, NPC menu interaction distance, Achievement reward ownership and Daily Bounty reward ownership.
+- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed Crystal gates and NPC interaction distance.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
@@ -49,7 +50,7 @@ Base: `main`
 - The current head has no reported Combined Status checks and no PR-triggered workflow runs available through the connector; do not call CI green without an actual status result.
 - Authored Roblox Animation/Sound assets are still absent.
 - Current VFX are still procedural/placeholder presentation.
-- TIDE/GALE currently unlock through level gates; the master design also plans Mining, Digging, Bosses, Dungeons, World Events and Quests as Crystal acquisition activities. Do not silently replace one model with another; decide the final model first.
+- TIDE/GALE currently unlock through level gates; the master design also plans Mining, Digging, Bosses, Dungeons, World Events and Quests as long-term Crystal acquisition activities. Do not silently replace one model with another; decide the final model first.
 - White Queen intro/story implementation has not been replaced or rewritten; the story rules remain unchanged.
 
 ## Next technical direction
