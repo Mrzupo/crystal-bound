@@ -64,11 +64,19 @@ function EconomyService.SellItem(profile, itemId, amount, InventoryService)
 		return false, 0
 	end
 
+	-- Reject values that could overflow the requested reward before touching inventory.
+	if amount > Config.MaxMoney / price then
+		return false, 0
+	end
+	local requestedEarned = price * amount
+	if finiteNumber(requestedEarned) == nil then
+		return false, 0
+	end
+
 	if not InventoryService.RemoveItem(profile, itemId, amount) then
 		return false, 0
 	end
 
-	local requestedEarned = price * amount
 	local _, earned = EconomyService.AddMoney(profile, requestedEarned)
 	if earned < requestedEarned then
 		InventoryService.AddItem(profile, itemId, amount)
