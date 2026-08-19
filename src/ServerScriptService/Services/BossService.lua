@@ -192,28 +192,20 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 			warn("Crystal Bound: refusing invalid Guardian reward configuration")
 			return
 		end
-		local beforeMoney = profile.Money
-		local beforeInventory = profile.Inventory and profile.Inventory[dropId] or 0
-		local beforeBossCount = profile.Stats and profile.Stats.BossesDefeated or 0
 
-		local _, _, levelsGained = XPService.AddXP(profile, xpReward)
-		local _, moneyEarned = EconomyService.AddMoney(profile, moneyReward)
-		local coreAdded = InventoryService.AddItem(profile, dropId, 1)
-		if not profile.Stats then profile.Stats = {} end
-		profile.Stats.BossesDefeated = (finiteNumber(beforeBossCount, 0) or 0) + 1
 		local questCompleted = QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
 		if not questCompleted then
-			profile.Stats.BossesDefeated = beforeBossCount
-			local rollbackMoney = finiteNumber(beforeMoney, 0) or 0
-			profile.Money = rollbackMoney
-			if profile.Inventory then profile.Inventory[dropId] = beforeInventory end
-			warn("Crystal Bound: Guardian reward transaction rolled back because quest completion failed")
 			return
 		end
 
 		model:SetAttribute("Rewarded", true)
+		local _, _, levelsGained = XPService.AddXP(profile, xpReward)
+		local _, moneyEarned = EconomyService.AddMoney(profile, moneyReward)
+		local coreAdded = InventoryService.AddItem(profile, dropId, 1)
+		if not profile.Stats then profile.Stats = {} end
+		profile.Stats.BossesDefeated = (finiteNumber(profile.Stats.BossesDefeated, 0) or 0) + 1
 		PlayerService.Sync(player)
-		if levelsGained or moneyEarned or coreAdded > 0 then end
+		if levelsGained or moneyEarned then end
 		if coreAdded > 0 then
 			player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
 		else
