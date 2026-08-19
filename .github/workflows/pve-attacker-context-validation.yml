@@ -26,18 +26,19 @@ jobs:
               problems.append("NPC damage helper must carry attacker, damage type and range")
           for snippet in [
               'damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage, model, "Physical", config.AttackRange)',
-              'damagePlayer(player, targetHumanoid, baseDamage + 6, model, "Physical", range)',
-              'ApplyBurn(targetHumanoid, 2, 3, 0.6, model, range)',
+              'damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)',
+              'StatusEffectService.ApplyBurn(targetHumanoid, special.BurnDamage, special.BurnTicks, special.BurnInterval, model, range)',
+              'StatusEffectService.ApplySlow(targetHumanoid, special.SlowMultiplier, special.SlowDuration)',
           ]:
               if snippet not in npc:
                   problems.append(f"missing NPC attacker-context contract: {snippet}")
-          if 'DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, phase == 2 and math.floor(config.AttackDamage * 1.35) or config.AttackDamage, model, "Physical", config.AttackRange)' not in boss:
+          if 'DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", config.AttackRange)' not in boss:
               problems.append("guardian normal attack must preserve attacker context")
-          if 'DodgeService.ApplyDamage(player, humanoid, math.max(0, damage), attacker, "Physical", range)' not in status:
+          if 'DodgeService.ApplyDamage(player, humanoid, damagePerTick, attacker, "Physical", range)' not in status:
               problems.append("player burn ticks must preserve NPC attacker context")
 
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("PvE attacker context validated.")
+          print("PvE attacker context validated against config-driven runtime paths.")
