@@ -19,6 +19,14 @@ local selectedTarget = nil
 local selectedTargetExpires = 0
 local localAbilityReadyAt = 0
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function getEquippedCrystal()
 	local crystalId = player:GetAttribute("EquippedCrystal")
 	if type(crystalId) ~= "string" or not crystalConfig.Abilities[crystalId] then
@@ -30,13 +38,14 @@ end
 local function getTargetRange(action)
 	local crystalId = getEquippedCrystal()
 	local config = action == "Ability" and crystalConfig.Abilities[crystalId] or crystalConfig.BasicAttack[crystalId]
-	return config and tonumber(config.Range) or nil
+	local range = config and finiteNumber(config.Range, nil)
+	return range and range > 0 and range or nil
 end
 
 local function canPresentCombat(action, target)
 	if not target then return false end
 	local range = getTargetRange(action)
-	if not range or range <= 0 then return false end
+	if not range then return false end
 	local character = player.Character
 	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
 	local targetRoot = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
@@ -44,11 +53,11 @@ local function canPresentCombat(action, target)
 	if (playerRoot.Position - targetRoot.Position).Magnitude > range then return false end
 	if action == "Ability" then
 		local now = os.clock()
-		local cooldownEnd = tonumber(player:GetAttribute("AbilityCooldownEnd")) or 0
+		local cooldownEnd = finiteNumber(player:GetAttribute("AbilityCooldownEnd"), 0)
 		if now < math.max(cooldownEnd, localAbilityReadyAt) then return false end
 		local crystalId = getEquippedCrystal()
-		local cooldown = tonumber(crystalConfig.Abilities[crystalId].Cooldown) or 0
-		localAbilityReadyAt = now + math.max(0, cooldown)
+		local cooldown = math.max(0, finiteNumber(crystalConfig.Abilities[crystalId].Cooldown, 0))
+		localAbilityReadyAt = now + cooldown
 	end
 	return true
 end
