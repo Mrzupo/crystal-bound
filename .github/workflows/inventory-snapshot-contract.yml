@@ -1,0 +1,32 @@
+name: Inventory Snapshot Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate InventoryService returns a detached snapshot
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/InventoryService.lua").read_text(encoding="utf-8")
+          required = [
+              "function InventoryService.GetInventory(profile)",
+              "local snapshot = {}",
+              "snapshot[itemId] = math.clamp",
+              "return snapshot",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Inventory snapshot contract missing: " + ", ".join(missing))
+
+          if "return profile.Inventory" in text:
+              raise SystemExit("InventoryService must not expose the live profile inventory table")
+
+          print("InventoryService snapshot data-exposure contract validated.")
