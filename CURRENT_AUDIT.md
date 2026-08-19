@@ -28,10 +28,10 @@ Base: `main`
 - Session heartbeat failure state uses weak keys.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
-- Crystal VFX requires a one-shot server-confirmed CombatFeedback authorization.
+- Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
 - NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
-- PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed.
+- PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
 - `crystal-service-ownership.yml` protects the Crystal ownership boundary.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
