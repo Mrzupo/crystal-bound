@@ -41,7 +41,7 @@ local function getTarget()
 	local humanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
 	local root = guardian and (guardian:FindFirstChild("HumanoidRootPart") or guardian.PrimaryPart)
 	if not humanoid or humanoid.Health <= 0 or not root or (guardian:GetAttribute("BossPhase") or 1) < 2 then
-		return nil
+		return nil, nil
 	end
 
 	local targetRange = math.max(0, tonumber(config.TargetRange) or 70)
@@ -58,15 +58,15 @@ local function getTarget()
 			end
 		end
 	end
-	return nearestPlayer
+	return nearestPlayer, guardian
 end
 
 local function cast()
-	local player = getTarget()
-	if not player then return end
-	local guardian = NPCs:FindFirstChild("CrystalGuardian")
-	local guardianHumanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
-	if not guardianHumanoid or guardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then return end
+	local player, guardian = getTarget()
+	if not player or not guardian then return end
+	local guardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
+	local guardianRoot = guardian:FindFirstChild("HumanoidRootPart") or guardian.PrimaryPart
+	if not guardianHumanoid or guardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 or not guardianRoot then return end
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -79,9 +79,9 @@ local function cast()
 	local damage = math.clamp(tonumber(config.Damage) or 0, 0, 1000)
 	createTelegraph(position)
 	task.delay(windup, function()
-		local currentGuardian = NPCs:FindFirstChild("CrystalGuardian")
-		local currentGuardianHumanoid = currentGuardian and currentGuardian:FindFirstChildOfClass("Humanoid")
-		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (currentGuardian:GetAttribute("BossPhase") or 1) < 2 then
+		if not guardian.Parent then return end
+		local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
+		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then
 			return
 		end
 		if not player.Parent then return end
@@ -89,7 +89,7 @@ local function cast()
 		local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
 		local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
 		if currentHumanoid and currentRoot and currentHumanoid.Health > 0 and (currentRoot.Position - position).Magnitude <= radius then
-			local applied = DodgeService.ApplyDamage(player, currentHumanoid, damage, currentGuardian, "BossShockwave", radius)
+			local applied = DodgeService.ApplyDamage(player, currentHumanoid, damage, guardian, "BossShockwave", radius)
 			if applied then
 				player:SetAttribute("BossMessage", "Guardian Impact!")
 			end
