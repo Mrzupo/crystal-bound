@@ -29,7 +29,6 @@ jobs:
           ]
 
           for crystal, action, asset_name in required:
-              block = rf"{crystal}\s*=\s*\{{(.*?)\n\s*\}},\n\s*\w+\s*=|"
               if asset_name not in text:
                   raise SystemExit(f"missing presentation asset name: {asset_name}")
               if f"SoundAssetName = \"{asset_name}\"" not in text:
@@ -53,4 +52,20 @@ jobs:
               if any(v < 0 for v in values):
                   raise SystemExit(f"negative {field} value found")
 
-          print("Crystal presentation asset contract validated.")
+          playback = [float(v) for v in re.findall(numeric_patterns["PlaybackSpeed"], text)]
+          fade = [float(v) for v in re.findall(numeric_patterns["FadeTime"], text)]
+          scale = [float(v) for v in re.findall(numeric_patterns["VFXScale"], text)]
+          offset = [float(v) for v in re.findall(numeric_patterns["VFXOffset"], text)]
+          volume = [float(v) for v in re.findall(numeric_patterns["SoundVolume"], text)]
+          if any(v < 0.05 or v > 4 for v in playback):
+              raise SystemExit("PlaybackSpeed is outside 0.05..4")
+          if any(v < 0 or v > 2 for v in fade):
+              raise SystemExit("FadeTime is outside 0..2")
+          if any(v < 0.05 or v > 10 for v in scale):
+              raise SystemExit("VFXScale is outside 0.05..10")
+          if any(v < 0 or v > 50 for v in offset):
+              raise SystemExit("VFXOffset is outside 0..50")
+          if any(v < 0 or v > 1 for v in volume):
+              raise SystemExit("SoundVolume is outside 0..1")
+
+          print("Crystal presentation asset contract and semantic bounds validated.")
