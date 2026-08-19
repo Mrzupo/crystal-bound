@@ -34,6 +34,12 @@ local function hasServerConfirmation(action, crystalId)
 	return os.clock() - authorizedAt <= 0.18
 end
 
+local function consumeServerConfirmation()
+	player:SetAttribute("CrystalVFXAuthorizedAt", nil)
+	player:SetAttribute("CrystalVFXAuthorizedAction", nil)
+	player:SetAttribute("CrystalVFXAuthorizedCrystal", nil)
+end
+
 local function getRoot()
 	local character = player.Character
 	return character and character:FindFirstChild("HumanoidRootPart")
@@ -94,6 +100,7 @@ function VFX.Play(action, crystalId)
 
 	crystalId = crystalId or player:GetAttribute("EquippedCrystal") or "EMBER"
 	if not hasServerConfirmation(action, crystalId) then return false end
+	consumeServerConfirmation()
 
 	local now = os.clock()
 	local key = action
