@@ -15,6 +15,8 @@ jobs:
           from pathlib import Path
           decor = Path('src/ServerScriptService/WorldDecor.server.lua').read_text(encoding='utf-8')
           theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+
           for marker in ['StarterDecorReady', 'TideDecorReady', 'WindDecorReady', 'DecorReady']:
               if marker not in decor:
                   raise SystemExit(f'missing world decor idempotency marker: {marker}')
@@ -24,7 +26,23 @@ jobs:
           for island in ['StarterIsland', 'TideIsland', 'WindIsland', 'AncientRuins']:
               if island not in theme:
                   raise SystemExit(f'missing world theme: {island}')
-          if 'while ' in theme:
-              raise SystemExit('WorldTheme must not contain a permanent loop')
-          print('World initialization contracts validated.')
+
+          required_tracking = [
+              'while islands.Parent do',
+              'task.wait(0.1)',
+              'Players.PlayerRemoving:Connect(function(player)',
+              'portalCandidates[player] = nil',
+              'portalCooldowns[player] = nil',
+              'lastPositions[player] = nil',
+          ]
+          for marker in required_tracking:
+              if marker not in theme:
+                  raise SystemExit(f'WorldTheme lifecycle/tracking marker missing: {marker}')
+
+          if 'createPortal(' not in bootstrap:
+              raise SystemExit('Bootstrap must create the canonical portal definitions')
+          if 'portal.Touched:Connect' in bootstrap:
+              raise SystemExit('Bootstrap must not own portal touch authority; WorldTheme is canonical')
+
+          print('World initialization, idempotent decoration and bounded portal tracking contracts validated.')
           PY
