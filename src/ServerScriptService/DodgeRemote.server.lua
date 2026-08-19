@@ -4,7 +4,11 @@ local DodgeService = require(script.Parent.Services.DodgeService)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local remote = remotes:FindFirstChild("DodgeRequest")
-if not remote then
+if remote then
+	if not remote:IsA("RemoteEvent") then
+		error(("Crystal Bound: DodgeRequest has class %s, expected RemoteEvent"):format(remote.ClassName))
+	end
+else
 	remote = Instance.new("RemoteEvent")
 	remote.Name = "DodgeRequest"
 	remote.Parent = remotes
