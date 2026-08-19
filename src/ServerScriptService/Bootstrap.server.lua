@@ -43,8 +43,10 @@ local function ensureRemote(className, name)
 	end
 	local existing = remotes:FindFirstChild(name)
 	if existing then
-		if existing.ClassName == className then return existing end
-		existing:Destroy()
+		if existing.ClassName ~= className then
+			error(("Crystal Bound: Remote %s has class %s, expected %s"):format(name, existing.ClassName, className))
+		end
+		return existing
 	end
 	local remote = Instance.new(className)
 	remote.Name = name
