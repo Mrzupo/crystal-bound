@@ -1,0 +1,46 @@
+name: Inventory Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate inventory item semantics
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          text = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
+          if 'Ancient =' in text or 'Rarity = "Ancient"' in text:
+              raise SystemExit('Ancient must remain a category/lore concept, not a rarity')
+          for rarity in ('Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Divine'):
+              if rarity not in text:
+                  raise SystemExit('Missing official rarity: ' + rarity)
+
+          entries = re.findall(
+              r'([A-Za-z0-9_]+)\s*=\s*\{\s*Id\s*=\s*"([^"]+)".*?Rarity\s*=\s*"([^"]+)"\s*,\s*MaxStackSize\s*=\s*([0-9]+)\s*,\s*SellPrice\s*=\s*([0-9]+)',
+              text,
+              re.S,
+          )
+          if len(entries) < 6:
+              raise SystemExit('InventoryConfig must expose all configured item records')
+          for key, item_id, rarity, stack, sell_price in entries:
+              if key != item_id:
+                  raise SystemExit(f'Inventory item key/Id mismatch: {key} -> {item_id}')
+              if rarity not in {'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Divine'}:
+                  raise SystemExit(f'Unknown Inventory rarity: {rarity}')
+              if not 1 <= int(stack) <= 1000:
+                  raise SystemExit(f'Inventory MaxStackSize out of bounds: {key}')
+              if int(sell_price) < 0:
+                  raise SystemExit(f'Inventory SellPrice cannot be negative: {key}')
+
+          if 'DefaultMaxStackSize = 99' not in text:
+              raise SystemExit('InventoryConfig must define a positive DefaultMaxStackSize')
+
+          print('Inventory item IDs, rarities, stack bounds and sell-price semantics validated.')
