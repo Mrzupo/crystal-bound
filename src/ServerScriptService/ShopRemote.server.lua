@@ -7,9 +7,16 @@ local EconomyService = require(script.Parent.Services.EconomyService)
 local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
-local remote = remotes:FindFirstChild("ShopRequest") or Instance.new("RemoteEvent")
-remote.Name = "ShopRequest"
-remote.Parent = remotes
+local remote = remotes:FindFirstChild("ShopRequest")
+if remote then
+	if not remote:IsA("RemoteEvent") then
+		error(("Crystal Bound: ShopRequest has class %s, expected RemoteEvent"):format(remote.ClassName))
+	end
+else
+	remote = Instance.new("RemoteEvent")
+	remote.Name = "ShopRequest"
+	remote.Parent = remotes
+end
 
 local NEXT_REQUEST = setmetatable({}, { __mode = "k" })
 local REQUEST_INTERVAL = 0.15
