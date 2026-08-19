@@ -28,7 +28,20 @@ local portalTolerance = math.clamp(tonumber(MovementConfig.PortalArrivalToleranc
 local portalCooldownDuration = 1
 local portalCandidates = setmetatable({}, { __mode = "k" })
 local portalCooldowns = setmetatable({}, { __mode = "k" })
+local lastPositions = setmetatable({}, { __mode = "k" })
 local portalConnections = setmetatable({}, { __mode = "k" })
+
+local function getRoot(player)
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function rememberPosition(player)
+	local root = getRoot(player)
+	if root then
+		lastPositions[player] = { Character = player.Character, Position = root.Position, Timestamp = os.clock() }
+	end
+end
 
 local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
 	if not player.Parent or player.Character ~= character then return end
@@ -64,11 +77,13 @@ local function bindPortal(portal)
 			portalCooldowns[player] = nil
 		end)
 
+		local snapshot = lastPositions[player]
+		local beforePosition = snapshot and snapshot.Character == character and snapshot.Position or root.Position
 		portalCandidates[player] = {
 			Character = character,
 			Destination = target.Destination,
 			RequiredLevel = target.RequiredLevel,
-			BeforePosition = root.Position,
+			BeforePosition = beforePosition,
 			ExpiresAt = os.clock() + math.max(0.5, portalGrace + 0.5),
 		}
 		task.defer(function()
@@ -105,14 +120,27 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	portalCandidates[player] = nil
 	portalCooldowns[player] = nil
+	lastPositions[player] = nil
 end)
 
 bindExistingPortals()
 islands.DescendantAdded:Connect(bindPortal)
+for _, player in ipairs(Players:GetPlayers()) do rememberPosition(player) end
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.defer(function() rememberPosition(player) end)
+	end)
+end)
 
 task.spawn(function()
 	while islands.Parent do
 		local now = os.clock()
+		for _, player in ipairs(Players:GetPlayers()) do
+			local root = getRoot(player)
+			if root then
+				lastPositions[player] = { Character = player.Character, Position = root.Position, Timestamp = now }
+			end
+		end
 		for player, candidate in pairs(portalCandidates) do
 			if now > candidate.ExpiresAt then
 				portalCandidates[player] = nil
