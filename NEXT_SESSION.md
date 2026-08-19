@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **934 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **950 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Current state
@@ -34,6 +34,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Shop and Crafting request quantities are strict positive integers; fractional requests are rejected instead of floored.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; no Crystal-based fallback rewards.
+- Combat defeat rewards have explicit `DeathRewarded` idempotency.
 - Inventory corrupt stacks are clamped before mutation.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - CrystalSystem, PlayerData and CrystalMastery accept only complete Crystal configurations with finite integer UnlockLevels plus Definition/BasicAttack/Ability/Passive data.
@@ -41,16 +42,18 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Daily Bounty payout has one server owner and marks the bounty claimed before payout.
 - Achievement payout has one server owner and only pays newly unlocked achievements.
 - Guardian telegraph binds to the exact Guardian instance.
+- Environmental damage contracts follow the current attacker-less BossArena implementation.
 - NPC Burn/Slow only apply after confirmed damage.
 - NPCMenuBridge validates server-side interaction distance before opening NPC menus.
 - PlayerService Save/Remove guarantees operation-lock release and preserves persistent locks after failed final saves/releases.
+- SessionHeartbeat kicks after two consecutive Refresh failures to protect the save-session lock.
 - `StatusSpeedGuardV2` continuously restores server-derived WalkSpeed, immediately corrects property changes, and prevents stale Character listeners across respawns.
 - DodgeService explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
-- Bootstrap now fails fast on mismatched critical Remote classes instead of silently destroying potentially bound instances.
+- Bootstrap and the major server Remote entrypoints now fail fast on mismatched Remote classes instead of silently destroying/binding the wrong type.
+- Remote type contract covers Bootstrap, CombatFeedback, Shop, Crafting, Dodge, Consumables, NPCDialog and AvailableQuests entrypoints.
 - RemoteFunction contract now matches the actual Bootstrap rate-limit variable names.
 - Portal contract now verifies portal gates consume canonical `WorldConfig` level fields instead of hardcoded numeric assertions.
-- A dedicated Remote type contract validates critical RemoteEvent/RemoteFunction declarations and Bootstrap fail-fast behavior.
-- Studio playtest matrix covers the latest transaction, persistence, movement-security, Crystal configuration and NPC interaction cases.
+- Studio playtest matrix covers the latest transaction, persistence, movement-security, Crystal configuration, NPC interaction, reward-idempotency and Remote-type cases.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
 ## Security / authority rules
