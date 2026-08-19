@@ -10,12 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Crystal mastery costs
+      - name: Validate Crystal mastery costs and ID boundary
         shell: python
         run: |
           import re
           from pathlib import Path
           config = Path("src/ReplicatedStorage/Config/CrystalUpgradeConfig.lua").read_text(encoding="utf-8")
+          mastery = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
           required = {
               "EMBER": "EmberShard",
               "TIDE": "TidePearl",
@@ -37,4 +38,13 @@ jobs:
           if len(costs) != 3 or any(int(amount) <= 0 for _, amount in costs):
               raise SystemExit("Every crystal mastery base cost must be present and positive")
 
-          print("Crystal upgrade config validated.")
+          required_mastery_markers = [
+              "local function validCrystalId(crystalId)",
+              "required >= 1 and required % 1 == 0",
+              "return validCrystalId(crystalId) and crystalId or DEFAULT_CRYSTAL",
+          ]
+          missing = [marker for marker in required_mastery_markers if marker not in mastery]
+          if missing:
+              raise SystemExit("CrystalMastery ID validation missing: " + ", ".join(missing))
+
+          print("Crystal upgrade config and strict CrystalMastery ID boundary validated.")
