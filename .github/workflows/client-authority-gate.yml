@@ -24,6 +24,9 @@ jobs:
                   "Health": r"\b(?:humanoid|Humanoid)\.Health\s*=",
                   "MaxHealth": r"\b(?:humanoid|Humanoid)\.MaxHealth\s*=",
                   "WalkSpeed": r"\b(?:humanoid|Humanoid)\.WalkSpeed\s*=",
+                  "RootCFrame": r"(?:HumanoidRootPart|PrimaryPart)\.CFrame\s*=",
+                  "RootPivot": r"(?:HumanoidRootPart|PrimaryPart):PivotTo\s*\(",
+                  "RootVelocity": r"(?:HumanoidRootPart|PrimaryPart)\.AssemblyLinearVelocity\s*=",
               }
               for field, pattern in forbidden.items():
                   if re.search(pattern, text):
@@ -42,4 +45,4 @@ jobs:
               if not Path(required).is_file():
                   raise SystemExit(f"Missing active client input path: {required}")
 
-          print("Client gameplay-state authority gate validated.")
+          print("Client gameplay-state authority gate validated, including Character movement writes.")
