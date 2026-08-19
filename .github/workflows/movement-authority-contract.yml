@@ -1,0 +1,39 @@
+name: Movement Authority Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-movement-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server WalkSpeed authority
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          server_guard = Path("src/ServerScriptService/StatusSpeedGuardV2.server.lua").read_text(encoding="utf-8")
+          required = [
+              'local expected = math.max(MIN_WALK_SPEED, base)',
+              'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
+              'humanoid.WalkSpeed = expected',
+              'humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()',
+          ]
+          missing = [marker for marker in required if marker not in server_guard]
+          if missing:
+              raise SystemExit('Server WalkSpeed authority guard missing: ' + ', '.join(missing))
+
+          client_writers = []
+          assignment = re.compile(r'\.WalkSpeed\s*=')
+          for path in Path("src/StarterPlayer").rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if assignment.search(text):
+                  client_writers.append(str(path))
+          if client_writers:
+              raise SystemExit('Client scripts must not directly write Humanoid.WalkSpeed: ' + ', '.join(client_writers))
+
+          print('Movement authority contract validated.')
