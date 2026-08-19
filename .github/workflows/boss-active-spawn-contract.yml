@@ -10,17 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Guardian spawn owner
+      - name: Validate Guardian spawn owner and reserved identity
         shell: python
         run: |
           from pathlib import Path
           text = Path("src/ServerScriptService/BossTelegraph.server.lua").read_text(encoding="utf-8")
           required = [
               'local BossService = require(script.Parent.Services.BossService)',
-              'if not NPCs:FindFirstChild("CrystalGuardian") then',
+              'local existingGuardian = NPCs:FindFirstChild("CrystalGuardian")',
+              'existingGuardian:IsA("Model")',
+              'existingGuardian:GetAttribute("BossId") == "CrystalGuardian"',
+              'if existingGuardian then existingGuardian:Destroy() end',
               'BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit("Guardian active spawn contract missing: " + ", ".join(missing))
-          print("Active Guardian spawn contract validated.")
+          print("Active Guardian spawn and reserved identity contract validated.")
