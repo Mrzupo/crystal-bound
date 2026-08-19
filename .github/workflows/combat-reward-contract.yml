@@ -50,7 +50,11 @@ jobs:
               'lastAttackers[targetModel] = { Kind = "Player", Instance = attacker, UserId = attacker.UserId }',
               'Players:GetPlayerByUserId(record.UserId) == player',
               'model:IsDescendantOf(npcFolder)',
+              'local previousAttacker = lastAttackers[targetModel]',
+              'rememberAttacker(targetModel, request.Attacker)',
+              'humanoid:TakeDamage(amount)',
+              'if applied <= 0 and request.Attacker then',
           ):
               if marker not in damage:
                   raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
-          print('Canonical combat reward source, idempotency and attacker-session contract validated.')
+          print('Canonical combat reward source, idempotency, attacker-session and lethal-hit ordering validated.')
