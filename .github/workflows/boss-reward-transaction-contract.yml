@@ -19,12 +19,15 @@ jobs:
           text = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
           boss = Path('src/ReplicatedStorage/Config/BossConfig.lua').read_text(encoding='utf-8')
           inventory = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
+          economy = Path('src/ReplicatedStorage/Config/EconomyConfig.lua').read_text(encoding='utf-8')
+          xp = Path('src/ReplicatedStorage/Config/XPConfig.lua').read_text(encoding='utf-8')
           required = [
               'if model:GetAttribute("Rewarded") then return end',
+              'local validRewardConfig =',
+              'xpReward <= XPConfig.MaxExperience',
+              'moneyReward <= EconomyConfig.MaxMoney',
+              'InventoryConfig.GetItemConfig(dropId) ~= nil',
               'model:SetAttribute("Rewarded", true)',
-              'local xpReward = finiteNumber(config.XP)',
-              'local moneyReward = finiteNumber(config.Money)',
-              'local dropId = type(config.Drop) == "string" and config.Drop or nil',
               'XPService.AddXP(profile, xpReward)',
               'EconomyService.AddMoney(profile, moneyReward)',
               'InventoryService.AddItem(profile, dropId, 1)',
@@ -34,10 +37,7 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('Guardian reward lifecycle markers missing: ' + ', '.join(missing))
-          forbidden = [
-              'profile.Money =',
-              'profile.Inventory[dropId] =',
-          ]
+          forbidden = ['profile.Money =', 'profile.Inventory[dropId] =']
           for marker in forbidden:
               if marker in text:
                   raise SystemExit('Guardian rewards must not bypass canonical mutation owners: ' + marker)
@@ -46,9 +46,17 @@ jobs:
           if not drop_match:
               raise SystemExit('Guardian reward Drop is missing from BossConfig')
           drop_id = drop_match.group(1)
-          if drop_id not in inventory or f'{drop_id} = ' not in inventory:
+          if f'{drop_id} = ' not in inventory:
               raise SystemExit(f'Guardian reward Drop is not registered in InventoryConfig: {drop_id}')
 
-          if 'Rewarded", true' not in text:
-              raise SystemExit('Guardian reward idempotency marker missing')
-          print('Guardian reward idempotency, lifecycle cleanup, canonical mutation ownership and drop registration validated.')
+          max_money_match = re.search(r'MaxMoney\s*=\s*(\d+)', economy)
+          max_xp_match = re.search(r'MaxExperience\s*=\s*(\d+)', xp)
+          max_money = int(max_money_match.group(1)) if max_money_match else 1000000000
+          max_xp = int(max_xp_match.group(1)) if max_xp_match else 1000000000
+          reward_match = re.search(r'XP\s*=\s*(\d+).*?Money\s*=\s*(\d+)', boss, re.S)
+          if not reward_match:
+              raise SystemExit('BossConfig Guardian XP/Money reward fields missing')
+          if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
+              raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
+
+          print('Guardian reward idempotency, lifecycle cleanup, cap validation, canonical mutation ownership and drop registration validated.')
