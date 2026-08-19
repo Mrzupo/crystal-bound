@@ -76,7 +76,9 @@ end
 function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval, attacker, range)
 	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
 	damagePerTick = math.clamp(finiteNumber(damagePerTick, 3), 1, 100)
-	ticks = math.clamp(math.floor(finiteNumber(ticks, 3)), 1, 10)
+	local normalizedTicks = finiteNumber(ticks, 3)
+	if normalizedTicks == nil or normalizedTicks < 1 or normalizedTicks % 1 ~= 0 then return false end
+	ticks = math.clamp(normalizedTicks, 1, 10)
 	interval = math.clamp(finiteNumber(interval, 0.7), 0.2, 3)
 	local state = stateFor(humanoid)
 	local token = {}
