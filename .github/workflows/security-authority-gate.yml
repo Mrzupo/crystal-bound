@@ -42,14 +42,18 @@ jobs:
           if inventory_direct != ["src/ServerScriptService/Services/InventoryService.lua"]:
               raise SystemExit(f"Direct profile.Inventory mutation escaped InventoryService: {inventory_direct}")
 
-          invoke_owners = []
+          invoke_counts = {}
           for path in server_files:
               text = path.read_text(encoding="utf-8")
               count = len(re.findall(r'\.OnServerInvoke\s*=', text))
               if count:
-                  invoke_owners.append((str(path), count))
-          duplicate_files = [(path, count) for path, count in invoke_owners if count > 1]
-          if duplicate_files:
-              raise SystemExit(f"Multiple OnServerInvoke handlers in one server entrypoint: {duplicate_files}")
-
+                  invoke_counts[str(path)] = count
+          allowed = {
+              "src/ServerScriptService/Bootstrap.server.lua": 2,
+              "src/ServerScriptService/NPCDialogRemote.server.lua": 1,
+              "src/ServerScriptService/QuestAvailability.server.lua": 1,
+          }
+          for path, count in invoke_counts.items():
+              if path not in allowed or count != allowed[path]:
+                  raise SystemExit(f"Unexpected OnServerInvoke ownership/count: {path} -> {count}")
           print("Repository-wide gameplay authority gate validated.")
