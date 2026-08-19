@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **992 commits ahead, 29 commits behind** `main`.
+Current compare: **996 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -63,14 +63,14 @@ Current compare: **992 commits ahead, 29 commits behind** `main`.
 - Portal contract verifies gates consume canonical `WorldConfig` level fields.
 - Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract now protects those invariants.
 - `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract now protects that boundary.
-- `movement-authority-contract.yml` now protects both server WalkSpeed and position authority plus verified portal-arrival semantics.
+- Quest completion is owned by `QuestService`; `QuestSystem.Complete()` now has a dedicated single-owner regression contract alongside the existing quest active-state checks.
+- `movement-authority-contract.yml` now protects both server WalkSpeed and position authority plus verified portal-arrival semantics and explicitly forbids generic movement grace.
 - `boss-creation-idempotency.yml` protects Guardian duplicate-creation and respawn ownership.
 - `session-shutdown-contract.yml` protects the canonical server shutdown save/release path.
 - Stale CI contracts were corrected where they still asserted retired inline values or variable names; the active contracts now inspect current config-driven runtime paths.
 - `contract-path-validation.yml` validates that workflow-referenced repository paths exist.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, PlayerService load lifecycle, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle and input boundaries, Hitbox PvE target boundaries, Remote type initialization, combat reward idempotency, Guardian creation idempotency, server shutdown persistence, NPC special movement bounds, attacker-context/range validation, and semantic balancing bounds.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, PlayerService load lifecycle, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle and input boundaries, Hitbox PvE target boundaries, Quest completion ownership, Remote type initialization, combat reward idempotency, Guardian creation idempotency, server shutdown persistence, NPC special movement bounds, attacker-context/range validation, and semantic balancing bounds.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
-- README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture except for the explicit limitation section below, which is updated here.
 
 ## Important open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
