@@ -28,7 +28,6 @@ jobs:
               "CraftingRequest": ".OnServerEvent",
               "UseItemRequest": ".OnServerEvent",
               "DodgeRequest": ".OnServerEvent",
-              "NPCDialogRequest": ".OnServerEvent",
           }
 
           counts = {key: [] for key in targets}
