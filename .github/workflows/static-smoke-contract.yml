@@ -40,6 +40,17 @@ jobs:
                   "src/StarterPlayer/StarterPlayerScripts/CrystalAnimationController.client.lua",
                   "Controller.Play",
                   "CharacterAdded",
+                  "Animator",
+              ],
+              "animation_authority": [
+                  "src/ServerScriptService/Services/PlayerService.lua",
+                  "ensureAnimator",
+                  "Instance.new(\"Animator\")",
+              ],
+              "confirmed_vfx": [
+                  "src/StarterPlayer/StarterPlayerScripts/ConfirmedCombatVFXBridge.client.lua",
+                  "combatFeedback.OnClientEvent",
+                  "vfx.Play(action, crystalId)",
               ],
           }
 
