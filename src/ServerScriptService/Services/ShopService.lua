@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 local ShopConfig = require(ReplicatedStorage.Config.ShopConfig)
+local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 
 local ShopService = {}
 local Offers = ShopConfig.Offers
@@ -46,10 +47,7 @@ function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyServi
 	-- Guard multiplication explicitly so a corrupted config can never produce
 	-- a non-finite or out-of-economy purchase total before the mutation phase.
 	local total = price * amount
-	if finiteNumber(total) == nil or total <= 0 then
-		return false, "Shop purchase total is invalid."
-	end
-	if EconomyService.GetMoney(profile) + total < EconomyService.GetMoney(profile) then
+	if finiteNumber(total) == nil or total <= 0 or total > EconomyConfig.MaxMoney then
 		return false, "Shop purchase total is invalid."
 	end
 	if not EconomyService.CanAfford(profile, total) then return false, "Not enough Money." end
