@@ -9,17 +9,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate portal gates against WorldConfig
+      - name: Validate portal gates use canonical WorldConfig levels
         shell: python
         run: |
           from pathlib import Path
           world = Path('src/ReplicatedStorage/Config/WorldConfig.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
-          required = ['Level = 1', 'Level = 4', 'Level = 10', 'Level = 15']
-          for marker in required:
-              if marker not in world:
-                  raise SystemExit(f'missing WorldConfig level marker: {marker}')
-          for marker in ['TidePortal', ',0),4)', 'WindPortal', ',0),10)', 'AncientPortal', ',0),15)']:
+          world_markers = [
+              'local worldIslands = WorldConfig.Islands',
+              'local starterConfig, tideConfig, windConfig, ancientConfig = worldIslands.STARTER, worldIslands.TIDE, worldIslands.WIND, worldIslands.ANCIENT',
+          ]
+          for marker in world_markers:
               if marker not in bootstrap:
-                  raise SystemExit(f'portal contract marker missing: {marker}')
-          print('World/portal level contract validated.')
+                  raise SystemExit(f'Bootstrap must consume canonical WorldConfig: {marker}')
+          required_portals = {
+              'TidePortal': 'tideConfig.Level',
+              'StarterPortal': 'starterConfig.Level',
+              'WindPortal': 'windConfig.Level',
+              'TideReturnPortal': 'tideConfig.Level',
+              'AncientPortal': 'ancientConfig.Level',
+              'WindReturnPortal': 'windConfig.Level',
+          }
+          for portal, level_expr in required_portals.items():
+              if portal not in bootstrap or level_expr not in bootstrap:
+                  raise SystemExit(f'{portal} must use canonical WorldConfig level {level_expr}')
+          if 'tostring(requiredLevel or 1)' not in bootstrap:
+              raise SystemExit('Portal UI must derive the displayed gate from the server-side requiredLevel argument')
+          print('World/portal canonical level contract validated.')
