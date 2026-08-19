@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **827 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **884 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains untouched.
 
 ## Current state
@@ -18,6 +18,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Central QuestSystem / QuestService completion and rewards.
 - SafeProfileStore session lock, refresh heartbeat, save snapshots, retries and corrupted-value protection.
 - Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
+- Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
 - Daily Bounty canonicalized from config even for existing same-day profiles.
@@ -28,6 +29,8 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - One-shot confirmed Crystal VFX bridge.
 
 ## Latest hardening work
+- Damage input boundaries reject non-positive, non-finite and oversized values at the canonical validator.
+- Shop and Crafting request quantities are strict positive integers; fractional requests are rejected instead of floored.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; no Crystal-based fallback rewards.
 - Inventory corrupt stacks are clamped before mutation.
@@ -39,9 +42,10 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - NPC dialog closes when transitioning into destination menus.
 - Crystal VFX requires one-shot server confirmation and handles late confirmation after Crystal switching.
 - PlayerService Save/Remove guarantees operation-lock release and clears local state after final-save failures while retaining the persistent session lock.
+- Final removal treats failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
 - SessionHeartbeat uses weak failure state.
 - CombatPresentation keeps one current Character HealthChanged listener across respawns.
-- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle and Quest completion boundaries.
+- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release and Crystal upgrade transaction rollback.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
 ## Security / authority rules
