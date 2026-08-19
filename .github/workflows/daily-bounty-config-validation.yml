@@ -37,19 +37,30 @@ jobs:
           if "DailyBountyConfig" not in profile:
               raise SystemExit("PlayerData must consume shared DailyBountyConfig")
 
-      - name: Validate bounty service canonicalizes persisted reward fields
+      - name: Validate bounty service canonicalizes persisted reward fields and owns payout
         shell: python
         run: |
           from pathlib import Path
-          service = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          root = Path("src/ServerScriptService")
+          service_path = root / "Services" / "DailyBountyService.lua"
+          service = service_path.read_text(encoding="utf-8")
           required = (
               "local function findDefinition(enemyType)",
               "definition = findDefinition(profile.DailyBounty.EnemyType)",
               "profile.DailyBounty.Goal =",
               "profile.DailyBounty.RewardMoney =",
               "definition.RewardMoney",
+              "bounty.Claimed = true",
+              "EconomyService.AddMoney(profile, bounty.RewardMoney)",
           )
           for marker in required:
               if marker not in service:
-                  raise SystemExit(f"DailyBountyService missing canonicalization marker: {marker}")
-          print("Daily bounty persistence canonicalization validated.")
+                  raise SystemExit(f"DailyBountyService missing canonicalization/payout marker: {marker}")
+          owners = []
+          marker = "EconomyService.AddMoney(profile, bounty.RewardMoney)"
+          for path in root.rglob("*.lua"):
+              if marker in path.read_text(encoding="utf-8"):
+                  owners.append(str(path))
+          if owners != ["src/ServerScriptService/Services/DailyBountyService.lua"]:
+              raise SystemExit(f"Daily bounty reward must have exactly one server owner; found {owners}")
+          print("Daily bounty persistence canonicalization and reward ownership validated.")
