@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate NPC and boss damage context
+      - name: Validate NPC, boss and central damage context
         shell: python
         run: |
           from pathlib import Path
@@ -20,6 +20,7 @@ jobs:
           npc = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
           boss = Path("src/ServerScriptService/Services/BossService.lua").read_text(encoding="utf-8")
           status = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
+          damage = Path("src/ServerScriptService/Services/DamageService.lua").read_text(encoding="utf-8")
 
           problems = []
           if "local function damagePlayer(player, humanoid, amount, attacker, damageType, range)" not in npc:
@@ -37,8 +38,17 @@ jobs:
           if 'DodgeService.ApplyDamage(player, humanoid, damagePerTick, attacker, "Physical", range)' not in status:
               problems.append("player burn ticks must preserve NPC attacker context")
 
+          for marker in [
+              'local function getNPCRoot()',
+              'instance:IsDescendantOf(npcFolder)',
+              'targetModel:IsDescendantOf(npcFolder)',
+              'targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil',
+          ]:
+              if marker not in damage:
+                  problems.append(f"central DamageService NPC boundary missing: {marker}")
+
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("PvE attacker context validated against config-driven runtime paths.")
+          print("PvE attacker context validated against config-driven and NPC-tree-constrained runtime paths.")
