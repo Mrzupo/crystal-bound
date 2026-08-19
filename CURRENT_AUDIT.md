@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **972 commits ahead, 29 commits behind** `main`.
+Current compare: **974 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -50,15 +50,16 @@ Current compare: **972 commits ahead, 29 commits behind** `main`.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
 - NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
 - NPCMenuBridge validates server-side interaction distance before opening NPC menus.
-- PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
+- PC and mobile input can request presentation locally, but gameplay authority remains server-side and VFX require server confirmation before actual VFX playback.
 - Combat defeat rewards are sourced from canonical EnemyConfig and guarded by `DeathRewarded` idempotency.
 - Environmental/Boss hazard contracts validate attacker-less Environmental damage against current `BossArena` semantics rather than stale exact calls.
 - RemoteFunction contract uses the actual Bootstrap request-interval guards.
 - Portal contract verifies gates consume canonical `WorldConfig` level fields.
 - Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract now protects those invariants.
+- `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract now protects that boundary.
 - Stale CI contracts were corrected where they still asserted retired inline values or variable names; the active contracts now inspect current config-driven runtime paths.
 - `contract-path-validation.yml` validates that workflow-referenced repository paths exist.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, PlayerService load lifecycle, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle and input boundaries, Remote type initialization, combat reward idempotency, NPC special movement bounds, attacker-context/range validation, and semantic balancing bounds.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, PlayerService load lifecycle, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle and input boundaries, Hitbox PvE target boundaries, Remote type initialization, combat reward idempotency, NPC special movement bounds, attacker-context/range validation, and semantic balancing bounds.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
