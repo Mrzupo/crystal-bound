@@ -43,7 +43,9 @@ end
 
 function CrystalSystem.Unlock(profile, id)
 	if not CrystalSystem.Exists(id) or not validProfileCrystals(profile) or CrystalSystem.Owns(profile, id) then return false end
-	local requiredLevel = math.max(1, math.floor(finiteNumber(CrystalConfig.UnlockLevels[id]) or math.huge))
+	local requiredRaw = finiteNumber(CrystalConfig.UnlockLevels[id])
+	if not requiredRaw or requiredRaw < 1 then return false end
+	local requiredLevel = math.floor(requiredRaw)
 	local playerLevel = math.max(1, math.floor(finiteNumber(profile.Level) or 1))
 	if playerLevel < requiredLevel then return false end
 	if type(profile.Crystals.Owned) ~= "table" then profile.Crystals.Owned = {} end
