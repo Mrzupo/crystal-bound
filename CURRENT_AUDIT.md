@@ -18,10 +18,12 @@ Current compare: **1054 commits ahead, 29 commits behind** `main`.
 - Last-attacker records pin Player attribution to the concrete Player instance/session and reject stale rejoin sessions before combat rewards are credited.
 - Lethal damage records the attacker before `Humanoid:TakeDamage()` so `Died` callbacks can attribute the final hit; zero-applied damage restores the previous attribution.
 - Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
+- `DodgeService` runtime config is finite-safe; direction magnitude and attacker ranges are bounded before movement or damage are applied.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
 - Shop purchase totals are finite, positive and bounded by canonical `EconomyConfig.MaxMoney` before the money mutation phase.
 - Crystal Mastery upgrades verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
+- `CrystalMastery.AddXP`, `GetUpgradeCost` and `Upgrade` reject malformed Crystal mutation IDs instead of silently falling back to EMBER.
 - CrystalSystem only treats Crystal IDs as valid when UnlockLevel is finite/integer and Definition, BasicAttack, Ability and Passive blocks all exist.
 - PlayerData rejects malformed persisted Crystal ownership, equipped IDs and Mastery keys using the same complete-config Crystal boundary; malformed equipped state falls back to the first valid owned Crystal instead of blindly restoring EMBER.
 - CrystalMastery applies the same complete Crystal-config validation before using a Crystal ID.
@@ -38,11 +40,13 @@ Current compare: **1054 commits ahead, 29 commits behind** `main`.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - NPC special attacks clamp runtime ranges/cooldowns and Gale teleport offsets to bounded values.
+- Normal enemy and Guardian loot IDs are checked against canonical `InventoryConfig` by CI.
 - `CrystalService` is the sole server-facing Crystal ownership wrapper and delegates mutation to `CrystalSystem`.
 - `CrystalAbilityService.Execute()` independently verifies the active/owned Crystal, complete Crystal config, GALE enemy target context and player-to-target ability range before applying secondary effects.
 - Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
 - Guardian creation is active in the loaded `BossTelegraph` runtime: a missing/invalid `CrystalGuardian` identity is replaced and a canonical Guardian is created from `BossConfig.CrystalGuardian.ArenaCenter`; `BossService.CreateGuardian()` remains idempotent.
+- Guardian phase-2 multipliers, attack values, shockwave radius/damage and telegraph values are runtime-bounded and backed by semantic CI contracts.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
@@ -57,8 +61,9 @@ Current compare: **1054 commits ahead, 29 commits behind** `main`.
 - `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback without creating a second server entry-point.
 - Position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
 - Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
-- Server portal movement grace is destination-bound and requires an observed server displacement from the portal touch position to the configured destination before arming the grace window.
+- WorldTheme mirrors the server portal cooldown, uses a pre-touch server position snapshot, and only arms portal grace after the character is observed near the configured destination; rejected/cooldown touches cannot grant grace.
 - Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the observed-arrival candidate/cooldown flow.
+- MovementConfig CI now bounds WalkSpeed, Slow, observed-position, grace and portal-arrival parameters.
 - Dodge has no generic movement/teleport grace path; its server velocity remains subject to the same positional authority.
 - `DodgeService` explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
 - Dodge request directions are server-validated as finite `Vector3` values and bounded by `MaxDirectionMagnitude` before movement is applied.
@@ -78,9 +83,8 @@ Current compare: **1054 commits ahead, 29 commits behind** `main`.
 - Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract protects those invariants.
 - `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract protects that boundary.
 - AI path destinations are finite-validated, quantized, cached by weak Model keys, recomputed at a bounded interval, and explicitly cleared when NPCs die; the AI-path contract protects those lifecycle/resource invariants.
-- Contracts additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership/reward configuration, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership, Shop purchase totals and current StatusSpeedGuard lifecycle behavior.
 - `contract-path-validation.yml` validates workflow-referenced repository paths.
-- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
+- Studio playtest checklist now explicitly covers portal cooldown/arrival grace, stale portal authorization, malformed CrystalMastery mutation IDs, movement correction, normal multiplayer contention, Damage bounds and transaction rollbacks.
 
 ## Important open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
