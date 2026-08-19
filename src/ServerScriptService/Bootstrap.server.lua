@@ -179,7 +179,6 @@ local function createPortal(island, name, fromPosition, destination, requiredLev
 	local portal=Instance.new("Part"); portal.Name=name; portal.Size=Vector3.new(6,8,2); portal.Position=fromPosition; portal.Anchored=true; portal.Material=Enum.Material.Neon; portal.Parent=island
 	local gui=Instance.new("BillboardGui"); gui.Size=UDim2.fromOffset(260,60); gui.StudsOffset=Vector3.new(0,6,0); gui.AlwaysOnTop=true; gui.Parent=portal
 	local label=Instance.new("TextLabel"); label.Size=UDim2.fromScale(1,1); label.BackgroundTransparency=1; label.Text="Level "..tostring(requiredLevel or 1).." required"; label.Font=Enum.Font.GothamBold; label.TextSize=18; label.Parent=gui
-	local cooldown=setmetatable({}, { __mode = "k" }); portal.Touched:Connect(function(hit) local character=hit:FindFirstAncestorOfClass("Model"); local player=character and Players:GetPlayerFromCharacter(character); local root=character and character:FindFirstChild("HumanoidRootPart"); if not player or not root or cooldown[player] then return end; local profile=PlayerService.GetProfile(player); if not profile or profile.Level<(requiredLevel or 1) then player:SetAttribute("PortalMessage",string.format("Reach level %d to use this portal",requiredLevel or 1)); return end; cooldown[player]=true; root.CFrame=CFrame.new(destination); task.delay(1,function() cooldown[player]=nil end) end)
 end
 local function spawnSimpleNPC(npcs,name,position,objectText,actionText,callback)
 	if npcs:FindFirstChild(name) then return end
