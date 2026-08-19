@@ -9,6 +9,7 @@ local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier
 local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
 local SPEED_EPSILON = 0.05
 local connections = setmetatable({}, { __mode = "k" })
+local humanoidConnections = setmetatable({}, { __mode = "k" })
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
@@ -34,7 +35,14 @@ local function refresh(player)
 	end
 end
 
+local function disconnectHumanoid(player)
+	local connection = humanoidConnections[player]
+	if connection and connection.Connected then connection:Disconnect() end
+	humanoidConnections[player] = nil
+end
+
 local function cleanup(player)
+	disconnectHumanoid(player)
 	local playerConnections = connections[player]
 	if not playerConnections then return end
 	for _, connection in ipairs(playerConnections) do
@@ -43,12 +51,13 @@ local function cleanup(player)
 	connections[player] = nil
 end
 
-local function watchCharacter(player, character, playerConnections)
+local function watchCharacter(player, character)
+	disconnectHumanoid(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
-	table.insert(playerConnections, humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+	humanoidConnections[player] = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 		refresh(player)
-	end))
+	end)
 	refresh(player)
 end
 
@@ -66,13 +75,13 @@ local function bind(player)
 	table.insert(playerConnections, player:GetAttributeChangedSignal("CrystalMasteryLevel"):Connect(deferredRefresh))
 	table.insert(playerConnections, player.CharacterAdded:Connect(function(character)
 		task.defer(function()
-			watchCharacter(player, character, playerConnections)
+			watchCharacter(player, character)
 		end)
 	end))
 
 	if player.Character then
 		task.defer(function()
-			watchCharacter(player, player.Character, playerConnections)
+			watchCharacter(player, player.Character)
 		end)
 	end
 end
