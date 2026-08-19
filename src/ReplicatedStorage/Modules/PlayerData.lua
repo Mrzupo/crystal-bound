@@ -152,13 +152,15 @@ function PlayerData.Reconcile(data)
 	local sourceMastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or {}
 	local normalizedMastery = {}
 	for crystalId in pairs(CrystalConfig.UnlockLevels) do
-		local source = type(sourceMastery[crystalId]) == "table" and sourceMastery[crystalId] or {}
-		local mastery = {
-			Level = clampInt(source.Level, 1, masteryMaxLevel, 1),
-			XP = clampInt(source.XP, 0, masteryMaxXP, 0),
-		}
-		if mastery.Level >= masteryMaxLevel then mastery.XP = 0 end
-		normalizedMastery[crystalId] = mastery
+		if isCrystalId(crystalId) then
+			local source = type(sourceMastery[crystalId]) == "table" and sourceMastery[crystalId] or {}
+			local mastery = {
+				Level = clampInt(source.Level, 1, masteryMaxLevel, 1),
+				XP = clampInt(source.XP, 0, masteryMaxXP, 0),
+			}
+			if mastery.Level >= masteryMaxLevel then mastery.XP = 0 end
+			normalizedMastery[crystalId] = mastery
+		end
 	end
 	data.CrystalMastery = normalizedMastery
 
