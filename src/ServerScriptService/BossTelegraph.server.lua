@@ -5,12 +5,17 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DodgeService = require(script.Parent.Services.DodgeService)
+local BossService = require(script.Parent.Services.BossService)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local NPCs = Workspace:WaitForChild("NPCs")
 local config = BossConfig.CrystalGuardian.Telegraph
 
 local RUN_INTERVAL = 0.25
 local nextCast = 0
+
+if not NPCs:FindFirstChild("CrystalGuardian") then
+	BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
+end
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
