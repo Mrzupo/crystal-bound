@@ -1,0 +1,32 @@
+name: Status Effect Lifecycle Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate status-effect cancellation and cleanup
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
+          required = [
+              'local active = setmetatable({}, { __mode = "k" })',
+              'local token = {}',
+              'state.Slow == token',
+              'state.Burn ~= token',
+              'function StatusEffectService.Clear(humanoid)',
+              'state.Slow = nil',
+              'state.Burn = nil',
+              'active[humanoid] = nil',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("missing status-effect lifecycle markers: " + ", ".join(missing))
+          print("Status effect cancellation and cleanup contract validated.")
