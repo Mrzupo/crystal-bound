@@ -68,10 +68,18 @@ local function titleMatchesAchievement(title, unlocked)
 	return false
 end
 
-local function isCrystalId(value)
+local function hasCompleteCrystalConfig(value)
 	if type(value) ~= "string" then return false end
 	local required = tonumber(CrystalConfig.UnlockLevels[value])
-	return isFiniteNumber(required) and required >= 1 and required % 1 == 0
+	if not isFiniteNumber(required) or required < 1 or required % 1 ~= 0 then return false end
+	return type(CrystalConfig.Definitions) == "table"
+		and type(CrystalConfig.Definitions[value]) == "table"
+		and type(CrystalConfig.BasicAttack) == "table"
+		and type(CrystalConfig.BasicAttack[value]) == "table"
+		and type(CrystalConfig.Abilities) == "table"
+		and type(CrystalConfig.Abilities[value]) == "table"
+		and type(CrystalConfig.Passives) == "table"
+		and type(CrystalConfig.Passives[value]) == "table"
 end
 
 local function isIslandId(value)
@@ -145,14 +153,14 @@ function PlayerData.Reconcile(data)
 	data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)
 
 	data.Crystals = type(data.Crystals) == "table" and data.Crystals or clone(defaults.Crystals)
-	data.Crystals.Owned = normalizeList(data.Crystals.Owned, isCrystalId)
-	if not table.find(data.Crystals.Owned, "EMBER") then table.insert(data.Crystals.Owned, "EMBER") end
-	if not isCrystalId(data.Crystals.Equipped) or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then data.Crystals.Equipped = "EMBER" end
+	data.Crystals.Owned = normalizeList(data.Crystals.Owned, hasCompleteCrystalConfig)
+	if not table.find(data.Crystals.Owned, "EMBER") and hasCompleteCrystalConfig("EMBER") then table.insert(data.Crystals.Owned, "EMBER") end
+	if not hasCompleteCrystalConfig(data.Crystals.Equipped) or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then data.Crystals.Equipped = "EMBER" end
 
 	local sourceMastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or {}
 	local normalizedMastery = {}
 	for crystalId in pairs(CrystalConfig.UnlockLevels) do
-		if isCrystalId(crystalId) then
+		if hasCompleteCrystalConfig(crystalId) then
 			local source = type(sourceMastery[crystalId]) == "table" and sourceMastery[crystalId] or {}
 			local mastery = {
 				Level = clampInt(source.Level, 1, masteryMaxLevel, 1),
