@@ -12,7 +12,12 @@ local EnemyConfig = {
 }
 
 function EnemyConfig.Get(typeId)
-	return EnemyConfig.Types[typeId] or EnemyConfig.Types.TrainingDummy
+	if type(typeId) ~= "string" then return nil end
+	return EnemyConfig.Types[typeId]
+end
+
+function EnemyConfig.IsValid(typeId)
+	return type(typeId) == "string" and EnemyConfig.Types[typeId] ~= nil
 end
 
 return EnemyConfig
