@@ -18,6 +18,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Reach the GALE unlock level and equip GALE.
 - Verify Gale Strike plus secondary splash hits only enemies in the configured radius.
 - Confirm crystal switching never changes server-side damage authority to the client.
+- Controlled config test: malformed/non-integer Crystal UnlockLevel must cause that crystal boundary to reject the ID rather than silently floor the requirement.
 
 ## 3. Combat security
 - Spam Basic/Q input rapidly.
@@ -88,9 +89,13 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Switch crystals through UI and hotkeys.
 - Verify quest HUD text matches the active quest and progress.
 - Open/close Quest rapidly; expected: no duplicate request storm or stale UI overwrite.
+- Trigger Crystal Keeper/Material Trader prompts from inside the configured distance.
+- Controlled server test: attempt the same NPC prompt action from outside range; expected: menu does not open.
 - Test mobile ATK/Q/target selection.
 - Test mobile dodge and verify the same server cooldown/invulnerability behavior as PC.
 - Confirm local animations/VFX never decide damage.
+- Change local `Humanoid.WalkSpeed` in a controlled client test; expected: the server restores the derived value immediately.
+- Repeat during and after respawn; expected: no stale speed listeners and no incorrect old-character writes.
 
 ## 10. Asset pass
 - Insert the authored animation objects under the six configured names.
@@ -105,6 +110,9 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm no quest reward is granted on an incomplete objective.
 - Confirm no Daily Bounty or Achievement reward can be granted twice.
 - Confirm no duplicate NPC/Boss instances appear after respawn.
+- Confirm no malformed Crystal UnlockLevel can be floored into an unintended lower gate.
+- Confirm NPC menu opening is server-distance validated.
+- Confirm WalkSpeed baseline enforcement remains active without a Slow effect.
 - Confirm the official rarity ladder is Common → Divine and Ancient is not a rarity.
 - Confirm `main` remains untouched.
 - Record every runtime failure with exact script name, event/action, reproduction steps and expected vs actual behavior.
