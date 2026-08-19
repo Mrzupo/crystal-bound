@@ -29,9 +29,29 @@ jobs:
           for marker in (
               "QuestSystem.IsActive(profile, questId)",
               "QuestSystem.Complete(profile, questId)",
-              "XPService.AddXP(profile, definition.XP)",
-              "EconomyService.AddMoney(profile, definition.Money)",
+              "XPService.AddXP(profile, rewardXP)",
+              "EconomyService.AddMoney(profile, rewardMoney)",
+              "FIRST_FIGHT = true",
+              "GUARDIAN_TRIAL = true",
           ):
               if marker not in service:
                   raise SystemExit(f"QuestService completion owner missing {marker}")
-          print("Quest completion ownership validated.")
+
+          special_owners = {
+              "FIRST_FIGHT": root / "ServerScriptService/Services/CombatService.lua",
+              "GUARDIAN_TRIAL": root / "ServerScriptService/Services/BossService.lua",
+          }
+          for quest_id, owner_path in special_owners.items():
+              owner_text = owner_path.read_text(encoding="utf-8")
+              if f'"{quest_id}"' not in owner_text:
+                  raise SystemExit(f"{quest_id} must retain its canonical server trigger owner: {owner_path}")
+
+          for path in root.rglob("*.lua"):
+              if path in special_owners.values() or path == root / "ServerScriptService/Services/QuestService.lua":
+                  continue
+              text = path.read_text(encoding="utf-8")
+              for quest_id in special_owners:
+                  if f'"{quest_id}"' in text and "QuestService.Complete" in text:
+                      raise SystemExit(f"Unexpected server-triggered quest completion owner for {quest_id}: {path}")
+
+          print("Quest completion ownership and server-triggered special quest ownership validated.")
