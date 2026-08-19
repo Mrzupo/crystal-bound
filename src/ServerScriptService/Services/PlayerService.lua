@@ -250,7 +250,10 @@ function PlayerService.Remove(player)
 		if not saved then
 			return { Saved = false }
 		end
-		SafeProfileStore.Release(player)
+		local released = SafeProfileStore.Release(player)
+		if not released then
+			return { Saved = false, ReleaseFailed = true }
+		end
 		cleanupRemovedPlayer(player)
 		return { Saved = true }
 	end, debug.traceback)
@@ -262,7 +265,11 @@ function PlayerService.Remove(player)
 		return false
 	end
 	if not result or not result.Saved then
-		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
+		if result and result.ReleaseFailed then
+			warn(("Crystal Bound: retaining session lock for %s because final session-lock release failed."):format(player.Name))
+		else
+			warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
+		end
 		cleanupRemovedPlayer(player)
 		return false
 	end
