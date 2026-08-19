@@ -8,6 +8,13 @@ local function finiteNumber(value)
 	return number
 end
 
+local function copyTable(value)
+	if type(value) ~= "table" then return value end
+	local result = {}
+	for key, child in pairs(value) do result[key] = type(child) == "table" and copyTable(child) or child end
+	return result
+end
+
 local function validProfileCrystals(profile)
 	return type(profile) == "table" and type(profile.Crystals) == "table"
 end
@@ -18,22 +25,22 @@ end
 
 function CrystalSystem.GetDefinition(id)
 	if not CrystalSystem.Exists(id) then return nil end
-	return CrystalConfig.Definitions[id]
+	return copyTable(CrystalConfig.Definitions[id])
 end
 
 function CrystalSystem.GetBasicAttack(id)
 	if not CrystalSystem.Exists(id) then return nil end
-	return CrystalConfig.BasicAttack[id]
+	return copyTable(CrystalConfig.BasicAttack[id])
 end
 
 function CrystalSystem.GetAbility(id)
 	if not CrystalSystem.Exists(id) then return nil end
-	return CrystalConfig.Abilities[id]
+	return copyTable(CrystalConfig.Abilities[id])
 end
 
 function CrystalSystem.GetPassive(id)
 	if not CrystalSystem.Exists(id) then return {} end
-	return CrystalConfig.Passives[id] or {}
+	return copyTable(CrystalConfig.Passives[id] or {})
 end
 
 function CrystalSystem.Owns(profile, id)
