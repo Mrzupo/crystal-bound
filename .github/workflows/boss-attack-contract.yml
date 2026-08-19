@@ -16,11 +16,12 @@ jobs:
           import re
 
           config = Path('src/ReplicatedStorage/Config/BossConfig.lua').read_text(encoding='utf-8')
+          inventory = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
           service = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
           telegraph = Path('src/ServerScriptService/BossTelegraph.server.lua').read_text(encoding='utf-8')
           arena = Path('src/ServerScriptService/BossArena.server.lua').read_text(encoding='utf-8')
 
-          for marker in ['Phase2 =', 'Telegraph =', 'ArenaHazard =', 'ArenaCenter =', 'AbilityCooldown =', 'AbilityRadius =', 'AbilityDamage =']:
+          for marker in ['Phase2 =', 'Telegraph =', 'ArenaHazard =', 'ArenaCenter =', 'AbilityCooldown =', 'AbilityRadius =', 'AbilityDamage =', 'Drop =']:
               if marker not in config:
                   raise SystemExit(f'missing Guardian config marker: {marker}')
 
@@ -46,6 +47,13 @@ jobs:
           if not damage_multiplier or not 0 < float(damage_multiplier.group(1)) <= 10:
               raise SystemExit('Guardian Phase2.AttackDamageMultiplier must be within 0..10')
 
+          drop = re.search(r'Drop\s*=\s*"([^"]+)"', config)
+          if not drop:
+              raise SystemExit('Guardian Drop must be a string')
+          drop_id = drop.group(1)
+          if f'{drop_id} = ' not in inventory:
+              raise SystemExit(f'Guardian Drop is not registered in InventoryConfig: {drop_id}')
+
           for marker in ['local abilityRadius =', 'phase2.AbilityRangeMultiplier', 'shockwave(root.Position, abilityRadius']:
               if marker not in service:
                   raise SystemExit(f'Guardian phase-2 ability path missing: {marker}')
@@ -59,5 +67,5 @@ jobs:
           if 'local center = bossConfig.ArenaCenter' not in arena:
               raise SystemExit('BossArena must use BossConfig.ArenaCenter')
 
-          print('Guardian phase-2 attack separation and semantic bounds validated.')
+          print('Guardian phase-2, reward, attack and semantic bounds validated.')
           PY
