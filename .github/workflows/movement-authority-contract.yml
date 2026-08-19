@@ -31,6 +31,8 @@ jobs:
               'root.AssemblyLinearVelocity = Vector3.zero',
               'positionState[player] = {',
               'isValidPortalArrival(player, root, now)',
+              'player:SetAttribute("PortalMovementGraceUntil", 0)',
+              'player:SetAttribute("PortalExpectedDestination", nil)',
           ]
           missing = [marker for marker in required if marker not in server_guard]
           if missing:
