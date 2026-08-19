@@ -67,6 +67,19 @@ local function showNextLine()
 	currentIndex = currentIndex % #currentLines + 1
 end
 
+local function openTargetMenu(optionId)
+	panel.Visible = false
+	if optionId == "QUEST" then
+		player:SetAttribute("OpenQuestMenu", os.clock())
+	elseif optionId == "CRYSTAL" or optionId == "INVENTORY" then
+		player:SetAttribute("OpenCrystalMenu", os.clock())
+	elseif optionId == "SHOP" then
+		player:SetAttribute("OpenShopMenu", os.clock())
+	elseif optionId == "CRAFT" then
+		player:SetAttribute("OpenCraftingMenu", os.clock())
+	end
+end
+
 local function openDialog(npcId)
 	local ok, data = pcall(function() return dialogRequest:InvokeServer(npcId) end)
 	if not ok or type(data) ~= "table" then
@@ -88,11 +101,7 @@ local function openDialog(npcId)
 		button.TextSize = 13
 		button.Parent = options
 		button.Activated:Connect(function()
-			if option.Id == "QUEST" then player:SetAttribute("OpenQuestMenu", os.clock())
-			elseif option.Id == "CRYSTAL" then player:SetAttribute("OpenCrystalMenu", os.clock())
-			elseif option.Id == "SHOP" then player:SetAttribute("OpenShopMenu", os.clock())
-			elseif option.Id == "INVENTORY" then player:SetAttribute("OpenCrystalMenu", os.clock())
-			elseif option.Id == "CRAFT" then player:SetAttribute("OpenCraftingMenu", os.clock()) end
+			openTargetMenu(option.Id)
 		end)
 	end
 	panel.Visible = true
