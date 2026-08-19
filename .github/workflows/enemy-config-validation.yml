@@ -37,13 +37,20 @@ jobs:
                   print(f" - EnemyConfig missing field: {problem}")
               raise SystemExit(1)
 
+          if "function EnemyConfig.Get(typeId)" not in text or "return EnemyConfig.Types[typeId]" not in text:
+              raise SystemExit("EnemyConfig.Get must perform strict type lookup")
+          if "return EnemyConfig.Types.TrainingDummy" in text:
+              raise SystemExit("EnemyConfig.Get must not silently fall back to TrainingDummy")
+          if "function EnemyConfig.IsValid(typeId)" not in text:
+              raise SystemExit("EnemyConfig.IsValid must exist for canonical enemy validation")
+          if "if not config then return end" not in npc:
+              raise SystemExit("NPCService must reject unknown enemy configuration cleanly")
+
           if "local specialRange =" not in npc or "distance <= specialRange" not in npc:
               raise SystemExit("NPCService must trigger specials from configured Special.Range")
           if "distance <= math.max(config.AttackRange * 2, 10)" in npc:
               raise SystemExit("NPCService must not use the old AttackRange*2 special trigger")
 
-          # NPCService removes dead enemies after 1.5 seconds; respawn values below that
-          # can race the cleanup callback and suppress the new spawn.
           respawns = [float(value) for value in re.findall(r"Respawn = ([0-9.]+)", text)]
           for respawn in respawns:
               if respawn < 1.5:
@@ -51,7 +58,6 @@ jobs:
               if respawn > 600:
                   raise SystemExit("Enemy Respawn exceeds the 10-minute design bound")
 
-          # Keep authored examples within sane combat bounds.
           numeric_fields = re.findall(r"AttackRange = ([0-9.]+).*?AttackDamage = ([0-9.]+).*?AttackCooldown = ([0-9.]+)", text)
           for attack_range, damage, cooldown in numeric_fields:
               if float(attack_range) > 1000:
@@ -66,4 +72,4 @@ jobs:
               if cooldown < 0.1 or cooldown > 60:
                   raise SystemExit("Enemy Special cooldown is outside 0.1..60")
 
-          print("EnemyConfig combat bounds, lifecycle and special trigger contract validated.")
+          print("EnemyConfig combat bounds, strict lookup, lifecycle and special trigger contract validated.")
