@@ -22,9 +22,10 @@ function InventoryService.AddItem(profile, itemId, amount)
 	amount = normalizePositiveAmount(amount)
 	if not amount then return 0 end
 	if type(profile.Inventory) ~= "table" then profile.Inventory = {} end
+	local maxStack = Config.GetMaxStackSize(itemId)
 	local currentRaw = finiteNumber(profile.Inventory[itemId]) or 0
-	local current = math.max(0, math.floor(currentRaw))
-	local nextAmount = math.min(Config.GetMaxStackSize(itemId), current + amount)
+	local current = math.clamp(math.max(0, math.floor(currentRaw)), 0, maxStack)
+	local nextAmount = math.min(maxStack, current + amount)
 	local added = nextAmount - current
 	profile.Inventory[itemId] = nextAmount
 	return added
@@ -35,8 +36,9 @@ function InventoryService.RemoveItem(profile, itemId, amount)
 	amount = normalizePositiveAmount(amount)
 	if not amount then return false end
 	if type(profile.Inventory) ~= "table" then profile.Inventory = {} end
+	local maxStack = Config.GetMaxStackSize(itemId)
 	local currentRaw = finiteNumber(profile.Inventory[itemId]) or 0
-	local current = math.max(0, math.floor(currentRaw))
+	local current = math.clamp(math.max(0, math.floor(currentRaw)), 0, maxStack)
 	if current < amount then return false end
 	profile.Inventory[itemId] = current - amount
 	return true
@@ -47,7 +49,8 @@ function InventoryService.HasItem(profile, itemId, amount)
 	amount = normalizePositiveAmount(amount)
 	if not amount then return false end
 	if type(profile.Inventory) ~= "table" then return false end
-	local current = math.max(0, math.floor(finiteNumber(profile.Inventory[itemId]) or 0))
+	local maxStack = Config.GetMaxStackSize(itemId)
+	local current = math.clamp(math.max(0, math.floor(finiteNumber(profile.Inventory[itemId]) or 0)), 0, maxStack)
 	return current >= amount
 end
 
