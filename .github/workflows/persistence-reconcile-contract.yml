@@ -30,7 +30,7 @@ jobs:
 
           crystal_required = [
               'local function hasCompleteCrystalConfig(value)',
-              'required >= 1 and required % 1 == 0',
+              'if not isFiniteNumber(required) or required < 1 or required % 1 ~= 0 then return false end',
               'type(CrystalConfig.Definitions[value]) == "table"',
               'type(CrystalConfig.BasicAttack[value]) == "table"',
               'type(CrystalConfig.Abilities[value]) == "table"',
@@ -65,3 +65,4 @@ jobs:
           if missing:
               raise SystemExit('missing session heartbeat lock-loss contract: ' + ', '.join(missing))
           print('Session heartbeat lock-loss handling validated.')
+          PY
