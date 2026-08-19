@@ -22,6 +22,14 @@ local pillarPositions = {
 local hazardParts = {}
 local phaseActive = false
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function createArena()
 	if arena:FindFirstChild("Floor") then return end
 	local floor = Instance.new("Part")
@@ -81,7 +89,9 @@ local function setPhaseHazard(enabled)
 		for index, hazard in pairs(hazardParts) do
 			if hazard.Parent then
 				TweenService:Create(hazard, TweenInfo.new(0.35), { Transparency = 1 }):Play()
-				task.delay(0.4, function() if hazard.Parent then hazard:Destroy() end end)
+				task.delay(0.4, function()
+					if hazard.Parent then hazard:Destroy() end
+				end)
 			end
 			hazardParts[index] = nil
 		end
@@ -90,8 +100,8 @@ end
 
 local function applyHazardDamage()
 	if not phaseActive then return end
-	local halfExtent = math.max(0, tonumber(config.HalfExtent) or 23)
-	local damage = math.clamp(tonumber(config.Damage) or 0, 0, 1000)
+	local halfExtent = math.clamp(finiteNumber(config.HalfExtent, 23), 0, 1000)
+	local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -108,7 +118,7 @@ end
 createArena()
 
 task.spawn(function()
-	local interval = math.max(0.1, tonumber(config.Interval) or 0.75)
+	local interval = math.max(0.1, finiteNumber(config.Interval, 0.75))
 	while arena.Parent do
 		local guardian = NPCs:FindFirstChild("CrystalGuardian")
 		local humanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
