@@ -20,8 +20,14 @@ jobs:
           for marker in ("BaseChance =", "ChancePerMasteryLevel =", "MaxChance =", "Multiplier ="):
               if marker not in config:
                   raise SystemExit(f"CombatModifierConfig missing {marker}")
-          if "CombatModifierConfig" not in service:
-              raise SystemExit("CombatModifierService must consume shared CombatModifierConfig")
+          for marker in (
+              'local baseChance = math.clamp(finiteNumber(config.BaseChance, 0.08), 0, 1)',
+              'local chancePerLevel = math.clamp(finiteNumber(config.ChancePerMasteryLevel, 0.01), 0, 1)',
+              'local maxChance = math.clamp(finiteNumber(config.MaxChance, 0.22), baseChance, 1)',
+              'local multiplier = math.clamp(finiteNumber(config.Multiplier, 1.65), 1, 10)',
+          ):
+              if marker not in service:
+                  raise SystemExit(f"CombatModifierService runtime bound missing: {marker}")
           match = re.search(
               r"BaseChance\s*=\s*([0-9.]+).*?ChancePerMasteryLevel\s*=\s*([0-9.]+).*?MaxChance\s*=\s*([0-9.]+).*?Multiplier\s*=\s*([0-9.]+)",
               config,
@@ -38,4 +44,4 @@ jobs:
               raise SystemExit("Critical MaxChance must be within BaseChance..1")
           if not 1 <= multiplier <= 10:
               raise SystemExit("Critical Multiplier must be within 1..10")
-          print("Combat modifier config validated with probability/multiplier bounds.")
+          print("Combat modifier config and runtime bounds validated.")
