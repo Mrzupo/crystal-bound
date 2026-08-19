@@ -1,485 +1,396 @@
-# Testing
-
-Dieses Dokument beschreibt, wie die aktuellen Kernsysteme von Crystal Fight getestet werden:
-
-- `SaveSystem`
-- `PlayerData`
-- `XPService`
-- `EconomyService`
-- `InventoryService`
-- `CrystalService`
-- Crystal Ability Framework
-- Damage Pipeline Framework
+# Crystal Bound — Testing Contract
 
 ## Ziel
 
-Die Tests sollen bestaetigen, dass persistente Spielerprofile, XP, Geld, Inventar und Crystal Framework v1 korrekt serverseitig funktionieren. Beim Crystal Framework wird nur Besitz und Ausruestung getestet. Faehigkeiten, Schaden, Animationen, VFX und UI sind nicht Teil dieses Testumfangs.
+Dieses Dokument beschreibt die aktuellen statischen und manuellen Tests für Crystal Bound.
 
-Die Damage Pipeline wird aktuell nur auf Datenmodell, Validierung und Result-Erzeugung getestet. Es wird kein Humanoid beschaedigt.
+Wichtig: Ein statischer Contract oder Code-Review ersetzt keinen echten Roblox-Studio-Runtime-Test.
 
 ## Voraussetzungen
 
-- Roblox Studio Projekt mit der Struktur aus `default.project.json`
-- API Services in Roblox Studio aktiviert, damit `DataStoreService` im Test funktioniert
-- Test im Server-Kontext, nicht nur als reiner Client-Test
+- Roblox Studio
+- Rojo mit `default.project.json`
+- Studio Access to API Services für DataStore-Tests
+- Server-Test für serverautoritatives Verhalten
+- Für Multiplayer-Tests mindestens zwei Testspieler
 
-In Roblox Studio:
+## 1. Static validation
 
-1. `Game Settings` oeffnen.
-2. `Security` oeffnen.
-3. `Enable Studio Access to API Services` aktivieren.
-4. Projekt speichern und erneut testen.
+Vor jedem Runtime-Test:
 
-## Testfaelle
+- `default.project.json` muss alle referenzierten Dateien finden.
+- JSON-Dateien müssen parsebar sein.
+- zentrale `require`-Pfade müssen existieren.
+- RemoteEvent/RemoteFunction Ownership muss eindeutig sein.
+- keine unerwarteten `Humanoid:TakeDamage()`-Pfade außerhalb `DamageService`.
+- keine Legacy-Save-/Crystal-Module dürfen in Rojo auftauchen.
+- Rarity muss Common → Divine sein.
+- Ancient darf nicht als Rarity auftauchen.
+- Crystal Unlock-Gates müssen aus `CrystalConfig.UnlockLevels` kommen.
+- Achievement Titles müssen aus Achievement-IDs abgeleitet werden.
+- Daily Bounty Rewards müssen aus `DailyBountyConfig` kommen.
 
-## SaveSystem testen
+## 2. Boot / World initialization
+
+### Test
+
+1. Starte einen Server-Test.
+2. Trete mit einem Spieler bei.
+3. Prüfe Roblox Output.
+4. Prüfe Workspace.
+
+### Erwartung
+
+- Profil lädt sicher.
+- Bei Load-Fehlern wird kein leeres Profil erzeugt.
+- `Crystal Bound`-Runtime wird geladen.
+- Starter Island, Tide Island, Wind Island und Ancient Ruins existieren.
+- NPCs und Spawn existieren.
+- WorldDecor/WorldTheme initialisieren nicht doppelt.
+- Crystal Guardian existiert genau einmal.
+
+## 3. Persistence
 
 ### Neues Profil
 
-1. Spiel in Roblox Studio starten.
-2. Dem Spiel als Testspieler beitreten.
-3. Pruefen, ob `SaveSystem.GetProfile(player)` ein Profil zurueckgibt.
+Erwartet:
+
+- Level 1
+- XP 0
+- EMBER besessen und ausgerüstet
+- Money = `EconomyConfig.StartingMoney`
+- gültige Default-Bounty
+- leeres Inventar
+
+### Save / Rejoin
+
+1. Level verändern.
+2. Money verändern.
+3. Item hinzufügen.
+4. Crystal Mastery verändern.
+5. Questfortschritt verändern.
+6. Spieler normal verlassen.
+7. Erneut beitreten.
 
 Erwartung:
 
-- `Level` ist `1`
-- `Experience` ist `0`
-- `Money` kommt aus `EconomyConfig.StartingMoney`
-- alle Felder aus `PlayerData.GetDefaultProfile()` sind vorhanden
+- Werte bleiben erhalten.
+- Reconciliation entfernt ungültige IDs.
+- Mastery-Caps bleiben korrekt.
+- Inventar bleibt innerhalb MaxStack.
 
-### Bestehendes Profil laden
+### Session Lock
 
-1. Spiel starten.
-2. Profilwerte serverseitig veraendern, zum Beispiel durch `XPService.AddXP` oder `EconomyService.AddMoney`.
-3. Spiel verlassen, damit gespeichert wird.
-4. Spiel erneut starten.
-
-Erwartung:
-
-- gespeicherte Werte werden geladen
-- neue Felder aus dem Schema werden automatisch ergaenzt
-- fehlende Felder verursachen keinen Absturz
-
-### Autosave
-
-1. Spiel starten.
-2. Profilwerte veraendern.
-3. Mindestens 60 Sekunden warten.
-4. Server stoppen und neu starten.
+1. Server A startet und besitzt Profil-Lock.
+2. Controlled Test für parallelen Serverzugriff.
+3. Server B versucht das gleiche Profil zu laden.
 
 Erwartung:
 
-- Werte wurden durch Autosave gespeichert
-- keine manuelle UI-Aktion ist erforderlich
+- Server B bekommt keinen gültigen Besitz solange Lock aktiv ist.
+- Lock wird nicht still überschrieben.
+- Heartbeat verlängert einen gesunden Lock.
+- wiederholter Heartbeat-Verlust beendet die Session sicher.
 
-### Server-Shutdown
+## 4. Crystal system
 
-1. Spiel starten.
-2. Profilwerte veraendern.
-3. Server stoppen.
+### EMBER
 
-Erwartung:
+- Start-Crystal vorhanden.
+- Basic Attack funktioniert.
+- Flame Burst funktioniert.
 
-- `BindToClose` versucht aktive Profile final zu speichern
-- parallele Saves werden nicht gleichzeitig auf denselben Spieler angewendet
+### TIDE
 
-## XPService testen
+- Level-Gate wird serverseitig geprüft.
+- Tidal Pulse funktioniert.
+- MaxHealth-Passive wirkt.
 
-### XP hinzufuegen
+### GALE
 
-Serverseitig:
+- Level-Gate wird serverseitig geprüft.
+- Gale Strike funktioniert.
+- Splash trifft nur gültige Enemy-Modelle innerhalb der konfigurierten Reichweite.
 
-```lua
-local XPService = require(game.ServerScriptService.Services.XPService)
-XPService.AddXP(player, 50)
-```
+### Security
 
-Erwartung:
+- Manipulierte Crystal-ID wird abgewiesen.
+- Nicht besessene Crystal-ID kann nicht ausgerüstet werden.
+- Client kann Unlock-Gate nicht umgehen.
 
-- `Experience` steigt um `50`
-- `XPChanged` wird an den Client gesendet
-- `GetXP(player)` gibt den aktuellen XP-Wert zurueck
+## 5. Crystal Mastery
 
-### Level-Up
+Testfälle:
 
-Serverseitig:
-
-```lua
-local XPService = require(game.ServerScriptService.Services.XPService)
-XPService.AddXP(player, 100000)
-```
-
-Erwartung:
-
-- der Spieler steigt automatisch im Level
-- mehrere Level-Ups in einem Aufruf werden verarbeitet
-- `LevelUp` wird gesendet, wenn mindestens ein Level gewonnen wurde
-- benoetigte XP kommt aus `XPConfig.GetRequiredXP(level)`
-
-## EconomyService testen
-
-### Geld hinzufuegen
-
-Serverseitig:
-
-```lua
-local EconomyService = require(game.ServerScriptService.Services.EconomyService)
-EconomyService.AddMoney(player, 100)
-```
+- XP addieren.
+- Level-Up.
+- Max-Level.
+- Max-XP.
+- Upgrade-Kosten.
+- fehlende Materialien.
+- volle Output-Stacks.
+- ungültige/negative/NaN Werte.
 
 Erwartung:
 
-- `Money` steigt um `100`
-- `MoneyChanged` wird an den Client gesendet
-- `GetMoney(player)` gibt den aktuellen Wert zurueck
+- keine negativen Mastery-Werte.
+- kein Level über MaxLevel.
+- auf MaxLevel bleibt XP 0.
+- ungültige Eingaben erzeugen keinen Fortschritt.
 
-### Geld entfernen
+## 6. Combat
 
-Serverseitig:
+### Basic Attack
 
-```lua
-local EconomyService = require(game.ServerScriptService.Services.EconomyService)
-EconomyService.RemoveMoney(player, 50)
-```
+- Enemy in Range trifft.
+- Enemy außerhalb Range wird abgewiesen.
+- toter Enemy wird abgewiesen.
+- Player-Target wird abgewiesen.
+- eigener Character als Target wird abgewiesen.
 
-Erwartung:
+### Ability
 
-- Geld wird nur entfernt, wenn genug Geld vorhanden ist
-- `Money` wird niemals negativ
-- `RemoveMoney` gibt `false` zurueck, wenn der Spieler nicht genug Geld hat
+- Server-Cooldown wird eingehalten.
+- clientseitige Cooldown-Anzeige ist nur Presentation/Input-Throttle.
+- Server entscheidet endgültig.
 
-### Kaufpruefung
+### Critical
 
-Serverseitig:
+- kritischer Treffer verändert Damage serverseitig.
+- Crit-State wird nicht dauerhaft am Target gespeichert.
+- Damage Numbers zeigen Crit nur bei bestätigtem Treffer.
 
-```lua
-local EconomyService = require(game.ServerScriptService.Services.EconomyService)
-local canBuy = EconomyService.CanAfford(player, 250)
-```
+## 7. DamageService / security
 
-Erwartung:
+Versuche:
 
-- `true`, wenn `Money >= 250`
-- `false`, wenn nicht genug Geld vorhanden ist
-- keine Profildaten werden veraendert
-
-## InventoryService testen
-
-### Item hinzufuegen
-
-Serverseitig:
-
-```lua
-local InventoryService = require(game.ServerScriptService.Services.InventoryService)
-InventoryService.AddItem(player, "CrystalShard", 5)
-```
+- negativer Schaden
+- NaN / Infinity
+- unbekannter DamageType
+- Range 0
+- negative Range
+- Range > 1000
+- ungültiger Attacker
+- ungültiges Target
+- Player-vs-Player
+- Dodge während Treffer
 
 Erwartung:
 
-- `Inventory.CrystalShard` steigt um `5`
-- `InventoryChanged` wird an den Client gesendet
-- die Stackgroesse wird aus `InventoryConfig.GetMaxStackSize(itemId)` gelesen
+- Request wird abgewiesen oder landet bei 0 applied damage.
+- keine Economy-/XP-/Loot-Seitenwirkung bei abgelehntem Treffer.
 
-### Item entfernen
+## 8. Dodge
 
-Serverseitig:
+Test:
 
-```lua
-local InventoryService = require(game.ServerScriptService.Services.InventoryService)
-InventoryService.RemoveItem(player, "CrystalShard", 2)
-```
-
-Erwartung:
-
-- der Bestand wird nur reduziert, wenn genug Items vorhanden sind
-- bei Bestand `0` wird der Eintrag aus dem Inventar entfernt
-- `RemoveItem` gibt `false` zurueck, wenn der Spieler zu wenig Items hat
-
-### Item pruefen
-
-Serverseitig:
-
-```lua
-local InventoryService = require(game.ServerScriptService.Services.InventoryService)
-local hasItem = InventoryService.HasItem(player, "CrystalShard")
-```
+- normaler Dodge
+- Spam
+- ungültiger Vector
+- NaN/Infinity Vector
+- Dodge während Incoming Hit
+- Respawn während Dodge
+- Leave während Dodge
 
 Erwartung:
 
-- `true`, wenn der Spieler mindestens ein Item besitzt
-- `false`, wenn der Spieler das Item nicht besitzt
-- keine Profildaten werden veraendert
+- Cooldown serverseitig.
+- kurze Invulnerability.
+- ForceField wird entfernt.
+- neuer Character startet ohne Dodge-Zustand.
 
-### Inventar lesen
+## 9. Status Effects
 
-Serverseitig:
+### Burn
 
-```lua
-local InventoryService = require(game.ServerScriptService.Services.InventoryService)
-local inventory = InventoryService.GetInventory(player)
-```
+- bounded tick count.
+- bounded damage.
+- bounded interval.
+- stoppt bei Tod.
+- ignoriert Dodge.
 
-Erwartung:
+### Slow
 
-- es wird eine Kopie des Inventars zurueckgegeben
-- direkte Mutation des Rueckgabewerts veraendert nicht automatisch das Profil
+- bounded multiplier.
+- bounded duration.
+- neuer Slow kann alten Token nicht falsch beenden.
+- Crystal/Mastery-Sync zerstört aktiven Slow nicht.
+- Respawn entfernt alten Zustand.
 
-## CrystalService testen
+## 10. Enemy AI
 
-### Definitionen pruefen
+Für jeden Enemy-Typ:
 
-Serverseitig oder in einem shared Modul:
-
-```lua
-local CrystalSystem = require(game.ReplicatedStorage.Modules.CrystalSystem)
-print(CrystalSystem.IsValid("EMBER"))
-print(CrystalSystem.GetDefinition("TIDE"))
-```
-
-Erwartung:
-
-- `EMBER`, `TIDE` und `GALE` sind gueltig
-- ungueltige IDs geben `false` oder `nil` zurueck
-- `CrystalUtils` veraendert keine Playerdaten
-
-### Kristall freischalten
-
-Serverseitig:
-
-```lua
-local CrystalService = require(game.ServerScriptService.Services.CrystalService)
-CrystalService.UnlockCrystal(player, "EMBER")
-```
+- Aggro
+- Movement
+- Attack
+- Special
+- Status Effect
+- Leash
+- Pathfinding
+- Jump waypoint
+- Death
+- Respawn
 
 Erwartung:
 
-- `EMBER` wird in `PlayerData.Crystals.Owned` gespeichert
-- erneutes Freischalten von `EMBER` gibt `false` zurueck
-- ungueltige IDs werden abgelehnt
-- Definitionen werden nicht in PlayerData gespeichert
+- kein NPC bleibt nach Tod aktiv.
+- keine alten Status-Callbacks bleiben bestehen.
+- keine Doppelspawns.
+- Spezialangriffe nutzen `Special.Range`.
+- Respawn-Wert bleibt kompatibel mit Cleanup-Lifecycle.
 
-### Kristall ausruesten
+## 11. Guardian
 
-Serverseitig:
+- Phase 1 → Phase 2 unter 50% HP.
+- Arena Hazard.
+- Telegraph sichtbar.
+- Telegraph verschwindet/stoppt bei Boss-Tod.
+- neuer Guardian wird nicht von altem Telegraph getroffen.
+- Dodge verhindert Shockwave-Schaden.
+- Reward genau einmal.
+- Quest Reward genau einmal.
+- Respawn genau einmal.
 
-```lua
-local CrystalService = require(game.ServerScriptService.Services.CrystalService)
-CrystalService.UnlockCrystal(player, "EMBER")
-CrystalService.EquipCrystal(player, "EMBER")
-```
+## 12. Quests
 
-Erwartung:
+- FIRST_FIGHT startet korrekt.
+- CRYSTAL_POWER wird nur durch tatsächlichen Ability-Fortschritt erhöht.
+- normale Quest benötigt Ziel-Fortschritt vor Abschluss.
+- Quest-Reihenfolge kann nicht übersprungen werden.
+- Quest-Reward nur einmal.
+- ungültige Progress-Mengen werden abgewiesen.
+- GetQuestData und GetAvailableQuests sind rate-limited.
 
-- `PlayerData.Crystals.Equipped` ist `"EMBER"`
-- es ist immer nur ein Kristall ausgeruestet
-- nicht freigeschaltete Kristalle koennen nicht ausgeruestet werden
+## 13. Daily Bounty
 
-### Kristalle lesen
+- UTC-Tageswechsel.
+- korrekter EnemyType.
+- Goal entspricht Config.
+- Reward entspricht Config.
+- Progress bounded.
+- Claim genau einmal.
+- MaxMoney-Clamp verwendet den tatsächlichen Delta-Wert.
+- manipuliertes RewardMoney aus Save wird nicht vertrauenswürdig übernommen.
 
-Serverseitig:
+## 14. Economy / Inventory / Crafting
 
-```lua
-local CrystalService = require(game.ServerScriptService.Services.CrystalService)
-local owned = CrystalService.GetOwnedCrystals(player)
-local equipped = CrystalService.GetEquippedCrystal(player)
-```
+### Shop
 
-Erwartung:
+- genug Geld.
+- zu wenig Geld.
+- volle Stacks.
+- MaxPerPurchase.
+- ungültige Amounts.
+- Rollback bei failed insertion.
 
-- `GetOwnedCrystals` gibt eine Kopie der IDs zurueck
-- `GetEquippedCrystal` gibt die ausgeruestete ID oder `""` zurueck
+### Selling
 
-### Ability-Basisklasse pruefen
+- Item vorhanden.
+- Item nicht vorhanden.
+- HealthPotion nicht verkäuflich.
+- MaxMoney-Clamp.
+- Item-Rollback bei fehlender Credit-Kapazität.
 
-Serverseitig oder in einem isolierten Module-Test:
+### Crafting
 
-```lua
-local BaseCrystal = require(game.ReplicatedStorage.Modules.Crystal.Abilities.BaseCrystal)
-local ability = BaseCrystal.new("EMBER")
+- gültiges Rezept.
+- ausreichende Inputs.
+- fehlende Inputs.
+- voller Output-Stack.
+- ungültiges Rezept.
+- Rollback bei fehlender Output-Insertion.
 
-print(ability:Initialize(player))
-print(ability:CanActivate())
-print(ability:Activate())
-print(ability:Deactivate())
-print(ability:GetCooldown())
-ability:Destroy()
-```
+### Health Potion
 
-Erwartung:
+- nur bei existierendem Item.
+- nicht bei voller HP.
+- nicht bei totem Character.
+- genau eine Potion pro Nutzung.
+- 0,2s serverseitiges Gate gegen Spam.
 
-- `Initialize` setzt nur Basiszustand
-- `CanActivate` prueft nur Initialisierung und aktiven Zustand
-- `Activate` und `Deactivate` veraendern nur `IsActive`
-- `GetCooldown` gibt `0` zurueck
-- es wird kein Schaden, keine Animation, kein VFX und kein Cooldown-System ausgefuehrt
+## 15. NPC / Dialog
 
-### AbilityRegistry pruefen
+- Crystal Keeper in Reichweite öffnet Dialog.
+- Material Trader in Reichweite öffnet Dialog.
+- NPC außerhalb Reichweite kann nicht als serverautoritative Menüquelle genutzt werden.
+- QUEST öffnet QuestMenu.
+- CRYSTAL öffnet CrystalMenu.
+- SHOP öffnet ShopMenu.
+- INVENTORY öffnet das kombinierte Inventory/Crystal-Menü.
+- CRAFT öffnet CraftingMenu.
+- Dialog schließt beim Übergang ins Zielmenü.
 
-Serverseitig:
+## 16. PC / Mobile
 
-```lua
-local AbilityRegistry = require(game.ReplicatedStorage.Modules.Crystal.Abilities.AbilityRegistry)
-local ability = AbilityRegistry.CreateAbility("EMBER")
-```
+PC:
 
-Erwartung:
+- Basic attack
+- Ability
+- Dodge
+- Inventory
+- Quest
+- Shop
+- Crafting
+- Achievement
 
-- nicht registrierte Kristalle erhalten eine `BaseCrystal`-Instanz
-- Registry enthaelt keine Gameplay-Logik
-- ungueltige Registrierungen geben `false` zurueck
+Mobile:
 
-### CrystalService Ability-Platzhalter pruefen
+- Touch target selection
+- Basic attack
+- Ability
+- Dodge
+- same server cooldowns
+- same server damage validation
+- same reward results
 
-Serverseitig:
+## 17. Animation / VFX / Audio
 
-```lua
-local CrystalService = require(game.ServerScriptService.Services.CrystalService)
-CrystalService.UnlockCrystal(player, "EMBER")
-CrystalService.EquipCrystal(player, "EMBER")
+### Before authored assets
 
-local ability = CrystalService.GetActiveAbility(player)
-local canUse = CrystalService.CanUseAbility(player)
-local activated = CrystalService.ActivateAbility(player)
-local deactivated = CrystalService.DeactivateAbility(player)
-```
+- fehlende AnimationId darf keinen Runtime-Crash erzeugen.
+- fehlende SoundId darf keinen Runtime-Crash erzeugen.
+- VFX bleibt cosmetic.
 
-Erwartung:
+### After authored assets
 
-- `GetActiveAbility` erzeugt eine Placeholder-Ability fuer den ausgeruesteten Kristall
-- `CanUseAbility` delegiert an `BaseCrystal.CanActivate`
-- `ActivateAbility` delegiert an `BaseCrystal.Activate`
-- `DeactivateAbility` delegiert an `BaseCrystal.Deactivate`
-- keine echte Combat-Logik wird ausgefuehrt
+Zuerst EMBER:
 
-## Damage Pipeline testen
+1. Basic animation
+2. Flame Burst animation
+3. Hit VFX
+4. sound
+5. server confirmation
 
-### DamageRequest erstellen
+Danach exakt denselben Vertrag für TIDE und GALE.
 
-Serverseitig:
+Wichtig: Animation markers dürfen niemals XP, Damage, Rewards oder Hit detection auslösen.
 
-```lua
-local CombatSystem = require(game.ReplicatedStorage.Modules.CombatSystem)
-local request = CombatSystem.DamageRequest.new(player, target, 10, CombatSystem.DamageTypes.Crystal, "EMBER")
-```
+## 18. Runtime performance
 
-Erwartung:
+Während Studio-Test prüfen:
 
-- Request enthaelt `Attacker`, `Target`, `Damage`, `DamageType`, `CrystalId` und `Timestamp`
-- es wird keine Validierung und kein Schaden ausgefuehrt
+- NPC CPU usage
+- Pathfinding frequency
+- Remote event frequency
+- RenderStep loops
+- GUI creation/destruction
+- VFX cleanup
+- memory after player leave
+- memory after repeated respawns
 
-### DamageService validieren
+## 19. Regression checklist
 
-Serverseitig:
+Vor jeder großen Änderung:
 
-```lua
-local DamageService = require(game.ServerScriptService.Services.DamageService)
-local result = DamageService.ValidateRequest(request)
-```
-
-Erwartung:
-
-- gueltige Requests geben `Success = true`
-- ungueltiger Angreifer gibt `INVALID_ATTACKER`
-- ungueltiges Ziel gibt `INVALID_TARGET`
-- Schaden `<= 0` gibt `DAMAGE_NOT_POSITIVE`
-- unbekannter DamageType gibt `UNKNOWN_DAMAGE_TYPE`
-
-### Damage vorbereiten
-
-Serverseitig:
-
-```lua
-local processed = DamageService.ProcessDamage(request)
-local applied = DamageService.ApplyDamage(request)
-```
-
-Erwartung:
-
-- `ProcessDamage` validiert und gibt `FinalDamage = request.Damage`
-- `ApplyDamage` gibt `NOT_APPLIED_FRAMEWORK_ONLY`
-- kein Humanoid und kein Spielzustand wird veraendert
-
-## Beruecksichtigte Randfaelle
-
-- DataStore-Zugriffe laufen mit `pcall`
-- DataStore-Zugriffe werden mehrfach versucht
-- fehlgeschlagenes Laden erzeugt nur ein unsicheres In-Memory-Profil
-- unsicher geladene Profile werden nicht automatisch gespeichert
-- fehlende neue Schemafelder werden beim Laden ergaenzt
-- ungueltige Profile werden verworfen und durch Standardwerte ersetzt
-- parallele Saves fuer denselben Spieler werden begrenzt
-- Autosave speichert aktive Profile regelmaessig
-- Spieler-Verlassen loest Speichern aus
-- Server-Shutdown loest Speichern aus
-- XP-Mengen werden auf ganze positive Zahlen normalisiert
-- negative oder ungueltige XP-Mengen werden abgelehnt
-- mehrere Level-Ups in einem XP-Aufruf werden verarbeitet
-- Geld-Mengen werden auf ganze positive Zahlen normalisiert
-- negative oder ungueltige Geld-Mengen werden abgelehnt
-- Geld wird auf `EconomyConfig.MinMoney` und `EconomyConfig.MaxMoney` begrenzt
-- `RemoveMoney` verhindert negative Kontostaende
-- Inventar-Mengen werden auf ganze positive Zahlen normalisiert
-- leere oder ungueltige ItemIds werden abgelehnt
-- Item-Stapel werden durch `InventoryConfig` begrenzt
-- Entfernen von Items erlaubt keine negativen Bestaende
-- alte array-basierte Inventarplatzhalter werden beim Laden in eine Item-Map migriert
-- Crystal IDs werden gegen `CrystalDefinitions` validiert
-- doppelte Kristalle werden abgelehnt
-- ungueltige gespeicherte Kristall-IDs werden bereinigt
-- ein ausgeruesteter Kristall muss auch in `Owned` enthalten sein
-- Ability-Platzhalter werden beim Wechsel des ausgeruesteten Kristalls zerstoert
-- Ability-Platzhalter werden beim Verlassen des Spielers bereinigt
-- Damage Requests ohne Angreifer oder Ziel werden abgelehnt
-- nicht-positive, NaN- und Infinite-Damage-Werte werden abgelehnt
-- unbekannte DamageTypes werden abgelehnt
-
-## Fehlerbehandlung
-
-- Oeffentliche Service-Funktionen geben bei ungueltigen Eingaben `false` oder `nil` zurueck.
-- Ungueltige Crystal IDs erzeugen Warnungen und werden nicht gespeichert.
-- Fehlende Profile werden nicht still ignoriert; Services warnen und brechen ab.
-- DataStore-Fehler werden im `SaveSystem` mit Retry-Logik behandelt.
-
-## Sicherheit
-
-- Crystal Framework v1 nutzt keine Crystal-RemoteEvents.
-- Der Client darf keine Kristalle freischalten oder ausruesten.
-- `CrystalService` ist der einzige vorgesehene Schreibzugriff auf `PlayerData.Crystals`.
-- Definitionen werden nicht in PlayerData gespeichert.
-- Ability-Aktivierung ist aktuell nur serverseitiger Platzhalter ohne Remotes.
-- Damage Pipeline hat keine Client-Remotes und wendet keinen Schaden an.
-
-## Performance
-
-- Crystal-Lookups erfolgen ueber Dictionary-Zugriff per ID.
-- `GetOwnedCrystals` gibt eine Kopie zurueck, um direkte Mutation zu verhindern.
-- Die aktuelle Datenmenge ist klein; `MaxOwnedCrystals` begrenzt Wachstum.
-- AbilityRegistry faellt ohne Lookup-Kosten fuer konkrete Klassen auf `BaseCrystal` zurueck.
-- DamageType-Validierung nutzt Dictionary-Lookups.
-
-## Bekannte Einschraenkungen
-
-- Es gibt noch keine automatisierten Luau-Unit-Tests.
-- DataStore-Verhalten kann in Studio von Live-Servern abweichen.
-- Es gibt noch keine Session-Lock-Implementierung gegen gleichzeitige Server-Sessions desselben Spielers.
-- `SaveSystem` nutzt einfache Retry-Logik, aber noch keine Backoff-Strategie mit zufaelliger Streuung.
-- Es gibt noch kein Admin-Testkommando und keine Debug-Konsole im Spiel.
-- RemoteEvents informieren nur spaetere UI-Systeme; es gibt aktuell keine UI, die diese Events anzeigt.
-- Shop- und Haendlerlogik ist vorbereitet, aber noch nicht implementiert.
-- Economy- und XP-Aenderungen werden im Profil aktualisiert, aber nicht sofort nach jedem Aufruf gespeichert; Persistenz erfolgt ueber Autosave, Verlassen oder Shutdown.
-- Inventory-Aenderungen werden im Profil aktualisiert, aber nicht sofort nach jedem Aufruf gespeichert; Persistenz erfolgt ueber Autosave, Verlassen oder Shutdown.
-- Es gibt noch keine Gewichtslimits, Slotlimits, Item-Rarities oder serverseitige Drop-Tabellen.
-- Crystal Framework v1 enthaelt noch keine Faehigkeiten, keinen Schaden, keine Animationen, keine VFX, keine Cooldowns und keine UI.
-- Ability Framework enthaelt keine echten Ability-Klassen, keine Hitboxen, keine Ressourcen, keine Status-Effekte und keine Cooldown-Berechnung.
-- Damage Pipeline enthaelt keine Schadensformeln, keine Hitboxen, kein Blocken, kein Ausweichen, keine kritischen Treffer, keine Ruestung und keine NPC-KI.
-
-## Naechste Erweiterungen
-
-- Crystal-Level und Upgrade-Kosten definieren.
-- Combat-System an `GetEquippedCrystal` anbinden.
-- Serverseitige Reward-Systeme an `UnlockCrystal` anbinden.
-- Konkrete Ability-Klassen registrieren, sobald das Combat-System spezifiziert ist.
-- Passive Faehigkeiten im `PassiveRegistry` formal definieren.
-- DamageTarget-Modell fuer Spieler, NPCs und Umweltschaden definieren.
-- Erst nach Zielmodell echten Humanoid-Schaden in `ApplyDamage` ergaenzen.
-- Optional spaeter sichere Remotes fuer reine Client-Anfragen planen.
+- keine Legacy SaveSystem references
+- keine Legacy Crystal modules
+- kein Legacy StatusSpeedGuard mapping
+- keine direkten `TakeDamage()`-Pfade außerhalb DamageService
+- keine doppelte `OnServerInvoke` ownership
+- keine unbestätigten Hit-VFX
+- keine falschen Rarity definitions
+- Ancient bleibt keine Rarity
+- White Queen Story unverändert
+- zweite Welt bleibt langfristig geheim
+- `main` bleibt unangetastet
