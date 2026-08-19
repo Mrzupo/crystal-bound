@@ -1,6 +1,7 @@
 return {
 	BaseWalkSpeed = 16,
 	MinWalkSpeed = 6,
+	MaxWalkSpeedBonus = 20,
 	MinSlowMultiplier = 0.2,
 	MaxSlowMultiplier = 1,
 	MaxObservedSpeed = 90,
