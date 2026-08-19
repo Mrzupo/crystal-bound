@@ -34,3 +34,7 @@ remote.OnServerInvoke = function(player, npcId)
 		Options = config.Options,
 	}
 end
+
+Players.PlayerRemoving:Connect(function(player)
+	nextRequest[player] = nil
+end)
