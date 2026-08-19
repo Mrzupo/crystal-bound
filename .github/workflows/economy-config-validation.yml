@@ -14,17 +14,29 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
           player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
           service = Path("src/ServerScriptService/Services/EconomyService.lua").read_text(encoding="utf-8")
-          required = ("StartingMoney = 100", "MinMoney = 0", "MaxMoney = 1000000000")
-          for marker in required:
-              if marker not in economy:
-                  raise SystemExit(f"EconomyConfig missing {marker}")
+          match = re.search(
+              r"StartingMoney\s*=\s*([0-9]+).*?MinMoney\s*=\s*([0-9]+).*?MaxMoney\s*=\s*([0-9]+)",
+              economy,
+              re.S,
+          )
+          if not match:
+              raise SystemExit("EconomyConfig must define StartingMoney, MinMoney and MaxMoney as non-negative integers")
+          starting, minimum, maximum = map(int, match.groups())
+          if minimum < 0 or maximum < minimum:
+              raise SystemExit("EconomyConfig money bounds are invalid")
+          if not minimum <= starting <= maximum:
+              raise SystemExit("EconomyConfig.StartingMoney must be within MinMoney..MaxMoney")
           if "Money = EconomyConfig.StartingMoney" not in player_data:
               raise SystemExit("PlayerData must consume EconomyConfig.StartingMoney")
           if "function nonNegativeInteger" not in service:
               raise SystemExit("EconomyService must enforce integer-only money transaction amounts")
           if "amount % 1 ~= 0" not in service:
               raise SystemExit("EconomyService must reject fractional money amounts")
-          print("Economy config and integer transaction contract validated.")
+          if "math.clamp(before + amount, Config.MinMoney, Config.MaxMoney)" not in service:
+              raise SystemExit("EconomyService must clamp money to canonical configured bounds")
+          print(f"Economy config validated: starting={starting}, min={minimum}, max={maximum}.")
