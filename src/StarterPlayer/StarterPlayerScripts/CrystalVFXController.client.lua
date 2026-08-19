@@ -23,6 +23,17 @@ local ACTION_GUARD = {
 
 local lastPlayed = {}
 
+local function hasServerConfirmation(action, crystalId)
+	local authorizedAt = tonumber(player:GetAttribute("CrystalVFXAuthorizedAt"))
+	local authorizedAction = player:GetAttribute("CrystalVFXAuthorizedAction")
+	local authorizedCrystal = player:GetAttribute("CrystalVFXAuthorizedCrystal")
+	if type(authorizedAt) ~= "number" or authorizedAt ~= authorizedAt or authorizedAt == math.huge or authorizedAt == -math.huge then
+		return false
+	end
+	if authorizedAction ~= action or authorizedCrystal ~= crystalId then return false end
+	return os.clock() - authorizedAt <= 0.18
+end
+
 local function getRoot()
 	local character = player.Character
 	return character and character:FindFirstChild("HumanoidRootPart")
@@ -82,6 +93,8 @@ function VFX.Play(action, crystalId)
 	if action ~= "Basic" and action ~= "Ability" then return false end
 
 	crystalId = crystalId or player:GetAttribute("EquippedCrystal") or "EMBER"
+	if not hasServerConfirmation(action, crystalId) then return false end
+
 	local now = os.clock()
 	local key = action
 	local guard = ACTION_GUARD[action] or 0.08
