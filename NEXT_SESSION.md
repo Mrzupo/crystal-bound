@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **908 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **929 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Current state
@@ -36,19 +36,19 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; no Crystal-based fallback rewards.
 - Inventory corrupt stacks are clamped before mutation.
 - Quest progress rejects invalid/non-finite/non-integer increments.
-- CrystalSystem, PlayerData and CrystalMastery now reject malformed non-integer/non-finite Crystal UnlockLevels consistently.
-- Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`.
+- CrystalSystem, PlayerData and CrystalMastery accept only complete Crystal configurations with finite integer UnlockLevels plus Definition/BasicAttack/Ability/Passive data.
+- Crystal mastery persistence drops malformed/incomplete Crystal IDs rather than synthesizing state for them.
+- Daily Bounty payout has one server owner and marks the bounty claimed before payout.
+- Achievement payout has one server owner and only pays newly unlocked achievements.
 - Guardian telegraph binds to the exact Guardian instance.
 - NPC Burn/Slow only apply after confirmed damage.
-- NPC dialog closes when transitioning into destination menus.
-- Crystal VFX requires one-shot server confirmation and handles late confirmation after Crystal switching.
-- PlayerService Save/Remove guarantees operation-lock release and clears local state after final-save failures while retaining the persistent session lock.
-- Final removal treats failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
-- SessionHeartbeat uses weak failure state.
-- `StatusSpeedGuardV2` continuously restores server-derived WalkSpeed even without an active Slow effect, immediately corrects server-observed `WalkSpeed` changes, and prevents stale Character listeners across respawns.
-- CombatPresentation keeps one current Character HealthChanged listener across respawns.
-- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release, Crystal upgrade transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, and strict Crystal config/mastery ID validation.
-- Studio playtest matrix covers the latest transaction, persistence, movement-security and Crystal configuration cases.
+- NPCMenuBridge validates server-side interaction distance before opening NPC menus.
+- PlayerService Save/Remove guarantees operation-lock release and preserves persistent locks after failed final saves/releases.
+- `StatusSpeedGuardV2` continuously restores server-derived WalkSpeed, immediately corrects property changes, and prevents stale Character listeners across respawns.
+- DodgeService explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
+- RemoteFunction contract now matches the actual Bootstrap rate-limit variable names.
+- Portal contract now verifies portal gates consume canonical `WorldConfig` level fields instead of hardcoded numeric assertions.
+- Studio playtest matrix covers the latest transaction, persistence, movement-security, Crystal configuration and NPC interaction cases.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
 ## Security / authority rules
@@ -72,7 +72,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
 
 ## Next steps
-1. Continue static audits only for concrete remaining issues.
+1. Continue only concrete static audits where risk remains.
 2. Move toward Roblox Studio runtime validation.
 3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first.
 4. Repeat the asset contract for TIDE and GALE.
