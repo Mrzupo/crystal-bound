@@ -58,11 +58,20 @@ hint.TextSize = 13
 hint.TextXAlignment = Enum.TextXAlignment.Right
 hint.Parent = panel
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function refresh()
-	local enemy = player:GetAttribute("DailyBountyEnemy") or "Unknown"
-	local progress = player:GetAttribute("DailyBountyProgress") or 0
-	local goal = player:GetAttribute("DailyBountyGoal") or 1
-	local reward = player:GetAttribute("DailyBountyReward") or 0
+	local rawEnemy = player:GetAttribute("DailyBountyEnemy")
+	local enemy = type(rawEnemy) == "string" and rawEnemy ~= "" and rawEnemy or "Unknown"
+	local progress = math.max(0, math.floor(finiteNumber(player:GetAttribute("DailyBountyProgress"), 0)))
+	local goal = math.max(1, math.floor(finiteNumber(player:GetAttribute("DailyBountyGoal"), 1)))
+	local reward = math.max(0, math.floor(finiteNumber(player:GetAttribute("DailyBountyReward"), 0)))
 	local claimed = player:GetAttribute("DailyBountyClaimed") == true
 	if claimed then
 		details.Text = string.format("Today's Target: %s\nProgress: %d / %d\nReward: %d Money\n\n✓ Bounty completed", enemy, progress, goal, reward)
