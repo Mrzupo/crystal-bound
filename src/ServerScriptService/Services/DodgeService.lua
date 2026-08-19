@@ -7,10 +7,16 @@ local DodgeService = {}
 local cooldowns = setmetatable({}, { __mode = "k" })
 local playerConnections = setmetatable({}, { __mode = "k" })
 
-local COOLDOWN = math.max(0.1, tonumber(DodgeConfig.Cooldown) or 2.5)
-local INVULNERABILITY = math.clamp(tonumber(DodgeConfig.Invulnerability) or 0.45, 0.05, 2)
-local BOOST = math.clamp(tonumber(DodgeConfig.Boost) or 42, 1, 100)
-local MAX_DIRECTION_MAGNITUDE = math.max(1, tonumber(DodgeConfig.MaxDirectionMagnitude) or 1000)
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
+local COOLDOWN = math.max(0.1, finiteNumber(DodgeConfig.Cooldown, 2.5))
+local INVULNERABILITY = math.clamp(finiteNumber(DodgeConfig.Invulnerability, 0.45), 0.05, 2)
+local BOOST = math.clamp(finiteNumber(DodgeConfig.Boost, 42), 1, 100)
+local MAX_DIRECTION_MAGNITUDE = math.clamp(finiteNumber(DodgeConfig.MaxDirectionMagnitude, 1000), 1, 10000)
 
 local function clearForceField(character)
 	local forceField = character and character:FindFirstChild("CrystalBoundDodgeForceField")
@@ -102,6 +108,7 @@ function DodgeService.ApplyDamage(player, humanoid, amount, attacker, damageType
 		if not safeRange or safeRange ~= safeRange or safeRange == math.huge or safeRange == -math.huge or safeRange <= 0 then
 			return false
 		end
+		safeRange = math.clamp(safeRange, 0.1, 1000)
 	end
 	local request = {
 		Attacker = attacker,
