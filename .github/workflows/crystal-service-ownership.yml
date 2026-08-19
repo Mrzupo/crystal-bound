@@ -1,0 +1,23 @@
+name: Crystal Service Ownership Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-crystal-service-ownership:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Crystal ownership boundary
+        shell: python
+        run: |
+          from pathlib import Path
+
+          service = Path("src/ServerScriptService/Services/CrystalService.lua").read_text(encoding="utf-8")
+          if "table.insert(result, crystalId)" not in service:
+              raise SystemExit("CrystalService.GetOwnedCrystals must return a copy of the owned-crystal list")
+          if "return profile.Crystals.Owned" in service:
+              raise SystemExit("CrystalService must not expose the internal owned-crystal table")
+          print("CrystalService ownership boundary validated.")
