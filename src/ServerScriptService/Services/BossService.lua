@@ -176,26 +176,50 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 	end)
 	humanoid.Died:Connect(function()
 		if model:GetAttribute("Rewarded") then return end
-		model:SetAttribute("Rewarded", true)
+
 		local creator = DamageService.GetLastAttacker(model)
 		local player = creator and (creator:IsA("Player") and creator or Players:GetPlayerFromCharacter(creator))
-		if player then
-			local PlayerService = require(script.Parent.PlayerService); local profile = PlayerService.GetProfile(player)
-			if profile then
-				XPService.AddXP(profile, config.XP)
-				EconomyService.AddMoney(profile, config.Money)
-				local coreAdded = InventoryService.AddItem(profile, config.Drop, 1)
-				profile.Stats.BossesDefeated = (profile.Stats.BossesDefeated or 0) + 1
-				QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
-				PlayerService.Sync(player)
-				if coreAdded > 0 then
-					player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
-				else
-					player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core stack is full.")
-				end
-				local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
-			end
+		if not player then return end
+
+		local PlayerService = require(script.Parent.PlayerService)
+		local profile = PlayerService.GetProfile(player)
+		if not profile then return end
+
+		local xpReward = finiteNumber(config.XP)
+		local moneyReward = finiteNumber(config.Money)
+		local dropId = type(config.Drop) == "string" and config.Drop or nil
+		if xpReward == nil or xpReward < 0 or xpReward % 1 ~= 0 or moneyReward == nil or moneyReward < 0 or moneyReward % 1 ~= 0 or not dropId then
+			warn("Crystal Bound: refusing invalid Guardian reward configuration")
+			return
 		end
+		local beforeMoney = profile.Money
+		local beforeInventory = profile.Inventory and profile.Inventory[dropId] or 0
+		local beforeBossCount = profile.Stats and profile.Stats.BossesDefeated or 0
+
+		local _, _, levelsGained = XPService.AddXP(profile, xpReward)
+		local _, moneyEarned = EconomyService.AddMoney(profile, moneyReward)
+		local coreAdded = InventoryService.AddItem(profile, dropId, 1)
+		if not profile.Stats then profile.Stats = {} end
+		profile.Stats.BossesDefeated = (finiteNumber(beforeBossCount, 0) or 0) + 1
+		local questCompleted = QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
+		if not questCompleted then
+			profile.Stats.BossesDefeated = beforeBossCount
+			local rollbackMoney = finiteNumber(beforeMoney, 0) or 0
+			profile.Money = rollbackMoney
+			if profile.Inventory then profile.Inventory[dropId] = beforeInventory end
+			warn("Crystal Bound: Guardian reward transaction rolled back because quest completion failed")
+			return
+		end
+
+		model:SetAttribute("Rewarded", true)
+		PlayerService.Sync(player)
+		if levelsGained or moneyEarned or coreAdded > 0 then end
+		if coreAdded > 0 then
+			player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
+		else
+			player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core stack is full.")
+		end
+		local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
 		DamageService.ClearTarget(model)
 		task.delay(1.5, function()
 			if model.Parent then model:Destroy() end
