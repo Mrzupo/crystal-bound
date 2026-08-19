@@ -1,0 +1,40 @@
+name: Contract Path Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-contract-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate workflow-referenced repository paths
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          repo = Path(".")
+          problems = []
+          pattern = re.compile(r'[\"\']((?:src|\.github)/[^\"\']+?\.(?:lua|json|md|yml|yaml))[\"\']')
+
+          for workflow in Path(".github/workflows").glob("*.yml"):
+              text = workflow.read_text(encoding="utf-8")
+              for path in sorted(set(pattern.findall(text))):
+                  if not (repo / path).is_file():
+                      problems.append(f"{workflow}: missing referenced path {path}")
+
+          for workflow in Path(".github/workflows").glob("*.yaml"):
+              text = workflow.read_text(encoding="utf-8")
+              for path in sorted(set(pattern.findall(text))):
+                  if not (repo / path).is_file():
+                      problems.append(f"{workflow}: missing referenced path {path}")
+
+          if problems:
+              print("Contract path problems:")
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("All workflow-referenced repository paths exist.")
