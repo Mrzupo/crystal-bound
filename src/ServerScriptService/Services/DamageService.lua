@@ -51,7 +51,7 @@ end
 
 local function rememberAttacker(targetModel, attacker)
 	if attacker:IsA("Player") then
-		lastAttackers[targetModel] = { Kind = "Player", UserId = attacker.UserId }
+		lastAttackers[targetModel] = { Kind = "Player", Instance = attacker, UserId = attacker.UserId }
 	else
 		lastAttackers[targetModel] = { Kind = "Model", Instance = attacker }
 	end
@@ -107,11 +107,16 @@ function DamageService.GetLastAttacker(targetModel)
 	local record = lastAttackers[targetModel]
 	if not record then return nil end
 	if record.Kind == "Player" then
-		local player = Players:GetPlayerByUserId(record.UserId)
-		if player then return player end
+		local player = record.Instance
+		if player and player.Parent and Players:GetPlayerByUserId(record.UserId) == player then
+			return player
+		end
 	elseif record.Kind == "Model" then
 		local model = record.Instance
-		if model and model.Parent then return model end
+		local npcFolder = getNPCRoot()
+		if model and model.Parent and npcFolder and model:IsDescendantOf(npcFolder) and model:GetAttribute("Enemy") == true then
+			return model
+		end
 	end
 	lastAttackers[targetModel] = nil
 	return nil
