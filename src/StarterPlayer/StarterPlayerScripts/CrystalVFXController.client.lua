@@ -23,6 +23,14 @@ local ACTION_GUARD = {
 
 local lastPlayed = {}
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function hasServerConfirmation(action, crystalId)
 	local authorizedAt = tonumber(player:GetAttribute("CrystalVFXAuthorizedAt"))
 	local authorizedAction = player:GetAttribute("CrystalVFXAuthorizedAction")
@@ -88,7 +96,7 @@ local function playSound(root, definition)
 	end
 
 	sound.Name = "CrystalBoundAbilitySound"
-	sound.Volume = math.clamp(tonumber(definition.SoundVolume) or 0.5, 0, 1)
+	sound.Volume = math.clamp(finiteNumber(definition.SoundVolume, 0.5), 0, 1)
 	sound.RollOffMaxDistance = 70
 	sound.Parent = root
 	sound:Play()
@@ -116,8 +124,8 @@ function VFX.Play(action, crystalId)
 	local crystal = animationConfig[crystalId] or animationConfig.EMBER
 	local definition = crystal and crystal[action]
 	local forward = root.CFrame.LookVector
-	local offset = tonumber(definition and definition.VFXOffset) or (action == "Ability" and 4.5 or 3)
-	local scale = tonumber(definition and definition.VFXScale) or (action == "Ability" and 0.7 or 0.38)
+	local offset = math.clamp(finiteNumber(definition and definition.VFXOffset, action == "Ability" and 4.5 or 3), 0, 50)
+	local scale = math.clamp(finiteNumber(definition and definition.VFXScale, action == "Ability" and 0.7 or 0.38), 0.05, 10)
 
 	makeBurst(root.Position + forward * offset + Vector3.new(0, 0.8, 0), crystalId, scale)
 	playSound(root, definition)
