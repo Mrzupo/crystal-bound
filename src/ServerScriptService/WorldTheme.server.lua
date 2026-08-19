@@ -24,7 +24,25 @@ local portalTargets = {
 }
 
 local portalGrace = math.clamp(tonumber(MovementConfig.GraceDuration) or 0.6, 0.1, 3)
-local portalConnections = {}
+local portalTolerance = math.clamp(tonumber(MovementConfig.PortalArrivalTolerance) or 18, 4, 50)
+local portalCandidates = setmetatable({}, { __mode = "k" })
+local portalConnections = setmetatable({}, { __mode = "k" })
+
+local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
+	if not player.Parent or player.Character ~= character then return end
+	local profile = PlayerService.GetProfile(player)
+	if not profile or profile.Level < requiredLevel then return end
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local displacement = (root.Position - beforePosition).Magnitude
+	local destinationError = (root.Position - destination).Magnitude
+	if destinationError > portalTolerance or displacement <= math.max(2, portalTolerance * 0.25) then
+		return
+	end
+	player:SetAttribute("PortalExpectedDestination", destination)
+	player:SetAttribute("PortalMovementGraceUntil", os.clock() + portalGrace)
+	portalCandidates[player] = nil
+end
 
 local function bindPortal(portal)
 	if not portal:IsA("BasePart") then return end
@@ -33,11 +51,24 @@ local function bindPortal(portal)
 	portalConnections[portal] = portal.Touched:Connect(function(hit)
 		local character = hit and hit:FindFirstAncestorOfClass("Model")
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player then return end
+		if not player or player.Character ~= character then return end
 		local profile = PlayerService.GetProfile(player)
 		if not profile or profile.Level < target.RequiredLevel then return end
-		player:SetAttribute("PortalExpectedDestination", target.Destination)
-		player:SetAttribute("PortalMovementGraceUntil", os.clock() + portalGrace)
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+		portalCandidates[player] = {
+			Character = character,
+			Destination = target.Destination,
+			RequiredLevel = target.RequiredLevel,
+			BeforePosition = root.Position,
+			ExpiresAt = os.clock() + math.max(0.5, portalGrace + 0.5),
+		}
+		task.defer(function()
+			local candidate = portalCandidates[player]
+			if not candidate or candidate.Character ~= character or candidate.Destination ~= target.Destination then return end
+			if os.clock() > candidate.ExpiresAt then portalCandidates[player] = nil; return end
+			tryArmArrival(player, character, candidate.Destination, candidate.BeforePosition, candidate.RequiredLevel)
+		end)
 	end)
 end
 
@@ -63,7 +94,25 @@ for islandName, theme in pairs(themes) do
 	ground.Material = theme.Material
 end
 
+Players.PlayerRemoving:Connect(function(player)
+	portalCandidates[player] = nil
+end)
+
 bindExistingPortals()
 islands.DescendantAdded:Connect(bindPortal)
+
+task.spawn(function()
+	while islands.Parent do
+		local now = os.clock()
+		for player, candidate in pairs(portalCandidates) do
+			if now > candidate.ExpiresAt then
+				portalCandidates[player] = nil
+			elseif player.Parent and player.Character == candidate.Character then
+				tryArmArrival(player, candidate.Character, candidate.Destination, candidate.BeforePosition, candidate.RequiredLevel)
+			end
+		end
+		task.wait(0.1)
+	end
+end)
 
 print("Crystal Bound world themes and portal movement authority ready")
