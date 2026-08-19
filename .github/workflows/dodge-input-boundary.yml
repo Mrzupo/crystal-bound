@@ -1,0 +1,31 @@
+name: Dodge Input Boundary
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server-side dodge input boundary
+        shell: python
+        run: |
+          from pathlib import Path
+
+          service = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
+          required = [
+              'local function validDirection(direction)',
+              'typeof(direction) ~= "Vector3"',
+              'not finiteComponent(direction.X)',
+              'not finiteComponent(direction.Y)',
+              'not finiteComponent(direction.Z)',
+              'direction.Magnitude <= MAX_DIRECTION_MAGNITUDE',
+              'if requested ~= nil and not validDirection(requested) then',
+          ]
+          missing = [marker for marker in required if marker not in service]
+          if missing:
+              raise SystemExit("missing Dodge input boundary contract markers: " + ", ".join(missing))
+          print("Dodge server input boundary contract validated.")
