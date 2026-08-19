@@ -1,0 +1,26 @@
+name: Crafting Input Boundary
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce integer crafting request validation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/CraftingService.lua').read_text(encoding='utf-8')
+          required = [
+              'number == nil or number % 1 ~= 0',
+              'Craft amount must be a positive integer.',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing crafting input boundary markers: ' + ', '.join(missing))
+          print('Crafting input boundary validated.')
+          PY
