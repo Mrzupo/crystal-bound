@@ -3,6 +3,9 @@ local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
+local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
+local XPConfig = require(ReplicatedStorage.Config.XPConfig)
+local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 local InventoryService = require(script.Parent.InventoryService)
 local EconomyService = require(script.Parent.EconomyService)
 local XPService = require(script.Parent.XPService)
@@ -182,7 +185,6 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 	end)
 	humanoid.Died:Connect(function()
 		if model:GetAttribute("Rewarded") then return end
-		model:SetAttribute("Rewarded", true)
 
 		local creator = DamageService.GetLastAttacker(model)
 		local player = creator and (creator:IsA("Player") and creator or Players:GetPlayerFromCharacter(creator))
@@ -191,8 +193,17 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		local xpReward = finiteNumber(config.XP)
 		local moneyReward = finiteNumber(config.Money)
 		local dropId = type(config.Drop) == "string" and config.Drop or nil
+		local validRewardConfig = xpReward ~= nil and xpReward >= 0 and xpReward % 1 == 0
+			and xpReward <= XPConfig.MaxExperience
+			and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0
+			and moneyReward <= EconomyConfig.MaxMoney
+			and dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil
 
-		if player and profile and xpReward ~= nil and xpReward >= 0 and xpReward % 1 == 0 and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0 and dropId then
+		if validRewardConfig then
+			model:SetAttribute("Rewarded", true)
+		end
+
+		if player and profile and validRewardConfig then
 			XPService.AddXP(profile, xpReward)
 			EconomyService.AddMoney(profile, moneyReward)
 			local coreAdded = InventoryService.AddItem(profile, dropId, 1)
