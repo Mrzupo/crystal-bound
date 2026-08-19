@@ -35,17 +35,6 @@ local function cleanupHumanoidConnections(player)
 	PlayerService.HumanoidConnections[player] = nil
 end
 
-local function ensureAnimator(character)
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return nil end
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
-	end
-	return animator
-end
-
 local function bindHumanoid(player, humanoid)
 	cleanupHumanoidConnections(player)
 	if not humanoid then return end
@@ -65,6 +54,17 @@ local function bindHumanoid(player, humanoid)
 		end
 	end))
 	updateHealth()
+end
+
+local function ensureAnimator(character)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return nil end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	return animator
 end
 
 local function syncTitleTag(character, title)
@@ -214,39 +214,49 @@ end
 function PlayerService.Save(player)
 	if not PlayerService.Profiles[player] then return false end
 	if not acquireOperation(player) then return false end
-	local ok = false
-	local profile = PlayerService.Profiles[player]
-	if profile then
+	local success, result = xpcall(function()
+		local profile = PlayerService.Profiles[player]
+		if not profile then return false end
 		PlayerService.Sync(player)
-		ok = SafeProfileStore.Save(player, profile) == true
-		player:SetAttribute("LastSaveOk", ok)
-	end
+		return SafeProfileStore.Save(player, profile) == true
+	end, debug.traceback)
 	releaseOperation(player)
-	return ok
+	if not success then
+		warn(("Crystal Bound: PlayerService.Save failed for %s: %s"):format(player.Name, tostring(result)))
+		return false
+	end
+	player:SetAttribute("LastSaveOk", result == true)
+	return result == true
 end
 
 function PlayerService.Remove(player)
 	if not PlayerService.Profiles[player] then return true end
 	if not acquireOperation(player) then return false end
-	local profile = PlayerService.Profiles[player]
-	if not profile then releaseOperation(player); return true end
-	PlayerService.Sync(player)
-	local saved = SafeProfileStore.Save(player, profile) == true
-	player:SetAttribute("LastSaveOk", saved)
-	if not saved then
-		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
+	local success, result = xpcall(function()
+		local profile = PlayerService.Profiles[player]
+		if not profile then return { Saved = true } end
+		PlayerService.Sync(player)
+		local saved = SafeProfileStore.Save(player, profile) == true
+		player:SetAttribute("LastSaveOk", saved)
+		if not saved then
+			return { Saved = false }
+		end
+		SafeProfileStore.Release(player)
 		if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
 		cleanupHumanoidConnections(player)
 		PlayerService.Profiles[player] = nil
-		releaseOperation(player)
+		return { Saved = true }
+	end, debug.traceback)
+	releaseOperation(player)
+
+	if not success then
+		warn(("Crystal Bound: PlayerService.Remove failed for %s: %s"):format(player.Name, tostring(result)))
 		return false
 	end
-
-	SafeProfileStore.Release(player)
-	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
-	cleanupHumanoidConnections(player)
-	PlayerService.Profiles[player] = nil
-	releaseOperation(player)
+	if not result or not result.Saved then
+		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
+		return false
+	end
 	return true
 end
 
