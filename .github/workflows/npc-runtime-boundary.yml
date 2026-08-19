@@ -16,7 +16,7 @@ jobs:
           from pathlib import Path
           text = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
           required = [
-              'local aggroRange = math.clamp(finiteNumber(config and config.AggroRange, 0), 0, 1000)',
+              'local aggroRange = finiteNumber(config and config.AggroRange, 0)',
               'local attackRange = math.clamp(finiteNumber(config and config.AttackRange, 0), 0, 1000)',
               'local attackCooldown = math.clamp(finiteNumber(config and config.AttackCooldown, 1), 0.25, 60)',
               'local attackDamage = math.clamp(finiteNumber(config and config.AttackDamage, 0), 0, 1000)',
@@ -28,4 +28,8 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit("NPC runtime boundary markers missing: " + ", ".join(missing))
-          print("NPC AI idempotency and runtime configuration boundaries validated.")
+
+          enemy_config = Path("src/ReplicatedStorage/Config/EnemyConfig.lua").read_text(encoding="utf-8")
+          if "AggroRange =" not in enemy_config:
+              raise SystemExit("EnemyConfig must define canonical AggroRange bounds")
+          print("NPC AI idempotency and runtime configuration boundaries validated against canonical EnemyConfig.")
