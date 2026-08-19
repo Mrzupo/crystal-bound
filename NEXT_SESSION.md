@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **901 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **908 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Current state
@@ -36,7 +36,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; no Crystal-based fallback rewards.
 - Inventory corrupt stacks are clamped before mutation.
 - Quest progress rejects invalid/non-finite/non-integer increments.
-- Crystal unlock boundary rejects malformed unlock-level configuration.
+- CrystalSystem, PlayerData and CrystalMastery now reject malformed non-integer/non-finite Crystal UnlockLevels consistently.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`.
 - Guardian telegraph binds to the exact Guardian instance.
 - NPC Burn/Slow only apply after confirmed damage.
@@ -47,8 +47,8 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - SessionHeartbeat uses weak failure state.
 - `StatusSpeedGuardV2` continuously restores server-derived WalkSpeed even without an active Slow effect, immediately corrects server-observed `WalkSpeed` changes, and prevents stale Character listeners across respawns.
 - CombatPresentation keeps one current Character HealthChanged listener across respawns.
-- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release, Crystal upgrade transaction rollback and StatusSpeedGuard baseline/immediate/stale-character enforcement.
-- Studio playtest matrix covers the latest transaction, persistence and movement-security cases.
+- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release, Crystal upgrade transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, and strict Crystal config/mastery ID validation.
+- Studio playtest matrix covers the latest transaction, persistence, movement-security and Crystal configuration cases.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
 ## Security / authority rules
@@ -75,7 +75,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 1. Continue static audits only for concrete remaining issues.
 2. Move toward Roblox Studio runtime validation.
 3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first.
-4. Repeat asset contract for TIDE and GALE.
+4. Repeat the asset contract for TIDE and GALE.
 5. Test combat, boss, AI, persistence, movement and mobile with real Studio Output.
 6. Decide final Crystal acquisition model before Mining/Digging implementation.
 
