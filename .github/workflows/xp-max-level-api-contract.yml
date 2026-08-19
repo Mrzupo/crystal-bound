@@ -1,0 +1,21 @@
+name: XP Max Level API Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate max-level XP semantics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/XPService.lua').read_text(encoding='utf-8')
+          if 'if level >= XPConfig.MaxLevel then return 0 end' not in text:
+              raise SystemExit('XPService.GetRequiredXP must return 0 at max level')
+          print('XP max-level API contract validated.')
+          PY
