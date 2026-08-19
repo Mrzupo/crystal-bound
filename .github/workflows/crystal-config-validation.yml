@@ -47,6 +47,19 @@ jobs:
                   if marker not in config:
                       problems.append(f"CrystalConfig {section} missing {crystal}")
 
+          for field, values in re.findall(r"\b(Damage|Range|Cooldown|HealAmount|UnlockLevels)\s*=\s*([0-9]+(?:\.[0-9]+)?)", config):
+              value = float(values)
+              if field == "Damage" and not 0 <= value <= 1000:
+                  problems.append(f"Crystal {field} outside 0..1000: {value}")
+              elif field == "Range" and not 0.1 <= value <= 1000:
+                  problems.append(f"Crystal {field} outside 0.1..1000: {value}")
+              elif field == "Cooldown" and not 0.05 <= value <= 60:
+                  problems.append(f"Crystal {field} outside 0.05..60: {value}")
+              elif field == "HealAmount" and not 0 <= value <= 1000:
+                  problems.append(f"Crystal {field} outside 0..1000: {value}")
+              elif field == "UnlockLevels" and not 1 <= value <= 1000:
+                  problems.append(f"Crystal {field} outside 1..1000: {value}")
+
           tide_block = re.search(r'TIDE\s*=\s*\{(?P<body>.*?)\n\s*\}', config, re.S)
           if not tide_block or not re.search(r'HealAmount\s*=\s*([0-9]+(?:\.[0-9]+)?)', tide_block.group("body")):
               problems.append("CrystalConfig TIDE ability must define HealAmount")
@@ -80,4 +93,4 @@ jobs:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("CrystalConfig contract validated, including strict complete-config Crystal IDs.")
+          print("CrystalConfig contract validated, including strict complete-config IDs and semantic numeric bounds.")
