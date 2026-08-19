@@ -29,6 +29,7 @@ jobs:
               'local allowed = MAX_OBSERVED_SPEED * sampleDt + EXTRA_DISTANCE_TOLERANCE',
               'root.CFrame = CFrame.new(snapshot.Position)',
               'root.AssemblyLinearVelocity = Vector3.zero',
+              'positionState[player] = {',
               'isValidPortalArrival(player, root, now)',
           ]
           missing = [marker for marker in required if marker not in server_guard]
