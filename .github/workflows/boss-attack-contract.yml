@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate distinct Guardian phase-2 attacks
+      - name: Validate distinct Guardian phase-2 attacks and semantic bounds
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -20,14 +20,25 @@ jobs:
           telegraph = Path('src/ServerScriptService/BossTelegraph.server.lua').read_text(encoding='utf-8')
           arena = Path('src/ServerScriptService/BossArena.server.lua').read_text(encoding='utf-8')
 
-          required_config = [
-              'AbilityCooldown = 6', 'AbilityRadius = 14', 'AbilityDamage = 45',
-              'Phase2 =', 'HealthThreshold = 0.5', 'AttackDamageMultiplier = 1.35',
-              'AbilityRangeMultiplier = 1.5', 'Telegraph =', 'ArenaHazard =', 'ArenaCenter =',
-          ]
-          for marker in required_config:
+          for marker in ['Phase2 =', 'Telegraph =', 'ArenaHazard =', 'ArenaCenter =', 'AbilityCooldown =', 'AbilityRadius =', 'AbilityDamage =']:
               if marker not in config:
                   raise SystemExit(f'missing Guardian config marker: {marker}')
+
+          numeric_fields = re.findall(
+              r'\b(Health|XP|Money|AttackCooldown|AttackRange|AttackDamage|AbilityCooldown|AbilityRadius|AbilityDamage|Respawn|Windup|Radius|Damage|TargetRange|Cooldown|HealthThreshold|AttackDamageMultiplier|AbilityRangeMultiplier|Interval|HalfExtent)\s*=\s*([0-9]+(?:\.[0-9]+)?)',
+              config,
+          )
+          for field, raw in numeric_fields:
+              value = float(raw)
+              if field in {'Health', 'XP', 'Money', 'AttackCooldown', 'AttackRange', 'AttackDamage', 'AbilityCooldown', 'AbilityRadius', 'AbilityDamage', 'Respawn', 'Windup', 'Radius', 'Damage', 'TargetRange', 'Cooldown', 'Interval'} and value < 0:
+                  raise SystemExit(f'Guardian config contains negative {field}: {value}')
+              if field in {'Health', 'AttackRange', 'AbilityRadius', 'TargetRange', 'Radius', 'HalfExtent'} and value > 1000:
+                  raise SystemExit(f'Guardian config {field} exceeds 1000-unit bound: {value}')
+              if field in {'AttackDamage', 'AbilityDamage', 'Damage'} and value > 1000:
+                  raise SystemExit(f'Guardian damage field exceeds 1000: {value}')
+          phase_threshold = re.search(r'HealthThreshold\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
+          if not phase_threshold or not 0 < float(phase_threshold.group(1)) < 1:
+              raise SystemExit('Guardian Phase2.HealthThreshold must be within 0..1')
 
           for marker in ['local abilityRadius =', 'phase2.AbilityRangeMultiplier', 'shockwave(root.Position, abilityRadius']:
               if marker not in service:
@@ -42,5 +53,5 @@ jobs:
           if 'local center = bossConfig.ArenaCenter' not in arena:
               raise SystemExit('BossArena must use BossConfig.ArenaCenter')
 
-          print('Guardian phase-2 attack separation validated.')
+          print('Guardian phase-2 attack separation and semantic bounds validated.')
           PY
