@@ -13,7 +13,9 @@ local config = BossConfig.CrystalGuardian.Telegraph
 local RUN_INTERVAL = 0.25
 local nextCast = 0
 
-if not NPCs:FindFirstChild("CrystalGuardian") then
+local existingGuardian = NPCs:FindFirstChild("CrystalGuardian")
+if not (existingGuardian and existingGuardian:IsA("Model") and existingGuardian:GetAttribute("BossId") == "CrystalGuardian") then
+	if existingGuardian then existingGuardian:Destroy() end
 	BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
 end
 
