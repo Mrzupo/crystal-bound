@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1085 commits ahead, 30 commits behind** `main`.
-`main` remains at verified commit `94b6f8c1ca4146017a389a977cd528c90b7cd9aa`.
+Current compare: **1090 commits ahead, 34 commits behind** `main`.
+`main` remains at verified commit `7089ec79ae47acc8430b68b62576c5458b288ce4`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -24,10 +24,14 @@ Current compare: **1085 commits ahead, 30 commits behind** `main`.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
 - Shop purchase totals are finite, positive and bounded by canonical `EconomyConfig.MaxMoney` before the money mutation phase.
+- Crafting CI now validates every configured recipe input/output ID against `InventoryConfig`, not only a fixed allowlist.
+- Crafting output/input multiplication is finite/integer-bounded before materials are mutated.
 - Crystal Mastery upgrades verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
 - `CrystalMastery.AddXP`, `GetUpgradeCost` and `Upgrade` reject malformed Crystal mutation IDs instead of silently falling back to EMBER.
 - CrystalSystem only treats Crystal IDs as valid when UnlockLevel is finite/integer and Definition, BasicAttack, Ability and Passive blocks all exist.
 - PlayerData rejects malformed persisted Crystal ownership, equipped IDs and Mastery keys using the same complete-config Crystal boundary; malformed equipped state falls back to the first valid owned Crystal instead of blindly restoring EMBER.
+- `PlayerData.Reconcile()` normalizes persisted Level/XP/Money, inventory stacks, quests/progress, islands, DailyBounty and SessionLock data before gameplay uses the profile.
+- PlayerData reconciliation now has a dedicated CI contract covering persisted numeric bounds, completed-vs-active quest state, bounty reward bounds and malformed SessionLock rejection.
 - CrystalMastery applies the same complete Crystal-config validation before using a Crystal ID.
 - CrystalConfig CI enforces semantic Damage/Range/Cooldown/HealAmount/UnlockLevel bounds.
 - Combat modifier CI enforces Critical probability 0..1 and multiplier 1..10.
@@ -54,20 +58,21 @@ Current compare: **1085 commits ahead, 30 commits behind** `main`.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
-- Enemy lifecycle CI now protects both death cleanup and attacker-liveness checks.
+- Enemy lifecycle CI protects both death cleanup and attacker-liveness checks.
 - Session heartbeat failure state uses weak keys; heartbeat kicks after two consecutive refresh failures to protect the save-session lock.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
 - Final player removal treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
 - `PlayerService.Load` rejects a player that leaves while the yieldable profile load is in flight and releases the claimed persistent session lock instead of installing an orphaned in-memory profile.
 - The load lifecycle is checked again immediately after `Profiles[player]` is populated; a leave race removes the in-memory profile and releases the persistent lock before returning.
 - `SafeProfileStore.Load/Save/Refresh/Release` only mutate a profile when the persistent `SessionLock.JobId` belongs to the current server session; competing active locks are not overwritten.
+- Profile-store session-lock invariants now have a dedicated CI contract covering foreign-lock protection, lock refresh/release ownership and Load/Save reconciliation.
 - `SessionHeartbeat.server.lua` registers `game:BindToClose()` and runs the canonical `PlayerService.Remove()` path for loaded profiles during server shutdown with a bounded shutdown wait.
 - `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
 - `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback without creating a second server entry-point.
 - Position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
 - Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
 - WorldTheme mirrors the server portal cooldown, uses a pre-touch server position snapshot, and only arms portal grace after the character is observed near the configured destination; rejected/cooldown touches cannot grant grace.
-- Bootstrap portal creation is now presentation/definition-only; it no longer registers a second `Touched` teleport handler or directly changes player `CFrame`.
+- Bootstrap portal creation is presentation/definition-only; it no longer registers a second `Touched` teleport handler or directly changes player `CFrame`.
 - `WorldTheme.server.lua` is the canonical server owner for portal touch, level gate, destination verification and movement-grace authorization.
 - Portal movement CI explicitly rejects any Bootstrap portal `Touched`/teleport authority drift.
 - Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the observed-arrival candidate/cooldown flow.
@@ -78,7 +83,7 @@ Current compare: **1085 commits ahead, 30 commits behind** `main`.
 - Bootstrap and all major server Remote entrypoints fail fast on mismatched Remote classes instead of silently binding the wrong type.
 - Critical RemoteEvent/RemoteFunction types are statically verified from `default.project.json` and per-entrypoint fail-fast guards are covered by CI.
 - Critical mutating Remote rate-limit state is contract-checked for cleanup on `PlayerRemoving`.
-- RemoteEvent ownership now covers all known mutating client-to-server RemoteEvents; RemoteFunction ownership separately covers `GetPlayerData`, `GetQuestData`, `GetAvailableQuests` and `NPCDialogRequest`.
+- RemoteEvent ownership covers all known mutating client-to-server RemoteEvents; RemoteFunction ownership separately covers `GetPlayerData`, `GetQuestData`, `GetAvailableQuests` and `NPCDialogRequest`.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
