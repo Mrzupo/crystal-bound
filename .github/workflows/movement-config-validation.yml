@@ -25,16 +25,18 @@ jobs:
               if "MovementConfig" not in text:
                   raise SystemExit(f"{path} must consume shared MovementConfig")
           for marker in (
-              "BaseWalkSpeed =", "MinWalkSpeed =", "MinSlowMultiplier =", "MaxSlowMultiplier =",
+              "BaseWalkSpeed =", "MinWalkSpeed =", "MaxWalkSpeedBonus =", "MinSlowMultiplier =", "MaxSlowMultiplier =",
               "MaxObservedSpeed =", "ExtraDistanceTolerance =", "GraceDuration =",
               "PositionCheckInterval =", "PortalArrivalTolerance =",
           ):
               if marker not in config:
                   raise SystemExit(f"MovementConfig missing {marker}")
 
-          values = {key: float(value) for key, value in re.findall(r"(BaseWalkSpeed|MinWalkSpeed|MinSlowMultiplier|MaxSlowMultiplier|MaxObservedSpeed|ExtraDistanceTolerance|GraceDuration|PositionCheckInterval|PortalArrivalTolerance)\s*=\s*([0-9.]+)", config)}
+          values = {key: float(value) for key, value in re.findall(r"(BaseWalkSpeed|MinWalkSpeed|MaxWalkSpeedBonus|MinSlowMultiplier|MaxSlowMultiplier|MaxObservedSpeed|ExtraDistanceTolerance|GraceDuration|PositionCheckInterval|PortalArrivalTolerance)\s*=\s*([0-9.]+)", config)}
           if not 1 <= values["MinWalkSpeed"] <= values["BaseWalkSpeed"] <= 200:
               raise SystemExit("WalkSpeed bounds are invalid")
+          if not 0 <= values["MaxWalkSpeedBonus"] <= 100:
+              raise SystemExit("MaxWalkSpeedBonus is outside the 0..100 bound")
           if not 0 < values["MinSlowMultiplier"] <= values["MaxSlowMultiplier"] <= 10:
               raise SystemExit("Slow multiplier bounds are invalid")
           if not 16 <= values["MaxObservedSpeed"] <= 200:
@@ -47,4 +49,4 @@ jobs:
               raise SystemExit("PositionCheckInterval is outside the 0.05..1 bound")
           if not 4 <= values["PortalArrivalTolerance"] <= 50:
               raise SystemExit("PortalArrivalTolerance is outside the 4..50 bound")
-          print("MovementConfig speed, slow, position and portal bounds validated.")
+          print("MovementConfig speed, slow, position, portal and WalkSpeed bonus bounds validated.")
