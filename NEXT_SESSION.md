@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **950 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **956 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Current state
@@ -35,6 +35,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; no Crystal-based fallback rewards.
 - Combat defeat rewards have explicit `DeathRewarded` idempotency.
+- NPC special attacks clamp runtime ranges/cooldowns and Gale teleport offsets to bounded values.
 - Inventory corrupt stacks are clamped before mutation.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - CrystalSystem, PlayerData and CrystalMastery accept only complete Crystal configurations with finite integer UnlockLevels plus Definition/BasicAttack/Ability/Passive data.
@@ -53,6 +54,8 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Remote type contract covers Bootstrap, CombatFeedback, Shop, Crafting, Dodge, Consumables, NPCDialog and AvailableQuests entrypoints.
 - RemoteFunction contract now matches the actual Bootstrap rate-limit variable names.
 - Portal contract now verifies portal gates consume canonical `WorldConfig` level fields instead of hardcoded numeric assertions.
+- Stale CI contracts were corrected where they still asserted retired inline values or variable names; current contracts now inspect the active config-driven code paths.
+- A workflow self-check validates that workflow-referenced repository paths exist.
 - Studio playtest matrix covers the latest transaction, persistence, movement-security, Crystal configuration, NPC interaction, reward-idempotency and Remote-type cases.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
@@ -69,7 +72,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 
 ## Open decisions / limitations
 - No actual Roblox Studio runtime playtest has been executed here.
-- No Luau interpreter is available here.
+- No Luau interpreter is available in this environment.
 - Latest Combined Status is not verified through the available GitHub connector.
 - Authored Roblox Animation/Sound assets are still missing.
 - Current VFX remain procedural/placeholder-level.
