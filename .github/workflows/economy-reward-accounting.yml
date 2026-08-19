@@ -9,11 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate capped sale reward accounting
+      - name: Validate capped sale reward accounting and Money ownership
         run: |
           python - <<'PY'
           from pathlib import Path
-          text = Path('src/ServerScriptService/Services/EconomyService.lua').read_text(encoding='utf-8')
+          root = Path('src/ServerScriptService')
+          text = (root / 'Services/EconomyService.lua').read_text(encoding='utf-8')
           required = [
               'local before = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)',
               'return nextMoney, nextMoney - before',
@@ -23,5 +24,13 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing economy reward accounting contract: ' + ', '.join(missing))
-          print('Economy reward accounting contract validated.')
+
+          owners = []
+          for path in root.rglob('*.lua'):
+              content = path.read_text(encoding='utf-8')
+              if 'profile.Money =' in content:
+                  owners.append(str(path))
+          if owners != ['src/ServerScriptService/Services/EconomyService.lua']:
+              raise SystemExit(f'profile.Money mutation must remain EconomyService-owned; found {owners}')
+          print('Economy reward accounting and Money ownership contract validated.')
           PY
