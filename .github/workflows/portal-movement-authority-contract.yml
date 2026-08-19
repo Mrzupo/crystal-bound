@@ -32,6 +32,18 @@ jobs:
           if missing:
               raise SystemExit('missing portal movement guard markers: ' + ', '.join(missing))
 
+          required_theme = [
+              'local portalCandidates = setmetatable({}, { __mode = "k" })',
+              'local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)',
+              'local displacement = (root.Position - beforePosition).Magnitude',
+              'portalCandidates[player] = {',
+              'task.defer(function()',
+              'player:SetAttribute("PortalMovementGraceUntil", os.clock() + portalGrace)',
+          ]
+          missing = [marker for marker in required_theme if marker not in world_theme]
+          if missing:
+              raise SystemExit('WorldTheme portal-arrival observation guard missing: ' + ', '.join(missing))
+
           for marker in (
               'TidePortal = { Destination = Vector3.new(120, 4, 0)',
               'StarterPortal = { Destination = Vector3.new(48, 4, 0)',
@@ -48,7 +60,7 @@ jobs:
               'createPortal(tideIsland,"StarterPortal",Vector3.new(118,5,0),Vector3.new(48,4,0)',
               'createPortal(tideIsland,"WindPortal",Vector3.new(218,5,0),Vector3.new(280,4,0)',
               'createPortal(windIsland,"TideReturnPortal",Vector3.new(278,5,0),Vector3.new(210,4,0)',
-              'createPortal(windIsland,"AncientPortal",Vector3.new(390,5,0),Vector3.new(440,4,0)',
+              'createPortal(windIsland,"AncientPortal",Vector3.new(390,5,0),Vector3.new(440,4,0',
               'createPortal(ancientIsland,"WindReturnPortal",Vector3.new(440,5,50),Vector3.new(380,4,0',
           ):
               if marker not in bootstrap:
@@ -61,4 +73,4 @@ jobs:
           if 'GraceDuration =' not in movement or 'PortalArrivalTolerance =' not in movement:
               raise SystemExit('MovementConfig must expose canonical portal movement bounds')
 
-          print('Portal movement authority integration and cross-file destinations validated.')
+          print('Portal movement authority integration, observed-arrival grace and cross-file destinations validated.')
