@@ -2,8 +2,12 @@ local CrystalSystem = require(game.ReplicatedStorage.Modules.CrystalSystem)
 local CrystalService = {}
 
 function CrystalService.GetOwnedCrystals(profile)
-	if type(profile) ~= "table" or type(profile.Crystals) ~= "table" then return {} end
-	return type(profile.Crystals.Owned) == "table" and profile.Crystals.Owned or {}
+	if type(profile) ~= "table" or type(profile.Crystals) ~= "table" or type(profile.Crystals.Owned) ~= "table" then return {} end
+	local result = {}
+	for _, crystalId in ipairs(profile.Crystals.Owned) do
+		table.insert(result, crystalId)
+	end
+	return result
 end
 
 function CrystalService.OwnsCrystal(profile, id)
