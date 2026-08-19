@@ -154,11 +154,15 @@ function DamageService.ProcessDamage(request)
 		return DamageResult.new(true, 0, "Dodged")
 	end
 
+	local previousAttacker = lastAttackers[targetModel]
+	if request.Attacker then
+		rememberAttacker(targetModel, request.Attacker)
+	end
 	local before = humanoid.Health
 	humanoid:TakeDamage(amount)
 	local applied = math.max(0, before - humanoid.Health)
-	if applied > 0 and request.Attacker then
-		rememberAttacker(targetModel, request.Attacker)
+	if applied <= 0 and request.Attacker then
+		lastAttackers[targetModel] = previousAttacker
 	end
 	return DamageResult.new(true, applied, applied > 0 and "Damage applied" or "No damage applied")
 end
