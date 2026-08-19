@@ -43,6 +43,15 @@ local function cleanup(player)
 	connections[player] = nil
 end
 
+local function watchCharacter(player, character, playerConnections)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	table.insert(playerConnections, humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		refresh(player)
+	end))
+	refresh(player)
+end
+
 local function bind(player)
 	cleanup(player)
 	local playerConnections = {}
@@ -55,9 +64,17 @@ local function bind(player)
 	table.insert(playerConnections, player:GetAttributeChangedSignal("WalkSpeedBonus"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("EquippedCrystal"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("CrystalMasteryLevel"):Connect(deferredRefresh))
-	table.insert(playerConnections, player.CharacterAdded:Connect(function()
-		task.defer(function() refresh(player) end)
+	table.insert(playerConnections, player.CharacterAdded:Connect(function(character)
+		task.defer(function()
+			watchCharacter(player, character, playerConnections)
+		end)
 	end))
+
+	if player.Character then
+		task.defer(function()
+			watchCharacter(player, player.Character, playerConnections)
+		end)
+	end
 end
 
 Players.PlayerAdded:Connect(bind)
