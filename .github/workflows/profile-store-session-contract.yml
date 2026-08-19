@@ -1,0 +1,36 @@
+name: Profile Store Session Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate session-lock ownership invariants
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ReplicatedStorage/Modules/SafeProfileStore.lua').read_text(encoding='utf-8')
+
+          required = [
+              'local sameServer = lock and lock.JobId == SESSION_ID',
+              'if lock and not sameServer and age < SESSION_TIMEOUT then',
+              'data.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }',
+              'if type(lock) ~= "table" or lock.JobId ~= SESSION_ID then',
+              'payload.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }',
+              'lock.JobId == SESSION_ID',
+              'current.SessionLock = nil',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('Profile-store session contract missing: ' + ', '.join(missing))
+
+          if 'SESSION_TIMEOUT = 120' not in text:
+              raise SystemExit('Profile session timeout must remain explicit and bounded')
+          if 'local profile = PlayerData.Reconcile(result)' not in text or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
+              raise SystemExit('Load/Save must reconcile persisted profile data at the storage boundary')
+
+          print('Profile-store session-lock contract validated.')
