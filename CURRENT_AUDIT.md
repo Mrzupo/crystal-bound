@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **912 commits ahead, 29 commits behind** `main`.
+Current compare: **916 commits ahead, 29 commits behind** `main` at last verified compare.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -18,14 +18,16 @@ Current compare: **912 commits ahead, 29 commits behind** `main`.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
 - Crystal Mastery upgrades verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
-- CrystalSystem, PlayerData and CrystalMastery now reject malformed non-integer/non-finite Crystal UnlockLevels consistently.
+- CrystalSystem only treats Crystal IDs as valid when UnlockLevel is finite/integer and Definition, BasicAttack, Ability and Passive blocks all exist.
+- PlayerData rejects malformed persisted Crystal ownership, equipped IDs and Mastery keys using the same complete-config Crystal boundary.
+- CrystalMastery applies the same complete Crystal-config validation before using a Crystal ID.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - `CrystalService.GetOwnedCrystals()` returns a copy instead of exposing the internal profile table.
 - Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
-- Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig` even for an existing same-day profile; payout has one server owner and completion is claimed before payout.
+- Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
@@ -40,8 +42,8 @@ Current compare: **912 commits ahead, 29 commits behind** `main`.
 - NPCMenuBridge validates server-side interaction distance before opening NPC menus.
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
 - Static smoke / presentation / reward / config CI contracts cover the canonical boundaries.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, strict Crystal UnlockLevel/Mastery ID validation, NPC menu interaction distance, Achievement reward ownership and Daily Bounty reward ownership.
-- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed Crystal gates and NPC interaction distance.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership and Daily Bounty reward ownership.
+- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, and NPC interaction distance.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
