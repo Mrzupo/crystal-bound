@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **934 commits ahead, 29 commits behind** `main`.
+Current compare: **946 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -36,18 +36,19 @@ Current compare: **934 commits ahead, 29 commits behind** `main`.
 - Final player removal treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
 - `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
 - `DodgeService` explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
-- Bootstrap now fails fast if an existing critical Remote has the wrong Roblox class instead of silently destroying a potentially bound instance.
-- Critical RemoteEvent/RemoteFunction types are statically verified from `default.project.json`.
+- Bootstrap and all major server Remote entrypoints now fail fast on mismatched Remote classes instead of silently binding the wrong type.
+- Critical RemoteEvent/RemoteFunction types are statically verified from `default.project.json` and per-entrypoint fail-fast guards are covered by CI.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
 - NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
 - NPCMenuBridge validates server-side interaction distance before opening NPC menus.
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
-- Static smoke / presentation / reward / config CI contracts cover the canonical boundaries.
+- Combat defeat rewards are sourced from canonical EnemyConfig and guarded by `DeathRewarded` idempotency.
+- Environmental/Boss hazard contracts validate attacker-less Environmental damage against current `BossArena` semantics rather than stale exact calls.
 - RemoteFunction contract uses the actual Bootstrap request-interval guards.
 - Portal contract verifies gates consume canonical `WorldConfig` level fields.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle, and Remote type initialization.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle, Remote type initialization, and combat reward idempotency.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
