@@ -42,9 +42,10 @@ jobs:
               'targetModel:GetAttribute("DeathRewarded") == true',
               'targetModel:SetAttribute("DeathRewarded", true)',
               'local function rewardDefeat',
+              'DamageService.ClearTarget(targetModel)',
           ):
               if marker not in combat:
-                  raise SystemExit(f'Combat reward idempotency marker missing: {marker}')
+                  raise SystemExit(f'Combat reward idempotency/cleanup marker missing: {marker}')
 
           for marker in (
               'lastAttackers[targetModel] = { Kind = "Player", Instance = attacker, UserId = attacker.UserId }',
@@ -57,4 +58,4 @@ jobs:
           ):
               if marker not in damage:
                   raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
-          print('Canonical combat reward source, idempotency, attacker-session and lethal-hit ordering validated.')
+          print('Canonical combat reward source, idempotency, attacker-session, lethal-hit ordering and attribution cleanup validated.')
