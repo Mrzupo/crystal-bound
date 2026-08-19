@@ -69,7 +69,9 @@ local function titleMatchesAchievement(title, unlocked)
 end
 
 local function isCrystalId(value)
-	return type(value) == "string" and CrystalConfig.UnlockLevels[value] ~= nil
+	if type(value) ~= "string" then return false end
+	local required = tonumber(CrystalConfig.UnlockLevels[value])
+	return isFiniteNumber(required) and required >= 1 and required % 1 == 0
 end
 
 local function isIslandId(value)
