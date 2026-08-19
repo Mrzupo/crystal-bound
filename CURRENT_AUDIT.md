@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1099 commits ahead, 42 commits behind** `main`.
-`main` remains at verified commit `2a23e56b154c922bb3de0d3e69bc5e78c14a9203`.
+Current compare: **1102 commits ahead, 43 commits behind** `main`.
+`main` remains at verified commit `83bac4017c769cb28381fc37c25e282d951e0d9d`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -34,7 +34,7 @@ Current compare: **1099 commits ahead, 42 commits behind** `main`.
 - PlayerData reconciliation has a dedicated CI contract covering persisted numeric bounds, completed-vs-active quest state, bounty reward bounds and malformed SessionLock rejection.
 - CrystalMastery applies the same complete Crystal-config validation before using a Crystal ID.
 - CrystalConfig CI enforces semantic Damage/Range/Cooldown/HealAmount/UnlockLevel bounds.
-- Combat modifier CI enforces Critical probability 0..1 and multiplier 1..10.
+- Combat modifier CI enforces Critical probability 0..1 and multiplier 1..10, and `CombatModifierService` applies the same runtime bounds before rolling.
 - Economy config CI validates StartingMoney/MinMoney/MaxMoney relationships instead of hardcoding balance values.
 - Money mutations are owned by `EconomyService`; direct `profile.Money` mutation elsewhere in `ServerScriptService` is blocked by contract.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
@@ -86,7 +86,7 @@ Current compare: **1099 commits ahead, 42 commits behind** `main`.
 - Critical mutating Remote rate-limit state is contract-checked for cleanup on `PlayerRemoving`.
 - RemoteEvent ownership covers all known mutating client-to-server RemoteEvents; RemoteFunction ownership separately covers `GetPlayerData`, `GetQuestData`, `GetAvailableQuests` and `NPCDialogRequest`.
 - NPC dialog config is constrained to the canonical CrystalKeeper/MaterialTrader option IDs, and the server read path enforces interaction distance plus request rate-limit cleanup.
-- World initialization CI now validates the bounded portal tracking loop, cleanup on PlayerRemoving and definition-only Bootstrap portal ownership instead of incorrectly banning all `while` loops.
+- World initialization CI validates the bounded portal tracking loop, cleanup on PlayerRemoving and definition-only Bootstrap portal ownership instead of incorrectly banning all `while` loops.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
