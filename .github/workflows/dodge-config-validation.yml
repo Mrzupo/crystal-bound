@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate centralized dodge configuration
+      - name: Validate centralized dodge configuration and lifecycle
         shell: python
         run: |
           from pathlib import Path
@@ -27,4 +27,19 @@ jobs:
           numbers = [float(value) for value in re.findall(r'=\s*(-?\d+(?:\.\d+)?)', config)]
           if any(value <= 0 for value in numbers):
               raise SystemExit("DodgeConfig values must all be positive")
-          print("DodgeConfig contract validated.")
+
+          lifecycle = [
+              'local playerConnections = setmetatable({}, { __mode = "k" })',
+              'local function disconnectPlayer(player)',
+              'if connection and connection.Connected then connection:Disconnect() end',
+              'disconnectPlayer(player)',
+              'Players.PlayerRemoving:Connect(function(player)',
+          ]
+          # The implementation intentionally uses a weak player connection table.
+          # Fail loudly if cleanup scaffolding regresses.
+          if 'local playerConnections = setmetatable({}, { __mode = "k" })' not in service:
+              raise SystemExit("DodgeService must keep player CharacterAdded connections in weak state")
+          for marker in lifecycle[1:]:
+              if marker not in service:
+                  raise SystemExit(f"DodgeService lifecycle cleanup missing: {marker}")
+          print("DodgeConfig and CharacterAdded lifecycle contract validated.")
