@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1044 commits ahead, 29 commits behind** `main`.
+Current compare: **1047 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -33,7 +33,7 @@ Current compare: **1044 commits ahead, 29 commits behind** `main`.
 - Level/Experience mutations are owned by `XPService`; direct server mutation outside the progression service is blocked by contract.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Quest completion is owned by `QuestService`; `QuestSystem.Complete()` has a dedicated single-owner regression contract.
-- `QuestService.Complete()` now validates XP/Money reward configuration as finite nonnegative integers before committing `CompletedQuests`, preventing a malformed reward definition from consuming quest completion state without a valid reward.
+- `QuestService.Complete()` validates XP/Money reward configuration as finite nonnegative integers before committing `CompletedQuests`.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - NPC special attacks clamp runtime ranges/cooldowns and Gale teleport offsets to bounded values.
