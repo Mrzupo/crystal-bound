@@ -27,6 +27,18 @@ local function finiteNumber(value)
 	return number
 end
 
+local function boundedPositive(value, minimum, maximum)
+	local number = finiteNumber(value)
+	if number == nil or number <= 0 then return nil end
+	return math.clamp(number, minimum, maximum)
+end
+
+local function validNonNegativeInteger(value)
+	local number = finiteNumber(value)
+	if number == nil or number < 0 or number % 1 ~= 0 then return nil end
+	return number
+end
+
 local function getCharacter(instance)
 	if instance:IsA("Player") then return instance.Character end
 	if instance:IsA("Model") then return instance end
@@ -100,10 +112,12 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	if type(enemyType) ~= "string" then return end
 	local enemyConfig = EnemyConfig.Types[enemyType]
 	if type(enemyConfig) ~= "table" then return end
-	targetModel:SetAttribute("DeathRewarded", true)
 
-	local xpGain = enemyConfig.XP
-	local moneyGain = enemyConfig.Money
+	local xpGain = validNonNegativeInteger(enemyConfig.XP)
+	local moneyGain = validNonNegativeInteger(enemyConfig.Money)
+	if xpGain == nil or moneyGain == nil then return end
+
+	targetModel:SetAttribute("DeathRewarded", true)
 	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
 	EconomyService.AddMoney(profile, moneyGain)
 	giveLoot(player, profile, targetModel, enemyConfig)
@@ -114,7 +128,7 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 		profile.Stats.CrystalBatsDefeated = (finiteNumber(profile.Stats.CrystalBatsDefeated) or 0) + 1
 	end
 	DailyBountyService.AddProgress(player, profile, enemyType, EconomyService, PlayerService)
-	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor((finiteNumber(xpGain) or 0) * 0.5)))
+	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
 	advanceEnemyQuest(player, profile, enemyType)
 	if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
 	if levelsGained > 0 and #QuestService.GetActive(profile) == 0 then QuestService.TryStartNext(player, profile) end
@@ -137,6 +151,11 @@ function CombatService.HandleRequest(player, action, target)
 	local config = action == "Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId)
 	if not config then return end
 
+	local safeRange = boundedPositive(config.Range, 0.1, 1000)
+	local safeCooldown = boundedPositive(config.Cooldown, 0.05, 60)
+	local safeBaseDamage = boundedPositive(config.Damage, 0.1, 1000)
+	if not safeRange or not safeCooldown or not safeBaseDamage then return end
+
 	cooldowns[player] = cooldowns[player] or {}
 	local now = requestNow
 	if now < (cooldowns[player][action] or 0) then return end
@@ -153,24 +172,26 @@ function CombatService.HandleRequest(player, action, target)
 	local critical, criticalMultiplier = CombatModifierService.RollCritical(profile, crystalId)
 	multiplier *= criticalMultiplier
 	local baseStatsDamage = math.max(0, finiteNumber(profile.Stats and profile.Stats.Damage) or 0)
-	local damage = (config.Damage + math.max(0, baseStatsDamage - 10)) * multiplier
+	local damage = (safeBaseDamage + math.max(0, baseStatsDamage - 10)) * multiplier
+	local safeDamage = finiteNumber(damage)
+	if not safeDamage or safeDamage <= 0 then return end
 
 	local result = DamageService.ProcessDamage({
 		Attacker = player,
 		Target = targetModel,
-		Amount = damage,
-		Range = config.Range,
+		Amount = math.min(1000, safeDamage),
+		Range = safeRange,
 		DamageType = "Crystal",
 	})
 	if not result.Success then return end
 
 	fireCombatFeedback(targetModel, player, action, crystalId, critical, result.Amount)
-	cooldowns[player][action] = now + config.Cooldown
-	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + config.Cooldown) end
+	cooldowns[player][action] = now + safeCooldown
+	if action == "Ability" then player:SetAttribute("AbilityCooldownEnd", now + safeCooldown) end
 
 	if critical and result.Amount > 0 then player:SetAttribute("CrystalMessage", "CRITICAL HIT!") end
 	if action == "Ability" then
-		local abilityResult = CrystalAbilityService.Execute(player, profile, crystalId, targetModel, damage, config.Range)
+		local abilityResult = CrystalAbilityService.Execute(player, profile, crystalId, targetModel, math.min(1000, safeDamage), safeRange)
 		if abilityResult.Message then player:SetAttribute("CrystalMessage", abilityResult.Message) end
 		for _, hit in ipairs(abilityResult.Hits or {}) do
 			fireCombatFeedback(hit.Target, player, "Ability", crystalId, false, hit.Amount)
