@@ -113,7 +113,7 @@ end
 function BossService.IsBoss(model) return model and model:GetAttribute("BossId") ~= nil end
 
 function BossService.CreateGuardian(position, parent, uniqueName)
-	if not parent or not parent.Parent or not position then return nil end
+	if not parent or not parent.Parent or typeof(position) ~= "Vector3" then return nil end
 	local bossName = uniqueName or "CrystalGuardian"
 	local existing = parent:FindFirstChild(bossName)
 	if existing and existing:IsA("Model") and existing:GetAttribute("BossId") == "CrystalGuardian" then
@@ -122,19 +122,25 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 
 	local config = BossConfig.CrystalGuardian
 	local phase2 = getPhase2Config(config)
+	local health = math.clamp(finiteNumber(config.Health, 2500), 1, 1000000)
+	local aggroRange = math.clamp(finiteNumber(config.AggroRange, 65), 1, 1000)
+	local attackRange = math.clamp(finiteNumber(config.AttackRange, 9), 0.1, 1000)
+	local attackCooldown = math.clamp(finiteNumber(config.AttackCooldown, 1.4), 0.1, 60)
+	local respawn = math.clamp(finiteNumber(config.Respawn, 90), 1.5, 600)
+	local displayName = type(config.DisplayName) == "string" and config.DisplayName ~= "" and config.DisplayName or "Crystal Guardian"
 	local model = Instance.new("Model"); model.Name = bossName; model.Parent = parent
 	model:SetAttribute("Enemy", true); model:SetAttribute("BossId", "CrystalGuardian"); model:SetAttribute("EnemyType", "CrystalGuardian"); model:SetAttribute("BossPhase", 1)
 	local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Size = Vector3.new(2, 2, 1); root.Position = position + Vector3.new(0, 3, 0); root.Transparency = 1; root.Anchored = true; root.CanCollide = false; root.Parent = model
 	local body = Instance.new("Part"); body.Name = "Body"; body.Size = Vector3.new(5, 7, 4); body.Position = position + Vector3.new(0, 6, 0); body.Material = Enum.Material.Neon; body.Color = Color3.fromRGB(120, 80, 190); body.Anchored = true; body.Parent = model
 	local head = Instance.new("Part"); head.Name = "Head"; head.Shape = Enum.PartType.Ball; head.Size = Vector3.new(3, 3, 3); head.Position = position + Vector3.new(0, 10.5, 0); head.Material = Enum.Material.Neon; head.Color = Color3.fromRGB(180, 130, 255); head.Anchored = true; head.Parent = model
 	for _, part in ipairs({ body, head }) do local weld = Instance.new("WeldConstraint"); weld.Part0 = root; weld.Part1 = part; weld.Parent = root end
-	local humanoid = Instance.new("Humanoid"); humanoid.MaxHealth = config.Health; humanoid.Health = config.Health; humanoid.DisplayName = config.DisplayName; humanoid.Parent = model
+	local humanoid = Instance.new("Humanoid"); humanoid.MaxHealth = health; humanoid.Health = health; humanoid.DisplayName = displayName; humanoid.Parent = model
 	model.PrimaryPart = root
 	attachBossHealthBar(model, humanoid, root)
 	local nextAttack, nextAbility = 0, 0
 	task.spawn(function()
 		while model.Parent and humanoid.Health > 0 do
-			local nearestPlayer, nearestDistance = nil, config.AggroRange
+			local nearestPlayer, nearestDistance = nil, aggroRange
 			for _, player in ipairs(Players:GetPlayers()) do
 				local character = player.Character
 				local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -149,19 +155,19 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 				local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
 				local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
 				if targetRoot and targetHumanoid then
-					local phase = humanoid.Health <= config.Health * phase2.HealthThreshold and 2 or 1
+					local phase = humanoid.Health <= health * phase2.HealthThreshold and 2 or 1
 					model:SetAttribute("BossPhase", phase)
-					if nearestDistance > config.AttackRange then
+					if nearestDistance > attackRange then
 						local direction = targetRoot.Position - root.Position
 						if direction.Magnitude > 0.1 then
 							local step = math.min(0.8, direction.Magnitude)
 							model:PivotTo(CFrame.lookAt(root.Position + direction.Unit * step, targetRoot.Position))
 						end
 					elseif os.clock() >= nextAttack then
-						local attackCooldown = phase == 2 and phase2.AttackCooldown or math.clamp(finiteNumber(config.AttackCooldown, 1), 0.1, 60)
+						local attackCooldownValue = phase == 2 and phase2.AttackCooldown or attackCooldown
 						local attackDamage = phase == 2 and math.floor(math.clamp(finiteNumber(config.AttackDamage, 0), 0, 1000) * phase2.AttackDamageMultiplier) or math.clamp(finiteNumber(config.AttackDamage, 0), 0, 1000)
-						nextAttack = os.clock() + attackCooldown
-						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", math.clamp(finiteNumber(config.AttackRange, 0), 0.1, 1000))
+						nextAttack = os.clock() + attackCooldownValue
+						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", attackRange)
 					end
 					local baseAbilityRadius = math.clamp(finiteNumber(config.AbilityRadius, 0), 0, 1000)
 					local abilityRadius = math.clamp(baseAbilityRadius * (phase == 2 and phase2.AbilityRangeMultiplier or 1), 0, 1000)
@@ -187,8 +193,8 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		local dropId = type(config.Drop) == "string" and config.Drop or nil
 
 		if player and profile and xpReward ~= nil and xpReward >= 0 and xpReward % 1 == 0 and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0 and dropId then
-			local _, _, levelsGained = XPService.AddXP(profile, xpReward)
-			local _, moneyEarned = EconomyService.AddMoney(profile, moneyReward)
+			XPService.AddXP(profile, xpReward)
+			EconomyService.AddMoney(profile, moneyReward)
 			local coreAdded = InventoryService.AddItem(profile, dropId, 1)
 			if not profile.Stats then profile.Stats = {} end
 			profile.Stats.BossesDefeated = (finiteNumber(profile.Stats.BossesDefeated, 0) or 0) + 1
@@ -206,7 +212,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		task.delay(1.5, function()
 			if model.Parent then model:Destroy() end
 		end)
-		task.delay(config.Respawn + 1.5, function()
+		task.delay(respawn + 1.5, function()
 			if parent.Parent and not parent:FindFirstChild(bossName) then
 				BossService.CreateGuardian(position, parent, bossName)
 			end
