@@ -36,4 +36,20 @@ jobs:
               raise SystemExit("DailyBountyService must consume shared BountyConfig")
           if "DailyBountyConfig" not in profile:
               raise SystemExit("PlayerData must consume shared DailyBountyConfig")
-          print("Daily bounty config validated.")
+
+      - name: Validate bounty service canonicalizes persisted reward fields
+        shell: python
+        run: |
+          from pathlib import Path
+          service = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          required = (
+              "local function findDefinition(enemyType)",
+              "definition = findDefinition(profile.DailyBounty.EnemyType)",
+              "profile.DailyBounty.Goal =",
+              "profile.DailyBounty.RewardMoney =",
+              "definition.RewardMoney",
+          )
+          for marker in required:
+              if marker not in service:
+                  raise SystemExit(f"DailyBountyService missing canonicalization marker: {marker}")
+          print("Daily bounty persistence canonicalization validated.")
