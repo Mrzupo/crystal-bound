@@ -73,7 +73,9 @@ function XPService.GetXP(profile)
 end
 
 function XPService.GetRequiredXP(profile)
-	return XPConfig.GetRequiredXP(normalizedLevel(profile))
+	local level = normalizedLevel(profile)
+	if level >= XPConfig.MaxLevel then return 0 end
+	return XPConfig.GetRequiredXP(level)
 end
 
 return XPService
