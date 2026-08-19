@@ -1,0 +1,28 @@
+name: Player Remove Release Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate final session release result is authoritative
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
+          required = [
+              'local released = SafeProfileStore.Release(player)',
+              'if not released then',
+              'ReleaseFailed = true',
+              'because final session-lock release failed.',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing PlayerService release boundary markers: ' + ', '.join(missing))
+          print('Player remove release contract validated.')
+          PY
