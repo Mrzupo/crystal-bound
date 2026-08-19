@@ -1,0 +1,28 @@
+name: Crystal Upgrade Transaction
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate upgrade material rollback boundary
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          required = [
+              'local removed = {}',
+              'if not InventoryService.RemoveItem(profile, itemId, amount) then',
+              'for rollbackId, rollbackAmount in pairs(removed) do InventoryService.AddItem(profile, rollbackId, rollbackAmount) end',
+              'if not upgraded then',
+              'for itemId, amount in pairs(removed) do InventoryService.AddItem(profile, itemId, amount) end',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing upgrade transaction guard: ' + ', '.join(missing))
+          print('Crystal upgrade material transaction validated.')
