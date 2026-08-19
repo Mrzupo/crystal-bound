@@ -41,6 +41,12 @@ jobs:
                   if marker not in config:
                       problems.append(f"CrystalConfig {section} is missing marker {marker}")
 
+          for crystal in ("EMBER", "TIDE", "GALE"):
+              for section in ("Definitions", "BasicAttack", "Abilities", "Passives"):
+                  marker = f"{crystal} ="
+                  if marker not in config:
+                      problems.append(f"CrystalConfig {section} missing {crystal}")
+
           tide_block = re.search(r'TIDE\s*=\s*\{(?P<body>.*?)\n\s*\}', config, re.S)
           if not tide_block or not re.search(r'HealAmount\s*=\s*([0-9]+(?:\.[0-9]+)?)', tide_block.group("body")):
               problems.append("CrystalConfig TIDE ability must define HealAmount")
@@ -57,10 +63,15 @@ jobs:
               problems.append("InventoryMenu must not hardcode an unlock table")
           if "local crystalRequirements = {" in bootstrap:
               problems.append("Bootstrap must not hardcode a crystal unlock table")
-          if "CrystalConfig.Definitions[id]" not in system:
-              problems.append("CrystalSystem must consume shared CrystalConfig.Definitions")
-          if "raw % 1 ~= 0" not in system or "validUnlockLevel" not in system:
-              problems.append("CrystalSystem must reject non-integer UnlockLevels")
+          for marker in (
+              "local function validUnlockLevel(id)",
+              "local function hasDefinition(id)",
+              "local function hasCombatConfig(id)",
+              "and hasDefinition(id) and hasCombatConfig(id)",
+              "raw % 1 ~= 0",
+          ):
+              if marker not in system:
+                  problems.append(f"CrystalSystem missing strict config boundary: {marker}")
           if "required >= 1 and required % 1 == 0" not in player_data:
               problems.append("PlayerData must reject malformed persisted UnlockLevels")
 
@@ -69,4 +80,4 @@ jobs:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("CrystalConfig contract validated, including strict integer UnlockLevels.")
+          print("CrystalConfig contract validated, including strict complete-config Crystal IDs.")
