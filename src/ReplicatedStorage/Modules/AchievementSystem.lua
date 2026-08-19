@@ -34,9 +34,24 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
-function AchievementSystem.Get(id) return Definitions[id] end
-function AchievementSystem.GetAll() return Definitions end
-function AchievementSystem.GetOrder() return ORDER end
+local function copyDefinition(definition)
+	if type(definition) ~= "table" then return definition end
+	local result = {}
+	for key, value in pairs(definition) do result[key] = value end
+	return result
+end
+
+function AchievementSystem.Get(id) return copyDefinition(Definitions[id]) end
+function AchievementSystem.GetAll()
+	local result = {}
+	for id, definition in pairs(Definitions) do result[id] = copyDefinition(definition) end
+	return result
+end
+function AchievementSystem.GetOrder()
+	local result = table.create(#ORDER)
+	for index, id in ipairs(ORDER) do result[index] = id end
+	return result
+end
 function AchievementSystem.GetOrdered()
 	local result = {}
 	for _, id in ipairs(ORDER) do
@@ -61,7 +76,7 @@ function AchievementSystem.Unlock(profile, id)
 	table.insert(profile.Achievements, id)
 	local definition = Definitions[id]
 	if definition.Title and not table.find(profile.Titles, definition.Title) then table.insert(profile.Titles, definition.Title) end
-	return definition
+	return copyDefinition(definition)
 end
 function AchievementSystem.Check(profile)
 	profile.Achievements = profile.Achievements or {}
