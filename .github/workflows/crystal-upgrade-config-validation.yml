@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Crystal mastery costs and ID boundary
+      - name: Validate Crystal mastery costs and complete ID boundary
         shell: python
         run: |
           import re
@@ -40,11 +40,15 @@ jobs:
 
           required_mastery_markers = [
               "local function validCrystalId(crystalId)",
-              "required >= 1 and required % 1 == 0",
+              "required >= 1 or required % 1 ~= 0",
+              "type(CrystalConfig.Definitions[crystalId]) == \"table\"",
+              "type(CrystalConfig.BasicAttack[crystalId]) == \"table\"",
+              "type(CrystalConfig.Abilities[crystalId]) == \"table\"",
+              "type(CrystalConfig.Passives[crystalId]) == \"table\"",
               "return validCrystalId(crystalId) and crystalId or DEFAULT_CRYSTAL",
           ]
           missing = [marker for marker in required_mastery_markers if marker not in mastery]
           if missing:
-              raise SystemExit("CrystalMastery ID validation missing: " + ", ".join(missing))
+              raise SystemExit("CrystalMastery complete-ID validation missing: " + ", ".join(missing))
 
-          print("Crystal upgrade config and strict CrystalMastery ID boundary validated.")
+          print("Crystal upgrade config and complete CrystalMastery ID boundary validated.")
