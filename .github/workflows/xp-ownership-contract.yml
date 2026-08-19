@@ -1,0 +1,38 @@
+name: XP Ownership Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical XPService mutation ownership
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path("src/ServerScriptService")
+          service = root / "Services/XPService.lua"
+          text = service.read_text(encoding="utf-8")
+          for marker in (
+              'profile.Level = XPConfig.MaxLevel',
+              'profile.Experience = math.min(XPConfig.MaxExperience, experience + amount)',
+              'profile.Level += 1',
+          ):
+              if marker not in text:
+                  raise SystemExit(f"XPService missing mutation marker: {marker}")
+
+          direct = []
+          assignment = re.compile(r'profile\.(?:Level|Experience)\s*=')
+          for path in root.rglob("*.lua"):
+              content = path.read_text(encoding="utf-8")
+              if path != service and assignment.search(content):
+                  direct.append(str(path))
+          if direct:
+              raise SystemExit("Server Level/Experience mutations must stay in XPService: " + ", ".join(direct))
+          print("XP and level mutation ownership validated.")
