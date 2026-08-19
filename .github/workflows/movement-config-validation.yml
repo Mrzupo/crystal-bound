@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate centralized movement speed config
+      - name: Validate centralized movement speed and position config
         shell: python
         run: |
           from pathlib import Path
+          import re
           config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
           for path in [
               "src/ServerScriptService/Services/PlayerService.lua",
@@ -23,7 +24,27 @@ jobs:
               text = Path(path).read_text(encoding="utf-8")
               if "MovementConfig" not in text:
                   raise SystemExit(f"{path} must consume shared MovementConfig")
-          for marker in ("BaseWalkSpeed =", "MinWalkSpeed =", "MinSlowMultiplier =", "MaxSlowMultiplier ="):
+          for marker in (
+              "BaseWalkSpeed =", "MinWalkSpeed =", "MinSlowMultiplier =", "MaxSlowMultiplier =",
+              "MaxObservedSpeed =", "ExtraDistanceTolerance =", "GraceDuration =",
+              "PositionCheckInterval =", "PortalArrivalTolerance =",
+          ):
               if marker not in config:
                   raise SystemExit(f"MovementConfig missing {marker}")
-          print("MovementConfig contract validated.")
+
+          values = {key: float(value) for key, value in re.findall(r"(BaseWalkSpeed|MinWalkSpeed|MinSlowMultiplier|MaxSlowMultiplier|MaxObservedSpeed|ExtraDistanceTolerance|GraceDuration|PositionCheckInterval|PortalArrivalTolerance)\s*=\s*([0-9.]+)", config)}
+          if not 1 <= values["MinWalkSpeed"] <= values["BaseWalkSpeed"] <= 200:
+              raise SystemExit("WalkSpeed bounds are invalid")
+          if not 0 < values["MinSlowMultiplier"] <= values["MaxSlowMultiplier"] <= 10:
+              raise SystemExit("Slow multiplier bounds are invalid")
+          if not 16 <= values["MaxObservedSpeed"] <= 200:
+              raise SystemExit("MaxObservedSpeed is outside the 16..200 bound")
+          if not 2 <= values["ExtraDistanceTolerance"] <= 50:
+              raise SystemExit("ExtraDistanceTolerance is outside the 2..50 bound")
+          if not 0.1 <= values["GraceDuration"] <= 5:
+              raise SystemExit("GraceDuration is outside the 0.1..5 bound")
+          if not 0.05 <= values["PositionCheckInterval"] <= 1:
+              raise SystemExit("PositionCheckInterval is outside the 0.05..1 bound")
+          if not 4 <= values["PortalArrivalTolerance"] <= 50:
+              raise SystemExit("PortalArrivalTolerance is outside the 4..50 bound")
+          print("MovementConfig speed, slow, position and portal bounds validated.")
