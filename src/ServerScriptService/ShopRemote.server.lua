@@ -44,3 +44,7 @@ remote.OnServerEvent:Connect(function(player, action, itemId, amount)
 		remotes.MoneyChanged:FireClient(player, profile.Money)
 	end
 end)
+
+Players.PlayerRemoving:Connect(function(player)
+	NEXT_REQUEST[player] = nil
+end)
