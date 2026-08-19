@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **889 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **896 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains untouched.
 
 ## Current state
@@ -27,7 +27,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-confirmed CombatFeedback presentation.
 - Server-owned character Animator for client animation playback.
 - One-shot confirmed Crystal VFX bridge.
-- Server-enforced WalkSpeed baseline and Slow modifiers.
+- Server-enforced WalkSpeed baseline and Slow modifiers, with immediate correction of server-observed speed changes.
 
 ## Latest hardening work
 - Damage input boundaries reject non-positive, non-finite and oversized values at the canonical validator.
@@ -45,9 +45,9 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - PlayerService Save/Remove guarantees operation-lock release and clears local state after final-save failures while retaining the persistent session lock.
 - Final removal treats failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
 - SessionHeartbeat uses weak failure state.
-- `StatusSpeedGuardV2` now continuously restores server-derived WalkSpeed even without an active Slow effect, preventing local speed overrides from remaining active.
+- `StatusSpeedGuardV2` continuously restores server-derived WalkSpeed even without an active Slow effect and immediately corrects server-observed `WalkSpeed` property changes.
 - CombatPresentation keeps one current Character HealthChanged listener across respawns.
-- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release, Crystal upgrade transaction rollback and StatusSpeedGuard baseline enforcement.
+- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release, Crystal upgrade transaction rollback and StatusSpeedGuard baseline/immediate enforcement.
 - Studio playtest matrix covers the latest transaction, persistence and movement-security cases.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
