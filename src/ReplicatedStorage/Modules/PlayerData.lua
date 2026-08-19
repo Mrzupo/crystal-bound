@@ -175,7 +175,7 @@ function PlayerData.Reconcile(data)
 	data.CrystalMastery = normalizedMastery
 
 	data.Stats = type(data.Stats) == "table" and data.Stats or clone(defaults.Stats)
-	data.Stats.Damage = clampInt(data.Stats.Damage, 0, 100000, defaults.Stats.Damage)
+	data.Stats.Damage = clampInt(data.Stats.Damage, 0, 1000, defaults.Stats.Damage)
 	data.Stats.Health = clampInt(data.Stats.Health, 1, 1000000, defaults.Stats.Health)
 	data.Stats.EnemiesDefeated = clampInt(data.Stats.EnemiesDefeated, 0, 100000000, 0)
 	data.Stats.BossesDefeated = clampInt(data.Stats.BossesDefeated, 0, 100000000, 0)
