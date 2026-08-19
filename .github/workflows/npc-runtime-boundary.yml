@@ -1,0 +1,31 @@
+name: NPC Runtime Boundary
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate NPC AI runtime boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
+          required = [
+              'local aggroRange = math.clamp(finiteNumber(config and config.AggroRange, 0), 0, 1000)',
+              'local attackRange = math.clamp(finiteNumber(config and config.AttackRange, 0), 0, 1000)',
+              'local attackCooldown = math.clamp(finiteNumber(config and config.AttackCooldown, 1), 0.25, 60)',
+              'local attackDamage = math.clamp(finiteNumber(config and config.AttackDamage, 0), 0, 1000)',
+              'model:GetAttribute("AIStarted") == true',
+              'model:SetAttribute("AIStarted", true)',
+              'local specialCooldown = math.clamp(finiteNumber(specialConfig.Cooldown, 6), 0.25, 60)',
+              'local specialRange = math.clamp(finiteNumber(specialConfig.Range, 0), 0, 1000)',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("NPC runtime boundary markers missing: " + ", ".join(missing))
+          print("NPC AI idempotency and runtime configuration boundaries validated.")
