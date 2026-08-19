@@ -27,9 +27,25 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
+local function getTelegraphRadius()
+	return math.clamp(finiteNumber(config.Radius, 8), 0.1, 1000)
+end
+
+local function getTelegraphWindup()
+	return math.clamp(finiteNumber(config.Windup, 0.8), 0.05, 10)
+end
+
+local function getTelegraphTargetRange()
+	return math.clamp(finiteNumber(config.TargetRange, 70), 0, 1000)
+end
+
+local function getTelegraphCooldown()
+	return math.clamp(finiteNumber(config.Cooldown, 5.5), 0.1, 60)
+end
+
 local function createTelegraph(position)
-	local radius = math.max(0.1, finiteNumber(config.Radius, 8))
-	local windup = math.max(0.05, finiteNumber(config.Windup, 0.8))
+	local radius = getTelegraphRadius()
+	local windup = getTelegraphWindup()
 	local part = Instance.new("Part")
 	part.Name = "GuardianTelegraph"
 	part.Anchored = true
@@ -59,7 +75,7 @@ local function getTarget()
 		return nil, nil
 	end
 
-	local targetRange = math.max(0, finiteNumber(config.TargetRange, 70))
+	local targetRange = getTelegraphTargetRange()
 	local nearestPlayer, nearestDistance
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
@@ -89,8 +105,8 @@ local function cast()
 	if not humanoid or humanoid.Health <= 0 or not root then return end
 
 	local position = root.Position
-	local windup = math.max(0.05, finiteNumber(config.Windup, 0.8))
-	local radius = math.max(0.1, finiteNumber(config.Radius, 8))
+	local windup = getTelegraphWindup()
+	local radius = getTelegraphRadius()
 	local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)
 	createTelegraph(position)
 	task.delay(windup, function()
@@ -118,7 +134,7 @@ task.spawn(function()
 			local guardian = NPCs:FindFirstChild("CrystalGuardian")
 			local phase = guardian and guardian:GetAttribute("BossPhase") or 1
 			if phase >= 2 then
-				nextCast = os.clock() + math.max(0.1, finiteNumber(config.Cooldown, 5.5))
+				nextCast = os.clock() + getTelegraphCooldown()
 				cast()
 			else
 				nextCast = os.clock() + 1
