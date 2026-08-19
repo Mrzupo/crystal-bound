@@ -13,7 +13,7 @@ end
 
 local function positiveInteger(value)
 	local number = finiteNumber(value)
-	if number == nil then return nil end
+	if number == nil or number % 1 ~= 0 then return nil end
 	number = math.floor(number)
 	if number <= 0 then return nil end
 	return number
