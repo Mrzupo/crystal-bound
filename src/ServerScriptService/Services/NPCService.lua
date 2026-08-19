@@ -167,7 +167,7 @@ local function specialAttack(typeId, model, character, targetHumanoid, targetRoo
 	local player = character and Players:GetPlayerFromCharacter(character)
 	if not player then return end
 	if typeId == "Emberling" then
-		local range = math.max(0, tonumber(special.Range) or 14)
+		local range = math.clamp(tonumber(special.Range) or 14, 0.1, 1000)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(255, 90, 30), 6)
 			local applied = damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
@@ -176,7 +176,7 @@ local function specialAttack(typeId, model, character, targetHumanoid, targetRoo
 			end
 		end
 	elseif typeId == "Tidecrawler" then
-		local range = math.max(0, tonumber(special.Range) or 10)
+		local range = math.clamp(tonumber(special.Range) or 10, 0.1, 1000)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
 			local applied = damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
@@ -186,21 +186,21 @@ local function specialAttack(typeId, model, character, targetHumanoid, targetRoo
 		end
 	elseif typeId == "Galewisp" then
 		local direction = targetRoot.Position - root.Position
-		local range = math.max(0, tonumber(special.Range) or 18)
+		local range = math.clamp(tonumber(special.Range) or 18, 0.1, 1000)
 		if direction.Magnitude > 0.1 and direction.Magnitude <= range then
 			emitSpecialEffect(root.Position, Color3.fromRGB(175, 120, 255), 8)
-			local offset = math.max(0, tonumber(special.TeleportOffset) or 4)
+			local offset = math.clamp(tonumber(special.TeleportOffset) or 4, 0, math.min(100, range))
 			model:PivotTo(CFrame.lookAt(targetRoot.Position - direction.Unit * offset, targetRoot.Position))
 			damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
 		end
 	elseif typeId == "CrystalBat" then
-		local range = math.max(0, tonumber(special.Range) or 12)
+		local range = math.clamp(tonumber(special.Range) or 12, 0.1, 1000)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(80, 255, 240), 5)
 			damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
 		end
 	elseif typeId == "AncientGolem" then
-		local range = math.max(0, tonumber(special.Range) or special.Radius or 10)
+		local range = math.clamp(tonumber(special.Range) or special.Radius or 10, 0.1, 1000)
 		emitSpecialEffect(root.Position, Color3.fromRGB(150, 140, 125), 12)
 		for _, otherPlayer in ipairs(Players:GetPlayers()) do
 			local otherCharacter = otherPlayer.Character
@@ -227,8 +227,8 @@ function NPCService.StartEnemyAI(model)
 		local nextAttack, nextSpecial = 0, os.clock() + 3
 		local leashDistance = math.max(config.AggroRange * 1.8, 50)
 		local specialConfig = type(config.Special) == "table" and config.Special or {}
-		local specialCooldown = math.max(0.25, tonumber(specialConfig.Cooldown) or 6)
-		local specialRange = math.max(0, tonumber(specialConfig.Range) or 0)
+		local specialCooldown = math.clamp(tonumber(specialConfig.Cooldown) or 6, 0.25, 60)
+		local specialRange = math.clamp(tonumber(specialConfig.Range) or 0, 0, 1000)
 		while model.Parent and humanoid.Health > 0 do
 			local character, distance = getNearestPlayer(root.Position, config.AggroRange)
 			if character then
@@ -247,7 +247,7 @@ function NPCService.StartEnemyAI(model)
 							end
 						end
 					elseif os.clock() >= nextAttack then
-						nextAttack = os.clock() + math.max(0.25, config.AttackCooldown)
+						nextAttack = os.clock() + math.clamp(tonumber(config.AttackCooldown) or 1, 0.25, 60)
 						damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage, model, "Physical", config.AttackRange)
 					end
 					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" and specialRange > 0 and distance <= specialRange then
