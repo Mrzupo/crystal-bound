@@ -10,12 +10,18 @@ local open = false
 local gui
 local panel
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
 	gui = playerGui:FindFirstChild("AchievementMenu")
 	if gui then panel = gui.Panel; return end
 	gui = Instance.new("ScreenGui")
-	gui.Name = "AchievementMenu"
+gui.Name = "AchievementMenu"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.Parent = playerGui
@@ -68,7 +74,10 @@ local function refresh()
 	if not ok or type(data) ~= "table" then return end
 	for _, child in ipairs(panel.List:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
 	local unlocked = {}
-	for _, id in ipairs(data.Achievements or {}) do unlocked[id] = true end
+	local achievements = type(data.Achievements) == "table" and data.Achievements or {}
+	for _, id in ipairs(achievements) do
+		if type(id) == "string" then unlocked[id] = true end
+	end
 
 	for _, definition in ipairs(AchievementSystem.GetOrdered()) do
 		local row = Instance.new("Frame")
@@ -85,7 +94,9 @@ local function refresh()
 		label.TextWrapped = true
 		label.Font = Enum.Font.GothamMedium
 		label.TextSize = 14
-		label.Text = string.format("%s  •  %s\n%s\nReward: %d Money%s", unlocked[definition.Id] and "UNLOCKED" or "LOCKED", definition.Name, definition.Requirement, definition.RewardMoney or 0, definition.Title and (" • Title: " .. definition.Title) or "")
+		local reward = math.max(0, math.floor(finiteNumber(definition.RewardMoney, 0)))
+		local titleSuffix = type(definition.Title) == "string" and (" • Title: " .. definition.Title) or ""
+		label.Text = string.format("%s  •  %s\n%s\nReward: %d Money%s", unlocked[definition.Id] and "UNLOCKED" or "LOCKED", tostring(definition.Name or definition.Id), tostring(definition.Requirement or ""), reward, titleSuffix)
 		label.Parent = row
 	end
 end
