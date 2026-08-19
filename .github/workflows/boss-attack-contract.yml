@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate distinct Guardian phase-2 attacks and semantic bounds
+      - name: Validate distinct Guardian phase-2 attacks, lifecycle binding and semantic bounds
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -62,10 +62,41 @@ jobs:
               if marker not in telegraph:
                   raise SystemExit(f'Guardian telegraph path missing: {marker}')
 
+          lifecycle = [
+              'local player, guardian = getTarget()',
+              'task.delay(windup, function()',
+              'if not guardian.Parent then return end',
+              'local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")',
+              'if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0',
+              'if not player.Parent then return end',
+              'local currentCharacter = player.Character',
+          ]
+          for marker in lifecycle:
+              if marker not in telegraph:
+                  raise SystemExit(f'Guardian telegraph lifecycle binding missing: {marker}')
+
+          reward = [
+              'if model:GetAttribute("Rewarded") then return end',
+              'model:SetAttribute("Rewarded", true)',
+              'local xpReward = finiteNumber(config.XP)',
+              'local moneyReward = finiteNumber(config.Money)',
+              'local dropId = type(config.Drop) == "string" and config.Drop or nil',
+              'XPService.AddXP(profile, xpReward)',
+              'EconomyService.AddMoney(profile, moneyReward)',
+              'InventoryService.AddItem(profile, dropId, 1)',
+              'DamageService.ClearTarget(model)',
+          ]
+          for marker in reward:
+              if marker not in service:
+                  raise SystemExit(f'Guardian reward lifecycle marker missing: {marker}')
+          for forbidden in ['profile.Money =', 'profile.Inventory[dropId] =']:
+              if forbidden in service:
+                  raise SystemExit(f'Guardian rewards must not bypass canonical mutation owners: {forbidden}')
+
           if 'BossConfig.CrystalGuardian.ArenaHazard' not in arena:
               raise SystemExit('BossArena must consume Guardian ArenaHazard config')
           if 'local center = bossConfig.ArenaCenter' not in arena:
               raise SystemExit('BossArena must use BossConfig.ArenaCenter')
 
-          print('Guardian phase-2, reward, attack and semantic bounds validated.')
+          print('Guardian phase-2, reward, lifecycle binding and semantic bounds validated.')
           PY
