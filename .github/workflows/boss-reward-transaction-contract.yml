@@ -14,7 +14,11 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           text = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
+          boss = Path('src/ReplicatedStorage/Config/BossConfig.lua').read_text(encoding='utf-8')
+          inventory = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
           required = [
               'if model:GetAttribute("Rewarded") then return end',
               'model:SetAttribute("Rewarded", true)',
@@ -37,4 +41,14 @@ jobs:
           for marker in forbidden:
               if marker in text:
                   raise SystemExit('Guardian rewards must not bypass canonical mutation owners: ' + marker)
-          print('Guardian reward idempotency, lifecycle cleanup and canonical mutation ownership validated.')
+
+          drop_match = re.search(r'Drop\s*=\s*"([A-Za-z0-9_]+)"', boss)
+          if not drop_match:
+              raise SystemExit('Guardian reward Drop is missing from BossConfig')
+          drop_id = drop_match.group(1)
+          if drop_id not in inventory or f'{drop_id} = ' not in inventory:
+              raise SystemExit(f'Guardian reward Drop is not registered in InventoryConfig: {drop_id}')
+
+          if 'Rewarded", true' not in text:
+              raise SystemExit('Guardian reward idempotency marker missing')
+          print('Guardian reward idempotency, lifecycle cleanup, canonical mutation ownership and drop registration validated.')
