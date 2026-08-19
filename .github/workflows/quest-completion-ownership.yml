@@ -1,0 +1,37 @@
+name: Quest Completion Ownership
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure QuestSystem completion remains service-owned
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src")
+          owners = []
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if "QuestSystem.Complete(" in text:
+                  owners.append(str(path))
+          expected = ["src/ServerScriptService/Services/QuestService.lua"]
+          if owners != expected:
+              raise SystemExit(f"QuestSystem.Complete must have exactly one server owner; found {owners}")
+
+          service = (root / "ServerScriptService/Services/QuestService.lua").read_text(encoding="utf-8")
+          for marker in (
+              "QuestSystem.IsActive(profile, questId)",
+              "QuestSystem.Complete(profile, questId)",
+              "XPService.AddXP(profile, definition.XP)",
+              "EconomyService.AddMoney(profile, definition.Money)",
+          ):
+              if marker not in service:
+                  raise SystemExit(f"QuestService completion owner missing {marker}")
+          print("Quest completion ownership validated.")
