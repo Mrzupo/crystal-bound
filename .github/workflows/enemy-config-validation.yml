@@ -29,6 +29,7 @@ jobs:
               "Special =",
               "Cooldown =",
               "Range =",
+              "Respawn =",
           ]
           problems = [marker for marker in required if marker not in text]
           if problems:
@@ -40,6 +41,15 @@ jobs:
               raise SystemExit("NPCService must trigger specials from configured Special.Range")
           if "distance <= math.max(config.AttackRange * 2, 10)" in npc:
               raise SystemExit("NPCService must not use the old AttackRange*2 special trigger")
+
+          # NPCService removes dead enemies after 1.5 seconds; respawn values below that
+          # can race the cleanup callback and suppress the new spawn.
+          respawns = [float(value) for value in re.findall(r"Respawn = ([0-9.]+)", text)]
+          for respawn in respawns:
+              if respawn < 1.5:
+                  raise SystemExit("Enemy Respawn must be at least 1.5 seconds to remain compatible with NPC cleanup")
+              if respawn > 600:
+                  raise SystemExit("Enemy Respawn exceeds the 10-minute design bound")
 
           # Keep authored examples within sane combat bounds.
           numeric_fields = re.findall(r"AttackRange = ([0-9.]+).*?AttackDamage = ([0-9.]+).*?AttackCooldown = ([0-9.]+)", text)
@@ -56,4 +66,4 @@ jobs:
               if cooldown < 0.1 or cooldown > 60:
                   raise SystemExit("Enemy Special cooldown is outside 0.1..60")
 
-          print("EnemyConfig combat bounds and special trigger contract validated.")
+          print("EnemyConfig combat bounds, lifecycle and special trigger contract validated.")
