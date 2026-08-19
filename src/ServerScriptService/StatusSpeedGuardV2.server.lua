@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 
 local ENFORCEMENT_INTERVAL = 0.25
@@ -11,10 +12,20 @@ local MAX_OBSERVED_SPEED = math.clamp(tonumber(MovementConfig.MaxObservedSpeed) 
 local EXTRA_DISTANCE_TOLERANCE = math.clamp(tonumber(MovementConfig.ExtraDistanceTolerance) or 12, 2, 50)
 local POSITION_CHECK_INTERVAL = math.clamp(tonumber(MovementConfig.PositionCheckInterval) or 0.15, 0.05, 1)
 local PORTAL_ARRIVAL_TOLERANCE = math.clamp(tonumber(MovementConfig.PortalArrivalTolerance) or 18, 4, 50)
+local PORTAL_GRACE_DURATION = math.clamp(tonumber(MovementConfig.PortalGraceDuration) or 1.5, 0.25, 5)
 local SPEED_EPSILON = 0.05
+local PORTAL_DESTINATIONS = {
+	TidePortal = Vector3.new(120, 4, 0),
+	StarterPortal = Vector3.new(48, 4, 0),
+	WindPortal = Vector3.new(280, 4, 0),
+	TideReturnPortal = Vector3.new(210, 4, 0),
+	AncientPortal = Vector3.new(440, 4, 0),
+	WindReturnPortal = Vector3.new(380, 4, 0),
+}
 local connections = setmetatable({}, { __mode = "k" })
 local humanoidConnections = setmetatable({}, { __mode = "k" })
 local positionState = setmetatable({}, { __mode = "k" })
+local portalConnections = setmetatable({}, { __mode = "k" })
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
@@ -53,6 +64,39 @@ local function isValidPortalArrival(player, root, now)
 	local destination = player:GetAttribute("PortalExpectedDestination")
 	if typeof(destination) ~= "Vector3" then return false end
 	return (root.Position - destination).Magnitude <= PORTAL_ARRIVAL_TOLERANCE
+end
+
+local function armPortalArrival(player, destination)
+	if not player or not player.Parent or typeof(destination) ~= "Vector3" then return end
+	local root = getRoot(player)
+	if not root then return end
+	if (root.Position - destination).Magnitude > PORTAL_ARRIVAL_TOLERANCE then return end
+	player:SetAttribute("PortalExpectedDestination", destination)
+	player:SetAttribute("PortalMovementGraceUntil", os.clock() + PORTAL_GRACE_DURATION)
+	resetPositionState(player)
+end
+
+local function attachPortal(portal)
+	if not portal or not portal:IsA("BasePart") or portalConnections[portal] or not PORTAL_DESTINATIONS[portal.Name] then return end
+	portalConnections[portal] = portal.Touched:Connect(function(hit)
+		local character = hit and hit:FindFirstAncestorOfClass("Model")
+		local player = character and Players:GetPlayerFromCharacter(character)
+		local destination = portal and PORTAL_DESTINATIONS[portal.Name]
+		if not player or not destination then return end
+		task.defer(function()
+			if portal.Parent and player.Parent and player.Character == character then
+				armPortalArrival(player, destination)
+			end
+		end)
+	end)
+end
+
+local function scanPortals()
+	for _, descendant in ipairs(Workspace:GetDescendants()) do
+		if descendant:IsA("BasePart") and PORTAL_DESTINATIONS[descendant.Name] then
+			attachPortal(descendant)
+		end
+	end
 end
 
 local function enforcePosition(player, now)
@@ -129,6 +173,8 @@ local function cleanup(player)
 	end
 	connections[player] = nil
 	positionState[player] = nil
+	player:SetAttribute("PortalMovementGraceUntil", 0)
+	player:SetAttribute("PortalExpectedDestination", nil)
 end
 
 local function watchCharacter(player, character)
@@ -170,6 +216,8 @@ end
 
 Players.PlayerAdded:Connect(bind)
 Players.PlayerRemoving:Connect(cleanup)
+Workspace.DescendantAdded:Connect(attachPortal)
+scanPortals()
 for _, player in ipairs(Players:GetPlayers()) do bind(player) end
 
 task.spawn(function()
