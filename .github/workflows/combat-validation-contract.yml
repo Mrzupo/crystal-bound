@@ -20,6 +20,7 @@ jobs:
           hitbox = Path("src/ReplicatedStorage/Modules/Combat/HitboxService.lua").read_text(encoding="utf-8")
           damage = Path("src/ServerScriptService/Services/DamageService.lua").read_text(encoding="utf-8")
           validators = Path("src/ReplicatedStorage/Modules/Combat/DamageValidators.lua").read_text(encoding="utf-8")
+          combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
 
           problems = []
           if "math.clamp(number, 0, 1000)" not in hitbox:
@@ -28,11 +29,24 @@ jobs:
               problems.append("DamageService must reject non-positive or range above 1000")
           if "request.Amount > 0" not in validators:
               problems.append("DamageValidators must reject zero and negative damage")
+          if "local MAX_RANGE = 1000" not in validators or "request.Range > MAX_RANGE" not in validators:
+              problems.append("DamageValidators must centrally bound attacker range")
           if "DamageTypes.Environmental" not in validators:
               problems.append("DamageValidators must explicitly gate Environmental damage")
+          for marker in (
+              "local function boundedPositive",
+              "local safeRange = boundedPositive(config.Range, 0.1, 1000)",
+              "local safeCooldown = boundedPositive(config.Cooldown, 0.05, 60)",
+              "local safeBaseDamage = boundedPositive(config.Damage, 0.1, 1000)",
+              "local function validNonNegativeInteger",
+              "if xpGain == nil or moneyGain == nil then return end",
+              "targetModel:SetAttribute(\"DeathRewarded\", true)",
+          ):
+              if marker not in combat:
+                  problems.append(f"CombatService missing runtime boundary marker: {marker}")
 
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Combat validation contract validated.")
+          print("Combat validation, request bounds and defeat-reward config gates validated.")
