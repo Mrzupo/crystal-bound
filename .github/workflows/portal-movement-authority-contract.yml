@@ -18,7 +18,6 @@ jobs:
           guard = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
           world_theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
-          world_config = Path('src/ReplicatedStorage/Config/WorldConfig.lua').read_text(encoding='utf-8')
           movement = Path('src/ReplicatedStorage/Config/MovementConfig.lua').read_text(encoding='utf-8')
 
           required_guard = [
@@ -35,9 +34,12 @@ jobs:
           required_theme = [
               'local portalCandidates = setmetatable({}, { __mode = "k" })',
               'local portalCooldowns = setmetatable({}, { __mode = "k" })',
+              'local lastPositions = setmetatable({}, { __mode = "k" })',
               'local portalCooldownDuration = 1',
+              'local function rememberPosition(player)',
               'local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)',
               'local displacement = (root.Position - beforePosition).Magnitude',
+              'local snapshot = lastPositions[player]',
               'portalCandidates[player] = {',
               'portalCooldowns[player] then return end',
               'task.defer(function()',
@@ -45,7 +47,7 @@ jobs:
           ]
           missing = [marker for marker in required_theme if marker not in world_theme]
           if missing:
-              raise SystemExit('WorldTheme portal-arrival/cooldown guard missing: ' + ', '.join(missing))
+              raise SystemExit('WorldTheme portal arrival/cooldown/snapshot guard missing: ' + ', '.join(missing))
 
           for marker in (
               'TidePortal = { Destination = Vector3.new(120, 4, 0)',
@@ -76,4 +78,4 @@ jobs:
           if 'GraceDuration =' not in movement or 'PortalArrivalTolerance =' not in movement:
               raise SystemExit('MovementConfig must expose canonical portal movement bounds')
 
-          print('Portal movement authority, cooldown parity, observed-arrival grace and cross-file destinations validated.')
+          print('Portal movement authority, cooldown parity, pre-touch snapshot and observed-arrival grace validated.')
