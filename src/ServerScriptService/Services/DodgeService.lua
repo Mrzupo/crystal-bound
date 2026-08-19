@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DamageService = require(script.Parent.DamageService)
 local DodgeConfig = require(ReplicatedStorage.Config.DodgeConfig)
-local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 
 local DodgeService = {}
 local cooldowns = setmetatable({}, { __mode = "k" })
@@ -12,7 +11,6 @@ local COOLDOWN = math.max(0.1, tonumber(DodgeConfig.Cooldown) or 2.5)
 local INVULNERABILITY = math.clamp(tonumber(DodgeConfig.Invulnerability) or 0.45, 0.05, 2)
 local BOOST = math.clamp(tonumber(DodgeConfig.Boost) or 42, 1, 100)
 local MAX_DIRECTION_MAGNITUDE = math.max(1, tonumber(DodgeConfig.MaxDirectionMagnitude) or 1000)
-local MOVEMENT_GRACE = math.clamp(tonumber(MovementConfig.GraceDuration) or 0.6, 0.1, 3)
 
 local function clearForceField(character)
 	local forceField = character and character:FindFirstChild("CrystalBoundDodgeForceField")
@@ -66,7 +64,6 @@ function DodgeService.TryDodge(player, direction)
 	cooldowns[player] = now + COOLDOWN
 	player:SetAttribute("DodgeCooldownEnd", now + COOLDOWN)
 	player:SetAttribute("DodgeInvulnerable", true)
-	player:SetAttribute("ServerMovementGraceUntil", now + MOVEMENT_GRACE)
 	player:SetAttribute("DodgeMessage", "Dodge!")
 
 	clearForceField(character)
@@ -124,7 +121,6 @@ function DodgeService.CleanupPlayer(player)
 	if player.Parent then
 		player:SetAttribute("DodgeInvulnerable", false)
 		player:SetAttribute("DodgeCooldownEnd", 0)
-		player:SetAttribute("ServerMovementGraceUntil", 0)
 	end
 end
 
@@ -133,7 +129,6 @@ local function resetForRespawn(player)
 	if player.Parent then
 		player:SetAttribute("DodgeInvulnerable", false)
 		player:SetAttribute("DodgeCooldownEnd", 0)
-		player:SetAttribute("ServerMovementGraceUntil", 0)
 	end
 	if player.Character then clearForceField(player.Character) end
 end
