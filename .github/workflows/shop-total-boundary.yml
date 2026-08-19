@@ -1,0 +1,26 @@
+name: Shop Total Boundary
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical shop total bound
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/ShopService.lua').read_text(encoding='utf-8')
+          required = [
+              'local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)',
+              'local total = price * amount',
+              'finiteNumber(total) == nil or total <= 0 or total > EconomyConfig.MaxMoney',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('shop total boundary missing: ' + ', '.join(missing))
+          print('Shop purchase total boundary validated.')
