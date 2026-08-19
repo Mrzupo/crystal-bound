@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate critical remote gates
+      - name: Validate critical remote gates and player cleanup
         shell: python
         run: |
           from pathlib import Path
@@ -38,10 +38,15 @@ jobs:
                   if marker not in text:
                       problems.append(f"{relative} is missing rate-limit marker: {marker}")
 
+              state_marker = markers[-1]
+              table_like = state_marker
+              if 'PlayerRemoving:Connect' not in text:
+                  problems.append(f"{relative} must clear request state on PlayerRemoving")
+
           if problems:
               print("Remote rate-limit validation problems:")
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("Critical remote rate-limit contracts validated.")
+          print("Critical remote rate-limit and player-lifecycle contracts validated.")
