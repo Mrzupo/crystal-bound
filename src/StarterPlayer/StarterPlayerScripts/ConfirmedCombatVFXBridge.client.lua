@@ -10,7 +10,6 @@ combatFeedback.OnClientEvent:Connect(function(_, attackerUserId, action, crystal
 	if attackerUserId ~= player.UserId then return end
 	if type(action) ~= "string" or (action ~= "Basic" and action ~= "Ability") then return end
 	if type(crystalId) ~= "string" then return end
-	if crystalId ~= player:GetAttribute("EquippedCrystal") then return end
 
 	player:SetAttribute("CrystalVFXAuthorizedAt", os.clock())
 	player:SetAttribute("CrystalVFXAuthorizedAction", action)
