@@ -176,12 +176,12 @@ function Controller.Play(action, crystalId)
 	lastPlay[playKey] = now + getLocalCooldown(crystalId, action)
 	for _, other in pairs(tracks) do
 		if other ~= track and other.IsPlaying then
-			stopTrack(other, finiteNumber(definition.FadeTime, 0.08))
+			stopTrack(other, math.clamp(finiteNumber(definition.FadeTime, 0.08), 0, 2))
 		end
 	end
 
-	local fadeTime = math.max(0, finiteNumber(definition.FadeTime, 0.08))
-	local playbackSpeed = math.max(0.05, finiteNumber(definition.PlaybackSpeed, 1))
+	local fadeTime = math.clamp(finiteNumber(definition.FadeTime, 0.08), 0, 2)
+	local playbackSpeed = math.clamp(finiteNumber(definition.PlaybackSpeed, 1), 0.05, 4)
 	track:Play(fadeTime, 1, playbackSpeed)
 	return true
 end
