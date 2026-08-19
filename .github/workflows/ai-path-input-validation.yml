@@ -20,6 +20,11 @@ jobs:
           text = path.read_text(encoding="utf-8")
 
           required = [
+              'typeof(value) == "number"',
+              'function isFiniteVector3(value)',
+              'finiteNumber(value.X)',
+              'finiteNumber(value.Y)',
+              'finiteNumber(value.Z)',
               'typeof(destination) ~= "Vector3"',
               'function keyFor(goal)',
               'math.floor(goal.X / 4)',
@@ -33,7 +38,4 @@ jobs:
                   print("Missing AI path marker:", marker)
               raise SystemExit(1)
 
-          # Keep this contract aligned with the current implementation.
-          # A finite-component guard is a future hardening target, not a
-          # claim about current runtime behavior.
-          print("AI path input baseline validated.")
+          print("AI path finite-input validation passed.")
