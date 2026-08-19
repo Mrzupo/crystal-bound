@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate shared shop config
+      - name: Validate shared shop config and inventory registration
         shell: python
         run: |
           import re
@@ -21,18 +21,26 @@ jobs:
           ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
 
-          for marker in ("Offers", "SellOrder", "HealthPotion", "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard"):
-              if marker not in config:
-                  raise SystemExit(f"ShopConfig missing {marker}")
+          if "Offers" not in config or "SellOrder" not in config:
+              raise SystemExit("ShopConfig must define Offers and SellOrder")
+
           prices = [int(value) for value in re.findall(r"Price\s*=\s*(\d+)", config)]
           limits = [int(value) for value in re.findall(r"MaxPerPurchase\s*=\s*(\d+)", config)]
           if not prices or any(value <= 0 for value in prices):
               raise SystemExit("ShopConfig prices must all be positive")
           if not limits or any(value <= 0 for value in limits):
               raise SystemExit("ShopConfig MaxPerPurchase values must all be positive")
-          for marker in ("HealthPotion", "EmberShard", "TidePearl", "GaleFeather", "GuardianCore", "AncientShard"):
-              if marker not in inventory:
-                  raise SystemExit(f"InventoryConfig missing shop item {marker}")
+
+          offer_ids = re.findall(r"ItemId\s*=\s*\"([^\"]+)\"", config)
+          if not offer_ids:
+              raise SystemExit("ShopConfig must define at least one ItemId offer")
+          sell_section = config.split("SellOrder", 1)[1]
+          sell_ids = re.findall(r'\"([A-Za-z0-9_]+)\"', sell_section)
+          all_shop_items = sorted(set(offer_ids + sell_ids))
+          for item_id in all_shop_items:
+              if f"{item_id} = " not in inventory:
+                  raise SystemExit(f"InventoryConfig missing shop item referenced by ShopConfig: {item_id}")
+
           if "ShopConfig" not in shop:
               raise SystemExit("ShopService must consume shared ShopConfig")
           if "positiveInteger" not in shop:
@@ -41,4 +49,4 @@ jobs:
               raise SystemExit("ShopMenu must consume shared ShopConfig and InventoryConfig")
           if "ShopConfig" not in bootstrap or "local sellOrder = shopConfig.SellOrder" not in bootstrap:
               raise SystemExit("ClientBootstrap must consume shared ShopConfig.SellOrder")
-          print("Shop configuration contract validated.")
+          print("Shop configuration, offer IDs, SellOrder IDs and inventory registration validated.")
