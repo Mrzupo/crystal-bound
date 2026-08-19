@@ -19,6 +19,12 @@ local function positiveInteger(value)
 	return number
 end
 
+local function safeProduct(left, right)
+	local product = left * right
+	if finiteNumber(product) == nil or product <= 0 or product % 1 ~= 0 then return nil end
+	return product
+end
+
 local function cloneRecipe(recipe)
 	if type(recipe) ~= "table" then return nil end
 	local copy = {}
@@ -59,7 +65,10 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	if recipeAmount > availableOutputSpace / math.max(1, amount) then
 		return false, string.format("Not enough inventory space for %dx %s.", recipeAmount * math.min(amount, maxPerCraft), recipe.Output)
 	end
-	local outputAmount = recipeAmount * amount
+	local outputAmount = safeProduct(recipeAmount, amount)
+	if not outputAmount then
+		return false, "Crafting output amount is out of bounds."
+	end
 
 	if type(recipe.Inputs) ~= "table" or next(recipe.Inputs) == nil then
 		return false, "Crafting recipe has no valid inputs."
@@ -71,7 +80,10 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 		if not safeRequired then
 			return false, string.format("Crafting recipe input %s is invalid.", tostring(itemId))
 		end
-		local totalRequired = safeRequired * amount
+		local totalRequired = safeProduct(safeRequired, amount)
+		if not totalRequired then
+			return false, string.format("Crafting input %s is out of bounds.", tostring(itemId))
+		end
 		if not InventoryService.HasItem(profile, itemId, totalRequired) then
 			return false, string.format("Need %d %s to craft %dx %s.", totalRequired, itemId, amount, outputId)
 		end
@@ -79,8 +91,8 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 
 	for itemId, required in pairs(recipe.Inputs) do
 		local safeRequired = positiveInteger(required)
-		local totalRequired = safeRequired * amount
-		if not InventoryService.RemoveItem(profile, itemId, totalRequired) then
+		local totalRequired = safeRequired and safeProduct(safeRequired, amount) or nil
+		if not totalRequired or not InventoryService.RemoveItem(profile, itemId, totalRequired) then
 			for rollbackId, rollbackAmount in pairs(consumed) do InventoryService.AddItem(profile, rollbackId, rollbackAmount) end
 			return false, "Crafting could not consume all materials safely."
 		end
