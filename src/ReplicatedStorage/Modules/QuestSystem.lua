@@ -11,23 +11,35 @@ local Definitions = {
 	BAT_HUNT = { Id = "BAT_HUNT", Name = "Shards in the Dark", Description = "Defeat 3 Crystal Bats.", Goal = 3, XP = 1000, Money = 700, EnemyType = "CrystalBat", MinLevel = 19, Requires = "GOLEM_HUNT" },
 }
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function safeAmount(amount)
-	local value = tonumber(amount)
-	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
-		return nil
-	end
-	if value < 0 or value % 1 ~= 0 then
-		return nil
-	end
+	local value = finiteNumber(amount, nil)
+	if value == nil or value < 0 or value % 1 ~= 0 then return nil end
 	return value
 end
 
+local function cloneDefinition(definition)
+	if type(definition) ~= "table" then return nil end
+	local copy = {}
+	for key, value in pairs(definition) do copy[key] = value end
+	return copy
+end
+
 function QuestSystem.GetDefinition(id)
-	return Definitions[id]
+	return cloneDefinition(Definitions[id])
 end
 
 function QuestSystem.GetDefinitions()
-	return Definitions
+	local result = {}
+	for id, definition in pairs(Definitions) do result[id] = cloneDefinition(definition) end
+	return result
 end
 
 function QuestSystem.GetChainOrder()
@@ -74,8 +86,10 @@ function QuestSystem.CanStart(profile, questId)
 	if #(profile.ActiveQuests or {}) > 0 then
 		return false, "Finish your active quest first."
 	end
-	if (profile.Level or 1) < (definition.MinLevel or 1) then
-		return false, string.format("Reach level %d.", definition.MinLevel or 1)
+	local profileLevel = math.max(1, math.floor(finiteNumber(profile.Level, 1)))
+	local minimumLevel = math.max(1, math.floor(finiteNumber(definition.MinLevel, 1)))
+	if profileLevel < minimumLevel then
+		return false, string.format("Reach level %d.", minimumLevel)
 	end
 	if definition.Requires and not QuestSystem.IsCompleted(profile, definition.Requires) then
 		return false, "Complete the previous quest first."
@@ -125,8 +139,10 @@ function QuestSystem.Advance(profile, questId, amount)
 	if safeIncrement == nil then
 		return false, QuestSystem.GetProgress(profile, questId), definition.Goal
 	end
-	profile.QuestProgress[questId] = math.min(definition.Goal, QuestSystem.GetProgress(profile, questId) + safeIncrement)
-	return profile.QuestProgress[questId] >= definition.Goal, profile.QuestProgress[questId], definition.Goal
+	local currentProgress = math.max(0, math.floor(finiteNumber(QuestSystem.GetProgress(profile, questId), 0)))
+	local goal = math.max(1, math.floor(finiteNumber(definition.Goal, 1)))
+	profile.QuestProgress[questId] = math.min(goal, currentProgress + safeIncrement)
+	return profile.QuestProgress[questId] >= goal, profile.QuestProgress[questId], goal
 end
 
 function QuestSystem.Complete(profile, questId)
