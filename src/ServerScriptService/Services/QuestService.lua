@@ -16,12 +16,21 @@ local function sync(player, profile)
 	player:SetAttribute("CompletedQuestCount", #(profile.CompletedQuests or {}))
 end
 
+local function copyArray(values)
+	local result = {}
+	if type(values) ~= "table" then return result end
+	for index, value in ipairs(values) do
+		result[index] = value
+	end
+	return result
+end
+
 function QuestService.GetActive(profile)
-	return profile.ActiveQuests or {}
+	return copyArray(profile.ActiveQuests)
 end
 
 function QuestService.GetCompleted(profile)
-	return profile.CompletedQuests or {}
+	return copyArray(profile.CompletedQuests)
 end
 
 function QuestService.Start(player, profile, questId)
