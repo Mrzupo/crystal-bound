@@ -1,0 +1,37 @@
+name: Session Shutdown Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shutdown save and release ownership
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/SessionHeartbeat.server.lua").read_text(encoding="utf-8")
+          required = [
+              "game:BindToClose(shutdownProfiles)",
+              "PlayerService.GetProfile(player)",
+              "local ok = PlayerService.Remove(player)",
+              "SHUTDOWN_TIMEOUT",
+              "shuttingDown = true",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Shutdown persistence contract missing: " + ", ".join(missing))
+
+          root = Path("src/ServerScriptService")
+          remove_calls = []
+          for path in root.rglob("*.lua"):
+              content = path.read_text(encoding="utf-8")
+              if "PlayerService.Remove(player)" in content:
+                  remove_calls.append(str(path))
+          if "src/ServerScriptService/SessionHeartbeat.server.lua" not in remove_calls:
+              raise SystemExit("Shutdown handler must invoke the canonical PlayerService.Remove path")
+          print("Session shutdown persistence contract validated.")
