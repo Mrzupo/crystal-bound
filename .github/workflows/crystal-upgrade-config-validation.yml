@@ -17,6 +17,7 @@ jobs:
           from pathlib import Path
           config = Path("src/ReplicatedStorage/Config/CrystalUpgradeConfig.lua").read_text(encoding="utf-8")
           mastery = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+          inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
           required = {
               "EMBER": "EmberShard",
               "TIDE": "TidePearl",
@@ -25,6 +26,8 @@ jobs:
           for crystal, item in required.items():
               if crystal not in config or item not in config:
                   raise SystemExit(f"Missing mastery cost definition for {crystal}: {item}")
+              if f'{item} = ' not in inventory:
+                  raise SystemExit(f"Mastery material is not registered in InventoryConfig: {item}")
 
           max_level = re.search(r"MaxLevel\s*=\s*(\d+)", config)
           max_xp = re.search(r"MaxExperience\s*=\s*(\d+)", config)
@@ -37,6 +40,8 @@ jobs:
           costs = re.findall(r"(EmberShard|TidePearl|GaleFeather)\s*=\s*(\d+)", base_costs)
           if len(costs) != 3 or any(int(amount) <= 0 for _, amount in costs):
               raise SystemExit("Every crystal mastery base cost must be present and positive")
+          if any(int(amount) > 1000000 for _, amount in costs):
+              raise SystemExit("Crystal mastery base cost exceeds the million-per-material design bound")
 
           required_mastery_markers = [
               "local function validCrystalId(crystalId)",
@@ -51,4 +56,4 @@ jobs:
           if missing:
               raise SystemExit("CrystalMastery complete-ID validation missing: " + ", ".join(missing))
 
-          print("Crystal upgrade config and complete CrystalMastery ID boundary validated.")
+          print("Crystal upgrade config, material ownership and complete CrystalMastery ID boundary validated.")
