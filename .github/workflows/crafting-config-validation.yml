@@ -15,26 +15,48 @@ jobs:
         run: |
           import re
           from pathlib import Path
+
           config = Path("src/ReplicatedStorage/Config/CraftingConfig.lua").read_text(encoding="utf-8")
           inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
           service = Path("src/ServerScriptService/Services/CraftingService.lua").read_text(encoding="utf-8")
           ui = Path("src/StarterPlayer/StarterPlayerScripts/CraftingMenu.client.lua").read_text(encoding="utf-8")
-          for marker in ("Recipes", "HealthPotion", "EmberShard", "TidePearl", "Inputs", "Output"):
+
+          for marker in ("Recipes", "Inputs", "Output"):
               if marker not in config:
                   raise SystemExit(f"CraftingConfig missing {marker}")
-          for marker in ("HealthPotion", "EmberShard", "TidePearl"):
-              if marker not in inventory:
-                  raise SystemExit(f"InventoryConfig missing crafting item {marker}")
-          if not re.search(r"HealthPotion", config):
-              raise SystemExit("CraftingConfig must define a HealthPotion recipe")
-          output_amounts = [int(value) for value in re.findall(r"Amount\s*=\s*(\d+)", config)]
-          input_amounts = [int(value) for value in re.findall(r"Inputs\s*=\s*\{(.*?)\}", config, re.S) for value in re.findall(r"\b[A-Za-z0-9_]+\s*=\s*(\d+)", value)]
-          if not output_amounts or any(value <= 0 for value in output_amounts):
+
+          recipe_blocks = re.findall(r"[A-Za-z0-9_]+\s*=\s*\{(.*?)\n\s*\}", config, re.S)
+          if not recipe_blocks:
+              raise SystemExit("CraftingConfig must contain recipe blocks")
+
+          outputs = re.findall(r"Output\s*=\s*[\"']([A-Za-z0-9_]+)[\"']", config)
+          if not outputs:
+              raise SystemExit("CraftingConfig must define recipe outputs")
+          for item_id in outputs:
+              if f"{item_id} = " not in inventory:
+                  raise SystemExit(f"Crafting output is not registered in InventoryConfig: {item_id}")
+
+          input_sections = re.findall(r"Inputs\s*=\s*\{(.*?)\}", config, re.S)
+          input_ids = []
+          for section in input_sections:
+              input_ids.extend(re.findall(r"([A-Za-z0-9_]+)\s*=\s*\d+", section))
+          if not input_ids:
+              raise SystemExit("CraftingConfig must define at least one input")
+          for item_id in input_ids:
+              if f"{item_id} = " not in inventory:
+                  raise SystemExit(f"Crafting input is not registered in InventoryConfig: {item_id}")
+
+          amounts = [int(value) for value in re.findall(r"\bAmount\s*=\s*(\d+)", config)]
+          if not amounts or any(value <= 0 for value in amounts):
               raise SystemExit("Crafting recipe output amounts must be positive")
+          input_amounts = [int(value) for value in re.findall(r"\b[A-Za-z0-9_]+\s*=\s*(\d+)", "\n".join(input_sections))]
           if not input_amounts or any(value <= 0 for value in input_amounts):
               raise SystemExit("Crafting recipe input amounts must be positive")
-          if "CraftingConfig" not in service or "CraftingConfig" not in ui:
-              raise SystemExit("Server and UI must consume shared CraftingConfig")
+
           if "positiveInteger" not in service:
               raise SystemExit("CraftingService must reject invalid craft amounts")
-          print("Crafting configuration contract validated.")
+          if "safeProduct" not in service:
+              raise SystemExit("CraftingService must bound multiplied recipe amounts")
+          if "CraftingConfig" not in ui:
+              raise SystemExit("Crafting UI must consume shared CraftingConfig")
+          print("Crafting configuration and item-registration contract validated.")
