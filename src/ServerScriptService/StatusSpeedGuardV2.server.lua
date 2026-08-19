@@ -9,8 +9,8 @@ local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier
 local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
 local MAX_OBSERVED_SPEED = math.clamp(tonumber(MovementConfig.MaxObservedSpeed) or 90, 16, 200)
 local EXTRA_DISTANCE_TOLERANCE = math.clamp(tonumber(MovementConfig.ExtraDistanceTolerance) or 12, 2, 50)
-local GRACE_DURATION = math.clamp(tonumber(MovementConfig.GraceDuration) or 0.6, 0.1, 3)
 local POSITION_CHECK_INTERVAL = math.clamp(tonumber(MovementConfig.PositionCheckInterval) or 0.15, 0.05, 1)
+local PORTAL_ARRIVAL_TOLERANCE = math.clamp(tonumber(MovementConfig.PortalArrivalTolerance) or 18, 4, 50)
 local SPEED_EPSILON = 0.05
 local connections = setmetatable({}, { __mode = "k" })
 local humanoidConnections = setmetatable({}, { __mode = "k" })
@@ -41,9 +41,18 @@ local function resetPositionState(player)
 	}
 end
 
-local function hasPositionGrace(player, now)
-	local untilTime = finiteNumber(player:GetAttribute("ServerMovementGraceUntil"), 0)
-	return untilTime > now
+local function consumePortalArrival(player)
+	player:SetAttribute("PortalMovementGraceUntil", 0)
+	player:SetAttribute("PortalExpectedDestination", nil)
+	resetPositionState(player)
+end
+
+local function isValidPortalArrival(player, root, now)
+	local untilTime = finiteNumber(player:GetAttribute("PortalMovementGraceUntil"), 0)
+	if untilTime <= now then return false end
+	local destination = player:GetAttribute("PortalExpectedDestination")
+	if typeof(destination) ~= "Vector3" then return false end
+	return (root.Position - destination).Magnitude <= PORTAL_ARRIVAL_TOLERANCE
 end
 
 local function enforcePosition(player, now)
@@ -67,7 +76,12 @@ local function enforcePosition(player, now)
 	local displacement = (root.Position - snapshot.Position).Magnitude
 	local allowed = MAX_OBSERVED_SPEED * sampleDt + EXTRA_DISTANCE_TOLERANCE
 
-	if not hasPositionGrace(player, now) and displacement > allowed then
+	if displacement > allowed then
+		if isValidPortalArrival(player, root, now) then
+			player:SetAttribute("MovementCorrection", false)
+			consumePortalArrival(player)
+			return
+		end
 		root.CFrame = CFrame.new(snapshot.Position)
 		root.AssemblyLinearVelocity = Vector3.zero
 		player:SetAttribute("MovementCorrection", true)
@@ -141,9 +155,6 @@ local function bind(player)
 	table.insert(playerConnections, player:GetAttributeChangedSignal("WalkSpeedBonus"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("EquippedCrystal"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("CrystalMasteryLevel"):Connect(deferredRefresh))
-	table.insert(playerConnections, player:GetAttributeChangedSignal("ServerMovementGraceUntil"):Connect(function()
-		if hasPositionGrace(player, os.clock()) then resetPositionState(player) end
-	end))
 	table.insert(playerConnections, player.CharacterAdded:Connect(function(character)
 		task.defer(function()
 			watchCharacter(player, character)
