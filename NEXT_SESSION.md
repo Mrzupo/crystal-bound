@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **887 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **889 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains untouched.
 
 ## Current state
@@ -27,6 +27,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-confirmed CombatFeedback presentation.
 - Server-owned character Animator for client animation playback.
 - One-shot confirmed Crystal VFX bridge.
+- Server-enforced WalkSpeed baseline and Slow modifiers.
 
 ## Latest hardening work
 - Damage input boundaries reject non-positive, non-finite and oversized values at the canonical validator.
@@ -44,8 +45,10 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - PlayerService Save/Remove guarantees operation-lock release and clears local state after final-save failures while retaining the persistent session lock.
 - Final removal treats failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
 - SessionHeartbeat uses weak failure state.
+- `StatusSpeedGuardV2` now continuously restores server-derived WalkSpeed even without an active Slow effect, preventing local speed overrides from remaining active.
 - CombatPresentation keeps one current Character HealthChanged listener across respawns.
-- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release and Crystal upgrade transaction rollback.
+- CI contracts cover canonical rewards, Crystal unlocks, Achievement titles, Daily Bounty, NPC dialogs, Animator ownership, confirmed VFX, Enemy lifecycle, Quest completion boundaries, strict crafting inputs, final session release, Crystal upgrade transaction rollback and StatusSpeedGuard baseline enforcement.
+- Studio playtest matrix covers the latest transaction, persistence and movement-security cases.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
 ## Security / authority rules
@@ -54,6 +57,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Positive finite damage and bounded range only.
 - PvP damage blocked in current PvE-first combat path.
 - Client cannot authoritatively grant Crystals, items, Money, XP, damage or quest completion.
+- Server derives and enforces WalkSpeed; local movement presentation cannot become authoritative speed.
 - Animation/VFX never decide gameplay.
 - Critical RemoteFunctions have single `OnServerInvoke` ownership.
 - Important Remotes are rate-limited.
@@ -69,10 +73,10 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 
 ## Next steps
 1. Continue static audits only for concrete remaining issues.
-2. Prepare Roblox Studio runtime validation.
-3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets.
+2. Move toward Roblox Studio runtime validation.
+3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first.
 4. Repeat asset contract for TIDE and GALE.
-5. Test combat, boss, AI, persistence and mobile with real Studio Output.
+5. Test combat, boss, AI, persistence, movement and mobile with real Studio Output.
 6. Decide final Crystal acquisition model before Mining/Digging implementation.
 
 ## Do not do
