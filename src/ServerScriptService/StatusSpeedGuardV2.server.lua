@@ -85,14 +85,20 @@ local function enforcePosition(player, now)
 		root.CFrame = CFrame.new(snapshot.Position)
 		root.AssemblyLinearVelocity = Vector3.zero
 		player:SetAttribute("MovementCorrection", true)
-	else
-		player:SetAttribute("MovementCorrection", false)
 		positionState[player] = {
 			Character = player.Character,
 			Position = root.Position,
 			Timestamp = now,
 		}
+		return
 	end
+
+	player:SetAttribute("MovementCorrection", false)
+	positionState[player] = {
+		Character = player.Character,
+		Position = root.Position,
+		Timestamp = now,
+	}
 end
 
 local function refresh(player)
