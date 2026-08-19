@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **929 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **934 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Current state
@@ -37,7 +37,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Inventory corrupt stacks are clamped before mutation.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - CrystalSystem, PlayerData and CrystalMastery accept only complete Crystal configurations with finite integer UnlockLevels plus Definition/BasicAttack/Ability/Passive data.
-- Crystal mastery persistence drops malformed/incomplete Crystal IDs rather than synthesizing state for them.
+- Crystal mastery persistence drops malformed/incomplete Crystal IDs and falls back Equipped state to the first valid owned Crystal.
 - Daily Bounty payout has one server owner and marks the bounty claimed before payout.
 - Achievement payout has one server owner and only pays newly unlocked achievements.
 - Guardian telegraph binds to the exact Guardian instance.
@@ -46,8 +46,10 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - PlayerService Save/Remove guarantees operation-lock release and preserves persistent locks after failed final saves/releases.
 - `StatusSpeedGuardV2` continuously restores server-derived WalkSpeed, immediately corrects property changes, and prevents stale Character listeners across respawns.
 - DodgeService explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
+- Bootstrap now fails fast on mismatched critical Remote classes instead of silently destroying potentially bound instances.
 - RemoteFunction contract now matches the actual Bootstrap rate-limit variable names.
 - Portal contract now verifies portal gates consume canonical `WorldConfig` level fields instead of hardcoded numeric assertions.
+- A dedicated Remote type contract validates critical RemoteEvent/RemoteFunction declarations and Bootstrap fail-fast behavior.
 - Studio playtest matrix covers the latest transaction, persistence, movement-security, Crystal configuration and NPC interaction cases.
 - README, DESIGN, TESTING, TODO, CHANGELOG and CURRENT_AUDIT are aligned with the current architecture.
 
@@ -70,6 +72,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Current VFX remain procedural/placeholder-level.
 - TIDE/GALE currently use level-gated prototype unlocks, while the master design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as long-term Crystal acquisition activities. Decide the final model before building acquisition content.
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
+- A conservative server movement-position anti-teleport system has not been added; WalkSpeed authority and server-side range checks are hardened, but true exploit-driven position spoofing remains a runtime concern to validate in Studio.
 
 ## Next steps
 1. Continue only concrete static audits where risk remains.
