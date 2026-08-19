@@ -23,13 +23,22 @@ local portalTargets = {
 	WindReturnPortal = { Destination = Vector3.new(380, 4, 0), RequiredLevel = WorldConfig.Islands.WIND.Level },
 }
 
-local portalGrace = math.clamp(tonumber(MovementConfig.GraceDuration) or 0.6, 0.1, 3)
-local portalTolerance = math.clamp(tonumber(MovementConfig.PortalArrivalTolerance) or 18, 4, 50)
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
+local portalGrace = math.clamp(finiteNumber(MovementConfig.GraceDuration, 0.6), 0.1, 5)
+local portalTolerance = math.clamp(finiteNumber(MovementConfig.PortalArrivalTolerance, 18), 4, 50)
 local portalCooldownDuration = 1
 local portalCandidates = setmetatable({}, { __mode = "k" })
 local portalCooldowns = setmetatable({}, { __mode = "k" })
 local lastPositions = setmetatable({}, { __mode = "k" })
 local portalConnections = setmetatable({}, { __mode = "k" })
+local playerCharacterConnections = setmetatable({}, { __mode = "k" })
 
 local function getRoot(player)
 	local character = player.Character
@@ -59,6 +68,14 @@ local function tryArmArrival(player, character, destination, beforePosition, req
 	portalCandidates[player] = nil
 end
 
+local function disconnectPlayerCharacter(player)
+	local connection = playerCharacterConnections[player]
+	if connection and connection.Connected then
+		connection:Disconnect()
+	end
+	playerCharacterConnections[player] = nil
+end
+
 local function bindPortal(portal)
 	if not portal:IsA("BasePart") then return end
 	local target = portalTargets[portal.Name]
@@ -74,7 +91,7 @@ local function bindPortal(portal)
 
 		portalCooldowns[player] = true
 		task.delay(portalCooldownDuration, function()
-			portalCooldowns[player] = nil
+			if player.Parent then portalCooldowns[player] = nil end
 		end)
 
 		local snapshot = lastPositions[player]
@@ -123,6 +140,7 @@ for islandName, theme in pairs(themes) do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+	disconnectPlayerCharacter(player)
 	portalCandidates[player] = nil
 	portalCooldowns[player] = nil
 	lastPositions[player] = nil
@@ -130,12 +148,19 @@ end)
 
 bindExistingPortals()
 islands.DescendantAdded:Connect(bindPortal)
-for _, player in ipairs(Players:GetPlayers()) do rememberPosition(player) end
-Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function()
-		task.defer(function() rememberPosition(player) end)
+
+local function bindPlayer(player)
+	disconnectPlayerCharacter(player)
+	rememberPosition(player)
+	playerCharacterConnections[player] = player.CharacterAdded:Connect(function()
+		task.defer(function()
+			if player.Parent then rememberPosition(player) end
+		end)
 	end)
-end)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do bindPlayer(player) end
+Players.PlayerAdded:Connect(bindPlayer)
 
 task.spawn(function()
 	while islands.Parent do
