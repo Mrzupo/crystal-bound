@@ -4,9 +4,16 @@ local DialogConfig = require(ReplicatedStorage.Modules.NPCDialogConfig)
 local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
-local remote = remotes:FindFirstChild("NPCDialogRequest") or Instance.new("RemoteFunction")
-remote.Name = "NPCDialogRequest"
-remote.Parent = remotes
+local remote = remotes:FindFirstChild("NPCDialogRequest")
+if remote then
+	if not remote:IsA("RemoteFunction") then
+		error(("Crystal Bound: NPCDialogRequest has class %s, expected RemoteFunction"):format(remote.ClassName))
+	end
+else
+	remote = Instance.new("RemoteFunction")
+	remote.Name = "NPCDialogRequest"
+	remote.Parent = remotes
+end
 
 local REQUEST_INTERVAL = 0.2
 local NPC_INTERACTION_RANGE = math.max(1, tonumber(InteractionConfig.NPCInteractionRange) or 14)
