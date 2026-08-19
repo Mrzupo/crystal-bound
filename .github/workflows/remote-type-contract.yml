@@ -36,6 +36,25 @@ jobs:
               if not isinstance(entry, dict) or entry.get("$className") != "RemoteFunction":
                   problems.append(f"{name} must be a RemoteFunction")
 
+          fail_fast_files = {
+              "src/ServerScriptService/Bootstrap.server.lua": ["CombatRequest", "GetPlayerData"],
+              "src/ServerScriptService/ShopRemote.server.lua": ["ShopRequest"],
+              "src/ServerScriptService/CraftingRemote.server.lua": ["CraftingRequest"],
+              "src/ServerScriptService/DodgeRemote.server.lua": ["DodgeRequest"],
+              "src/ServerScriptService/UseItemRemote.server.lua": ["UseItemRequest"],
+              "src/ServerScriptService/NPCDialogRemote.server.lua": ["NPCDialogRequest"],
+              "src/ServerScriptService/QuestAvailability.server.lua": ["GetAvailableQuests"],
+          }
+          for file, names in fail_fast_files.items():
+              text = Path(file).read_text(encoding="utf-8")
+              if 'if remote then' not in text and file != "src/ServerScriptService/Bootstrap.server.lua":
+                  problems.append(f"{file} must inspect an existing Remote before binding")
+              for name in names:
+                  if file == "src/ServerScriptService/Bootstrap.server.lua":
+                      continue
+                  if f'{name} has class %s, expected' not in text:
+                      problems.append(f"{file} missing Remote type fail-fast for {name}")
+
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           for marker in (
               'if existing.ClassName ~= className then',
@@ -48,4 +67,4 @@ jobs:
               for problem in problems:
                   print(problem)
               raise SystemExit(1)
-          print("Critical RemoteEvent/RemoteFunction types and Bootstrap fail-fast behavior validated.")
+          print("Critical RemoteEvent/RemoteFunction types and all server Remote fail-fast guards validated.")
