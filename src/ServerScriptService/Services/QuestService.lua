@@ -11,6 +11,14 @@ local SERVER_TRIGGERED_SINGLE_STEP = {
 	GUARDIAN_TRIAL = true,
 }
 
+local function finiteNonNegativeInteger(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge or number < 0 or number % 1 ~= 0 then
+		return nil
+	end
+	return math.floor(number)
+end
+
 local function sync(player, profile)
 	player:SetAttribute("ActiveQuestCount", #(profile.ActiveQuests or {}))
 	player:SetAttribute("CompletedQuestCount", #(profile.CompletedQuests or {}))
@@ -61,10 +69,17 @@ function QuestService.Complete(player, profile, questId, message)
 		return false
 	end
 
+	local rewardXP = finiteNonNegativeInteger(definition.XP)
+	local rewardMoney = finiteNonNegativeInteger(definition.Money)
+	if rewardXP == nil or rewardMoney == nil then
+		if player then player:SetAttribute("QuestMessage", "Quest reward configuration is unavailable.") end
+		return false
+	end
+
 	if not QuestSystem.Complete(profile, questId) then return false end
 
-	XPService.AddXP(profile, definition.XP)
-	EconomyService.AddMoney(profile, definition.Money)
+	XPService.AddXP(profile, rewardXP)
+	EconomyService.AddMoney(profile, rewardMoney)
 	PlayerService.Sync(player)
 	sync(player, profile)
 	if player then
