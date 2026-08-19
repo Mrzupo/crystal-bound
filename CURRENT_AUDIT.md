@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1094 commits ahead, 41 commits behind** `main`.
+Current compare: **1097 commits ahead, 41 commits behind** `main`.
 `main` remains at verified commit `bd4e32ec4caee4feabda7bdb03425fd21aa5c04f`.
 
 ## Verified
@@ -56,6 +56,7 @@ Current compare: **1094 commits ahead, 41 commits behind** `main`.
 - Guardian phase-2 multipliers, attack values, shockwave radius/damage and telegraph values are runtime-bounded and backed by semantic CI contracts.
 - Guardian rewards are idempotent, reward configuration is finite/integer-validated, and XP/Money/Inventory mutation stays on canonical services; optional quest completion no longer blocks Guardian cleanup/respawn.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
+- Guardian reward contract additionally verifies the configured Guardian Drop is registered in `InventoryConfig`.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
 - Enemy lifecycle CI protects both death cleanup and attacker-liveness checks.
@@ -71,11 +72,11 @@ Current compare: **1094 commits ahead, 41 commits behind** `main`.
 - `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback without creating a second server entry-point.
 - Position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
 - Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
-- WorldTheme mirrors the server portal cooldown, uses a pre-touch server position snapshot, and only arms portal grace after the character is observed near the configured destination; rejected/cooldown touches cannot grant grace.
+- WorldTheme mirrors the server portal cooldown, uses a pre-touch server position snapshot, performs the level-gated destination teleport and arms movement grace only at that verified destination.
 - Bootstrap portal creation is now presentation/definition-only; it no longer registers a second `Touched` teleport handler or directly changes player `CFrame`.
-- `WorldTheme.server.lua` is the canonical server owner for portal touch, level gate, destination verification and movement-grace authorization.
-- Portal movement CI explicitly rejects any Bootstrap portal `Touched`/teleport authority drift.
-- Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the observed-arrival candidate/cooldown flow.
+- `WorldTheme.server.lua` is the sole canonical server owner for portal touch, level gate, destination teleport, destination verification and movement-grace authorization.
+- Portal movement CI explicitly rejects any Bootstrap portal `Touched`/teleport authority drift and requires the canonical WorldTheme teleport path.
+- Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the pre-touch snapshot, canonical teleport and arrival-grace flow.
 - MovementConfig CI bounds WalkSpeed, Slow, observed-position, grace and portal-arrival parameters.
 - Dodge has no generic movement/teleport grace path; its server velocity remains subject to the same positional authority.
 - `DodgeService` explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
