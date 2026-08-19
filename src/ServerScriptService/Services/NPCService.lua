@@ -9,6 +9,12 @@ local DodgeService = require(script.Parent.DodgeService)
 
 local NPCService = {}
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
 function NPCService.GetNPCs()
 	local folder = Workspace:FindFirstChild("NPCs")
 	return folder and folder:GetChildren() or {}
@@ -168,80 +174,91 @@ local function specialAttack(typeId, model, character, targetHumanoid, targetRoo
 	local config = EnemyConfig.Get(typeId)
 	if not config then return end
 	local special = type(config.Special) == "table" and config.Special or {}
-	local baseDamage = config.AttackDamage
+	local baseDamage = finiteNumber(config.AttackDamage, 0)
 	local player = character and Players:GetPlayerFromCharacter(character)
 	if not player then return end
 	if typeId == "Emberling" then
-		local range = math.clamp(tonumber(special.Range) or 14, 0.1, 1000)
+		local range = math.clamp(finiteNumber(special.Range, 14), 0.1, 1000)
+		local bonus = math.clamp(finiteNumber(special.BonusDamage, 0), 0, 1000)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(255, 90, 30), 6)
-			local applied = damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
+			local applied = damagePlayer(player, targetHumanoid, math.min(1000, baseDamage + bonus), model, "Physical", range)
 			if applied then
 				StatusEffectService.ApplyBurn(targetHumanoid, special.BurnDamage, special.BurnTicks, special.BurnInterval, model, range)
 			end
 		end
 	elseif typeId == "Tidecrawler" then
-		local range = math.clamp(tonumber(special.Range) or 10, 0.1, 1000)
+		local range = math.clamp(finiteNumber(special.Range, 10), 0.1, 1000)
+		local bonus = math.clamp(finiteNumber(special.BonusDamage, 0), 0, 1000)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(40, 150, 255), 5)
-			local applied = damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
+			local applied = damagePlayer(player, targetHumanoid, math.min(1000, baseDamage + bonus), model, "Physical", range)
 			if applied then
 				StatusEffectService.ApplySlow(targetHumanoid, special.SlowMultiplier, special.SlowDuration)
 			end
 		end
 	elseif typeId == "Galewisp" then
 		local direction = targetRoot.Position - root.Position
-		local range = math.clamp(tonumber(special.Range) or 18, 0.1, 1000)
+		local range = math.clamp(finiteNumber(special.Range, 18), 0.1, 1000)
+		local bonus = math.clamp(finiteNumber(special.BonusDamage, 0), 0, 1000)
 		if direction.Magnitude > 0.1 and direction.Magnitude <= range then
 			emitSpecialEffect(root.Position, Color3.fromRGB(175, 120, 255), 8)
-			local offset = math.clamp(tonumber(special.TeleportOffset) or 4, 0, math.min(100, range))
+			local offset = math.clamp(finiteNumber(special.TeleportOffset, 4), 0, math.min(100, range))
 			model:PivotTo(CFrame.lookAt(targetRoot.Position - direction.Unit * offset, targetRoot.Position))
-			damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
+			damagePlayer(player, targetHumanoid, math.min(1000, baseDamage + bonus), model, "Physical", range)
 		end
 	elseif typeId == "CrystalBat" then
-		local range = math.clamp(tonumber(special.Range) or 12, 0.1, 1000)
+		local range = math.clamp(finiteNumber(special.Range, 12), 0.1, 1000)
+		local bonus = math.clamp(finiteNumber(special.BonusDamage, 0), 0, 1000)
 		if (targetRoot.Position - root.Position).Magnitude <= range then
 			emitSpecialEffect(targetRoot.Position, Color3.fromRGB(80, 255, 240), 5)
-			damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
+			damagePlayer(player, targetHumanoid, math.min(1000, baseDamage + bonus), model, "Physical", range)
 		end
 	elseif typeId == "AncientGolem" then
-		local range = math.clamp(tonumber(special.Range) or special.Radius or 10, 0.1, 1000)
+		local range = math.clamp(finiteNumber(special.Range, special.Radius or 10), 0.1, 1000)
+		local bonus = math.clamp(finiteNumber(special.BonusDamage, 0), 0, 1000)
 		emitSpecialEffect(root.Position, Color3.fromRGB(150, 140, 125), 12)
 		for _, otherPlayer in ipairs(Players:GetPlayers()) do
 			local otherCharacter = otherPlayer.Character
 			local otherHumanoid = otherCharacter and otherCharacter:FindFirstChildOfClass("Humanoid")
 			local otherRoot = otherCharacter and otherCharacter:FindFirstChild("HumanoidRootPart")
 			if otherHumanoid and otherHumanoid.Health > 0 and otherRoot and (otherRoot.Position - root.Position).Magnitude <= range then
-				damagePlayer(otherPlayer, otherHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)
+				damagePlayer(otherPlayer, otherHumanoid, math.min(1000, baseDamage + bonus), model, "Physical", range)
 			end
 		end
 	end
 end
 
 function NPCService.StartEnemyAI(model)
+	if model:GetAttribute("AIStarted") == true then return false end
 	local typeId = model:GetAttribute("EnemyType")
 	local config = EnemyConfig.Get(typeId)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
-	if not config or not humanoid or not root or config.AggroRange <= 0 then return end
+	local aggroRange = finiteNumber(config and config.AggroRange, 0)
+	local attackRange = math.clamp(finiteNumber(config and config.AttackRange, 0), 0, 1000)
+	local attackCooldown = math.clamp(finiteNumber(config and config.AttackCooldown, 1), 0.25, 60)
+	local attackDamage = math.clamp(finiteNumber(config and config.AttackDamage, 0), 0, 1000)
+	if not config or not humanoid or not root or aggroRange <= 0 then return false end
+	model:SetAttribute("AIStarted", true)
 	local homePosition = root.Position
 	model:SetAttribute("HomeX", homePosition.X)
 	model:SetAttribute("HomeY", homePosition.Y)
 	model:SetAttribute("HomeZ", homePosition.Z)
 	task.spawn(function()
 		local nextAttack, nextSpecial = 0, os.clock() + 3
-		local leashDistance = math.max(config.AggroRange * 1.8, 50)
+		local leashDistance = math.max(aggroRange * 1.8, 50)
 		local specialConfig = type(config.Special) == "table" and config.Special or {}
-		local specialCooldown = math.clamp(tonumber(specialConfig.Cooldown) or 6, 0.25, 60)
-		local specialRange = math.clamp(tonumber(specialConfig.Range) or 0, 0, 1000)
+		local specialCooldown = math.clamp(finiteNumber(specialConfig.Cooldown, 6), 0.25, 60)
+		local specialRange = math.clamp(finiteNumber(specialConfig.Range, 0), 0, 1000)
 		while model.Parent and humanoid.Health > 0 do
-			local character, distance = getNearestPlayer(root.Position, config.AggroRange)
+			local character, distance = getNearestPlayer(root.Position, aggroRange)
 			if character then
 				local targetRoot = character:FindFirstChild("HumanoidRootPart")
 				local targetHumanoid = character:FindFirstChildOfClass("Humanoid")
 				local targetPlayer = Players:GetPlayerFromCharacter(character)
 				if targetRoot and targetHumanoid and targetHumanoid.Health > 0 and targetPlayer then
-					if distance > config.AttackRange then
+					if distance > attackRange then
 						local direction = targetRoot.Position - root.Position
 						local steer = steerAroundObstacle(model, direction)
 						if steer.Magnitude > 0.1 then
@@ -252,8 +269,8 @@ function NPCService.StartEnemyAI(model)
 							end
 						end
 					elseif os.clock() >= nextAttack then
-						nextAttack = os.clock() + math.clamp(tonumber(config.AttackCooldown) or 1, 0.25, 60)
-						damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage, model, "Physical", config.AttackRange)
+						nextAttack = os.clock() + attackCooldown
+						damagePlayer(targetPlayer, targetHumanoid, attackDamage, model, "Physical", attackRange)
 					end
 					if os.clock() >= nextSpecial and typeId ~= "TrainingDummy" and specialRange > 0 and distance <= specialRange then
 						nextSpecial = os.clock() + specialCooldown
@@ -277,17 +294,21 @@ function NPCService.StartEnemyAI(model)
 		AIPathService.Clear(model)
 		StatusEffectService.Clear(humanoid)
 	end)
+	return true
 end
 
 function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local config = EnemyConfig.Get(typeId)
-	if not config or not position or not parent then return nil end
+	if not config or typeof(position) ~= "Vector3" or not parent then return nil end
+	local health = math.clamp(finiteNumber(config.Health, 100), 1, 1000000)
+	local xp = math.max(0, finiteNumber(config.XP, 0))
+	local money = math.max(0, finiteNumber(config.Money, 0))
 	local model = Instance.new("Model")
 	model.Name = uniqueName or config.DisplayName:gsub("%s+", "")
 	model:SetAttribute("Enemy", true)
 	model:SetAttribute("EnemyType", typeId)
-	model:SetAttribute("RewardXP", config.XP)
-	model:SetAttribute("RewardMoney", config.Money)
+	model:SetAttribute("RewardXP", xp)
+	model:SetAttribute("RewardMoney", money)
 	model:SetAttribute("SpawnX", position.X)
 	model:SetAttribute("SpawnY", position.Y)
 	model:SetAttribute("SpawnZ", position.Z)
@@ -315,9 +336,9 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	head.Parent = model
 	applyVisualStyle(typeId, body, head)
 	local humanoid = Instance.new("Humanoid")
-	humanoid.MaxHealth = config.Health
-	humanoid.Health = config.Health
-	humanoid.DisplayName = config.DisplayName
+	humanoid.MaxHealth = health
+	humanoid.Health = health
+	humanoid.DisplayName = type(config.DisplayName) == "string" and config.DisplayName ~= "" and config.DisplayName or typeId
 	humanoid.Parent = model
 	local weldA = Instance.new("WeldConstraint")
 	weldA.Part0 = root
