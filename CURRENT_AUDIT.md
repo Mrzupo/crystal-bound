@@ -14,23 +14,24 @@ Base: `main`
 - Damage requests require known damage types, valid attackers/targets, positive bounded range and finite damage.
 - Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
-- Shop and Crafting request amounts are now strict positive integers; fractional amounts are rejected instead of floored.
-- Crystal Mastery upgrades now verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
+- Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
+- Crystal Mastery upgrades verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
+- CrystalSystem and PlayerData now reject malformed non-integer or non-finite Crystal UnlockLevels; CrystalMastery applies the same strict Crystal-ID boundary.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Crystal unlock level gates are enforced in canonical `CrystalSystem.Unlock()`; malformed UnlockLevel configuration is rejected.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - `CrystalService.GetOwnedCrystals()` returns a copy instead of exposing the internal profile table.
-- Achievement Titles are derived from earned Achievement IDs instead of trusted standalone title strings.
+- Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig` even for an existing same-day profile.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
 - Session heartbeat failure state uses weak keys.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
-- Final player removal now treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
-- `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active and immediately corrects server-observed `WalkSpeed` property changes.
+- Final player removal treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
+- `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
@@ -38,8 +39,8 @@ Base: `main`
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
 - `crystal-service-ownership.yml` protects the Crystal ownership boundary.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, and StatusSpeedGuard baseline + immediate correction enforcement.
-- Studio playtest checklist now explicitly covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, and the new baseline WalkSpeed enforcement.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, and strict Crystal UnlockLevel/Mastery ID validation.
+- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement and the latest Crystal config boundaries.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
