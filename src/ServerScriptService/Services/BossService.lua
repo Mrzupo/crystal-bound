@@ -21,7 +21,7 @@ local function getPhase2Config(config)
 	local phase2 = type(config.Phase2) == "table" and config.Phase2 or {}
 	return {
 		HealthThreshold = math.clamp(finiteNumber(phase2.HealthThreshold, 0.5), 0.01, 0.99),
-		AttackCooldown = math.clamp(finiteNumber(phase2.AttackCooldown, config.AttackCooldown), 0.1, 60),
+		AttackCooldown = math.clamp(finiteNumber(phase2.AttackCooldown, finiteNumber(config.AttackCooldown, 1)), 0.1, 60),
 		AttackDamageMultiplier = math.clamp(finiteNumber(phase2.AttackDamageMultiplier, 1.35), 0, 10),
 		AbilityRangeMultiplier = math.clamp(finiteNumber(phase2.AbilityRangeMultiplier, 1.5), 0, 10),
 	}
