@@ -20,11 +20,15 @@ jobs:
           root = Path("src/ServerScriptService")
           targets = {
               "CombatRequest": ".OnServerEvent",
+              "QuestRequest": ".OnServerEvent",
+              "InventoryRequest": ".OnServerEvent",
+              "CrystalChanged": ".OnServerEvent",
+              "CrystalUpgradeRequest": ".OnServerEvent",
               "ShopRequest": ".OnServerEvent",
               "CraftingRequest": ".OnServerEvent",
               "UseItemRequest": ".OnServerEvent",
               "DodgeRequest": ".OnServerEvent",
-              "QuestRequest": ".OnServerEvent",
+              "NPCDialogRequest": ".OnServerEvent",
           }
 
           counts = {key: [] for key in targets}
@@ -44,4 +48,4 @@ jobs:
                   print(problem)
               raise SystemExit(1)
 
-          print("Critical RemoteEvent ownership validated.")
+          print("Critical mutating RemoteEvent ownership validated.")
