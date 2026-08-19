@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1037 commits ahead, 29 commits behind** `main`.
+Current compare: **1044 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -33,6 +33,7 @@ Current compare: **1037 commits ahead, 29 commits behind** `main`.
 - Level/Experience mutations are owned by `XPService`; direct server mutation outside the progression service is blocked by contract.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Quest completion is owned by `QuestService`; `QuestSystem.Complete()` has a dedicated single-owner regression contract.
+- `QuestService.Complete()` now validates XP/Money reward configuration as finite nonnegative integers before committing `CompletedQuests`, preventing a malformed reward definition from consuming quest completion state without a valid reward.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - NPC special attacks clamp runtime ranges/cooldowns and Gale teleport offsets to bounded values.
@@ -55,13 +56,14 @@ Current compare: **1037 commits ahead, 29 commits behind** `main`.
 - `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback without creating a second server entry-point.
 - Position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
 - Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
-- Server portal movement grace is destination-bound: `WorldTheme.server.lua` only authorizes known portal destinations for players who meet canonical level requirements, and `StatusSpeedGuardV2` accepts a large displacement only when the server-observed position lands near that expected destination.
-- Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates.
+- Server portal movement grace is destination-bound and requires an observed server displacement from the portal touch position to the configured destination before arming the grace window.
+- Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the observed-arrival candidate/cooldown flow.
 - Dodge has no generic movement/teleport grace path; its server velocity remains subject to the same positional authority.
 - `DodgeService` explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
 - Dodge request directions are server-validated as finite `Vector3` values and bounded by `MaxDirectionMagnitude` before movement is applied.
 - Bootstrap and all major server Remote entrypoints fail fast on mismatched Remote classes instead of silently binding the wrong type.
 - Critical RemoteEvent/RemoteFunction types are statically verified from `default.project.json` and per-entrypoint fail-fast guards are covered by CI.
+- Critical mutating Remote rate-limit state is contract-checked for cleanup on `PlayerRemoving`.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
@@ -71,12 +73,11 @@ Current compare: **1037 commits ahead, 29 commits behind** `main`.
 - Combat defeat rewards are sourced from canonical EnemyConfig and guarded by `DeathRewarded` idempotency.
 - Environmental/Boss hazard contracts validate attacker-less Environmental damage against current BossArena semantics.
 - RemoteFunction contracts enforce single ownership and request-rate guards.
-- Critical RemoteEvent/RemoteFunction rate-limit state is now contract-checked for PlayerRemoving cleanup.
 - Portal contracts verify gates consume canonical `WorldConfig` level fields.
 - Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract protects those invariants.
 - `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract protects that boundary.
 - AI path destinations are finite-validated, quantized, cached by weak Model keys, recomputed at a bounded interval, and explicitly cleared when NPCs die; the AI-path contract protects those lifecycle/resource invariants.
-- Contracts additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership and current StatusSpeedGuard lifecycle behavior.
+- Contracts additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership/reward configuration, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership and current StatusSpeedGuard lifecycle behavior.
 - `contract-path-validation.yml` validates workflow-referenced repository paths.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 
