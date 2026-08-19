@@ -1,0 +1,48 @@
+name: NPC Dialog Config Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server-authorized NPC dialog options
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path("src/ReplicatedStorage/Modules/NPCDialogConfig.lua").read_text(encoding="utf-8")
+          remote = Path("src/ServerScriptService/NPCDialogRemote.server.lua").read_text(encoding="utf-8")
+          bridge = Path("src/ServerScriptService/NPCMenuBridge.server.lua").read_text(encoding="utf-8")
+
+          for npc in ("CrystalKeeper", "MaterialTrader"):
+              if npc not in config:
+                  raise SystemExit(f"Missing canonical NPC dialog config: {npc}")
+
+          option_ids = set(re.findall(r'Id = "([A-Z_]+)"', config))
+          allowed = {"QUEST", "CRYSTAL", "SHOP", "INVENTORY", "CRAFT"}
+          if option_ids != allowed:
+              raise SystemExit(f"Unexpected NPC dialog option IDs: {sorted(option_ids)}")
+
+          for marker in (
+              'local config = DialogConfig.Get(npcId)',
+              'if not config or not isNearNPC(player, npcId) then return nil end',
+              'Players.PlayerRemoving:Connect(function(player)',
+          ):
+              if marker not in remote:
+                  raise SystemExit(f"NPCDialogRemote authority marker missing: {marker}")
+
+          for marker in (
+              'model.Name == "CrystalKeeper" or model.Name == "MaterialTrader"',
+              'isNearModel(player, model)',
+              'player:SetAttribute("OpenNPCDialog", npcId)',
+          ):
+              if marker not in bridge:
+                  raise SystemExit(f"NPC menu bridge authority marker missing: {marker}")
+
+          print("NPC dialog configuration, option ownership and interaction-distance guards validated.")
