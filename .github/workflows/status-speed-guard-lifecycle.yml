@@ -22,6 +22,7 @@ jobs:
               'local expected = math.max(MIN_WALK_SPEED, base)',
               'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
               'humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()',
+              'if player.Character ~= character then return end',
               'disconnectHumanoid(player)',
               'refresh(player)',
           ]
@@ -30,5 +31,5 @@ jobs:
               raise SystemExit('StatusSpeedGuardV2 contract missing: ' + ', '.join(missing))
           if 'and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil' in text:
               raise SystemExit('StatusSpeedGuardV2 must enforce baseline speed even without a slow effect')
-          print('Status speed guard lifecycle, baseline enforcement, immediate correction and respawn cleanup validated.')
+          print('Status speed guard lifecycle, baseline enforcement, immediate correction and stale-character protection validated.')
           PY
