@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1108 commits ahead, 52 commits behind** `main`.
-`main` remains at verified commit `6397450ee13b777e9f1f6ea9d7076e74e9669efb`.
+Current compare: **1109 commits ahead, 53 commits behind** `main`.
+`main` remains at verified commit `a329f8dcb345b72bb807e2fe6ec23733fcf32aaa`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -49,7 +49,7 @@ Current compare: **1108 commits ahead, 52 commits behind** `main`.
 - Normal enemy and Guardian loot IDs are checked against canonical `InventoryConfig` by CI.
 - `CrystalService` is the sole server-facing Crystal ownership wrapper and delegates mutation to `CrystalSystem`.
 - `CrystalAbilityService.Execute()` independently verifies the active/owned Crystal, complete Crystal config, GALE enemy target context and player-to-target ability range before applying secondary effects.
-- Crystal ability input CI also pins defensive numeric ability values to a 1000-unit cap.
+- Crystal ability input CI pins defensive numeric ability values to a 1000-unit cap.
 - TIDE's `Tidal Pulse` configuration explicitly combines ability damage with a bounded heal; the service implementation matches the canonical config rather than treating the heal as an accidental side effect.
 - Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
