@@ -25,7 +25,9 @@ local portalTargets = {
 
 local portalGrace = math.clamp(tonumber(MovementConfig.GraceDuration) or 0.6, 0.1, 3)
 local portalTolerance = math.clamp(tonumber(MovementConfig.PortalArrivalTolerance) or 18, 4, 50)
+local portalCooldownDuration = 1
 local portalCandidates = setmetatable({}, { __mode = "k" })
+local portalCooldowns = setmetatable({}, { __mode = "k" })
 local portalConnections = setmetatable({}, { __mode = "k" })
 
 local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
@@ -51,11 +53,17 @@ local function bindPortal(portal)
 	portalConnections[portal] = portal.Touched:Connect(function(hit)
 		local character = hit and hit:FindFirstAncestorOfClass("Model")
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player or player.Character ~= character then return end
+		if not player or player.Character ~= character or portalCooldowns[player] then return end
 		local profile = PlayerService.GetProfile(player)
 		if not profile or profile.Level < target.RequiredLevel then return end
 		local root = character:FindFirstChild("HumanoidRootPart")
 		if not root then return end
+
+		portalCooldowns[player] = true
+		task.delay(portalCooldownDuration, function()
+			portalCooldowns[player] = nil
+		end)
+
 		portalCandidates[player] = {
 			Character = character,
 			Destination = target.Destination,
@@ -96,6 +104,7 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
 	portalCandidates[player] = nil
+	portalCooldowns[player] = nil
 end)
 
 bindExistingPortals()
