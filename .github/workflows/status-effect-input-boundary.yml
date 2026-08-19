@@ -1,0 +1,26 @@
+name: Status Effect Input Boundary
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce integer Burn tick count
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
+          required = [
+              'normalizedTicks % 1 ~= 0',
+              'ticks = math.clamp(normalizedTicks, 1, 10)',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing status-effect boundary markers: ' + ', '.join(missing))
+          print('Status effect tick boundary validated.')
+          PY
