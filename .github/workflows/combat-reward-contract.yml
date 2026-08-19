@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate canonical enemy reward source
+      - name: Validate canonical enemy reward source and idempotency
         shell: python
         run: |
           from pathlib import Path
@@ -36,4 +36,15 @@ jobs:
           for marker in forbidden:
               if marker in combat:
                   raise SystemExit(f'Implicit fallback reward still present: {marker}')
-          print('Canonical combat reward contract validated.')
+
+          idempotency = (
+              'targetModel:GetAttribute("DeathRewarded") == true',
+              'targetModel:SetAttribute("DeathRewarded", true)',
+          )
+          for marker in idempotency:
+              if marker not in combat:
+                  raise SystemExit(f'Combat reward idempotency marker missing: {marker}')
+
+          if 'local function rewardDefeat' not in combat:
+              raise SystemExit('CombatService rewardDefeat owner missing')
+          print('Canonical combat reward source and idempotency contract validated.')
