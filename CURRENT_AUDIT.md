@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1097 commits ahead, 41 commits behind** `main`.
-`main` remains at verified commit `bd4e32ec4caee4feabda7bdb03425fd21aa5c04f`.
+Current compare: **1099 commits ahead, 42 commits behind** `main`.
+`main` remains at verified commit `2a23e56b154c922bb3de0d3e69bc5e78c14a9203`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -72,10 +72,10 @@ Current compare: **1097 commits ahead, 41 commits behind** `main`.
 - `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback without creating a second server entry-point.
 - Position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
 - Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
-- WorldTheme mirrors the server portal cooldown, uses a pre-touch server position snapshot, performs the level-gated destination teleport and arms movement grace only at that verified destination.
-- Bootstrap portal creation is now presentation/definition-only; it no longer registers a second `Touched` teleport handler or directly changes player `CFrame`.
+- `WorldTheme.server.lua` performs the canonical level-gated portal destination teleport, resets server velocity, verifies destination arrival and arms movement grace only for that same destination.
+- Bootstrap portal creation is definition-only; it no longer registers a second `Touched` teleport handler or directly changes player `CFrame`.
 - `WorldTheme.server.lua` is the sole canonical server owner for portal touch, level gate, destination teleport, destination verification and movement-grace authorization.
-- Portal movement CI explicitly rejects any Bootstrap portal `Touched`/teleport authority drift and requires the canonical WorldTheme teleport path.
+- Portal movement CI explicitly rejects Bootstrap portal `Touched`/teleport authority drift and requires the canonical WorldTheme teleport path.
 - Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the pre-touch snapshot, canonical teleport and arrival-grace flow.
 - MovementConfig CI bounds WalkSpeed, Slow, observed-position, grace and portal-arrival parameters.
 - Dodge has no generic movement/teleport grace path; its server velocity remains subject to the same positional authority.
@@ -86,6 +86,7 @@ Current compare: **1097 commits ahead, 41 commits behind** `main`.
 - Critical mutating Remote rate-limit state is contract-checked for cleanup on `PlayerRemoving`.
 - RemoteEvent ownership covers all known mutating client-to-server RemoteEvents; RemoteFunction ownership separately covers `GetPlayerData`, `GetQuestData`, `GetAvailableQuests` and `NPCDialogRequest`.
 - NPC dialog config is constrained to the canonical CrystalKeeper/MaterialTrader option IDs, and the server read path enforces interaction distance plus request rate-limit cleanup.
+- World initialization CI now validates the bounded portal tracking loop, cleanup on PlayerRemoving and definition-only Bootstrap portal ownership instead of incorrectly banning all `while` loops.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
