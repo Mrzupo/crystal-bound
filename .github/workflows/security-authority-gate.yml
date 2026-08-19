@@ -1,0 +1,55 @@
+name: Security Authority Gate
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate global gameplay authority invariants
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path("src")
+          lua_files = list(root.rglob("*.lua"))
+          server_files = list(Path("src/ServerScriptService").rglob("*.lua"))
+
+          damage_callers = []
+          for path in lua_files:
+              text = path.read_text(encoding="utf-8")
+              if ":TakeDamage(" in text:
+                  damage_callers.append(str(path))
+          allowed_damage_owner = "src/ServerScriptService/Services/DamageService.lua"
+          if damage_callers != [allowed_damage_owner]:
+              raise SystemExit(f"Direct Humanoid:TakeDamage owners must equal [{allowed_damage_owner}], found {damage_callers}")
+
+          money_owners = []
+          inventory_direct = []
+          for path in server_files:
+              text = path.read_text(encoding="utf-8")
+              if "profile.Money =" in text:
+                  money_owners.append(str(path))
+              if re.search(r'profile\.Inventory\[[^\]]+\]\s*=', text):
+                  inventory_direct.append(str(path))
+          if money_owners != ["src/ServerScriptService/Services/EconomyService.lua"]:
+              raise SystemExit(f"Direct profile.Money mutation escaped EconomyService: {money_owners}")
+          if inventory_direct != ["src/ServerScriptService/Services/InventoryService.lua"]:
+              raise SystemExit(f"Direct profile.Inventory mutation escaped InventoryService: {inventory_direct}")
+
+          invoke_owners = []
+          for path in server_files:
+              text = path.read_text(encoding="utf-8")
+              count = len(re.findall(r'\.OnServerInvoke\s*=', text))
+              if count:
+                  invoke_owners.append((str(path), count))
+          duplicate_files = [(path, count) for path, count in invoke_owners if count > 1]
+          if duplicate_files:
+              raise SystemExit(f"Multiple OnServerInvoke handlers in one server entrypoint: {duplicate_files}")
+
+          print("Repository-wide gameplay authority gate validated.")
