@@ -16,6 +16,14 @@ local lastLoad = 0
 local LOAD_INTERVAL = 0.2
 local loadData
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
 	local gui = playerGui:FindFirstChild("QuestMenu")
@@ -83,6 +91,14 @@ local function clearList()
 end
 
 local function addRow(questId, definition, state, progress)
+	if type(questId) ~= "string" or type(definition) ~= "table" then return end
+	local name = type(definition.Name) == "string" and definition.Name or questId
+	local description = type(definition.Description) == "string" and definition.Description or ""
+	local goal = math.max(0, math.floor(finiteNumber(definition.Goal, 0)))
+	local xp = math.max(0, math.floor(finiteNumber(definition.XP, 0)))
+	local money = math.max(0, math.floor(finiteNumber(definition.Money, 0)))
+	local safeProgress = math.clamp(math.floor(finiteNumber(progress, 0)), 0, goal > 0 and goal or math.huge)
+
 	local row = Instance.new("Frame")
 	row.Name = questId
 	row.Size = UDim2.fromOffset(620, 108)
@@ -100,7 +116,7 @@ local function addRow(questId, definition, state, progress)
 	text.TextWrapped = true
 	text.Font = Enum.Font.GothamMedium
 	text.TextSize = 14
-	text.Text = string.format("%s\n%s\nProgress: %d/%d\nReward: %d XP + %d Money\nStatus: %s", definition.Name, definition.Description, progress or 0, definition.Goal or 0, definition.XP or 0, definition.Money or 0, state)
+	text.Text = string.format("%s\n%s\nProgress: %d/%d\nReward: %d XP + %d Money\nStatus: %s", name, description, safeProgress, goal, xp, money, type(state) == "string" and state or "unknown")
 	text.Parent = row
 
 	if state == "available" then
@@ -120,19 +136,19 @@ local function addRow(questId, definition, state, progress)
 end
 
 local function refresh()
-	if not data then return end
+	if not data or type(data) ~= "table" then return end
 	clearList()
-	local active = data.Active or {}
-	local completed = data.Completed or {}
-	local progressData = data.Progress or {}
-	local defs = data.Definitions or {}
+	local active = type(data.Active) == "table" and data.Active or {}
+	local completed = type(data.Completed) == "table" and data.Completed or {}
+	local progressData = type(data.Progress) == "table" and data.Progress or {}
+	local defs = type(data.Definitions) == "table" and data.Definitions or {}
 	local activeSet, completedSet, availableSet = {}, {}, {}
-	for _, id in ipairs(active) do activeSet[id] = true end
-	for _, id in ipairs(completed) do completedSet[id] = true end
-	for _, id in ipairs(available) do availableSet[id] = true end
+	for _, id in ipairs(active) do if type(id) == "string" then activeSet[id] = true end end
+	for _, id in ipairs(completed) do if type(id) == "string" then completedSet[id] = true end end
+	for _, id in ipairs(available) do if type(id) == "string" then availableSet[id] = true end end
 	for id, definition in pairs(defs) do if activeSet[id] then addRow(id, definition, "active", progressData[id] or 0) end end
 	for id, definition in pairs(defs) do if not activeSet[id] and not completedSet[id] and availableSet[id] then addRow(id, definition, "available", progressData[id] or 0) end end
-	for id, definition in pairs(defs) do if completedSet[id] then addRow(id, definition, "completed", definition.Goal or 0) end end
+	for id, definition in pairs(defs) do if completedSet[id] then addRow(id, definition, "completed", definition and definition.Goal or 0) end end
 end
 
 loadData = function(force)
@@ -142,7 +158,7 @@ loadData = function(force)
 	loading = true
 	lastLoad = now
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
-	if ok and response then data = response end
+	if ok and type(response) == "table" then data = response end
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
 	if okAvailable and type(responseAvailable) == "table" then
 		available = responseAvailable
@@ -165,4 +181,4 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	end
 end)
 
-loadData(true) 
+loadData(true)
