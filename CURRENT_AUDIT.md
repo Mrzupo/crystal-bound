@@ -3,6 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
+Current GitHub compare: **825 commits ahead, 29 commits behind** `main`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -17,7 +18,7 @@ Base: `main`
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Crystal unlock level gates are enforced in canonical `CrystalSystem.Unlock()`; malformed UnlockLevel configuration is rejected.
-- Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC creation/AI rejects unknown types cleanly.
+- Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - Achievement Titles are derived from earned Achievement IDs instead of trusted standalone title strings.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig` even for an existing same-day profile.
@@ -25,9 +26,9 @@ Base: `main`
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
 - Session heartbeat failure state uses weak keys.
-- `PlayerService.Save/Remove` use guaranteed operation-lock release and clean local player state after final-save failure while retaining the persistent session lock.
+- `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
-- Crystal VFX requires one-shot server-confirmed CombatFeedback authorization.
+- Crystal VFX requires a one-shot server-confirmed CombatFeedback authorization.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
 - NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed.
@@ -40,7 +41,7 @@ Base: `main`
 - Latest Combined Status is not verified through the available connector; do not call CI green without an actual status result.
 - Authored Roblox Animation/Sound assets are still absent.
 - Current VFX are still procedural/placeholder presentation.
-- TIDE/GALE currently unlock through level gates; the master design also plans Mining, Digging, Bosses, Dungeons, World Events and Quests as Crystal acquisition activities. Do not silently replace one model with another; decide the final acquisition model first.
+- TIDE/GALE currently unlock through level gates; the master design also plans Mining, Digging, Bosses, Dungeons, World Events and Quests as Crystal acquisition activities. Do not silently replace one model with another; decide the final model first.
 - White Queen intro/story implementation has not been replaced or rewritten; the story rules remain unchanged.
 
 ## Next technical direction
