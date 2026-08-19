@@ -19,8 +19,23 @@ local function positiveInteger(value)
 	return number
 end
 
+local function cloneRecipe(recipe)
+	if type(recipe) ~= "table" then return nil end
+	local copy = {}
+	for key, value in pairs(recipe) do
+		if key == "Inputs" and type(value) == "table" then
+			local inputs = {}
+			for itemId, amount in pairs(value) do inputs[itemId] = amount end
+			copy[key] = inputs
+		else
+			copy[key] = value
+		end
+	end
+	return copy
+end
+
 function CraftingService.GetRecipe(outputId)
-	return Recipes[outputId]
+	return cloneRecipe(Recipes[outputId])
 end
 
 function CraftingService.Craft(profile, outputId, amount, InventoryService)
@@ -82,7 +97,11 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 end
 
 function CraftingService.GetRecipes()
-	return Recipes
+	local result = {}
+	for outputId, recipe in pairs(Recipes) do
+		result[outputId] = cloneRecipe(recipe)
+	end
+	return result
 end
 
 return CraftingService
