@@ -8,7 +8,11 @@ if not remotes then
 end
 
 local feedback = remotes:FindFirstChild("CombatFeedback")
-if not feedback then
+if feedback then
+	if not feedback:IsA("RemoteEvent") then
+		error(("Crystal Bound: CombatFeedback has class %s, expected RemoteEvent"):format(feedback.ClassName))
+	end
+else
 	feedback = Instance.new("RemoteEvent")
 	feedback.Name = "CombatFeedback"
 	feedback.Parent = remotes
