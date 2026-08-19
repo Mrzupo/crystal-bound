@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local Validators = require(ReplicatedStorage.Modules.Combat.DamageValidators)
 local DamageTypes = require(ReplicatedStorage.Modules.Combat.DamageTypes)
 local DamageResult = require(ReplicatedStorage.Modules.Combat.DamageResult)
@@ -11,6 +12,10 @@ local function finiteNumber(value)
 	local number = tonumber(value)
 	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
 	return number
+end
+
+local function getNPCRoot()
+	return Workspace:FindFirstChild("NPCs")
 end
 
 local function getRoot(instance)
@@ -34,7 +39,9 @@ local function isValidAttacker(instance)
 	end
 	if instance:IsA("Model") then
 		local humanoid = instance:FindFirstChildOfClass("Humanoid")
-		return instance:IsDescendantOf(workspace)
+		local npcFolder = getNPCRoot()
+		return npcFolder ~= nil
+			and instance:IsDescendantOf(npcFolder)
 			and instance:GetAttribute("Enemy") == true
 			and humanoid ~= nil
 			and humanoid.Health > 0
@@ -51,13 +58,16 @@ local function rememberAttacker(targetModel, attacker)
 end
 
 local function isValidTarget(target)
-	if not target or not target:IsA("Instance") or not target:IsDescendantOf(workspace) then return false end
+	if not target or not target:IsA("Instance") or not target:IsDescendantOf(Workspace) then return false end
 	local targetModel = target:IsA("Player") and target.Character or target
 	if not targetModel or not targetModel:IsA("Model") then return false end
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return false end
 	if Players:GetPlayerFromCharacter(targetModel) then return true end
-	return targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil
+	local npcFolder = getNPCRoot()
+	return npcFolder ~= nil
+		and targetModel:IsDescendantOf(npcFolder)
+		and (targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil)
 end
 
 function DamageService.ValidateRequest(request)
