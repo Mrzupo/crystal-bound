@@ -22,12 +22,13 @@ jobs:
           inventory_ui = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           system = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
+          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
           ability_service = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
           required = {
               "Definitions": ("EMBER =", "TIDE =", "GALE ="),
               "UnlockLevels": ("EMBER = 1", "TIDE = 3", "GALE = 5"),
               "BasicAttack": ("EMBER =", "TIDE =", "GALE ="),
-              "Abilities": ("EMBER =", "TIDE =", "GALE=".replace("=", " =")),
+              "Abilities": ("EMBER =", "TIDE =", "GALE ="),
               "Passives": ("EMBER =", "TIDE =", "GALE ="),
           }
 
@@ -58,10 +59,14 @@ jobs:
               problems.append("Bootstrap must not hardcode a crystal unlock table")
           if "CrystalConfig.Definitions[id]" not in system:
               problems.append("CrystalSystem must consume shared CrystalConfig.Definitions")
+          if "raw % 1 ~= 0" not in system or "validUnlockLevel" not in system:
+              problems.append("CrystalSystem must reject non-integer UnlockLevels")
+          if "required >= 1 and required % 1 == 0" not in player_data:
+              problems.append("PlayerData must reject malformed persisted UnlockLevels")
 
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("CrystalConfig contract validated.")
+          print("CrystalConfig contract validated, including strict integer UnlockLevels.")
