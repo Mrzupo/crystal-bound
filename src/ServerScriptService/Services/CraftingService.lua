@@ -39,11 +39,12 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	local currentOutput = math.max(0, math.floor(finiteNumber(currentRaw) or 0))
 	local recipeAmount = positiveInteger(recipe.Amount)
 	if not recipeAmount then return false, "Crafting recipe output amount is invalid." end
-	local outputAmount = recipeAmount * amount
 	local maxStack = InventoryConfig.GetMaxStackSize(recipe.Output)
-	if currentOutput + outputAmount > maxStack then
-		return false, string.format("Not enough inventory space for %dx %s.", outputAmount, recipe.Output)
+	local availableOutputSpace = math.max(0, maxStack - currentOutput)
+	if recipeAmount > availableOutputSpace / math.max(1, amount) then
+		return false, string.format("Not enough inventory space for %dx %s.", recipeAmount * math.min(amount, maxPerCraft), recipe.Output)
 	end
+	local outputAmount = recipeAmount * amount
 
 	if type(recipe.Inputs) ~= "table" or next(recipe.Inputs) == nil then
 		return false, "Crafting recipe has no valid inputs."
