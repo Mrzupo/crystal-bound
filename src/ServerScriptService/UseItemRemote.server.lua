@@ -19,15 +19,22 @@ end
 local NEXT_USE = setmetatable({}, { __mode = "k" })
 local USE_INTERVAL = 0.2
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
 remote.OnServerEvent:Connect(function(player, itemId)
 	local potion = ConsumableConfig.HealthPotion
 	if type(potion) ~= "table" or type(potion.ItemId) ~= "string" then return end
 	if type(itemId) ~= "string" or itemId ~= potion.ItemId then return end
-	local healAmount = tonumber(potion.HealAmount)
-	if type(healAmount) ~= "number" or healAmount ~= healAmount or healAmount == math.huge or healAmount <= 0 then
+	local healAmount = finiteNumber(potion.HealAmount, 0)
+	if healAmount <= 0 then
 		player:SetAttribute("ShopMessage", "Health Potion configuration is unavailable.")
 		return
 	end
+	healAmount = math.clamp(healAmount, 0.1, 1000)
 	local now = os.clock()
 	if now < (NEXT_USE[player] or 0) then return end
 	NEXT_USE[player] = now + USE_INTERVAL
