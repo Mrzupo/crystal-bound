@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1090 commits ahead, 34 commits behind** `main`.
-`main` remains at verified commit `7089ec79ae47acc8430b68b62576c5458b288ce4`.
+Current compare: **1091 commits ahead, 36 commits behind** `main`.
+`main` remains at verified commit `77634237b1892cdc1e88b7c6d21a3d496279ebc4`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -24,14 +24,14 @@ Current compare: **1090 commits ahead, 34 commits behind** `main`.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
 - Shop purchase totals are finite, positive and bounded by canonical `EconomyConfig.MaxMoney` before the money mutation phase.
-- Crafting CI now validates every configured recipe input/output ID against `InventoryConfig`, not only a fixed allowlist.
+- Crafting CI validates every configured recipe input/output ID against `InventoryConfig`, not only a fixed allowlist.
 - Crafting output/input multiplication is finite/integer-bounded before materials are mutated.
 - Crystal Mastery upgrades verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
 - `CrystalMastery.AddXP`, `GetUpgradeCost` and `Upgrade` reject malformed Crystal mutation IDs instead of silently falling back to EMBER.
 - CrystalSystem only treats Crystal IDs as valid when UnlockLevel is finite/integer and Definition, BasicAttack, Ability and Passive blocks all exist.
 - PlayerData rejects malformed persisted Crystal ownership, equipped IDs and Mastery keys using the same complete-config Crystal boundary; malformed equipped state falls back to the first valid owned Crystal instead of blindly restoring EMBER.
 - `PlayerData.Reconcile()` normalizes persisted Level/XP/Money, inventory stacks, quests/progress, islands, DailyBounty and SessionLock data before gameplay uses the profile.
-- PlayerData reconciliation now has a dedicated CI contract covering persisted numeric bounds, completed-vs-active quest state, bounty reward bounds and malformed SessionLock rejection.
+- PlayerData reconciliation has a dedicated CI contract covering persisted numeric bounds, completed-vs-active quest state, bounty reward bounds and malformed SessionLock rejection.
 - CrystalMastery applies the same complete Crystal-config validation before using a Crystal ID.
 - CrystalConfig CI enforces semantic Damage/Range/Cooldown/HealAmount/UnlockLevel bounds.
 - Combat modifier CI enforces Critical probability 0..1 and multiplier 1..10.
@@ -65,7 +65,7 @@ Current compare: **1090 commits ahead, 34 commits behind** `main`.
 - `PlayerService.Load` rejects a player that leaves while the yieldable profile load is in flight and releases the claimed persistent session lock instead of installing an orphaned in-memory profile.
 - The load lifecycle is checked again immediately after `Profiles[player]` is populated; a leave race removes the in-memory profile and releases the persistent lock before returning.
 - `SafeProfileStore.Load/Save/Refresh/Release` only mutate a profile when the persistent `SessionLock.JobId` belongs to the current server session; competing active locks are not overwritten.
-- Profile-store session-lock invariants now have a dedicated CI contract covering foreign-lock protection, lock refresh/release ownership and Load/Save reconciliation.
+- Profile-store session-lock invariants have a dedicated CI contract covering foreign-lock protection, lock refresh/release ownership and Load/Save reconciliation.
 - `SessionHeartbeat.server.lua` registers `game:BindToClose()` and runs the canonical `PlayerService.Remove()` path for loaded profiles during server shutdown with a bounded shutdown wait.
 - `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
 - `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback without creating a second server entry-point.
