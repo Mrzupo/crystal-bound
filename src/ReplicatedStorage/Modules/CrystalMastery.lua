@@ -14,7 +14,15 @@ end
 local function validCrystalId(crystalId)
 	if type(crystalId) ~= "string" then return false end
 	local required = finiteNumber(CrystalConfig.UnlockLevels[crystalId])
-	return required ~= nil and required >= 1 and required % 1 == 0
+	if required == nil or required < 1 or required % 1 ~= 0 then return false end
+	return type(CrystalConfig.Definitions) == "table"
+		and type(CrystalConfig.Definitions[crystalId]) == "table"
+		and type(CrystalConfig.BasicAttack) == "table"
+		and type(CrystalConfig.BasicAttack[crystalId]) == "table"
+		and type(CrystalConfig.Abilities) == "table"
+		and type(CrystalConfig.Abilities[crystalId]) == "table"
+		and type(CrystalConfig.Passives) == "table"
+		and type(CrystalConfig.Passives[crystalId]) == "table"
 end
 
 local function normalizeCrystalId(crystalId)
