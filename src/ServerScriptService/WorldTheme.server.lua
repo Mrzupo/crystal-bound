@@ -86,6 +86,11 @@ local function bindPortal(portal)
 			BeforePosition = beforePosition,
 			ExpiresAt = os.clock() + math.max(0.5, portalGrace + 0.5),
 		}
+
+		root.CFrame = CFrame.new(target.Destination)
+		root.AssemblyLinearVelocity = Vector3.zero
+		tryArmArrival(player, character, target.Destination, beforePosition, target.RequiredLevel)
+
 		task.defer(function()
 			local candidate = portalCandidates[player]
 			if not candidate or candidate.Character ~= character or candidate.Destination ~= target.Destination then return end
