@@ -1,0 +1,39 @@
+name: Direct Damage Single Owner
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-direct-damage-owner:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require DamageService as the only direct TakeDamage owner
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src")
+          owner = root / "ServerScriptService/Services/DamageService.lua"
+          if not owner.is_file():
+              raise SystemExit(f"Missing required damage owner: {owner}")
+
+          violations = []
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if ":TakeDamage(" in text and path != owner:
+                  violations.append(str(path))
+
+          owner_text = owner.read_text(encoding="utf-8")
+          if ":TakeDamage(" not in owner_text:
+              raise SystemExit("DamageService must contain the direct Humanoid:TakeDamage call")
+
+          if violations:
+              print("Direct TakeDamage calls found outside DamageService:")
+              for path in violations:
+                  print(f" - {path}")
+              raise SystemExit(1)
+
+          print("DamageService is the sole direct Humanoid:TakeDamage owner.")
