@@ -80,15 +80,14 @@ local function advanceAbilityQuest(player, profile)
 	if complete then completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
 end
 
-local function giveLoot(player, profile, targetModel, crystalId)
+local function giveLoot(player, profile, targetModel)
 	local enemyType = targetModel:GetAttribute("EnemyType")
-	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
-	local itemId = enemyConfig and enemyConfig.Drop
-	if not itemId and not enemyConfig then
-		itemId = ({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })[crystalId]
-	end
+	if type(enemyType) ~= "string" then return false end
+	local enemyConfig = EnemyConfig.Get(enemyType)
+	if not enemyConfig or enemyConfig.DisplayName == "Training Dummy" and enemyType ~= "TrainingDummy" then return false end
+	local itemId = enemyConfig.Drop
 	if not itemId then return false end
-	local chance = math.clamp(finiteNumber(enemyConfig and enemyConfig.DropChance) or 1, 0, 1)
+	local chance = math.clamp(finiteNumber(enemyConfig.DropChance) or 0, 0, 1)
 	if chance <= 0 or (chance < 1 and math.random() > chance) then return false end
 	local added = InventoryService.AddItem(profile, itemId, 1)
 	if added > 0 then
@@ -103,12 +102,14 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	if targetModel:GetAttribute("BossId") ~= nil or targetModel:GetAttribute("Enemy") ~= true or targetModel:GetAttribute("DeathRewarded") == true then return end
 	targetModel:SetAttribute("DeathRewarded", true)
 	local enemyType = targetModel:GetAttribute("EnemyType")
-	local enemyConfig = enemyType and EnemyConfig.Get(enemyType) or nil
-	local xpGain = enemyConfig and enemyConfig.XP or (action == "Ability" and 40 or 25)
-	local moneyGain = enemyConfig and enemyConfig.Money or (action == "Ability" and 20 or 10)
+	if type(enemyType) ~= "string" then return end
+	local enemyConfig = EnemyConfig.Get(enemyType)
+	if not enemyConfig then return end
+	local xpGain = enemyConfig.XP
+	local moneyGain = enemyConfig.Money
 	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
 	EconomyService.AddMoney(profile, moneyGain)
-	giveLoot(player, profile, targetModel, crystalId)
+	giveLoot(player, profile, targetModel)
 	profile.Stats.EnemiesDefeated = (finiteNumber(profile.Stats.EnemiesDefeated) or 0) + 1
 	if enemyType == "AncientGolem" then
 		profile.Stats.AncientGolemsDefeated = (finiteNumber(profile.Stats.AncientGolemsDefeated) or 0) + 1
