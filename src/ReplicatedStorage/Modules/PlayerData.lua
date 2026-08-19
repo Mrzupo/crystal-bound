@@ -155,7 +155,9 @@ function PlayerData.Reconcile(data)
 	data.Crystals = type(data.Crystals) == "table" and data.Crystals or clone(defaults.Crystals)
 	data.Crystals.Owned = normalizeList(data.Crystals.Owned, hasCompleteCrystalConfig)
 	if not table.find(data.Crystals.Owned, "EMBER") and hasCompleteCrystalConfig("EMBER") then table.insert(data.Crystals.Owned, "EMBER") end
-	if not hasCompleteCrystalConfig(data.Crystals.Equipped) or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then data.Crystals.Equipped = "EMBER" end
+	if not hasCompleteCrystalConfig(data.Crystals.Equipped) or not table.find(data.Crystals.Owned, data.Crystals.Equipped) then
+		data.Crystals.Equipped = data.Crystals.Owned[1] or ""
+	end
 
 	local sourceMastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or {}
 	local normalizedMastery = {}
