@@ -8,10 +8,18 @@ local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 local StatusEffectService = {}
 local active = setmetatable({}, { __mode = "k" })
 
-local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
-local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
-local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier) or 0.2, 0.01, 1)
-local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
+local BASE_WALK_SPEED = math.max(1, finiteNumber(MovementConfig.BaseWalkSpeed, 16))
+local MIN_WALK_SPEED = math.max(1, finiteNumber(MovementConfig.MinWalkSpeed, 6))
+local MIN_SLOW_MULTIPLIER = math.clamp(finiteNumber(MovementConfig.MinSlowMultiplier, 0.2), 0.01, 1)
+local MAX_SLOW_MULTIPLIER = math.clamp(finiteNumber(MovementConfig.MaxSlowMultiplier, 1), MIN_SLOW_MULTIPLIER, 10)
 
 local function stateFor(humanoid)
 	active[humanoid] = active[humanoid] or {}
@@ -22,7 +30,7 @@ local function getCurrentBaseWalkSpeed(humanoid, fallback)
 	local character = humanoid and humanoid.Parent
 	local player = character and Players:GetPlayerFromCharacter(character)
 	if player then
-		return BASE_WALK_SPEED + math.max(0, tonumber(player:GetAttribute("WalkSpeedBonus")) or 0)
+		return BASE_WALK_SPEED + math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0))
 	end
 	return fallback or humanoid.WalkSpeed
 end
@@ -46,8 +54,8 @@ end
 
 function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
-	multiplier = math.clamp(tonumber(multiplier) or 0.8, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
-	duration = math.clamp(tonumber(duration) or 1, 0.1, 10)
+	multiplier = math.clamp(finiteNumber(multiplier, 0.8), MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
+	duration = math.clamp(finiteNumber(duration, 1), 0.1, 10)
 	local state = stateFor(humanoid)
 	local token = {}
 	if not state.BaseWalkSpeed then state.BaseWalkSpeed = getCurrentBaseWalkSpeed(humanoid) end
@@ -67,9 +75,9 @@ end
 
 function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval, attacker, range)
 	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
-	damagePerTick = math.clamp(tonumber(damagePerTick) or 3, 1, 100)
-	ticks = math.clamp(math.floor(tonumber(ticks) or 3), 1, 10)
-	interval = math.clamp(tonumber(interval) or 0.7, 0.2, 3)
+	damagePerTick = math.clamp(finiteNumber(damagePerTick, 3), 1, 100)
+	ticks = math.clamp(math.floor(finiteNumber(ticks, 3)), 1, 10)
+	interval = math.clamp(finiteNumber(interval, 0.7), 0.2, 3)
 	local state = stateFor(humanoid)
 	local token = {}
 	state.Burn = token
