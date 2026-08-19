@@ -120,6 +120,7 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	if levelsGained > 0 and #QuestService.GetActive(profile) == 0 then QuestService.TryStartNext(player, profile) end
 	if masteryLevels > 0 then player:SetAttribute("CrystalMessage", string.format("%s mastery reached Lv. %d", crystalId, masteryLevel)) end
 	fireProgress(player, levelsGained or 0, { Crystal = crystalId, Level = masteryLevel, XP = masteryXP })
+	DamageService.ClearTarget(targetModel)
 end
 
 function CombatService.HandleRequest(player, action, target)
