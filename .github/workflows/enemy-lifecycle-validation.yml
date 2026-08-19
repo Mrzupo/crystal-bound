@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate enemy death cleanup and attacker liveness contract
+      - name: Validate enemy death cleanup, attacker liveness and AI startup idempotency
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -24,9 +24,12 @@ jobs:
               'if not attacker.Parent or attacker:GetAttribute("Enemy") ~= true then return false end',
               'local attackerHumanoid = attacker:FindFirstChildOfClass("Humanoid")',
               'if attackerHumanoid and attackerHumanoid.Health <= 0 then return false end',
+              'if model:GetAttribute("AIStarted") == true then return false end',
+              'model:SetAttribute("AIStarted", true)',
+              'NPCService.StartEnemyAI(model)',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
-              raise SystemExit('missing enemy lifecycle/attacker guard: ' + ', '.join(missing))
-          print('Enemy lifecycle cleanup and attacker liveness contract validated.')
+              raise SystemExit('missing enemy lifecycle/attacker/AI guard: ' + ', '.join(missing))
+          print('Enemy lifecycle cleanup, attacker liveness and single-start AI contract validated.')
           PY
