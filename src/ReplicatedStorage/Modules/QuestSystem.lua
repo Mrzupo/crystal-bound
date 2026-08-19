@@ -11,10 +11,10 @@ local Definitions = {
 	BAT_HUNT = { Id = "BAT_HUNT", Name = "Shards in the Dark", Description = "Defeat 3 Crystal Bats.", Goal = 3, XP = 1000, Money = 700, EnemyType = "CrystalBat", MinLevel = 19, Requires = "GOLEM_HUNT" },
 }
 
-local function safeAmount(amount, fallback)
+local function safeAmount(amount)
 	local value = tonumber(amount)
 	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
-		return fallback or 0
+		return nil
 	end
 	if value < 0 or value % 1 ~= 0 then
 		return nil
@@ -121,7 +121,7 @@ function QuestSystem.Advance(profile, questId, amount)
 		return false, 0, definition and definition.Goal or 0
 	end
 	profile.QuestProgress = profile.QuestProgress or {}
-	local safeIncrement = safeAmount(amount, 1)
+	local safeIncrement = safeAmount(amount)
 	if safeIncrement == nil then
 		return false, QuestSystem.GetProgress(profile, questId), definition.Goal
 	end
