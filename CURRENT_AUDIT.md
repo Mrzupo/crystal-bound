@@ -3,7 +3,6 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current GitHub compare: **829 commits ahead, 29 commits behind** `main`.
 
 ## Verified
 - `main` remains untouched; development work is isolated on the feature branch.
@@ -20,6 +19,7 @@ Current GitHub compare: **829 commits ahead, 29 commits behind** `main`.
 - Crystal unlock level gates are enforced in canonical `CrystalSystem.Unlock()`; malformed UnlockLevel configuration is rejected.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
+- `CrystalService.GetOwnedCrystals()` returns a copy instead of exposing the internal profile table.
 - Achievement Titles are derived from earned Achievement IDs instead of trusted standalone title strings.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig` even for an existing same-day profile.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
@@ -33,12 +33,13 @@ Current GitHub compare: **829 commits ahead, 29 commits behind** `main`.
 - NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
+- `crystal-service-ownership.yml` protects the Crystal ownership boundary.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter is available in this environment.
-- Latest Combined Status is not verified through the available connector; do not call CI green without an actual status result.
+- The current head has no reported Combined Status checks and no PR-triggered workflow runs available through the connector; do not call CI green without an actual status result.
 - Authored Roblox Animation/Sound assets are still absent.
 - Current VFX are still procedural/placeholder presentation.
 - TIDE/GALE currently unlock through level gates; the master design also plans Mining, Digging, Bosses, Dungeons, World Events and Quests as Crystal acquisition activities. Do not silently replace one model with another; decide the final model first.
