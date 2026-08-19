@@ -14,6 +14,19 @@ local function validUnlockLevel(id)
 	return math.floor(raw)
 end
 
+local function hasDefinition(id)
+	return type(CrystalConfig.Definitions) == "table" and type(CrystalConfig.Definitions[id]) == "table"
+end
+
+local function hasCombatConfig(id)
+	return type(CrystalConfig.BasicAttack) == "table"
+		and type(CrystalConfig.BasicAttack[id]) == "table"
+		and type(CrystalConfig.Abilities) == "table"
+		and type(CrystalConfig.Abilities[id]) == "table"
+		and type(CrystalConfig.Passives) == "table"
+		and type(CrystalConfig.Passives[id]) == "table"
+end
+
 local function copyTable(value)
 	if type(value) ~= "table" then return value end
 	local result = {}
@@ -26,7 +39,7 @@ local function validProfileCrystals(profile)
 end
 
 function CrystalSystem.Exists(id)
-	return type(id) == "string" and validUnlockLevel(id) ~= nil
+	return type(id) == "string" and validUnlockLevel(id) ~= nil and hasDefinition(id) and hasCombatConfig(id)
 end
 
 function CrystalSystem.GetDefinition(id)
