@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1110 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1127 commits ahead, 29 commits behind** `main` (verified with GitHub compare).
 - `main` is restored to verified baseline commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Current state
@@ -42,12 +42,14 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy AI startup is idempotent via an `AIStarted` model guard, preventing duplicate attack/movement loops.
 - Inventory corrupt stacks are clamped before mutation.
 - Quest progress rejects invalid/non-finite/non-integer increments.
+- Quest reward config is cross-checked against canonical XP/Economy caps.
 - CrystalSystem, PlayerData and CrystalMastery accept only complete Crystal configurations with finite integer UnlockLevels plus Definition/BasicAttack/Ability/Passive data.
 - Crystal mastery persistence drops malformed/incomplete Crystal IDs and falls back Equipped state to the first valid owned Crystal.
 - Crystal mastery growth and bonus configuration are finite-safe and bounded for damage, ability damage, health, movement speed and XP growth.
 - Daily Bounty payout has one server owner and marks the bounty claimed before payout; Bounty goals must map to canonical EnemyConfig entries.
-- Achievement payout has one server owner and only pays newly unlocked achievements.
+- Achievement payout has one server owner and RewardMoney is checked against EconomyConfig.MaxMoney.
 - Guardian phase-2 multipliers, attack values, shockwave radius/damage, ArenaHazard interval and telegraph values are runtime-bounded and backed by semantic contracts.
+- Guardian rewards validate XP/Money against canonical XP/Economy caps and require a registered InventoryConfig Drop before marking the boss Rewarded.
 - Guardian telegraph binds to the exact Guardian instance.
 - NPC Burn/Slow only apply after confirmed damage.
 - NPCMenuBridge validates server-side interaction distance before opening NPC menus.
@@ -59,9 +61,11 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Bootstrap and major server Remote entrypoints fail fast on mismatched Remote classes instead of silently binding the wrong type.
 - Remote type contracts cover Bootstrap, CombatFeedback, Shop, Crafting, Dodge, Consumables, NPCDialog and AvailableQuests entrypoints.
 - RemoteFunction contracts enforce single ownership, request-rate guards and non-internal data snapshots.
+- Remote rate-limit CI now checks exact per-player cleanup for all critical mutating Remote state tables.
 - Portal contracts verify canonical `WorldConfig` gates, server destination arrival and lifecycle cleanup.
+- `WorldTheme.server.lua` now explicitly disconnects per-player CharacterAdded listeners on rebind and PlayerRemoving.
 - WorldInit contract verifies canonical four-island IDs, bounded level/size config and WorldTheme portal ownership.
-- Inventory contract validates item type/rariy/stack/sell-price semantics.
+- Inventory contract validates item type/rarity/stack/sell-price semantics.
 - Shop/Crafting contracts validate canonical inventory IDs and economy limits.
 - XPConfig.GetRequiredXP now clamps level/growth/required-XP math.
 - Workflow path self-check validates referenced repository files exist.
