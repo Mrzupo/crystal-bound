@@ -56,6 +56,9 @@ function CrystalMastery.GetRequiredXP(level)
 end
 
 function CrystalMastery.AddXP(profile, crystalId, amount)
+	if not validCrystalId(crystalId) then
+		return 1, 0, 0
+	end
 	local mastery = ensure(profile, crystalId)
 	if mastery.Level >= Config.MaxLevel then
 		mastery.XP = 0
@@ -80,6 +83,14 @@ function CrystalMastery.AddXP(profile, crystalId, amount)
 end
 
 function CrystalMastery.GetBonuses(profile, crystalId)
+	if not validCrystalId(crystalId) then
+		return {
+			DamageMultiplier = 1,
+			AbilityDamageMultiplier = 1,
+			MaxHealthBonus = 0,
+			WalkSpeedBonus = 0,
+		}
+	end
 	local mastery = ensure(profile, crystalId)
 	local extra = mastery.Level - 1
 	return {
@@ -91,7 +102,7 @@ function CrystalMastery.GetBonuses(profile, crystalId)
 end
 
 function CrystalMastery.GetUpgradeCost(profile, crystalId)
-	crystalId = normalizeCrystalId(crystalId)
+	if not validCrystalId(crystalId) then return nil end
 	local mastery = ensure(profile, crystalId)
 	if mastery.Level >= Config.MaxLevel then return {} end
 	local base = type(Config.BaseCosts) == "table" and Config.BaseCosts[crystalId] or nil
@@ -103,13 +114,15 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 		if type(itemId) ~= "string" or not safeAmount or safeAmount <= 0 or safeAmount % 1 ~= 0 then
 			return nil
 		end
-		cost[itemId] = math.floor(safeAmount) * multiplier
+		local total = math.floor(safeAmount) * multiplier
+		if total > 1000000000 then return nil end
+		cost[itemId] = total
 	end
 	return next(cost) and cost or nil
 end
 
 function CrystalMastery.Upgrade(profile, crystalId)
-	crystalId = normalizeCrystalId(crystalId)
+	if not validCrystalId(crystalId) then return false, 0 end
 	local mastery = ensure(profile, crystalId)
 	if mastery.Level >= Config.MaxLevel then
 		return false, mastery.Level
