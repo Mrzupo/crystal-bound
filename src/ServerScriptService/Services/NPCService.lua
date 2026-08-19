@@ -161,6 +161,7 @@ end
 
 local function specialAttack(typeId, model, character, targetHumanoid, targetRoot, root)
 	local config = EnemyConfig.Get(typeId)
+	if not config then return end
 	local special = type(config.Special) == "table" and config.Special or {}
 	local baseDamage = config.AttackDamage
 	local player = character and Players:GetPlayerFromCharacter(character)
@@ -217,7 +218,7 @@ function NPCService.StartEnemyAI(model)
 	local config = EnemyConfig.Get(typeId)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
-	if not humanoid or not root or config.AggroRange <= 0 then return end
+	if not config or not humanoid or not root or config.AggroRange <= 0 then return end
 	local homePosition = root.Position
 	model:SetAttribute("HomeX", homePosition.X)
 	model:SetAttribute("HomeY", homePosition.Y)
@@ -275,6 +276,7 @@ end
 
 function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local config = EnemyConfig.Get(typeId)
+	if not config or not position or not parent then return nil end
 	local model = Instance.new("Model")
 	model.Name = uniqueName or config.DisplayName:gsub("%s+", "")
 	model:SetAttribute("Enemy", true)
