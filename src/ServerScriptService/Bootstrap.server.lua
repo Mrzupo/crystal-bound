@@ -20,7 +20,12 @@ local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
 local NPCService = require(script.Parent.Services.NPCService)
 
 local AUTOSAVE_INTERVAL = 60
-local NPC_INTERACTION_RANGE = math.max(1, tonumber(InteractionConfig.NPCInteractionRange) or 14)
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+local NPC_INTERACTION_RANGE = math.clamp(finiteNumber(InteractionConfig.NPCInteractionRange, 14), 4, 50)
 local QUEST_REQUEST_INTERVAL = 0.15
 local INVENTORY_REQUEST_INTERVAL = 0.1
 local CRYSTAL_REQUEST_INTERVAL = 0.12
@@ -65,7 +70,8 @@ local function isNearNPC(player, npcName, range)
 	local character = player.Character; local root = character and character:FindFirstChild("HumanoidRootPart")
 	local folder = Workspace:FindFirstChild("NPCs"); local npc = folder and folder:FindFirstChild(npcName)
 	local npcRoot = npc and (npc.PrimaryPart or npc:FindFirstChild("Torso"))
-	return root and npcRoot and (root.Position - npcRoot.Position).Magnitude <= (range or NPC_INTERACTION_RANGE)
+	local safeRange = finiteNumber(range, NPC_INTERACTION_RANGE)
+	return root and npcRoot and (root.Position - npcRoot.Position).Magnitude <= math.clamp(safeRange, 4, 50)
 end
 
 remotes.CombatRequest.OnServerEvent:Connect(function(player, action, target) CombatService.HandleRequest(player, action, target) end)
@@ -217,28 +223,3 @@ Players.PlayerAdded:Connect(function(player)
 	end
 	PlayerService.Sync(player)
 end)
-
-Players.PlayerRemoving:Connect(function(player)
-	if not PlayerService.Remove(player) then
-		warn(("Crystal Bound: player removal did not complete cleanly for %s"):format(player.Name))
-	end
-	nextQuestRequest[player] = nil
-	nextInventoryRequest[player] = nil
-	nextCrystalRequest[player] = nil
-	nextCrystalUpgradeRequest[player] = nil
-	nextPlayerDataRequest[player] = nil
-	nextQuestDataRequest[player] = nil
-end)
-
-task.spawn(function()
-	while true do
-		task.wait(AUTOSAVE_INTERVAL)
-		for _, player in ipairs(Players:GetPlayers()) do
-			if PlayerService.GetProfile(player) then
-				PlayerService.Save(player)
-			end
-		end
-	end
-end)
-
-syncAllPlayerData()
