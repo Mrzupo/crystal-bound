@@ -9,13 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate world initialization contracts
+      - name: Validate world initialization and portal lifecycle contracts
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           decor = Path('src/ServerScriptService/WorldDecor.server.lua').read_text(encoding='utf-8')
           theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          world = Path('src/ReplicatedStorage/Config/WorldConfig.lua').read_text(encoding='utf-8')
 
           for marker in ['StarterDecorReady', 'TideDecorReady', 'WindDecorReady', 'DecorReady']:
               if marker not in decor:
@@ -34,15 +36,29 @@ jobs:
               'portalCandidates[player] = nil',
               'portalCooldowns[player] = nil',
               'lastPositions[player] = nil',
+              'local playerCharacterConnections = setmetatable({}, { __mode = "k" })',
+              'local function disconnectPlayerCharacter(player)',
+              'playerCharacterConnections[player] = player.CharacterAdded:Connect',
+              'disconnectPlayerCharacter(player)',
           ]
           for marker in required_tracking:
               if marker not in theme:
                   raise SystemExit(f'WorldTheme lifecycle/tracking marker missing: {marker}')
 
-          if 'createPortal(' not in bootstrap:
-              raise SystemExit('Bootstrap must create the canonical portal definitions')
-          if 'portal.Touched:Connect' in bootstrap:
-              raise SystemExit('Bootstrap must not own portal touch authority; WorldTheme is canonical')
+          levels = [int(value) for value in re.findall(r'Level = (\d+)', world)]
+          if len(levels) != 4 or any(level < 1 or level > 1000 for level in levels):
+              raise SystemExit('WorldConfig island levels must be within 1..1000')
+          sizes = [tuple(map(float, values)) for values in re.findall(r'Size = Vector3\.new\(([^,]+), ([^,]+), ([^)]+)\)', world)]
+          if len(sizes) != 4:
+              raise SystemExit('WorldConfig must define exactly four island sizes')
+          for size in sizes:
+              if any(value <= 0 or value > 2000 for value in size):
+                  raise SystemExit('WorldConfig island sizes must be positive and <= 2000 units')
 
-          print('World initialization, idempotent decoration and bounded portal tracking contracts validated.')
+          if 'createPortal(' not in bootstrap:
+              raise SystemExit('Bootstrap must create canonical portal definitions')
+          if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
+              raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
+
+          print('World initialization, bounded config, portal authority and per-player portal lifecycle validated.')
           PY
