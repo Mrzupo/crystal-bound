@@ -1,0 +1,29 @@
+name: Crystal Ability Context Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate defense-in-depth ability context
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
+          required = [
+              "local CrystalSystem = require",
+              "CrystalSystem.Exists(crystalId)",
+              "profile.Crystals.Equipped ~= crystalId",
+              "CrystalSystem.Owns(profile, crystalId)",
+              "targetModel:GetAttribute(\"Enemy\") ~= true",
+              "(targetRoot.Position - playerRoot.Position).Magnitude > safeRange",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Crystal ability context guard missing: " + ", ".join(missing))
+          print("Crystal ability context contract validated.")
