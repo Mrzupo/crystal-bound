@@ -21,19 +21,21 @@ local function getPhase2Config(config)
 	local phase2 = type(config.Phase2) == "table" and config.Phase2 or {}
 	return {
 		HealthThreshold = math.clamp(finiteNumber(phase2.HealthThreshold, 0.5), 0.01, 0.99),
-		AttackCooldown = math.max(0.1, finiteNumber(phase2.AttackCooldown, config.AttackCooldown)),
-		AttackDamageMultiplier = math.max(0, finiteNumber(phase2.AttackDamageMultiplier, 1.35)),
-		AbilityRangeMultiplier = math.max(0, finiteNumber(phase2.AbilityRangeMultiplier, 1.5)),
+		AttackCooldown = math.clamp(finiteNumber(phase2.AttackCooldown, config.AttackCooldown), 0.1, 60),
+		AttackDamageMultiplier = math.clamp(finiteNumber(phase2.AttackDamageMultiplier, 1.35), 0, 10),
+		AbilityRangeMultiplier = math.clamp(finiteNumber(phase2.AbilityRangeMultiplier, 1.5), 0, 10),
 	}
 end
 
 local function shockwave(center, radius, damage, ignoreModel)
+	radius = math.clamp(finiteNumber(radius, 0), 0, 1000)
+	damage = math.clamp(finiteNumber(damage, 0), 0, 1000)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
-			DodgeService.ApplyDamage(player, humanoid, math.max(0, damage), ignoreModel, "BossShockwave", radius)
+			DodgeService.ApplyDamage(player, humanoid, damage, ignoreModel, "BossShockwave", radius)
 		end
 	end
 
@@ -49,7 +51,7 @@ local function shockwave(center, radius, damage, ignoreModel)
 						DamageService.ProcessDamage({
 							Attacker = ignoreModel,
 							Target = child,
-							Amount = math.max(0, damage),
+							Amount = damage,
 							Range = radius,
 							DamageType = "BossShockwave",
 						})
@@ -156,15 +158,16 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 							model:PivotTo(CFrame.lookAt(root.Position + direction.Unit * step, targetRoot.Position))
 						end
 					elseif os.clock() >= nextAttack then
-						local attackCooldown = phase == 2 and phase2.AttackCooldown or math.max(0.1, finiteNumber(config.AttackCooldown, 1))
-						local attackDamage = phase == 2 and math.floor(math.max(0, finiteNumber(config.AttackDamage, 0)) * phase2.AttackDamageMultiplier) or math.max(0, finiteNumber(config.AttackDamage, 0))
+						local attackCooldown = phase == 2 and phase2.AttackCooldown or math.clamp(finiteNumber(config.AttackCooldown, 1), 0.1, 60)
+						local attackDamage = phase == 2 and math.floor(math.clamp(finiteNumber(config.AttackDamage, 0), 0, 1000) * phase2.AttackDamageMultiplier) or math.clamp(finiteNumber(config.AttackDamage, 0), 0, 1000)
 						nextAttack = os.clock() + attackCooldown
-						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", config.AttackRange)
+						DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", math.clamp(finiteNumber(config.AttackRange, 0), 0.1, 1000))
 					end
-					local abilityRadius = math.max(0, finiteNumber(config.AbilityRadius, 0)) * (phase == 2 and phase2.AbilityRangeMultiplier or 1)
+					local baseAbilityRadius = math.clamp(finiteNumber(config.AbilityRadius, 0), 0, 1000)
+					local abilityRadius = math.clamp(baseAbilityRadius * (phase == 2 and phase2.AbilityRangeMultiplier or 1), 0, 1000)
 					if os.clock() >= nextAbility and nearestDistance <= abilityRadius then
-						nextAbility = os.clock() + math.max(0.1, finiteNumber(config.AbilityCooldown, 6))
-						shockwave(root.Position, abilityRadius, math.max(0, finiteNumber(config.AbilityDamage, 0)), model)
+						nextAbility = os.clock() + math.clamp(finiteNumber(config.AbilityCooldown, 6), 0.1, 60)
+						shockwave(root.Position, abilityRadius, math.clamp(finiteNumber(config.AbilityDamage, 0), 0, 1000), model)
 					end
 				end
 			end
