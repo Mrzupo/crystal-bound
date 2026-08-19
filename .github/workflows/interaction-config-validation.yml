@@ -20,10 +20,14 @@ jobs:
               "src/ServerScriptService/ShopRemote.server.lua",
               "src/ServerScriptService/CraftingRemote.server.lua",
               "src/ServerScriptService/NPCDialogRemote.server.lua",
+              "src/ServerScriptService/NPCMenuBridge.server.lua",
           ]:
               text = Path(path).read_text(encoding="utf-8")
               if "InteractionConfig" not in text:
                   raise SystemExit(f"{path} must consume shared InteractionConfig")
+          bridge = Path("src/ServerScriptService/NPCMenuBridge.server.lua").read_text(encoding="utf-8")
+          if "isNearModel" not in bridge or "and isNearModel(player, model)" not in bridge:
+              raise SystemExit("NPCMenuBridge must validate prompt interaction distance server-side")
           if "NPCInteractionRange" not in config:
               raise SystemExit("InteractionConfig must define NPC interaction range")
 
