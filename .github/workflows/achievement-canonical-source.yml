@@ -10,13 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate centralized achievement definitions and reward ownership
+      - name: Validate centralized achievement definitions, reward ownership and economy bounds
         shell: python
         run: |
           from pathlib import Path
+          import re
           player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
           menu = Path("src/StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua").read_text(encoding="utf-8")
           system = Path("src/ReplicatedStorage/Modules/AchievementSystem.lua").read_text(encoding="utf-8")
+          economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
           server_root = Path("src/ServerScriptService")
           for marker in ("GetOrdered", "IsValidTitle", "AchievementSystem.Get"):
               if marker not in system:
@@ -33,15 +35,18 @@ jobs:
                   if marker in text:
                       duplicate_locations.append(f"{path}: {marker}")
           if duplicate_locations:
-              print("Hard-coded achievement definition remnants:")
-              for item in duplicate_locations:
-                  print(f" - {item}")
-              raise SystemExit(1)
+              raise SystemExit("Hard-coded achievement definition remnants: " + ", ".join(duplicate_locations))
 
           if "canonicalTitles" not in system or "for _, achievementId in ipairs(profile.Achievements)" not in system:
               raise SystemExit("AchievementSystem must derive Titles from earned Achievement IDs")
           if "profile.Titles = canonicalTitles" not in system:
               raise SystemExit("AchievementSystem must replace persisted Titles with canonical achievement-derived titles")
+
+          max_money_match = re.search(r"MaxMoney\s*=\s*(\d+)", economy)
+          max_money = int(max_money_match.group(1)) if max_money_match else 1000000000
+          rewards = [int(value) for value in re.findall(r"RewardMoney\s*=\s*(\d+)", system)]
+          if not rewards or any(value < 0 or value > max_money for value in rewards):
+              raise SystemExit("Achievement RewardMoney values must be within 0..EconomyConfig.MaxMoney")
 
           reward_owners = []
           marker = "EconomyService.AddMoney(profile, definition.RewardMoney or 0)"
@@ -51,4 +56,4 @@ jobs:
           if len(reward_owners) != 1 or reward_owners[0] != "src/ServerScriptService/Services/PlayerService.lua":
               raise SystemExit(f"Achievement Money rewards must have exactly one server owner; found {reward_owners}")
 
-          print("Achievement canonical source, title integrity and reward ownership validated.")
+          print("Achievement canonical source, title integrity, reward ownership and economy bounds validated.")
