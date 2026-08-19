@@ -5,6 +5,7 @@ local DodgeConfig = require(ReplicatedStorage.Config.DodgeConfig)
 
 local DodgeService = {}
 local cooldowns = setmetatable({}, { __mode = "k" })
+local playerConnections = setmetatable({}, { __mode = "k" })
 
 local COOLDOWN = math.max(0.1, tonumber(DodgeConfig.Cooldown) or 2.5)
 local INVULNERABILITY = math.clamp(tonumber(DodgeConfig.Invulnerability) or 0.45, 0.05, 2)
@@ -14,6 +15,12 @@ local MAX_DIRECTION_MAGNITUDE = math.max(1, tonumber(DodgeConfig.MaxDirectionMag
 local function clearForceField(character)
 	local forceField = character and character:FindFirstChild("CrystalBoundDodgeForceField")
 	if forceField then forceField:Destroy() end
+end
+
+local function disconnectPlayer(player)
+	local connection = playerConnections[player]
+	if connection and connection.Connected then connection:Disconnect() end
+	playerConnections[player] = nil
 end
 
 local function finiteComponent(value)
@@ -108,6 +115,7 @@ function DodgeService.ApplyDamage(player, humanoid, amount, attacker, damageType
 end
 
 function DodgeService.CleanupPlayer(player)
+	disconnectPlayer(player)
 	cooldowns[player] = nil
 	if player.Character then clearForceField(player.Character) end
 	if player.Parent then
@@ -126,7 +134,8 @@ local function resetForRespawn(player)
 end
 
 local function bindPlayer(player)
-	player.CharacterAdded:Connect(function()
+	disconnectPlayer(player)
+	playerConnections[player] = player.CharacterAdded:Connect(function()
 		resetForRespawn(player)
 	end)
 	if player.Character then resetForRespawn(player) end
