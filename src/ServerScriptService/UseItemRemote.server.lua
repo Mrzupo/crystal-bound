@@ -5,9 +5,16 @@ local InventoryService = require(script.Parent.Services.InventoryService)
 local ConsumableConfig = require(ReplicatedStorage.Config.ConsumableConfig)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
-local remote = remotes:FindFirstChild("UseItemRequest") or Instance.new("RemoteEvent")
-remote.Name = "UseItemRequest"
-remote.Parent = remotes
+local remote = remotes:FindFirstChild("UseItemRequest")
+if remote then
+	if not remote:IsA("RemoteEvent") then
+		error(("Crystal Bound: UseItemRequest has class %s, expected RemoteEvent"):format(remote.ClassName))
+	end
+else
+	remote = Instance.new("RemoteEvent")
+	remote.Name = "UseItemRequest"
+	remote.Parent = remotes
+end
 
 local NEXT_USE = setmetatable({}, { __mode = "k" })
 local USE_INTERVAL = 0.2
