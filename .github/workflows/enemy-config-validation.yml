@@ -85,6 +85,11 @@ jobs:
               if float(cooldown) < 0.1 or float(cooldown) > 60:
                   raise SystemExit("Enemy AttackCooldown is outside 0.1..60")
 
+          aggro_ranges = [float(value) for value in re.findall(r"AggroRange = ([0-9.]+)", text)]
+          for aggro_range in aggro_ranges:
+              if aggro_range < 0 or aggro_range > 1000:
+                  raise SystemExit("Enemy AggroRange is outside 0..1000")
+
           special_cooldowns = [float(value) for value in re.findall(r"Special = \{\s*Cooldown = ([0-9.]+)", text)]
           for cooldown in special_cooldowns:
               if cooldown < 0.1 or cooldown > 60:
@@ -100,4 +105,4 @@ jobs:
               if offset < 0 or offset > 100:
                   raise SystemExit("Enemy TeleportOffset is outside 0..100")
 
-          print("EnemyConfig combat bounds, strict lookup, lifecycle, special movement and canonical loot validated.")
+          print("EnemyConfig combat bounds, aggro bounds, strict lookup, lifecycle, special movement and canonical loot validated.")
