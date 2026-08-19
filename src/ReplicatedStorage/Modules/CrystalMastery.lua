@@ -11,8 +11,14 @@ local function finiteNumber(value)
 	return number
 end
 
+local function validCrystalId(crystalId)
+	if type(crystalId) ~= "string" then return false end
+	local required = finiteNumber(CrystalConfig.UnlockLevels[crystalId])
+	return required ~= nil and required >= 1 and required % 1 == 0
+end
+
 local function normalizeCrystalId(crystalId)
-	return type(crystalId) == "string" and CrystalConfig.UnlockLevels[crystalId] and crystalId or DEFAULT_CRYSTAL
+	return validCrystalId(crystalId) and crystalId or DEFAULT_CRYSTAL
 end
 
 local function ensure(profile, crystalId)
