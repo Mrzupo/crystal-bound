@@ -1,0 +1,30 @@
+name: Hitbox Target Boundary
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-hitbox-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PvE hitbox target boundary
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/ReplicatedStorage/Modules/Combat/HitboxService.lua")
+          text = path.read_text(encoding="utf-8")
+          required = [
+              'local folder = Workspace:FindFirstChild("NPCs")',
+              'model:IsA("Model")',
+              'model:GetAttribute("Enemy") == true',
+              'humanoid and humanoid.Health > 0',
+              '(root.Position - center).Magnitude <= radius',
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise SystemExit(f"HitboxService missing target-boundary invariant: {marker}")
+          print("Hitbox PvE target boundary validated.")
