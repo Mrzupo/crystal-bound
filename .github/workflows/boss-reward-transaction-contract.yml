@@ -1,0 +1,40 @@
+name: Boss Reward Transaction Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Guardian reward lifecycle and canonical mutation owners
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
+          required = [
+              'if model:GetAttribute("Rewarded") then return end',
+              'model:SetAttribute("Rewarded", true)',
+              'local xpReward = finiteNumber(config.XP)',
+              'local moneyReward = finiteNumber(config.Money)',
+              'local dropId = type(config.Drop) == "string" and config.Drop or nil',
+              'XPService.AddXP(profile, xpReward)',
+              'EconomyService.AddMoney(profile, moneyReward)',
+              'InventoryService.AddItem(profile, dropId, 1)',
+              'DamageService.ClearTarget(model)',
+              'BossService.CreateGuardian(position, parent, bossName)',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('Guardian reward lifecycle markers missing: ' + ', '.join(missing))
+          forbidden = [
+              'profile.Money =',
+              'profile.Inventory[dropId] =',
+          ]
+          for marker in forbidden:
+              if marker in text:
+                  raise SystemExit('Guardian rewards must not bypass canonical mutation owners: ' + marker)
+          print('Guardian reward idempotency, lifecycle cleanup and canonical mutation ownership validated.')
