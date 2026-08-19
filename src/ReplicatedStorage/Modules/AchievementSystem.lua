@@ -94,11 +94,16 @@ function AchievementSystem.Check(profile)
 
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	local mastery = profile.CrystalMastery or {}
+	local hasMastery = function(crystalId)
+		return table.find(owned, crystalId) ~= nil
+			and type(mastery[crystalId]) == "table"
+			and finiteNumber(mastery[crystalId].Level, 0) >= masteryMaxLevel
+	end
 	local ancient = (finiteNumber(profile.Stats.AncientGolemsDefeated, 0) > 0) and (finiteNumber(profile.Stats.CrystalBatsDefeated, 0) > 0)
 	local checks = {
 		FIRST_BLOOD = finiteNumber(profile.Stats.EnemiesDefeated, 0) >= 1,
 		CRYSTAL_KEEPER = table.find(owned, "EMBER") ~= nil and table.find(owned, "TIDE") ~= nil and table.find(owned, "GALE") ~= nil,
-		MASTER_OF_ONE = (mastery.EMBER and finiteNumber(mastery.EMBER.Level, 0) >= masteryMaxLevel) or (mastery.TIDE and finiteNumber(mastery.TIDE.Level, 0) >= masteryMaxLevel) or (mastery.GALE and finiteNumber(mastery.GALE.Level, 0) >= masteryMaxLevel),
+		MASTER_OF_ONE = hasMastery("EMBER") or hasMastery("TIDE") or hasMastery("GALE"),
 		GUARDIAN_SLAYER = finiteNumber(profile.Stats.BossesDefeated, 0) >= 1,
 		ANCIENT_EXPLORER = ancient,
 		LEVEL_20 = finiteNumber(profile.Level, 0) >= 20,
