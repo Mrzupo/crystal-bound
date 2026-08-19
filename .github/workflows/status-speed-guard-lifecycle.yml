@@ -20,6 +20,7 @@ jobs:
               'if connection.Connected then connection:Disconnect() end',
               'local expected = math.max(MIN_WALK_SPEED, base)',
               'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
+              'humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()',
               'refresh(player)',
           ]
           missing = [token for token in required if token not in text]
@@ -27,5 +28,5 @@ jobs:
               raise SystemExit('StatusSpeedGuardV2 contract missing: ' + ', '.join(missing))
           if 'and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil' in text:
               raise SystemExit('StatusSpeedGuardV2 must enforce baseline speed even without a slow effect')
-          print('Status speed guard lifecycle and baseline enforcement validated.')
+          print('Status speed guard lifecycle, baseline enforcement and immediate correction validated.')
           PY
