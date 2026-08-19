@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **969 commits ahead, 29 commits behind** `main`.
+Current compare: **972 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -37,10 +37,12 @@ Current compare: **969 commits ahead, 29 commits behind** `main`.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
 - Session heartbeat failure state uses weak keys; heartbeat kicks after two consecutive refresh failures to protect the save-session lock.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
-- `PlayerService.Load` now rejects a player who leaves while `SafeProfileStore.Load` is yielding, releases the just-claimed session lock, and re-checks `player.Parent` after installing the in-memory profile to close the load/remove race.
 - Final player removal treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
+- `PlayerService.Load` now rejects a player that leaves while the yieldable profile load is in flight, and releases the claimed persistent session lock instead of installing an orphaned in-memory profile.
+- The load lifecycle is checked again immediately after `Profiles[player]` is populated; a leave race removes the in-memory profile and releases the persistent lock before returning.
 - `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
 - `DodgeService` explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
+- Dodge request directions are server-validated as finite `Vector3` values and bounded by `MaxDirectionMagnitude` before movement is applied.
 - Bootstrap and all major server Remote entrypoints now fail fast on mismatched Remote classes instead of silently binding the wrong type.
 - Critical RemoteEvent/RemoteFunction types are statically verified from `default.project.json` and per-entrypoint fail-fast guards are covered by CI.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
@@ -53,9 +55,10 @@ Current compare: **969 commits ahead, 29 commits behind** `main`.
 - Environmental/Boss hazard contracts validate attacker-less Environmental damage against current `BossArena` semantics rather than stale exact calls.
 - RemoteFunction contract uses the actual Bootstrap request-interval guards.
 - Portal contract verifies gates consume canonical `WorldConfig` level fields.
+- Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract now protects those invariants.
 - Stale CI contracts were corrected where they still asserted retired inline values or variable names; the active contracts now inspect current config-driven runtime paths.
 - `contract-path-validation.yml` validates that workflow-referenced repository paths exist.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, PlayerService load/leave lifecycle, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle, Remote type initialization, combat reward idempotency, NPC special movement bounds, attacker-context/range validation, and semantic balancing bounds.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, PlayerService load lifecycle, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle and input boundaries, Remote type initialization, combat reward idempotency, NPC special movement bounds, attacker-context/range validation, and semantic balancing bounds.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
@@ -70,7 +73,7 @@ Current compare: **969 commits ahead, 29 commits behind** `main`.
 - A conservative server movement-position anti-teleport system has not been added; WalkSpeed authority and server-side range checks are hardened, but true exploit-driven position spoofing remains a runtime concern to validate in Studio.
 
 ## Next technical direction
-1. Continue only concrete static audits where risk remains.
+1. Continue concrete static audits where risk remains, prioritizing server authority, persistence and lifecycle races.
 2. Move toward Roblox Studio runtime validation.
 3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first.
 4. Repeat the asset contract for TIDE and GALE.
