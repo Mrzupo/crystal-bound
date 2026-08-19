@@ -7,14 +7,78 @@ local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16
 local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
 local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier) or 0.2, 0.01, 1)
 local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
+local MAX_OBSERVED_SPEED = math.clamp(tonumber(MovementConfig.MaxObservedSpeed) or 90, 16, 200)
+local EXTRA_DISTANCE_TOLERANCE = math.clamp(tonumber(MovementConfig.ExtraDistanceTolerance) or 12, 2, 50)
+local GRACE_DURATION = math.clamp(tonumber(MovementConfig.GraceDuration) or 0.6, 0.1, 3)
+local POSITION_CHECK_INTERVAL = math.clamp(tonumber(MovementConfig.PositionCheckInterval) or 0.15, 0.05, 1)
 local SPEED_EPSILON = 0.05
 local connections = setmetatable({}, { __mode = "k" })
 local humanoidConnections = setmetatable({}, { __mode = "k" })
+local positionState = setmetatable({}, { __mode = "k" })
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
 	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
 	return number
+end
+
+local function getHumanoid(player)
+	local character = player.Character
+	return character and character:FindFirstChildOfClass("Humanoid")
+end
+
+local function getRoot(player)
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function resetPositionState(player)
+	local root = getRoot(player)
+	positionState[player] = {
+		Character = player.Character,
+		Position = root and root.Position or nil,
+		Timestamp = os.clock(),
+	}
+end
+
+local function hasPositionGrace(player, now)
+	local untilTime = finiteNumber(player:GetAttribute("ServerMovementGraceUntil"), 0)
+	return untilTime > now
+end
+
+local function enforcePosition(player, now)
+	if not player.Parent then return end
+	local humanoid = getHumanoid(player)
+	local root = getRoot(player)
+	if not humanoid or humanoid.Health <= 0 or not root then
+		if positionState[player] and positionState[player].Character ~= player.Character then
+			resetPositionState(player)
+		end
+		return
+	end
+
+	local snapshot = positionState[player]
+	if not snapshot or snapshot.Character ~= player.Character or not snapshot.Position then
+		resetPositionState(player)
+		return
+	end
+
+	local sampleDt = math.max(0.05, now - snapshot.Timestamp)
+	local displacement = (root.Position - snapshot.Position).Magnitude
+	local allowed = MAX_OBSERVED_SPEED * sampleDt + EXTRA_DISTANCE_TOLERANCE
+
+	if not hasPositionGrace(player, now) and displacement > allowed then
+		root.CFrame = CFrame.new(snapshot.Position)
+		root.AssemblyLinearVelocity = Vector3.zero
+		player:SetAttribute("MovementCorrection", true)
+	else
+		player:SetAttribute("MovementCorrection", false)
+		positionState[player] = {
+			Character = player.Character,
+			Position = root.Position,
+			Timestamp = now,
+		}
+	end
 end
 
 local function refresh(player)
@@ -44,16 +108,19 @@ end
 local function cleanup(player)
 	disconnectHumanoid(player)
 	local playerConnections = connections[player]
-	if not playerConnections then return end
-	for _, connection in ipairs(playerConnections) do
-		if connection.Connected then connection:Disconnect() end
+	if playerConnections then
+		for _, connection in ipairs(playerConnections) do
+			if connection.Connected then connection:Disconnect() end
+		end
 	end
 	connections[player] = nil
+	positionState[player] = nil
 end
 
 local function watchCharacter(player, character)
 	if player.Character ~= character then return end
 	disconnectHumanoid(player)
+	resetPositionState(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 	humanoidConnections[player] = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
@@ -74,6 +141,9 @@ local function bind(player)
 	table.insert(playerConnections, player:GetAttributeChangedSignal("WalkSpeedBonus"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("EquippedCrystal"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("CrystalMasteryLevel"):Connect(deferredRefresh))
+	table.insert(playerConnections, player:GetAttributeChangedSignal("ServerMovementGraceUntil"):Connect(function()
+		if hasPositionGrace(player, os.clock()) then resetPositionState(player) end
+	end))
 	table.insert(playerConnections, player.CharacterAdded:Connect(function(character)
 		task.defer(function()
 			watchCharacter(player, character)
@@ -92,10 +162,17 @@ Players.PlayerRemoving:Connect(cleanup)
 for _, player in ipairs(Players:GetPlayers()) do bind(player) end
 
 task.spawn(function()
+	local positionElapsed = 0
 	while true do
-		task.wait(ENFORCEMENT_INTERVAL)
+		local dt = task.wait(ENFORCEMENT_INTERVAL)
+		positionElapsed += dt
+		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			refresh(player)
+			if positionElapsed >= POSITION_CHECK_INTERVAL then
+				enforcePosition(player, now)
+			end
 		end
+		if positionElapsed >= POSITION_CHECK_INTERVAL then positionElapsed = 0 end
 	end
-end
+end)
