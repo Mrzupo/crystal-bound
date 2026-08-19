@@ -5,6 +5,14 @@ local player = Players.LocalPlayer
 local crystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local active = false
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function refresh()
 	local gui = player:FindFirstChild("PlayerGui")
 	local main = gui and gui:FindFirstChild("MainUI")
@@ -13,7 +21,7 @@ local function refresh()
 	if not label then return false end
 
 	local crystal = player:GetAttribute("EquippedCrystal") or "EMBER"
-	local endTime = tonumber(player:GetAttribute("AbilityCooldownEnd")) or 0
+	local endTime = finiteNumber(player:GetAttribute("AbilityCooldownEnd"), 0)
 	local remaining = math.max(0, endTime - os.clock())
 	local config = crystalConfig.Abilities[crystal]
 	local name = config and config.Name or "Ability"
