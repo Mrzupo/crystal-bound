@@ -16,10 +16,9 @@ Base: `main`
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
 - Crystal Mastery upgrades verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
-- CrystalSystem and PlayerData now reject malformed non-integer or non-finite Crystal UnlockLevels; CrystalMastery applies the same strict Crystal-ID boundary.
+- CrystalSystem, PlayerData and CrystalMastery now reject malformed non-integer/non-finite Crystal UnlockLevels consistently.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
 - Quest progress rejects invalid/non-finite/non-integer increments.
-- Crystal unlock level gates are enforced in canonical `CrystalSystem.Unlock()`; malformed UnlockLevel configuration is rejected.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - `CrystalService.GetOwnedCrystals()` returns a copy instead of exposing the internal profile table.
@@ -36,11 +35,12 @@ Base: `main`
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
 - NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
+- NPCMenuBridge now validates server-side interaction distance before opening NPC menus.
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
 - `crystal-service-ownership.yml` protects the Crystal ownership boundary.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, and strict Crystal UnlockLevel/Mastery ID validation.
-- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement and the latest Crystal config boundaries.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, strict Crystal UnlockLevel/Mastery ID validation, and NPC menu interaction distance.
+- Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement and the latest Crystal configuration/interaction cases.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
