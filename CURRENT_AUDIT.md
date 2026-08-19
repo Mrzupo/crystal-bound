@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1054 commits ahead, 29 commits behind** `main`.
+Current compare: **1071 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -47,6 +47,7 @@ Current compare: **1054 commits ahead, 29 commits behind** `main`.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
 - Guardian creation is active in the loaded `BossTelegraph` runtime: a missing/invalid `CrystalGuardian` identity is replaced and a canonical Guardian is created from `BossConfig.CrystalGuardian.ArenaCenter`; `BossService.CreateGuardian()` remains idempotent.
 - Guardian phase-2 multipliers, attack values, shockwave radius/damage and telegraph values are runtime-bounded and backed by semantic CI contracts.
+- Guardian rewards are idempotent, reward configuration is finite/integer-validated, and XP/Money/Inventory mutation stays on canonical services; optional quest completion no longer blocks Guardian cleanup/respawn.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
@@ -63,13 +64,14 @@ Current compare: **1054 commits ahead, 29 commits behind** `main`.
 - Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
 - WorldTheme mirrors the server portal cooldown, uses a pre-touch server position snapshot, and only arms portal grace after the character is observed near the configured destination; rejected/cooldown touches cannot grant grace.
 - Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates plus the observed-arrival candidate/cooldown flow.
-- MovementConfig CI now bounds WalkSpeed, Slow, observed-position, grace and portal-arrival parameters.
+- MovementConfig CI bounds WalkSpeed, Slow, observed-position, grace and portal-arrival parameters.
 - Dodge has no generic movement/teleport grace path; its server velocity remains subject to the same positional authority.
 - `DodgeService` explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
 - Dodge request directions are server-validated as finite `Vector3` values and bounded by `MaxDirectionMagnitude` before movement is applied.
 - Bootstrap and all major server Remote entrypoints fail fast on mismatched Remote classes instead of silently binding the wrong type.
 - Critical RemoteEvent/RemoteFunction types are statically verified from `default.project.json` and per-entrypoint fail-fast guards are covered by CI.
 - Critical mutating Remote rate-limit state is contract-checked for cleanup on `PlayerRemoving`.
+- RemoteEvent ownership now covers all known mutating client-to-server RemoteEvents; RemoteFunction ownership separately covers `GetPlayerData`, `GetQuestData`, `GetAvailableQuests` and `NPCDialogRequest`.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
