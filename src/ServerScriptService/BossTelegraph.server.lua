@@ -12,9 +12,17 @@ local config = BossConfig.CrystalGuardian.Telegraph
 local RUN_INTERVAL = 0.25
 local nextCast = 0
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function createTelegraph(position)
-	local radius = math.max(0.1, tonumber(config.Radius) or 8)
-	local windup = math.max(0.05, tonumber(config.Windup) or 0.8)
+	local radius = math.max(0.1, finiteNumber(config.Radius, 8))
+	local windup = math.max(0.05, finiteNumber(config.Windup, 0.8))
 	local part = Instance.new("Part")
 	part.Name = "GuardianTelegraph"
 	part.Anchored = true
@@ -44,7 +52,7 @@ local function getTarget()
 		return nil, nil
 	end
 
-	local targetRange = math.max(0, tonumber(config.TargetRange) or 70)
+	local targetRange = math.max(0, finiteNumber(config.TargetRange, 70))
 	local nearestPlayer, nearestDistance
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
@@ -74,9 +82,9 @@ local function cast()
 	if not humanoid or humanoid.Health <= 0 or not root then return end
 
 	local position = root.Position
-	local windup = math.max(0.05, tonumber(config.Windup) or 0.8)
-	local radius = math.max(0.1, tonumber(config.Radius) or 8)
-	local damage = math.clamp(tonumber(config.Damage) or 0, 0, 1000)
+	local windup = math.max(0.05, finiteNumber(config.Windup, 0.8))
+	local radius = math.max(0.1, finiteNumber(config.Radius, 8))
+	local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)
 	createTelegraph(position)
 	task.delay(windup, function()
 		if not guardian.Parent then return end
@@ -103,7 +111,7 @@ task.spawn(function()
 			local guardian = NPCs:FindFirstChild("CrystalGuardian")
 			local phase = guardian and guardian:GetAttribute("BossPhase") or 1
 			if phase >= 2 then
-				nextCast = os.clock() + math.max(0.1, tonumber(config.Cooldown) or 5.5)
+				nextCast = os.clock() + math.max(0.1, finiteNumber(config.Cooldown, 5.5))
 				cast()
 			else
 				nextCast = os.clock() + 1
