@@ -56,7 +56,14 @@ end
 
 function InventoryService.GetInventory(profile)
 	if type(profile.Inventory) ~= "table" then profile.Inventory = {} end
-	return profile.Inventory
+	local snapshot = {}
+	for itemId, amount in pairs(profile.Inventory) do
+		if InventoryService.IsValidItem(itemId) then
+			local maxStack = Config.GetMaxStackSize(itemId)
+			snapshot[itemId] = math.clamp(math.max(0, math.floor(finiteNumber(amount) or 0)), 0, maxStack)
+		end
+	end
+	return snapshot
 end
 
 return InventoryService
