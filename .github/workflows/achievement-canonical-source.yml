@@ -41,6 +41,8 @@ jobs:
               raise SystemExit("AchievementSystem must derive Titles from earned Achievement IDs")
           if "profile.Titles = canonicalTitles" not in system:
               raise SystemExit("AchievementSystem must replace persisted Titles with canonical achievement-derived titles")
+          if "local masteryMaxLevel = math.clamp(math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel, 10)), 1, 100)" not in system:
+              raise SystemExit("AchievementSystem must bound the mastery threshold used by MASTER_OF_ONE")
 
           max_money_match = re.search(r"MaxMoney\s*=\s*(\d+)", economy)
           max_money = int(max_money_match.group(1)) if max_money_match else 1000000000
@@ -56,4 +58,4 @@ jobs:
           if len(reward_owners) != 1 or reward_owners[0] != "src/ServerScriptService/Services/PlayerService.lua":
               raise SystemExit(f"Achievement Money rewards must have exactly one server owner; found {reward_owners}")
 
-          print("Achievement canonical source, title integrity, reward ownership and economy bounds validated.")
+          print("Achievement canonical source, title integrity, bounded mastery threshold, reward ownership and economy bounds validated.")
