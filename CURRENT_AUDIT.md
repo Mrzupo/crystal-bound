@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1084 commits ahead, 30 commits behind** `main`.
+Current compare: **1085 commits ahead, 30 commits behind** `main`.
 `main` remains at verified commit `94b6f8c1ca4146017a389a977cd528c90b7cd9aa`.
 
 ## Verified
@@ -45,6 +45,7 @@ Current compare: **1084 commits ahead, 30 commits behind** `main`.
 - Normal enemy and Guardian loot IDs are checked against canonical `InventoryConfig` by CI.
 - `CrystalService` is the sole server-facing Crystal ownership wrapper and delegates mutation to `CrystalSystem`.
 - `CrystalAbilityService.Execute()` independently verifies the active/owned Crystal, complete Crystal config, GALE enemy target context and player-to-target ability range before applying secondary effects.
+- TIDE's `Tidal Pulse` configuration explicitly combines ability damage with a bounded heal; the service implementation matches the canonical config rather than treating the heal as an accidental side effect.
 - Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
 - Guardian creation is active in the loaded `BossTelegraph` runtime: a missing/invalid `CrystalGuardian` identity is replaced and a canonical Guardian is created from `BossConfig.CrystalGuardian.ArenaCenter`; `BossService.CreateGuardian()` remains idempotent.
