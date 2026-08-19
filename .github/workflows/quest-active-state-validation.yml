@@ -19,4 +19,20 @@ jobs:
               raise SystemExit("QuestSystem must reject starting a second active quest")
           if "Finish your active quest first." not in text:
               raise SystemExit("QuestSystem must expose the active-quest rejection message")
-          print("Single-active-quest contract validated.")
+
+      - name: Validate QuestService is the only completion authority
+        shell: python
+        run: |
+          from pathlib import Path
+          root = Path("src/ServerScriptService")
+          violations = []
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if "QuestSystem.Complete(" in text and str(path) != "src/ServerScriptService/Services/QuestService.lua":
+                  violations.append(str(path))
+          if violations:
+              print("Direct QuestSystem.Complete calls outside QuestService:")
+              for path in violations:
+                  print(f" - {path}")
+              raise SystemExit(1)
+          print("Quest completion authority contract validated.")
