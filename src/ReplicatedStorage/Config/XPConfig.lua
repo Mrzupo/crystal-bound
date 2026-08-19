@@ -12,10 +12,14 @@ local function finiteNumber(value)
 end
 
 function XPConfig.GetRequiredXP(level)
-	local safeLevel = math.max(1, math.floor(finiteNumber(level) or 1))
-	local baseXP = math.max(1, math.floor(finiteNumber(XPConfig.BaseXP) or 1))
-	local growth = math.max(0.01, finiteNumber(XPConfig.Growth) or 1)
-	return math.max(1, math.floor(baseXP * (safeLevel ^ growth)))
+	local safeLevel = math.clamp(math.floor(finiteNumber(level) or 1), 1, XPConfig.MaxLevel)
+	local baseXP = math.clamp(math.floor(finiteNumber(XPConfig.BaseXP) or 1), 1, XPConfig.MaxExperience)
+	local growth = math.clamp(finiteNumber(XPConfig.Growth) or 1, 0.01, 4)
+	local required = baseXP * (safeLevel ^ growth)
+	if required ~= required or required == math.huge or required == -math.huge then
+		return XPConfig.MaxExperience
+	end
+	return math.clamp(math.floor(required), 1, XPConfig.MaxExperience)
 end
 
 return XPConfig
