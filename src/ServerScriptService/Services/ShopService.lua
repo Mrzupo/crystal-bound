@@ -42,7 +42,16 @@ function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyServi
 	if not amount then return false, "Purchase amount must be a positive integer." end
 	local maxPerPurchase = positiveInteger(offer.MaxPerPurchase) or 1
 	if amount > maxPerPurchase then return false, "Purchase amount exceeds the per-purchase limit." end
+
+	-- Guard multiplication explicitly so a corrupted config can never produce
+	-- a non-finite or out-of-economy purchase total before the mutation phase.
 	local total = price * amount
+	if finiteNumber(total) == nil or total <= 0 then
+		return false, "Shop purchase total is invalid."
+	end
+	if EconomyService.GetMoney(profile) + total < EconomyService.GetMoney(profile) then
+		return false, "Shop purchase total is invalid."
+	end
 	if not EconomyService.CanAfford(profile, total) then return false, "Not enough Money." end
 
 	InventoryService.GetInventory(profile)
