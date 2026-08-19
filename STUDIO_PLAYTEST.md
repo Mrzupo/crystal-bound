@@ -25,8 +25,9 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Attempt a target outside range from the client.
 - Attempt a player target from the client.
 - Attempt a dead target.
+- Attempt malformed/fractional/oversized damage through a controlled server-side test harness.
 - Perform a dodge during an incoming hit.
-- Expected: invalid/out-of-range/Player targets deal no damage; dodged hits return zero applied damage.
+- Expected: invalid/out-of-range/Player targets deal no damage; invalid damage is rejected; dodged hits return zero applied damage.
 
 ## 4. Quest security
 - Start `FIRST_FIGHT` and defeat the Training Dummy; confirm the one-step server trigger completes it once.
@@ -66,12 +67,18 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm the second session is refused while the original lock is healthy.
 - Force heartbeat/save failure only in a controlled test environment.
 - Confirm the server does not silently release a lost lock.
+- Force final `Release()` failure in a controlled test environment.
+- Expected: removal reports failure and the persistent session lock is retained.
 
 ## 8. Transactions / Consumables
 - Buy Health Potions with enough Money; confirm Money decreases exactly once and inventory increases exactly once.
 - Attempt a purchase over the maximum stack; expected: no Money loss.
+- Send fractional purchase/crafting quantities; expected: the server rejects them rather than flooring them.
 - Attempt crafting without enough materials; expected: no materials lost.
 - Force a failed output insertion in a controlled test; expected: all consumed crafting inputs are restored.
+- Force a mid-transaction crafting or upgrade material-removal failure; expected: already-consumed inputs are restored.
+- Upgrade a Crystal with valid materials; confirm every required material is consumed exactly once and mastery increases exactly once.
+- Force `CrystalMastery.Upgrade()` to fail after material consumption in a controlled test; expected: all consumed upgrade materials are restored.
 - Use a Health Potion below max HP; expected: exactly one potion is consumed and HP increases by up to 60 without exceeding MaxHealth.
 - Try to use a Health Potion at full HP or without inventory; expected: no item is consumed.
 - Spam potion use; expected: the 0.2-second server gate prevents duplicate consumption.
