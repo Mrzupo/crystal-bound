@@ -111,9 +111,16 @@ end
 function BossService.IsBoss(model) return model and model:GetAttribute("BossId") ~= nil end
 
 function BossService.CreateGuardian(position, parent, uniqueName)
+	if not parent or not parent.Parent or not position then return nil end
+	local bossName = uniqueName or "CrystalGuardian"
+	local existing = parent:FindFirstChild(bossName)
+	if existing and existing:IsA("Model") and existing:GetAttribute("BossId") == "CrystalGuardian" then
+		return existing
+	end
+
 	local config = BossConfig.CrystalGuardian
 	local phase2 = getPhase2Config(config)
-	local model = Instance.new("Model"); model.Name = uniqueName or "CrystalGuardian"; model.Parent = parent
+	local model = Instance.new("Model"); model.Name = bossName; model.Parent = parent
 	model:SetAttribute("Enemy", true); model:SetAttribute("BossId", "CrystalGuardian"); model:SetAttribute("EnemyType", "CrystalGuardian"); model:SetAttribute("BossPhase", 1)
 	local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Size = Vector3.new(2, 2, 1); root.Position = position + Vector3.new(0, 3, 0); root.Transparency = 1; root.Anchored = true; root.CanCollide = false; root.Parent = model
 	local body = Instance.new("Part"); body.Name = "Body"; body.Size = Vector3.new(5, 7, 4); body.Position = position + Vector3.new(0, 6, 0); body.Material = Enum.Material.Neon; body.Color = Color3.fromRGB(120, 80, 190); body.Anchored = true; body.Parent = model
@@ -191,8 +198,8 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 			if model.Parent then model:Destroy() end
 		end)
 		task.delay(config.Respawn + 1.5, function()
-			if parent.Parent and not parent:FindFirstChild(uniqueName or "CrystalGuardian") then
-				BossService.CreateGuardian(position, parent, uniqueName)
+			if parent.Parent and not parent:FindFirstChild(bossName) then
+				BossService.CreateGuardian(position, parent, bossName)
 			end
 		end)
 	end)
