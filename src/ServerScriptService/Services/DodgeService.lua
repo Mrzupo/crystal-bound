@@ -89,12 +89,18 @@ function DodgeService.ApplyDamage(player, humanoid, amount, attacker, damageType
 	local damage = finiteDamage(amount)
 	if not damage or damage <= 0 then return false end
 	local resolvedDamageType = damageType or (attacker and "Physical" or "Environmental")
-	if attacker and (not range or tonumber(range) <= 0) then return false end
+	local safeRange
+	if attacker then
+		safeRange = tonumber(range)
+		if not safeRange or safeRange ~= safeRange or safeRange == math.huge or safeRange == -math.huge or safeRange <= 0 then
+			return false
+		end
+	end
 	local request = {
 		Attacker = attacker,
 		Target = player,
 		Amount = math.clamp(damage, 0, 1000),
-		Range = range,
+		Range = safeRange,
 		DamageType = resolvedDamageType,
 	}
 	local result = DamageService.ProcessDamage(request)
