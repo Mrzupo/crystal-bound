@@ -6,7 +6,7 @@ local PlayerService = require(script.Parent.Services.PlayerService)
 
 local HEARTBEAT_INTERVAL = 45
 local MAX_CONSECUTIVE_FAILURES = 2
-local failures = {}
+local failures = setmetatable({}, { __mode = "k" })
 
 while true do
 	task.wait(HEARTBEAT_INTERVAL)
@@ -24,8 +24,5 @@ while true do
 				end
 			end
 		end
-	end
-	for player in pairs(failures) do
-		if not player.Parent then failures[player] = nil end
 	end
 end
