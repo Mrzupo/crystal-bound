@@ -52,6 +52,7 @@ local function cleanup(player)
 end
 
 local function watchCharacter(player, character)
+	if player.Character ~= character then return end
 	disconnectHumanoid(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
