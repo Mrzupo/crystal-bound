@@ -16,12 +16,24 @@ local function indexForDate(date)
 	return (total % #GOALS) + 1
 end
 
+local function findDefinition(enemyType)
+	if type(enemyType) ~= "string" then return nil end
+	for _, definition in ipairs(GOALS) do
+		if type(definition) == "table" and definition.EnemyType == enemyType then
+			return definition
+		end
+	end
+	return nil
+end
+
 function DailyBountyService.Refresh(profile)
 	profile.DailyBounty = type(profile.DailyBounty) == "table" and profile.DailyBounty or {}
 	local date = utcDate()
+	local definition
+
 	if profile.DailyBounty.Date ~= date then
 		local index = indexForDate(date)
-		local definition = index and GOALS[index]
+		definition = index and GOALS[index]
 		if not definition then return profile.DailyBounty end
 		profile.DailyBounty = {
 			Date = date,
@@ -31,10 +43,21 @@ function DailyBountyService.Refresh(profile)
 			RewardMoney = definition.RewardMoney,
 			Claimed = false,
 		}
+	else
+		definition = findDefinition(profile.DailyBounty.EnemyType)
+		if not definition then
+			local index = indexForDate(date)
+			definition = index and GOALS[index]
+			if not definition then return profile.DailyBounty end
+			profile.DailyBounty.EnemyType = definition.EnemyType
+			profile.DailyBounty.Progress = 0
+			profile.DailyBounty.Claimed = false
+		end
 	end
-	profile.DailyBounty.Goal = math.clamp(math.floor(tonumber(profile.DailyBounty.Goal) or 1), 1, 100)
+
+	profile.DailyBounty.Goal = math.clamp(math.floor(tonumber(definition.Goal) or 1), 1, 100)
 	profile.DailyBounty.Progress = math.clamp(math.floor(tonumber(profile.DailyBounty.Progress) or 0), 0, profile.DailyBounty.Goal)
-	profile.DailyBounty.RewardMoney = math.clamp(math.floor(tonumber(profile.DailyBounty.RewardMoney) or 0), 0, EconomyConfig.MaxMoney)
+	profile.DailyBounty.RewardMoney = math.clamp(math.floor(tonumber(definition.RewardMoney) or 0), 0, EconomyConfig.MaxMoney)
 	profile.DailyBounty.Claimed = profile.DailyBounty.Claimed == true
 	return profile.DailyBounty
 end
