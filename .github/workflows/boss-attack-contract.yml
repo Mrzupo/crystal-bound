@@ -39,6 +39,12 @@ jobs:
           phase_threshold = re.search(r'HealthThreshold\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
           if not phase_threshold or not 0 < float(phase_threshold.group(1)) < 1:
               raise SystemExit('Guardian Phase2.HealthThreshold must be within 0..1')
+          multiplier = re.search(r'AbilityRangeMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
+          if not multiplier or not 0 < float(multiplier.group(1)) <= 10:
+              raise SystemExit('Guardian Phase2.AbilityRangeMultiplier must be within 0..10')
+          damage_multiplier = re.search(r'AttackDamageMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
+          if not damage_multiplier or not 0 < float(damage_multiplier.group(1)) <= 10:
+              raise SystemExit('Guardian Phase2.AttackDamageMultiplier must be within 0..10')
 
           for marker in ['local abilityRadius =', 'phase2.AbilityRangeMultiplier', 'shockwave(root.Position, abilityRadius']:
               if marker not in service:
