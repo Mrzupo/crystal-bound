@@ -1,0 +1,45 @@
+name: Mobile Combat Parity
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate touch combat uses shared server-authoritative remotes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          touch = Path('src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua').read_text(encoding='utf-8')
+          combat = Path('src/ServerScriptService/Services/CombatService.lua').read_text(encoding='utf-8')
+
+          required_touch = [
+              'remotes:WaitForChild("CombatRequest")',
+              'combatRemote:FireServer("Basic", hit)',
+              'combatRemote:FireServer("Ability", hit)',
+              'canPresentCombat("Basic", hit)',
+              'canPresentCombat("Ability", hit)',
+              'crystalChanged:FireServer("EMBER")',
+              'crystalChanged:FireServer("TIDE")',
+              'crystalChanged:FireServer("GALE")',
+          ]
+          missing = [marker for marker in required_touch if marker not in touch]
+          if missing:
+              raise SystemExit('missing touch combat parity markers: ' + ', '.join(missing))
+
+          if 'VALID_ACTIONS = { Basic = true, Ability = true }' not in combat:
+              raise SystemExit('CombatService must keep the shared Basic/Ability action whitelist')
+          if 'localAbilityReadyAt' not in touch:
+              raise SystemExit('TouchControls must keep a local ability presentation cooldown')
+          if ':TakeDamage(' in touch or 'InventoryService' in touch or 'EconomyService' in touch:
+              raise SystemExit('TouchControls must remain presentation/input-only')
+          if 'combatRemote:FireServer("Basic", target)' not in bootstrap or 'combatRemote:FireServer("Ability", target)' not in bootstrap:
+              raise SystemExit('PC ClientBootstrap must use the same CombatRequest action path as mobile')
+
+          print('Mobile combat parity and client authority boundary validated.')
