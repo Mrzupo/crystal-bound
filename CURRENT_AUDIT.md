@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1025 commits ahead, 29 commits behind** `main`.
+Current compare: **1032 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -14,8 +14,9 @@ Current compare: **1025 commits ahead, 29 commits behind** `main`.
 - Legacy `StatusSpeedGuard` is not loaded; V2 is the active runtime implementation.
 - `DamageService` is the only direct `Humanoid:TakeDamage()` implementation path in `src`.
 - Damage requests require known damage types, valid attackers/targets, positive bounded range and finite damage.
-- `DamageService` now restricts NPC attackers and non-player targets to the server-managed `Workspace.NPCs` tree and rejects Player-vs-Player damage.
+- `DamageService` restricts NPC attackers and non-player targets to the server-managed `Workspace.NPCs` tree and rejects Player-vs-Player damage.
 - Last-attacker records pin Player attribution to the concrete Player instance/session and reject stale rejoin sessions before combat rewards are credited.
+- Lethal damage records the attacker before `Humanoid:TakeDamage()` so `Died` callbacks can attribute the final hit; zero-applied damage restores the previous attribution.
 - Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
@@ -26,19 +27,19 @@ Current compare: **1025 commits ahead, 29 commits behind** `main`.
 - CrystalConfig CI enforces semantic Damage/Range/Cooldown/HealAmount/UnlockLevel bounds.
 - Combat modifier CI enforces Critical probability 0..1 and multiplier 1..10.
 - Economy config CI validates StartingMoney/MinMoney/MaxMoney relationships instead of hardcoding balance values.
-- Money mutations are owned by `EconomyService`; a server-side ownership contract rejects direct `profile.Money` mutations elsewhere in `ServerScriptService`.
+- Money mutations are owned by `EconomyService`; direct `profile.Money` mutation elsewhere in `ServerScriptService` is blocked by contract.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
-- Inventory mutations are owned by `InventoryService`; a server-side ownership contract rejects direct `profile.Inventory[...]` mutations elsewhere in `ServerScriptService`.
-- Level/Experience mutations are owned by `XPService`; a server-side ownership contract protects the canonical progression path.
+- Inventory mutations are owned by `InventoryService`; direct `profile.Inventory[...]` mutation elsewhere in `ServerScriptService` is blocked by contract.
+- Level/Experience mutations are owned by `XPService`; direct server mutation outside the progression service is blocked by contract.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Quest completion is owned by `QuestService`; `QuestSystem.Complete()` has a dedicated single-owner regression contract.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - NPC special attacks clamp runtime ranges/cooldowns and Gale teleport offsets to bounded values.
 - `CrystalService` is the sole server-facing Crystal ownership wrapper and delegates mutation to `CrystalSystem`.
+- `CrystalAbilityService.Execute()` independently verifies the active/owned Crystal, complete Crystal config, GALE enemy target context and player-to-target ability range before applying secondary effects.
 - Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
-- `CrystalAbilityService.Execute()` independently verifies the active/owned Crystal, complete Crystal config, GALE enemy target context and player-to-target ability range before applying secondary effects.
 - Guardian creation is active in the loaded `BossTelegraph` runtime: a missing/invalid `CrystalGuardian` identity is replaced and a canonical Guardian is created from `BossConfig.CrystalGuardian.ArenaCenter`; `BossService.CreateGuardian()` remains idempotent.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
@@ -46,20 +47,20 @@ Current compare: **1025 commits ahead, 29 commits behind** `main`.
 - Session heartbeat failure state uses weak keys; heartbeat kicks after two consecutive refresh failures to protect the save-session lock.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
 - Final player removal treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
-- `PlayerService.Load` now rejects a player that leaves while the yieldable profile load is in flight, and releases the claimed persistent session lock instead of installing an orphaned in-memory profile.
+- `PlayerService.Load` rejects a player that leaves while the yieldable profile load is in flight and releases the claimed persistent session lock instead of installing an orphaned in-memory profile.
 - The load lifecycle is checked again immediately after `Profiles[player]` is populated; a leave race removes the in-memory profile and releases the persistent lock before returning.
-- `SessionHeartbeat.server.lua` now registers `game:BindToClose()` and runs the canonical `PlayerService.Remove()` path for loaded profiles during server shutdown, with a bounded shutdown wait.
+- `SafeProfileStore.Load/Save/Refresh/Release` only mutate a profile when the persistent `SessionLock.JobId` belongs to the current server session; competing active locks are not overwritten.
+- `SessionHeartbeat.server.lua` registers `game:BindToClose()` and runs the canonical `PlayerService.Remove()` path for loaded profiles during server shutdown with a bounded shutdown wait.
 - `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
-- `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback, without creating a second server entry-point.
-- A position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
-- Portal movement authority is cleared on Character respawn, preventing a stale portal grace from authorizing a new character instance.
-- Movement configuration centralizes observed-speed, displacement-tolerance, position-check interval and portal-arrival tolerance values.
-- Server portal movement grace is destination-bound: `WorldTheme.server.lua` only authorizes known portal destinations for players who meet the canonical level requirement, and `StatusSpeedGuardV2` accepts a large displacement only when the server-observed position lands near that expected destination.
+- `StatusSpeedGuardV2` applies conservative server-side position authority using observed displacement bounds and server rollback without creating a second server entry-point.
+- Position correction refreshes the authoritative movement snapshot immediately after rollback, preventing repeated correction against a stale pre-correction position.
+- Portal movement authority is cleared on Character respawn, preventing stale portal grace from authorizing a new character instance.
+- Server portal movement grace is destination-bound: `WorldTheme.server.lua` only authorizes known portal destinations for players who meet canonical level requirements, and `StatusSpeedGuardV2` accepts a large displacement only when the server-observed position lands near that expected destination.
 - Portal movement CI cross-checks Bootstrap portal definitions, WorldTheme destinations and WorldConfig level gates.
 - Dodge has no generic movement/teleport grace path; its server velocity remains subject to the same positional authority.
 - `DodgeService` explicitly disconnects CharacterAdded listeners on leave/rebind while retaining weak player state.
 - Dodge request directions are server-validated as finite `Vector3` values and bounded by `MaxDirectionMagnitude` before movement is applied.
-- Bootstrap and all major server Remote entrypoints now fail fast on mismatched Remote classes instead of silently binding the wrong type.
+- Bootstrap and all major server Remote entrypoints fail fast on mismatched Remote classes instead of silently binding the wrong type.
 - Critical RemoteEvent/RemoteFunction types are statically verified from `default.project.json` and per-entrypoint fail-fast guards are covered by CI.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
@@ -68,21 +69,13 @@ Current compare: **1025 commits ahead, 29 commits behind** `main`.
 - NPCMenuBridge validates server-side interaction distance before opening NPC menus.
 - PC and mobile input can request presentation locally, but gameplay authority remains server-side and VFX require server confirmation before actual VFX playback.
 - Combat defeat rewards are sourced from canonical EnemyConfig and guarded by `DeathRewarded` idempotency.
-- Environmental/Boss hazard contracts validate attacker-less Environmental damage against current `BossArena` semantics rather than stale exact calls.
-- RemoteFunction contract uses the actual Bootstrap request-interval guards.
-- Portal contract verifies gates consume canonical `WorldConfig` level fields.
-- Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract now protects those invariants.
-- `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract now protects that boundary.
-- `movement-authority-contract.yml` protects WalkSpeed, position rollback, portal semantics, correction snapshots, respawn cleanup and absence of generic movement grace.
-- `boss-creation-idempotency.yml` and `boss-active-spawn-contract.yml` protect Guardian creation ownership and reserved identity.
-- `session-shutdown-contract.yml` protects the canonical server shutdown save/release path.
-- `quest-completion-ownership.yml` protects the single QuestSystem completion owner.
-- `crystal-ability-context-contract.yml` protects defense-in-depth Crystal ability validation.
-- `pve-damage-range-contract.yml` protects current-position range checks in both Dodge and central DamageService paths.
-- `combat-reward-contract.yml` protects canonical rewards, death idempotency and concrete attacker-session attribution.
-- `inventory-ownership-contract.yml` and `xp-ownership-contract.yml` protect canonical mutation owners for inventory and progression.
-- `contract-path-validation.yml` validates that workflow-referenced repository paths exist.
-- Stale CI contracts were corrected where they still asserted retired inline values or variable names; the active contracts now inspect current config-driven runtime paths.
+- Environmental/Boss hazard contracts validate attacker-less Environmental damage against current BossArena semantics.
+- RemoteFunction contracts enforce single ownership and request-rate guards.
+- Portal contracts verify gates consume canonical `WorldConfig` level fields.
+- Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract protects those invariants.
+- `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract protects that boundary.
+- Contracts now additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership and current StatusSpeedGuard lifecycle behavior.
+- `contract-path-validation.yml` validates workflow-referenced repository paths.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 
 ## Important open decisions / limitations
@@ -93,11 +86,11 @@ Current compare: **1025 commits ahead, 29 commits behind** `main`.
 - Current VFX are still procedural/placeholder presentation.
 - TIDE/GALE currently unlock through level gates; the master design also plans Mining, Digging, Bosses, Dungeons, World Events and Quests as long-term Crystal acquisition activities. Do not silently replace one model with another; decide the final model first.
 - White Queen intro/story implementation has not been replaced or rewritten; the story rules remain unchanged.
-- The conservative server movement-position anti-teleport foundation is now present, but its thresholding and interaction with Roblox network ownership/physics still require real Studio multiplayer validation before calling the exploit-resistance complete.
+- Conservative server movement-position anti-teleport foundations are present, but thresholding and interaction with Roblox network ownership/physics still require real Studio multiplayer validation before calling exploit-resistance complete.
 
 ## Next technical direction
-1. Continue concrete static audits where risk remains, prioritizing server authority, persistence and lifecycle races.
-2. Move toward Roblox Studio runtime validation, especially movement correction, portal arrivals, Dodge velocity, shutdown saves and multi-player contention.
+1. Continue concrete static audits where risk remains.
+2. Move toward Roblox Studio runtime validation, especially movement correction, portal arrivals, Dodge velocity, shutdown saves and multiplayer contention.
 3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first.
 4. Repeat the asset contract for TIDE and GALE.
 5. Keep gameplay authority in server systems; animation/VFX never decide damage, timing or rewards.
