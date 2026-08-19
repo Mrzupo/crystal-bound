@@ -16,11 +16,13 @@ jobs:
           text = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
           required = [
               'local connections = setmetatable({}, { __mode = "k" })',
+              'local humanoidConnections = setmetatable({}, { __mode = "k" })',
               'Players.PlayerRemoving:Connect(cleanup)',
               'if connection.Connected then connection:Disconnect() end',
               'local expected = math.max(MIN_WALK_SPEED, base)',
               'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
               'humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()',
+              'disconnectHumanoid(player)',
               'refresh(player)',
           ]
           missing = [token for token in required if token not in text]
@@ -28,5 +30,5 @@ jobs:
               raise SystemExit('StatusSpeedGuardV2 contract missing: ' + ', '.join(missing))
           if 'and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil' in text:
               raise SystemExit('StatusSpeedGuardV2 must enforce baseline speed even without a slow effect')
-          print('Status speed guard lifecycle, baseline enforcement and immediate correction validated.')
+          print('Status speed guard lifecycle, baseline enforcement, immediate correction and respawn cleanup validated.')
           PY
