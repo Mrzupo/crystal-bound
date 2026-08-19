@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate connection cleanup
+      - name: Validate connection cleanup and baseline enforcement
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -18,9 +18,14 @@ jobs:
               'local connections = setmetatable({}, { __mode = "k" })',
               'Players.PlayerRemoving:Connect(cleanup)',
               'if connection.Connected then connection:Disconnect() end',
+              'local expected = math.max(MIN_WALK_SPEED, base)',
+              'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
+              'refresh(player)',
           ]
           missing = [token for token in required if token not in text]
           if missing:
-              raise SystemExit('StatusSpeedGuardV2 lifecycle contract missing: ' + ', '.join(missing))
-          print('Status speed guard lifecycle validated.')
+              raise SystemExit('StatusSpeedGuardV2 contract missing: ' + ', '.join(missing))
+          if 'and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil' in text:
+              raise SystemExit('StatusSpeedGuardV2 must enforce baseline speed even without a slow effect')
+          print('Status speed guard lifecycle and baseline enforcement validated.')
           PY
