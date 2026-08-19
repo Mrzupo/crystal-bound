@@ -10,19 +10,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate shared XP cap
+      - name: Validate shared XP cap and growth boundary
         shell: python
         run: |
           from pathlib import Path
+          import re
           config = Path("src/ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
           service = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
           player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
           if "MaxExperience = 1000000000" not in config:
               raise SystemExit("XPConfig must define MaxExperience")
+          if "Growth = 1.25" not in config:
+              raise SystemExit("XPConfig must define canonical Growth")
+          if "math.clamp(finiteNumber(XPConfig.Growth) or 1, 0.01, 4)" not in config:
+              raise SystemExit("XPConfig growth must be bounded to 0.01..4")
+          if "math.clamp(math.floor(required), 1, XPConfig.MaxExperience)" not in config:
+              raise SystemExit("Required XP must remain bounded by MaxExperience")
           if "XPConfig.MaxExperience" not in service:
               raise SystemExit("XPService must consume XPConfig.MaxExperience")
           if "XPConfig.MaxExperience" not in player_data:
               raise SystemExit("PlayerData must consume XPConfig.MaxExperience")
           if "math.min(1000000000" in service or "0, 1000000000" in player_data:
               raise SystemExit("XP cap must not be hardcoded outside XPConfig")
-          print("XP cap contract validated.")
+          print("XP cap, growth and required-XP contracts validated.")
