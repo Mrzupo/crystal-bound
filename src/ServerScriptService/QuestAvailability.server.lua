@@ -5,7 +5,11 @@ local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local remote = remotes:FindFirstChild("GetAvailableQuests")
-if not remote then
+if remote then
+	if not remote:IsA("RemoteFunction") then
+		error(("Crystal Bound: GetAvailableQuests has class %s, expected RemoteFunction"):format(remote.ClassName))
+	end
+else
 	remote = Instance.new("RemoteFunction")
 	remote.Name = "GetAvailableQuests"
 	remote.Parent = remotes
