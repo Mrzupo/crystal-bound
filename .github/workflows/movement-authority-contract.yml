@@ -19,6 +19,7 @@ jobs:
           server_guard = Path("src/ServerScriptService/StatusSpeedGuardV2.server.lua").read_text(encoding="utf-8")
           movement_config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
           portal_authority = Path("src/ServerScriptService/WorldTheme.server.lua").read_text(encoding="utf-8")
+          dodge_service = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
           required = [
               'local expected = math.max(MIN_WALK_SPEED, base)',
               'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
@@ -41,6 +42,9 @@ jobs:
           for marker in ('portalTargets =', 'PortalExpectedDestination', 'PortalMovementGraceUntil', 'PlayerService.GetProfile(player)'):
               if marker not in portal_authority:
                   raise SystemExit(f'Portal movement authority missing {marker}')
+
+          if 'ServerMovementGraceUntil' in server_guard or 'ServerMovementGraceUntil' in dodge_service:
+              raise SystemExit('Generic server movement grace must not be restored; only destination-bound portal grace is allowed')
 
           client_writers = []
           assignment = re.compile(r'\.WalkSpeed\s*=')
