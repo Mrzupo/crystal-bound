@@ -5,6 +5,14 @@ local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 local DailyBountyService = {}
 local GOALS = BountyConfig.Goals
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
+		return fallback
+	end
+	return number
+end
+
 local function utcDate()
 	return os.date("!%Y-%m-%d")
 end
@@ -55,9 +63,9 @@ function DailyBountyService.Refresh(profile)
 		end
 	end
 
-	profile.DailyBounty.Goal = math.clamp(math.floor(tonumber(definition.Goal) or 1), 1, 100)
-	profile.DailyBounty.Progress = math.clamp(math.floor(tonumber(profile.DailyBounty.Progress) or 0), 0, profile.DailyBounty.Goal)
-	profile.DailyBounty.RewardMoney = math.clamp(math.floor(tonumber(definition.RewardMoney) or 0), 0, EconomyConfig.MaxMoney)
+	profile.DailyBounty.Goal = math.clamp(math.floor(finiteNumber(definition.Goal, 1)), 1, 100)
+	profile.DailyBounty.Progress = math.clamp(math.floor(finiteNumber(profile.DailyBounty.Progress, 0)), 0, profile.DailyBounty.Goal)
+	profile.DailyBounty.RewardMoney = math.clamp(math.floor(finiteNumber(definition.RewardMoney, 0)), 0, EconomyConfig.MaxMoney)
 	profile.DailyBounty.Claimed = profile.DailyBounty.Claimed == true
 	return profile.DailyBounty
 end
