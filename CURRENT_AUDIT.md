@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1032 commits ahead, 29 commits behind** `main`.
+Current compare: **1037 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -71,10 +71,12 @@ Current compare: **1032 commits ahead, 29 commits behind** `main`.
 - Combat defeat rewards are sourced from canonical EnemyConfig and guarded by `DeathRewarded` idempotency.
 - Environmental/Boss hazard contracts validate attacker-less Environmental damage against current BossArena semantics.
 - RemoteFunction contracts enforce single ownership and request-rate guards.
+- Critical RemoteEvent/RemoteFunction rate-limit state is now contract-checked for PlayerRemoving cleanup.
 - Portal contracts verify gates consume canonical `WorldConfig` level fields.
 - Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract protects those invariants.
 - `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract protects that boundary.
-- Contracts now additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership and current StatusSpeedGuard lifecycle behavior.
+- AI path destinations are finite-validated, quantized, cached by weak Model keys, recomputed at a bounded interval, and explicitly cleared when NPCs die; the AI-path contract protects those lifecycle/resource invariants.
+- Contracts additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership and current StatusSpeedGuard lifecycle behavior.
 - `contract-path-validation.yml` validates workflow-referenced repository paths.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 
