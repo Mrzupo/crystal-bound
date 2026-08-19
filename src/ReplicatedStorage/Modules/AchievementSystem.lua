@@ -67,11 +67,18 @@ function AchievementSystem.Check(profile)
 	profile.Achievements = profile.Achievements or {}
 	profile.Titles = profile.Titles or {}
 	profile.Stats = profile.Stats or {}
-	local validTitles = {}
-	for _, title in ipairs(profile.Titles) do
-		if AchievementSystem.IsValidTitle(title) and not table.find(validTitles, title) then table.insert(validTitles, title) end
+
+	-- Titles are canonical consequences of earned achievements; never trust a
+	-- standalone title from persisted data.
+	local canonicalTitles = {}
+	for _, achievementId in ipairs(profile.Achievements) do
+		local definition = Definitions[achievementId]
+		if definition and definition.Title and not table.find(canonicalTitles, definition.Title) then
+			table.insert(canonicalTitles, definition.Title)
+		end
 	end
-	profile.Titles = validTitles
+	profile.Titles = canonicalTitles
+
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	local mastery = profile.CrystalMastery or {}
 	local ancient = (finiteNumber(profile.Stats.AncientGolemsDefeated, 0) > 0) and (finiteNumber(profile.Stats.CrystalBatsDefeated, 0) > 0)
