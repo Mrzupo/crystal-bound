@@ -1,0 +1,27 @@
+name: Damage Input Bounds
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce positive bounded damage requests
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('src/ReplicatedStorage/Modules/Combat/DamageValidators.lua').read_text(encoding='utf-8')
+          required = [
+              'local MAX_DAMAGE = 1000',
+              'request.Amount > 0',
+              'request.Amount <= MAX_DAMAGE',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing damage bounds: ' + ', '.join(missing))
+          print('Damage input bounds validated.')
+          PY
