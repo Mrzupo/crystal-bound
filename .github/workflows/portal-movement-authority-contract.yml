@@ -1,0 +1,51 @@
+name: Portal Movement Authority Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server portal movement integration
+        shell: python
+        run: |
+          from pathlib import Path
+
+          guard = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          movement = Path('src/ReplicatedStorage/Config/MovementConfig.lua').read_text(encoding='utf-8')
+
+          required_guard = [
+              'PortalMovementGraceUntil',
+              'PortalExpectedDestination',
+              'PORTAL_ARRIVAL_TOLERANCE',
+              'PORTAL_DESTINATIONS',
+              'Workspace.DescendantAdded:Connect(attachPortal)',
+              'armPortalArrival(player, destination)',
+              'MovementConfig.GraceDuration',
+          ]
+          missing = [marker for marker in required_guard if marker not in guard]
+          if missing:
+              raise SystemExit('missing portal movement guard markers: ' + ', '.join(missing))
+
+          for marker in (
+              'TidePortal = Vector3.new(120, 4, 0)',
+              'StarterPortal = Vector3.new(48, 4, 0)',
+              'WindPortal = Vector3.new(280, 4, 0)',
+              'TideReturnPortal = Vector3.new(210, 4, 0)',
+              'AncientPortal = Vector3.new(440, 4, 0)',
+              'WindReturnPortal = Vector3.new(380, 4, 0)',
+          ):
+              if marker not in guard:
+                  raise SystemExit('portal destination missing from movement guard: ' + marker)
+
+          if 'root.CFrame=CFrame.new(destination)' not in bootstrap and 'root.CFrame = CFrame.new(destination)' not in bootstrap:
+              raise SystemExit('Bootstrap portal teleport path is missing')
+          if 'GraceDuration =' not in movement:
+              raise SystemExit('MovementConfig must expose canonical GraceDuration')
+
+          print('Portal movement authority integration validated.')
