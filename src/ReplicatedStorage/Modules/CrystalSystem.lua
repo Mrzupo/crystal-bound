@@ -8,6 +8,12 @@ local function finiteNumber(value)
 	return number
 end
 
+local function validUnlockLevel(id)
+	local raw = finiteNumber(CrystalConfig.UnlockLevels[id])
+	if raw == nil or raw < 1 or raw % 1 ~= 0 then return nil end
+	return math.floor(raw)
+end
+
 local function copyTable(value)
 	if type(value) ~= "table" then return value end
 	local result = {}
@@ -20,7 +26,7 @@ local function validProfileCrystals(profile)
 end
 
 function CrystalSystem.Exists(id)
-	return type(id) == "string" and CrystalConfig.UnlockLevels[id] ~= nil
+	return type(id) == "string" and validUnlockLevel(id) ~= nil
 end
 
 function CrystalSystem.GetDefinition(id)
@@ -50,9 +56,8 @@ end
 
 function CrystalSystem.Unlock(profile, id)
 	if not CrystalSystem.Exists(id) or not validProfileCrystals(profile) or CrystalSystem.Owns(profile, id) then return false end
-	local requiredRaw = finiteNumber(CrystalConfig.UnlockLevels[id])
-	if not requiredRaw or requiredRaw < 1 then return false end
-	local requiredLevel = math.floor(requiredRaw)
+	local requiredLevel = validUnlockLevel(id)
+	if not requiredLevel then return false end
 	local playerLevel = math.max(1, math.floor(finiteNumber(profile.Level) or 1))
 	if playerLevel < requiredLevel then return false end
 	if type(profile.Crystals.Owned) ~= "table" then profile.Crystals.Owned = {} end
