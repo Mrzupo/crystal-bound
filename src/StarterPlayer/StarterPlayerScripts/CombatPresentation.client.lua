@@ -16,6 +16,7 @@ local FEEDBACK_WINDOW = 1
 local MAX_FEEDBACK_EVENTS = 30
 local feedbackWindowStarted = 0
 local feedbackEvents = 0
+local healthConnection
 
 local function getRoot(model)
 	return model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
@@ -197,8 +198,8 @@ local function createAbilityAccent(model, crystalId)
 			slash.Color = color
 			slash.Transparency = 0.2
 			slash.Size = Vector3.new(0.3, 5, 0.3)
-		slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
-		slash.Parent = root
+			slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
+			slash.Parent = root
 			TweenService:Create(slash, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 				Size = Vector3.new(0.3, 9, 0.3),
 				Transparency = 1,
@@ -229,10 +230,14 @@ local function shakePlayer()
 end
 
 local function watchPlayerHealth(character)
+	if healthConnection then
+		healthConnection:Disconnect()
+		healthConnection = nil
+	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
 	if not humanoid then return end
 	local lastHealth = humanoid.Health
-	humanoid.HealthChanged:Connect(function(newHealth)
+	healthConnection = humanoid.HealthChanged:Connect(function(newHealth)
 		if newHealth < lastHealth then shakePlayer() end
 		lastHealth = newHealth
 	end)
