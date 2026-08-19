@@ -9,18 +9,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce integer Burn tick count
+      - name: Enforce bounded status-effect inputs
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           text = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
           required = [
+              'multiplier = math.clamp(finiteNumber(multiplier, 0.8), MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)',
+              'duration = math.clamp(finiteNumber(duration, 1), 0.1, 10)',
+              'damagePerTick = math.clamp(finiteNumber(damagePerTick, 3), 1, 100)',
               'normalizedTicks % 1 ~= 0',
               'ticks = math.clamp(normalizedTicks, 1, 10)',
+              'interval = math.clamp(finiteNumber(interval, 0.7), 0.2, 3)',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing status-effect boundary markers: ' + ', '.join(missing))
-          print('Status effect tick boundary validated.')
+          print('Status effect numeric, integer and lifecycle input boundaries validated.')
           PY
