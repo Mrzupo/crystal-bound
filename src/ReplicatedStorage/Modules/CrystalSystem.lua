@@ -2,6 +2,12 @@ local CrystalConfig = require(game.ReplicatedStorage.Config.CrystalConfig)
 
 local CrystalSystem = {}
 
+local function finiteNumber(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
+
 local function validProfileCrystals(profile)
 	return type(profile) == "table" and type(profile.Crystals) == "table"
 end
@@ -37,6 +43,9 @@ end
 
 function CrystalSystem.Unlock(profile, id)
 	if not CrystalSystem.Exists(id) or not validProfileCrystals(profile) or CrystalSystem.Owns(profile, id) then return false end
+	local requiredLevel = math.max(1, math.floor(finiteNumber(CrystalConfig.UnlockLevels[id]) or math.huge))
+	local playerLevel = math.max(1, math.floor(finiteNumber(profile.Level) or 1))
+	if playerLevel < requiredLevel then return false end
 	if type(profile.Crystals.Owned) ~= "table" then profile.Crystals.Owned = {} end
 	table.insert(profile.Crystals.Owned, id)
 	return true
