@@ -12,23 +12,27 @@ Base: `main`
 - Legacy `StatusSpeedGuard` is not loaded; V2 is the active runtime implementation.
 - `DamageService` is the only direct `Humanoid:TakeDamage()` implementation path in `src`.
 - Damage requests require known damage types, valid attackers/targets, positive bounded range and finite damage.
-- Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage now normalizes Range before comparison.
+- Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
 - Quest progress rejects invalid/non-finite/non-integer increments.
-- Crystal unlock level gates are enforced in the canonical `CrystalSystem.Unlock()` boundary, not only in Bootstrap; malformed UnlockLevel config is rejected.
+- Crystal unlock level gates are enforced in canonical `CrystalSystem.Unlock()`; malformed UnlockLevel configuration is rejected.
+- Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC creation/AI rejects unknown types cleanly.
+- Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - Achievement Titles are derived from earned Achievement IDs instead of trusted standalone title strings.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig` even for an existing same-day profile.
-- Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
+- Session heartbeat failure state uses weak keys.
+- `PlayerService.Save/Remove` use guaranteed operation-lock release and clean local player state after final-save failure while retaining the persistent session lock.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
-- Crystal VFX requires a one-shot server-confirmed CombatFeedback authorization.
-- NPC dialog now closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
+- Crystal VFX requires one-shot server-confirmed CombatFeedback authorization.
+- CombatPresentation keeps a single Character HealthChanged connection across respawns.
+- NPC dialog closes cleanly when transitioning into Quest/Crystal/Shop/Inventory/Crafting menus.
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
-- `CURRENT_AUDIT.md`, `NEXT_SESSION.md`, `TODO.md` and `CHANGELOG.md` are being kept in the repository for handoff continuity.
+- README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
