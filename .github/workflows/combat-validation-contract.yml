@@ -24,10 +24,10 @@ jobs:
           problems = []
           if "math.clamp(number, 0, 1000)" not in hitbox:
               problems.append("Hitbox radius cap must remain 1000")
-          if "maxRange > 1000" not in damage:
-              problems.append("DamageService must reject range above 1000")
-          if "request.Amount >= 0" not in validators:
-              problems.append("DamageValidators must reject negative damage")
+          if "if not maxRange or maxRange <= 0 or maxRange > 1000 then return false end" not in damage:
+              problems.append("DamageService must reject non-positive or range above 1000")
+          if "request.Amount > 0" not in validators:
+              problems.append("DamageValidators must reject zero and negative damage")
           if "DamageTypes.Environmental" not in validators:
               problems.append("DamageValidators must explicitly gate Environmental damage")
 
