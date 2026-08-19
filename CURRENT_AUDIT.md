@@ -3,7 +3,7 @@
 Date: 2026-08-19
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **954 commits ahead, 29 commits behind** `main`.
+Current compare: **956 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -25,13 +25,14 @@ Current compare: **954 commits ahead, 29 commits behind** `main`.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Unknown EnemyConfig IDs no longer fall back to TrainingDummy; NPC runtime boundaries reject them cleanly.
 - Enemy XP/Money/Loot rewards use canonical `EnemyConfig`; unknown enemy types and implicit Crystal-based fallback rewards are rejected.
+- NPC special attacks clamp runtime ranges/cooldowns and Gale teleport offsets to bounded values.
 - `CrystalService` is the sole server-facing Crystal ownership wrapper and delegates mutation to `CrystalSystem`.
 - Achievement Titles are derived from earned Achievement IDs; achievement Money rewards are granted only for newly unlocked IDs and have one server payout owner.
 - Daily Bounty Goal/Reward values are canonicalized from `DailyBountyConfig`; payout has one server owner and completion is claimed before payout.
 - Guardian telegraphs are bound to the concrete Guardian instance, preventing old-boss attacks after a respawn.
 - NPC Burn/Slow only apply after the base damage call actually succeeds.
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
-- Session heartbeat failure state uses weak keys.
+- Session heartbeat failure state uses weak keys; heartbeat kicks after two consecutive refresh failures to protect the save-session lock.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
 - Final player removal treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
 - `StatusSpeedGuardV2` continuously enforces the server-derived base WalkSpeed even when no Slow effect is active, immediately corrects server-observed `WalkSpeed` property changes, and prevents stale Character listeners across respawns.
@@ -48,7 +49,9 @@ Current compare: **954 commits ahead, 29 commits behind** `main`.
 - Environmental/Boss hazard contracts validate attacker-less Environmental damage against current `BossArena` semantics rather than stale exact calls.
 - RemoteFunction contract uses the actual Bootstrap request-interval guards.
 - Portal contract verifies gates consume canonical `WorldConfig` level fields.
-- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle, Remote type initialization, and combat reward idempotency.
+- Stale CI contracts were corrected where they still asserted retired inline values or variable names; the active contracts now inspect current config-driven runtime paths.
+- `contract-path-validation.yml` validates that workflow-referenced repository paths exist.
+- Additional contracts protect strict crafting input boundaries, final player-remove/session-release semantics, Crystal upgrade material transaction rollback, StatusSpeedGuard baseline/immediate/stale-character enforcement, complete Crystal ID validation, NPC menu interaction distance, Achievement reward ownership, Daily Bounty reward ownership, Dodge listener lifecycle, Remote type initialization, combat reward idempotency, NPC special movement bounds and attacker-context/range validation.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
