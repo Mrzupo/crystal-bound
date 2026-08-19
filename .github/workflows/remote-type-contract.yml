@@ -1,0 +1,43 @@
+name: Remote Type Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-remote-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate critical RemoteEvent/RemoteFunction types
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          project = json.loads(Path("default.project.json").read_text(encoding="utf-8"))
+          remotes = project["tree"]["ReplicatedStorage"]["Remotes"]
+          expected_events = {
+              "CombatRequest", "CombatFeedback", "QuestRequest", "InventoryRequest",
+              "CrystalChanged", "CrystalMasteryChanged", "CrystalUpgradeRequest",
+              "DodgeRequest", "ShopRequest", "UseItemRequest", "CraftingRequest",
+              "XPChanged", "LevelUp", "MoneyChanged", "InventoryChanged",
+          }
+          expected_functions = {"NPCDialogRequest", "GetPlayerData", "GetQuestData", "GetAvailableQuests"}
+
+          problems = []
+          for name in sorted(expected_events):
+              entry = remotes.get(name)
+              if not isinstance(entry, dict) or entry.get("$className") != "RemoteEvent":
+                  problems.append(f"{name} must be a RemoteEvent")
+          for name in sorted(expected_functions):
+              entry = remotes.get(name)
+              if not isinstance(entry, dict) or entry.get("$className") != "RemoteFunction":
+                  problems.append(f"{name} must be a RemoteFunction")
+
+          if problems:
+              for problem in problems:
+                  print(problem)
+              raise SystemExit(1)
+          print("Critical RemoteEvent/RemoteFunction types validated.")
