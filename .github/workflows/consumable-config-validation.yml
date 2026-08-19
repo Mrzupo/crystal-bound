@@ -21,10 +21,15 @@ jobs:
           ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
           if "HealthPotion" not in config or not re.search(r"HealAmount\s*=\s*[1-9]\d*", config):
               raise SystemExit("ConsumableConfig must define a positive HealthPotion HealAmount")
+          match = re.search(r"HealAmount\s*=\s*([0-9]+)", config)
+          if not match or not 0 < int(match.group(1)) <= 1000:
+              raise SystemExit("HealthPotion HealAmount must remain within 1..1000")
           if "HealthPotion" not in inventory:
               raise SystemExit("InventoryConfig must contain HealthPotion")
           if "ConsumableConfig" not in remote or "ConsumableConfig" not in ui:
               raise SystemExit("UseItemRemote and ShopMenu must consume shared ConsumableConfig")
+          if "math.clamp(healAmount, 0.1, 1000)" not in remote:
+              raise SystemExit("UseItemRemote must clamp runtime heal configuration to 0.1..1000")
           if "+ 60" in remote or "restored 60 HP" in remote:
               raise SystemExit("UseItemRemote must not hardcode potion healing")
-          print("Consumable config contract validated.")
+          print("Consumable config and runtime heal boundary validated.")
