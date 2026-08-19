@@ -36,4 +36,9 @@ jobs:
               for item in duplicate_locations:
                   print(f" - {item}")
               raise SystemExit(1)
-          print("Achievement canonical source contract validated.")
+
+          if "canonicalTitles" not in system or "for _, achievementId in ipairs(profile.Achievements)" not in system:
+              raise SystemExit("AchievementSystem must derive Titles from earned Achievement IDs")
+          if "profile.Titles = canonicalTitles" not in system:
+              raise SystemExit("AchievementSystem must replace persisted Titles with canonical achievement-derived titles")
+          print("Achievement canonical source and title integrity contract validated.")
