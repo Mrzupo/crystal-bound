@@ -14,7 +14,13 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          text = Path("src/ServerScriptService/Services/QuestService.lua").read_text(encoding="utf-8")
+          import re
+
+          service = Path("src/ServerScriptService/Services/QuestService.lua").read_text(encoding="utf-8")
+          config = Path("src/ReplicatedStorage/Modules/QuestSystem.lua").read_text(encoding="utf-8")
+          economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
+          xp = Path("src/ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
+
           for marker in (
               'local function finiteNonNegativeInteger(value)',
               'local rewardXP = finiteNonNegativeInteger(definition.XP)',
@@ -22,8 +28,22 @@ jobs:
               'if rewardXP == nil or rewardMoney == nil then',
               'if not QuestSystem.Complete(profile, questId) then return false end',
           ):
-              if marker not in text:
+              if marker not in service:
                   raise SystemExit(f"Quest reward validation marker missing: {marker}")
-          if text.index('local rewardXP = finiteNonNegativeInteger(definition.XP)') > text.index('if not QuestSystem.Complete(profile, questId) then return false end'):
+          if service.index('local rewardXP = finiteNonNegativeInteger(definition.XP)') > service.index('if not QuestSystem.Complete(profile, questId) then return false end'):
               raise SystemExit("Quest reward config must be validated before completion is committed")
-          print("Quest reward configuration is validated before completion state mutation.")
+
+          max_money_match = re.search(r"MaxMoney\s*=\s*(\d+)", economy)
+          max_xp_match = re.search(r"MaxExperience\s*=\s*(\d+)", xp)
+          max_money = int(max_money_match.group(1)) if max_money_match else 1000000000
+          max_xp = int(max_xp_match.group(1)) if max_xp_match else 1000000000
+          rewards = re.findall(r"\{\s*Id\s*=\s*\"?([^,\s\"]+)\"?\s*,.*?XP\s*=\s*([0-9]+).*?Money\s*=\s*([0-9]+)", config, re.S)
+          if not rewards:
+              rewards = [(name, int(xp_value), int(money_value)) for name, xp_value, money_value in re.findall(r"([A-Z0-9_]+).*?XP\s*=\s*(\d+).*?Money\s*=\s*(\d+)", config, re.S)]
+          for quest_id, reward_xp, reward_money in rewards:
+              if int(reward_xp) > max_xp:
+                  raise SystemExit(f"Quest reward XP exceeds XPConfig.MaxExperience: {quest_id}")
+              if int(reward_money) > max_money:
+                  raise SystemExit(f"Quest reward Money exceeds EconomyConfig.MaxMoney: {quest_id}")
+
+          print("Quest reward numeric validation and progression-cap cross-check passed.")
