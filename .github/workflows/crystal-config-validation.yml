@@ -85,8 +85,8 @@ jobs:
           ):
               if marker not in system:
                   problems.append(f"CrystalSystem missing strict config boundary: {marker}")
-          if "required >= 1 and required % 1 == 0" not in player_data:
-              problems.append("PlayerData must reject malformed persisted UnlockLevels")
+          if "if not isFiniteNumber(required) or required < 1 or required % 1 ~= 0 then return false end" not in player_data:
+              problems.append("PlayerData must reject malformed persisted UnlockLevels with finite/integer validation")
 
           if problems:
               for problem in problems:
