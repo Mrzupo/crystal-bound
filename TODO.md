@@ -10,7 +10,7 @@
 - [x] Explizite SessionLock-Daten-Reconciliation
 - [x] Sicherer Profil-Ladefehlerpfad ohne leeres Fallback-Profil
 - [x] Persistente Daten-Normalisierung für Zahlen, Kristalle, Inventar, Quests und Daily Bounty
-- [x] Validierung der Daily-Bounty-Gegner bei Save-Migration
+- [x] Canonical Daily-Bounty Goal/Reward-Reconciliation aus DailyBountyConfig
 - [x] Economy-/Save-Cap ist an EconomyConfig gekoppelt
 - [x] XP- und Levelsystem mit sauberem Max-Level-Cap
 - [x] Geldsystem
@@ -23,6 +23,7 @@
 - [x] Server-Rate-Limits für Shop, Crafting, Inventory und Consumables
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
+- [x] Canonical Crystal unlock gate inside CrystalSystem.Unlock
 - [x] Crystal-Passiveffekte
 - [x] Crystal-Mastery + Upgrade-System mit sauberem Max-Level-Cap
 - [x] Crystal-Fähigkeiten mit unterschiedlichen Effekten
@@ -39,6 +40,7 @@
 - [x] Damage Numbers + Cooldown-Feedback
 - [x] Modulare Combat-Hit-Flash- und Player-Hit-Reaction
 - [x] Serverseitig bestätigtes CombatFeedback für Crystal-Hits
+- [x] ConfirmedCombatVFXBridge für einmalige serverbestätigte lokale Crystal-VFX
 - [x] Clientseitige Crystal-spezifische Impact-/Ability-Presentation
 - [x] Serverseitige Crystal-VFX aus CombatService entfernt
 - [x] GALE-Splash über zentrale DamageService-Validierung
@@ -68,7 +70,9 @@
 - [x] Crystal Guardian Boss
 - [x] Guardian-Arena mit Phase-2-Hazard
 - [x] Telegraphierte Phase-2-Bossattacke
+- [x] Guardian-Telegraph an konkrete Bossinstanz gebunden
 - [x] Guardian Quest Reward über zentralen QuestService
+- [x] Canonical EnemyConfig XP/Money/Loot Rewards ohne Crystal-Fallback
 - [x] Starter Island
 - [x] Tide Island
 - [x] Wind Island
@@ -77,15 +81,18 @@
 - [x] Questdefinitionen + Fortschritt
 - [x] Servervalidierte Questvoraussetzungen
 - [x] Zentralisierter Quest-Completion-/Reward-Pfad
+- [x] Ungültige Quest-Fortschrittswerte werden abgelehnt
 - [x] Automatische Questkette bis Ancient Ruins
 - [x] Automatischer Queststart nach erreichter Levelvoraussetzung
 - [x] Quest Journal
 - [x] Achievements + Titles
+- [x] Achievement-Titel werden aus Achievement-IDs abgeleitet
 - [x] Achievement Journal
 - [x] Deterministische Achievement-Reihenfolge
 - [x] Tägliche Bounty mit persistentem Fortschritt
 - [x] NPC-Dialoge mit servervalidierten Menü-Optionen
 - [x] NPC-Dialoge als zentraler Einstieg zu Quest/Crystal/Shop/Inventory/Crafting
+- [x] Dialog schließt beim Wechsel in Zielmenüs
 - [x] Legacy-NPC-Remote entfernt
 - [x] HUD für Progression, Loot, Quests, Bounty und Crafting
 - [x] Gemeinsames Status-Message-HUD inklusive Loot/Dodge/Bounty/Crafting-Feedback
@@ -108,6 +115,12 @@
 - [x] GitHub-CI für Balancing-Invarianten
 - [x] GitHub-CI für Combat-Presentation-Grenze und fehlende clientseitige TakeDamage-Pfade
 - [x] GitHub-CI für zentralisierte Damage-Pfade und Environmental-Damage-Contract
+- [x] GitHub-CI für canonical enemy rewards
+- [x] GitHub-CI für canonical Daily-Bounty persistence values
+- [x] GitHub-CI für Crystal unlock boundaries
+- [x] GitHub-CI für canonical Achievement Titles
+- [x] GitHub-CI für NPC dialog option targets
+- [x] GitHub-CI für Enemy respawn/cleanup compatibility
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 - [x] Duplicate Cooldown UI entfernt
 - [x] Clientseitige Animation-Controller-Architektur für Basic/Ability vorbereitet
