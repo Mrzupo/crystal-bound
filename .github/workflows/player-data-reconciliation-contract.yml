@@ -27,6 +27,7 @@ jobs:
               'data.DailyBounty.Claimed = data.DailyBounty.Claimed == true',
               'data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""',
               'data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 4102444800, 0)',
+              'data.Stats.Damage = clampInt(data.Stats.Damage, 0, 1000, defaults.Stats.Damage)',
               'data.Version = defaults.Version',
               'data.LegacyVersion = oldVersion',
           ]
@@ -41,4 +42,4 @@ jobs:
           if 'jobId ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated.')
+          print('Persisted player-data reconciliation contract validated, including Damage stat bounds.')
