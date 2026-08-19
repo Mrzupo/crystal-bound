@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Crystal mastery costs and complete ID boundary
+      - name: Validate Crystal mastery costs, bounds and strict ID handling
         shell: python
         run: |
           import re
@@ -18,11 +18,7 @@ jobs:
           config = Path("src/ReplicatedStorage/Config/CrystalUpgradeConfig.lua").read_text(encoding="utf-8")
           mastery = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
           inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
-          required = {
-              "EMBER": "EmberShard",
-              "TIDE": "TidePearl",
-              "GALE": "GaleFeather",
-          }
+          required = {"EMBER": "EmberShard", "TIDE": "TidePearl", "GALE": "GaleFeather"}
           for crystal, item in required.items():
               if crystal not in config or item not in config:
                   raise SystemExit(f"Missing mastery cost definition for {crystal}: {item}")
@@ -31,31 +27,49 @@ jobs:
 
           max_level = re.search(r"MaxLevel\s*=\s*(\d+)", config)
           max_xp = re.search(r"MaxExperience\s*=\s*(\d+)", config)
-          if not max_level or int(max_level.group(1)) <= 0:
-              raise SystemExit("MaxLevel must be a positive integer")
-          if not max_xp or int(max_xp.group(1)) <= 0:
-              raise SystemExit("MaxExperience must be a positive integer")
+          growth = re.search(r"Growth\s*=\s*([0-9]+(?:\.[0-9]+)?)", config)
+          if not max_level or not 1 <= int(max_level.group(1)) <= 100:
+              raise SystemExit("MaxLevel must be within 1..100")
+          if not max_xp or not 1 <= int(max_xp.group(1)) <= 100000000:
+              raise SystemExit("MaxExperience must be within 1..100000000")
+          if not growth or not 0.01 <= float(growth.group(1)) <= 10:
+              raise SystemExit("Growth must be within 0.01..10")
+
+          bonus_bounds = {
+              "DamagePerLevel": (0, 1),
+              "AbilityDamagePerLevel": (0, 1),
+              "HealthPerLevel": (0, 100),
+              "SpeedPerLevel": (0, 10),
+          }
+          for field, (minimum, maximum) in bonus_bounds.items():
+              match = re.search(rf"{field}\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)", config)
+              if not match:
+                  raise SystemExit(f"Missing mastery bonus field: {field}")
+              value = float(match.group(1))
+              if not minimum <= value <= maximum:
+                  raise SystemExit(f"{field} outside {minimum}..{maximum}: {value}")
 
           base_costs = config.split("BaseCosts", 1)[1] if "BaseCosts" in config else ""
           costs = re.findall(r"(EmberShard|TidePearl|GaleFeather)\s*=\s*(\d+)", base_costs)
-          if len(costs) != 3 or any(int(amount) <= 0 for _, amount in costs):
-              raise SystemExit("Every crystal mastery base cost must be present and positive")
-          if any(int(amount) > 1000000 for _, amount in costs):
-              raise SystemExit("Crystal mastery base cost exceeds the million-per-material design bound")
+          if len(costs) != 3 or any(int(amount) <= 0 or int(amount) > 1000000 for _, amount in costs):
+              raise SystemExit("Crystal mastery base costs must be positive and <= 1000000")
 
           required_mastery_markers = [
               "local function validCrystalId(crystalId)",
-              "if not validCrystalId(crystalId) then",
-              "type(CrystalConfig.Definitions[crystalId]) == \"table\"",
-              "type(CrystalConfig.BasicAttack[crystalId]) == \"table\"",
-              "type(CrystalConfig.Abilities[crystalId]) == \"table\"",
-              "type(CrystalConfig.Passives[crystalId]) == \"table\"",
+              "local function ensure(profile, crystalId)",
+              "if type(profile) ~= \"table\" or not validCrystalId(crystalId) then return nil end",
+              "function CrystalMastery.Get(profile, crystalId)",
+              "return mastery and { Level = mastery.Level, XP = mastery.XP } or neutralMastery()",
               "function CrystalMastery.AddXP",
               "function CrystalMastery.GetUpgradeCost",
               "function CrystalMastery.Upgrade",
+              "boundedPositiveConfig(Config.DamagePerLevel, 0, 1)",
+              "boundedPositiveConfig(Config.AbilityDamagePerLevel, 0, 1)",
+              "boundedPositiveConfig(Config.HealthPerLevel, 0, 100)",
+              "boundedPositiveConfig(Config.SpeedPerLevel, 0, 10)",
           ]
           missing = [marker for marker in required_mastery_markers if marker not in mastery]
           if missing:
-              raise SystemExit("CrystalMastery mutation boundary missing: " + ", ".join(missing))
+              raise SystemExit("CrystalMastery strict ID/bonus boundary missing: " + ", ".join(missing))
 
-          print("Crystal upgrade config, material ownership and mutation ID boundary validated.")
+          print("Crystal upgrade config, bonus bounds, material ownership and strict invalid-ID semantics validated.")
