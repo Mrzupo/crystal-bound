@@ -14,6 +14,7 @@ Base: `main`
 - Damage requests require known damage types, valid attackers/targets, positive bounded range and finite damage.
 - Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
+- Shop and Crafting request amounts are now strict positive integers; fractional amounts are rejected instead of floored.
 - Inventory stacks are clamped and AddItem never reports a negative added amount from corrupted over-cap state.
 - Quest progress rejects invalid/non-finite/non-integer increments.
 - Crystal unlock level gates are enforced in canonical `CrystalSystem.Unlock()`; malformed UnlockLevel configuration is rejected.
@@ -27,6 +28,7 @@ Base: `main`
 - Enemy respawn configuration is protected by CI against values shorter than NPC cleanup time.
 - Session heartbeat failure state uses weak keys.
 - `PlayerService.Save/Remove` guarantee operation-lock release and clean local player state after final-save failures while retaining the persistent session lock.
+- Final player removal now treats a failed `SafeProfileStore.Release()` as a failed removal and retains the persistent session lock.
 - Crystal Animation Controller no longer creates a local Animator; PlayerService creates the Animator server-side.
 - Confirmed Crystal VFX follow a server-confirmed presentation flow; gameplay authority never depends on local VFX state.
 - CombatPresentation keeps a single Character HealthChanged connection across respawns.
@@ -34,6 +36,7 @@ Base: `main`
 - PC and mobile input can request presentation locally, but unconfirmed hit VFX are suppressed in the normal client flow.
 - Static smoke / presentation / reward / config CI contracts cover the new canonical boundaries.
 - `crystal-service-ownership.yml` protects the Crystal ownership boundary.
+- Additional contracts protect strict crafting input boundaries and final player-remove/session-release semantics.
 - README, DESIGN, TESTING, TODO, NEXT_SESSION, CHANGELOG and CURRENT_AUDIT are aligned to the current architecture.
 
 ## Important open decisions / limitations
