@@ -33,10 +33,13 @@ jobs:
           for remote, owner in handlers.items():
               body = Path('src/ServerScriptService').joinpath(owner).read_text(encoding='utf-8')
               if 'OnServerInvoke' not in body:
-                  raise SystemExit(f'{owner}: missing OnServerInvoke')
+                  raise SystemExit(f'{owner}: missing OnServerInvoke for {remote}')
           assert 'REQUEST_INTERVAL = 0.2' in Path('src/ServerScriptService/NPCDialogRemote.server.lua').read_text(encoding='utf-8')
           assert 'REQUEST_INTERVAL = 0.2' in Path('src/ServerScriptService/QuestAvailability.server.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
-          assert 'GET_PLAYER_DATA_INTERVAL' in bootstrap
-          assert 'GET_QUEST_DATA_INTERVAL' in bootstrap
+          assert 'PLAYER_DATA_REQUEST_INTERVAL = 0.2' in bootstrap
+          assert 'QUEST_DATA_REQUEST_INTERVAL = 0.35' in bootstrap
+          assert 'nextPlayerDataRequest[player]' in bootstrap
+          assert 'nextQuestDataRequest[player]' in bootstrap
+          print('RemoteFunction ownership and rate-limit contract validated.')
           PY
