@@ -1,9 +1,9 @@
 # Crystal Bound — Current Audit
 
-Date: 2026-08-19
+Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1048 commits ahead, 29 commits behind** `main`.
+Current compare: **1054 commits ahead, 29 commits behind** `main`.
 `main` remains at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -20,6 +20,7 @@ Current compare: **1048 commits ahead, 29 commits behind** `main`.
 - Dodge state resets on respawn and is cleaned on leave; attacker-based Dodge damage normalizes Range before comparison.
 - Shop, Crafting and Consumable transactions validate before mutation and use rollback/rate-limit protections.
 - Shop and Crafting request amounts are strict positive integers; fractional amounts are rejected instead of floored.
+- Shop purchase totals are finite, positive and bounded by canonical `EconomyConfig.MaxMoney` before the money mutation phase.
 - Crystal Mastery upgrades verify every material removal and roll back already-consumed materials if any removal or the final upgrade fails.
 - CrystalSystem only treats Crystal IDs as valid when UnlockLevel is finite/integer and Definition, BasicAttack, Ability and Passive blocks all exist.
 - PlayerData rejects malformed persisted Crystal ownership, equipped IDs and Mastery keys using the same complete-config Crystal boundary; malformed equipped state falls back to the first valid owned Crystal instead of blindly restoring EMBER.
@@ -77,7 +78,7 @@ Current compare: **1048 commits ahead, 29 commits behind** `main`.
 - Status effects use weak Humanoid state, token-based cancellation for Slow/Burn, and explicit `Clear()` cleanup; a lifecycle contract protects those invariants.
 - `HitboxService.GetEnemyModels()` resolves targets only from `Workspace.NPCs`, requires `Model` + `Enemy == true`, living Humanoids and bounded radius; a dedicated regression contract protects that boundary.
 - AI path destinations are finite-validated, quantized, cached by weak Model keys, recomputed at a bounded interval, and explicitly cleared when NPCs die; the AI-path contract protects those lifecycle/resource invariants.
-- Contracts additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership/reward configuration, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership and current StatusSpeedGuard lifecycle behavior.
+- Contracts additionally protect Movement authority, Guardian spawn ownership/idempotency, shutdown persistence, Quest completion ownership/reward configuration, Crystal ability context, PvE range/attacker context, combat reward attribution, Money ownership, Inventory ownership, XP ownership, Shop purchase totals and current StatusSpeedGuard lifecycle behavior.
 - `contract-path-validation.yml` validates workflow-referenced repository paths.
 - Studio playtest checklist covers Damage bounds, Crystal upgrade rollback, fractional transaction rejection, final session-release failure, baseline WalkSpeed enforcement, malformed/incomplete Crystal config, NPC interaction distance and movement/respawn checks.
 
