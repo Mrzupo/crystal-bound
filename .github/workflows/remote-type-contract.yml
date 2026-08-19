@@ -38,6 +38,7 @@ jobs:
 
           fail_fast_files = {
               "src/ServerScriptService/Bootstrap.server.lua": ["CombatRequest", "GetPlayerData"],
+              "src/ServerScriptService/CombatFeedbackRemote.server.lua": ["CombatFeedback"],
               "src/ServerScriptService/ShopRemote.server.lua": ["ShopRequest"],
               "src/ServerScriptService/CraftingRemote.server.lua": ["CraftingRequest"],
               "src/ServerScriptService/DodgeRemote.server.lua": ["DodgeRequest"],
@@ -47,12 +48,18 @@ jobs:
           }
           for file, names in fail_fast_files.items():
               text = Path(file).read_text(encoding="utf-8")
-              if 'if remote then' not in text and file != "src/ServerScriptService/Bootstrap.server.lua":
+              if 'if remote then' not in text and 'if feedback then' not in text and file != "src/ServerScriptService/Bootstrap.server.lua":
                   problems.append(f"{file} must inspect an existing Remote before binding")
               for name in names:
                   if file == "src/ServerScriptService/Bootstrap.server.lua":
                       continue
-                  if f'{name} has class %s, expected' not in text:
+                  if name == "CombatFeedback":
+                      marker = 'if not feedback:IsA("RemoteEvent") then'
+                  elif name in expected_events:
+                      marker = 'if not remote:IsA("RemoteEvent") then'
+                  else:
+                      marker = 'if not remote:IsA("RemoteFunction") then'
+                  if marker not in text:
                       problems.append(f"{file} missing Remote type fail-fast for {name}")
 
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
