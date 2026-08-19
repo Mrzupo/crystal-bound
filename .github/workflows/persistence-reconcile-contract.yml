@@ -46,3 +46,22 @@ jobs:
               raise SystemExit('missing persisted complete Crystal normalization contract: ' + ', '.join(missing))
           print('Persistence reconcile and complete Crystal normalization contracts validated.')
           PY
+
+      - name: Validate session heartbeat lock-loss handling
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ServerScriptService/SessionHeartbeat.server.lua').read_text(encoding='utf-8')
+          required = [
+              'local HEARTBEAT_INTERVAL = 45',
+              'local MAX_CONSECUTIVE_FAILURES = 2',
+              'failures = setmetatable({}, { __mode = "k" })',
+              'local ok, reason = SafeProfileStore.Refresh(player)',
+              'failures[player] = (failures[player] or 0) + 1',
+              'if failures[player] >= MAX_CONSECUTIVE_FAILURES then',
+              'player:Kick("Crystal Bound lost the save-session lock.',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('missing session heartbeat lock-loss contract: ' + ', '.join(missing))
+          print('Session heartbeat lock-loss handling validated.')
