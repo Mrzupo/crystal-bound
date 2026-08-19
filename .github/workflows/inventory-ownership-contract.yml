@@ -1,0 +1,37 @@
+name: Inventory Ownership Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical InventoryService mutation ownership
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path("src/ServerScriptService")
+          service = root / "Services/InventoryService.lua"
+          service_text = service.read_text(encoding="utf-8")
+          for marker in (
+              'profile.Inventory[itemId] = nextAmount',
+              'profile.Inventory[itemId] = current - amount',
+          ):
+              if marker not in service_text:
+                  raise SystemExit(f"InventoryService missing canonical mutation marker: {marker}")
+
+          direct = []
+          assignment = re.compile(r'profile\.Inventory(?:\[[^\]]+\]|\.[A-Za-z_][A-Za-z0-9_]*)\s*=')
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if path != service and assignment.search(text):
+                  direct.append(str(path))
+          if direct:
+              raise SystemExit("Server inventory mutations must stay in InventoryService: " + ", ".join(direct))
+          print("Inventory mutation ownership contract validated.")
