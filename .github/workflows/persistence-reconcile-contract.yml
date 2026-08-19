@@ -27,5 +27,18 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing persistence reconcile contract: ' + ', '.join(missing))
-          print('Persistence reconcile contract validated.')
+
+          crystal_required = [
+              'local function isCrystalId(value)',
+              'required >= 1 and required % 1 == 0',
+              'data.Crystals.Owned = normalizeList(data.Crystals.Owned, isCrystalId)',
+              'if not isCrystalId(data.Crystals.Equipped)',
+              'for crystalId in pairs(CrystalConfig.UnlockLevels) do',
+              'if isCrystalId(crystalId) then',
+              'normalizedMastery[crystalId] = mastery',
+          ]
+          missing = [marker for marker in crystal_required if marker not in text]
+          if missing:
+              raise SystemExit('missing persisted Crystal normalization contract: ' + ', '.join(missing))
+          print('Persistence reconcile and strict Crystal normalization contracts validated.')
           PY
