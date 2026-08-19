@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate AI path destination guard baseline
+      - name: Validate AI path destination guard, cache lifecycle and rate limit
         shell: python
         run: |
           from pathlib import Path
@@ -30,6 +30,10 @@ jobs:
               'math.floor(goal.X / 4)',
               'math.floor(goal.Y / 4)',
               'math.floor(goal.Z / 4)',
+              'local cache = setmetatable({}, { __mode = "k" })',
+              'local RECOMPUTE_INTERVAL = 0.5',
+              'function AIPathService.Clear(model)',
+              'cache[model] = nil',
           ]
 
           missing = [marker for marker in required if marker not in text]
@@ -38,4 +42,4 @@ jobs:
                   print("Missing AI path marker:", marker)
               raise SystemExit(1)
 
-          print("AI path finite-input validation passed.")
+          print("AI path finite-input, weak-cache, rate-limit and cleanup contract passed.")
