@@ -22,9 +22,15 @@ label.TextSize = 14
 label.Parent = gui
 Instance.new("UICorner", label).CornerRadius = UDim.new(0, 8)
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
 local function fireDodge()
 	local now = os.clock()
-	local cooldownEnd = tonumber(player:GetAttribute("DodgeCooldownEnd")) or 0
+	local cooldownEnd = finiteNumber(player:GetAttribute("DodgeCooldownEnd"), 0)
 	if now < cooldownEnd then return end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -59,7 +65,7 @@ end
 
 task.spawn(function()
 	while gui.Parent do
-		local remaining = math.max(0, (tonumber(player:GetAttribute("DodgeCooldownEnd")) or 0) - os.clock())
+		local remaining = math.max(0, finiteNumber(player:GetAttribute("DodgeCooldownEnd"), 0) - os.clock())
 		label.Text = remaining > 0 and string.format("Dodge: %.1fs", remaining) or "Dodge: READY"
 		task.wait(0.1)
 	end
