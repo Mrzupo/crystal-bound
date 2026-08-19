@@ -107,6 +107,15 @@ end
 
 local function releaseOperation(player) PlayerService.Operations[player] = nil end
 
+local function cleanupRemovedPlayer(player)
+	if PlayerService.CharacterConnections[player] then
+		PlayerService.CharacterConnections[player]:Disconnect()
+		PlayerService.CharacterConnections[player] = nil
+	end
+	cleanupHumanoidConnections(player)
+	PlayerService.Profiles[player] = nil
+end
+
 function PlayerService.GetProfile(player) return PlayerService.Profiles[player] end
 
 function PlayerService.Load(player)
@@ -242,19 +251,19 @@ function PlayerService.Remove(player)
 			return { Saved = false }
 		end
 		SafeProfileStore.Release(player)
-		if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect(); PlayerService.CharacterConnections[player] = nil end
-		cleanupHumanoidConnections(player)
-		PlayerService.Profiles[player] = nil
+		cleanupRemovedPlayer(player)
 		return { Saved = true }
 	end, debug.traceback)
 	releaseOperation(player)
 
 	if not success then
 		warn(("Crystal Bound: PlayerService.Remove failed for %s: %s"):format(player.Name, tostring(result)))
+		cleanupRemovedPlayer(player)
 		return false
 	end
 	if not result or not result.Saved then
 		warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
+		cleanupRemovedPlayer(player)
 		return false
 	end
 	return true
