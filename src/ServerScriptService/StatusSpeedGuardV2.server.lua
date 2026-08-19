@@ -7,17 +7,31 @@ local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16
 local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
 local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier) or 0.2, 0.01, 1)
 local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
+local SPEED_EPSILON = 0.05
 local connections = setmetatable({}, { __mode = "k" })
+
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
 
 local function refresh(player)
 	if not player.Parent then return end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
-	local slow = tonumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"))
-	if not slow or slow <= 0 then return end
-	local base = BASE_WALK_SPEED + math.max(0, tonumber(player:GetAttribute("WalkSpeedBonus")) or 0)
-	humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, base * math.clamp(slow, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
+
+	local base = BASE_WALK_SPEED + math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0))
+	local expected = math.max(MIN_WALK_SPEED, base)
+	local slow = finiteNumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"), nil)
+	if slow and slow > 0 then
+		expected = math.max(MIN_WALK_SPEED, base * math.clamp(slow, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
+	end
+
+	if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then
+		humanoid.WalkSpeed = expected
+	end
 end
 
 local function cleanup(player)
@@ -54,11 +68,7 @@ task.spawn(function()
 	while true do
 		task.wait(ENFORCEMENT_INTERVAL)
 		for _, player in ipairs(Players:GetPlayers()) do
-			local character = player.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil then
-				refresh(player)
-			end
+			refresh(player)
 		end
 	end
 end
