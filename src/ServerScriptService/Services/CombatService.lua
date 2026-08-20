@@ -86,10 +86,14 @@ local function advanceEnemyQuest(player, profile, enemyType)
 end
 
 local function advanceAbilityQuest(player, profile)
-	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return end
+	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return false, false end
 	local complete, progress, goal = QuestSystem.Advance(profile, "CRYSTAL_POWER", 1)
 	player:SetAttribute("QuestProgress", string.format("Crystal Power: %d/%d", progress, goal))
-	if complete then completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
+	if complete then
+		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
+		return true, true
+	end
+	return true, false
 end
 
 local function giveLoot(player, profile, targetModel, enemyConfig)
@@ -172,7 +176,8 @@ function CombatService.HandleRequest(player, action, target)
 		cooldowns[player][action] = now + safeCooldown
 		player:SetAttribute("AbilityCooldownEnd", now + safeCooldown)
 		if abilityResult.Message then player:SetAttribute("CrystalMessage", abilityResult.Message) end
-		advanceAbilityQuest(player, profile)
+		local questChanged, questCompleted = advanceAbilityQuest(player, profile)
+		if questChanged and not questCompleted then PlayerService.Sync(player) end
 		return
 	end
 
@@ -214,14 +219,10 @@ function CombatService.HandleRequest(player, action, target)
 			fireCombatFeedback(hit.Target, player, "Ability", crystalId, false, hit.Amount)
 			if hit.Defeated then rewardDefeat(player, profile, hit.Target, "Ability", crystalId) end
 		end
-		advanceAbilityQuest(player, profile)
+		local questChanged, questCompleted = advanceAbilityQuest(player, profile)
+		if questChanged and not questCompleted and result.Amount > 0 and humanoid.Health > 0 then
+			PlayerService.Sync(player)
+		end
 	end
 	if result.Amount > 0 and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
-
-function CombatService.CleanupPlayer(player)
-	cooldowns[player] = nil
-	nextRequest[player] = nil
-end
-
-return CombatService
