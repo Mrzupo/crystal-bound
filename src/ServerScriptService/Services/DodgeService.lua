@@ -57,6 +57,7 @@ end
 function DodgeService.TryDodge(player, direction)
 	if isShuttingDown() then return false, "Server shutting down" end
 	if not player or not player:IsA("Player") then return false, "Invalid player" end
+	if player:GetAttribute("ProfileLoaded") ~= true then return false, "Profile not ready" end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
