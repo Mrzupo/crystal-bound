@@ -55,7 +55,14 @@ close.Size = UDim2.fromOffset(40, 34)
 close.Text = "X"
 close.Font = Enum.Font.GothamBold
 close.Parent = panel
-close.Activated:Connect(function() open = false; panel.Visible = false end)
+
+local function closeMenu()
+	open = false
+	panel.Visible = false
+	player:SetAttribute("OpenCraftingMenu", nil)
+end
+
+close.Activated:Connect(closeMenu)
 
 local recipeLabel = Instance.new("TextLabel")
 recipeLabel.Position = UDim2.fromOffset(18, 65)
@@ -143,7 +150,14 @@ end)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.K then
-		if open then open = false; panel.Visible = false else open = true; panel.Visible = true; inventoryRequest:FireServer(); refresh() end
+		if open then
+			closeMenu()
+		else
+			open = true
+			panel.Visible = true
+			inventoryRequest:FireServer()
+			refresh()
+		end
 	end
 end)
 
