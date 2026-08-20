@@ -131,7 +131,7 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 		profile.Stats.CrystalBatsDefeated = (finiteNumber(profile.Stats.CrystalBatsDefeated) or 0) + 1
 	end
 	DailyBountyService.AddProgress(player, profile, enemyType, EconomyService, PlayerService)
-	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.max(10, math.floor(xpGain * 0.5)))
+	local masteryLevel, masteryXP, masteryLevels = CrystalMastery.AddXP(profile, crystalId, math.floor(xpGain * 0.5))
 	advanceEnemyQuest(player, profile, enemyType)
 	if targetModel.Name == "TrainingDummy" then completeQuest(player, profile, "FIRST_FIGHT", "First Trial complete!") end
 	if levelsGained > 0 and #QuestService.GetActive(profile) == 0 then QuestService.TryStartNext(player, profile) end
