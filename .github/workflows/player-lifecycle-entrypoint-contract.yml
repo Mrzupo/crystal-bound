@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate canonical PlayerRemoving owner and Rojo wiring
+      - name: Validate canonical Player lifecycle owners and Bootstrap load guard
         shell: python
         run: |
           from pathlib import Path
           project = Path("default.project.json").read_text(encoding="utf-8")
           lifecycle = Path("src/ServerScriptService/PlayerLifecycle.server.lua").read_text(encoding="utf-8")
           service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
 
           if '"PlayerLifecycle": {"$path": "src/ServerScriptService/PlayerLifecycle.server.lua"}' not in project:
               raise SystemExit("default.project.json must load PlayerLifecycle.server.lua")
@@ -28,4 +29,19 @@ jobs:
               raise SystemExit("PlayerLifecycle must not gate Remove() behind GetProfile(); shutdown hides gameplay profiles intentionally")
           if "function PlayerService.Remove(player)" not in service:
               raise SystemExit("PlayerService.Remove must remain the canonical remove owner")
-          print("Player lifecycle entrypoint, shutdown-safe unconditional remove delegation and Rojo wiring validated.")
+
+          for marker in (
+              'local loadingPlayers = setmetatable({}, { __mode = "k" })',
+              'if loadingPlayers[player] then return false end',
+              'loadingPlayers[player] = true',
+              'local success, profile, reason = xpcall(function()',
+              'loadingPlayers[player] = nil',
+              'local syncSuccess, syncError = xpcall(function()',
+          ):
+              if marker not in bootstrap:
+                  raise SystemExit("Bootstrap player-load lifecycle guard missing: " + marker)
+          if bootstrap.count('Players.PlayerAdded:Connect(function(player)') != 1:
+              raise SystemExit("Bootstrap must have exactly one canonical PlayerAdded owner")
+          if bootstrap.count('for _, player in ipairs(Players:GetPlayers()) do') < 1:
+              raise SystemExit("Bootstrap must also process already-present players")
+          print("Player lifecycle entrypoint, shutdown-safe remove delegation, single PlayerAdded owner and Bootstrap load-guard cleanup validated.")
