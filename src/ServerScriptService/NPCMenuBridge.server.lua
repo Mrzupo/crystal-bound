@@ -26,10 +26,10 @@ local function clearMenus(player)
 	end
 end
 
-local function openDialog(player, npcId)
+local function openDialog(player, npcId, character)
 	clearMenus(player)
 	task.defer(function()
-		if player.Parent then
+		if player.Parent and player.Character == character and character.Parent then
 			player:SetAttribute("OpenNPCDialog", npcId)
 		end
 	end)
@@ -41,8 +41,9 @@ local function bindPrompt(prompt)
 	local model = prompt:FindFirstAncestorOfClass("Model")
 	if not model then return end
 	prompt.Triggered:Connect(function(player)
-		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and isNearModel(player, model) then
-			openDialog(player, model.Name)
+		local character = player.Character
+		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and character and isNearModel(player, model) then
+			openDialog(player, model.Name, character)
 		end
 	end)
 end
