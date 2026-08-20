@@ -1,0 +1,28 @@
+name: TIDE Heal Return Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/tide-heal-return-type-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate TIDE uses PlayerService.Heal as a boolean authority result
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
+          start = text.index("local function executeTide")
+          end = text.index("local function executeGale", start)
+          block = text[start:end]
+          if "local applied = PlayerService.Heal(player, healAmount)" not in block:
+              raise SystemExit("TIDE must remain server-authoritative through PlayerService.Heal")
+          if "if not applied then" not in block:
+              raise SystemExit("TIDE must interpret PlayerService.Heal as a boolean result")
+          if "applied <= 0" in block:
+              raise SystemExit("TIDE must not compare the boolean Heal result numerically")
+          print("TIDE correctly interprets PlayerService.Heal as a boolean server-authority result.")
