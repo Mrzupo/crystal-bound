@@ -123,8 +123,8 @@ function PlayerData.Reconcile(input)
 		if CrystalSystemExists(crystalId) and table.find(owned, crystalId) then
 			local value = type(state) == "table" and state or {}
 			local maxLevel = math.max(1, math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel) or 10))
-			local level = clampInt(value.Level, 1, maxLevel, 1)
 			local xp = clampInt(value.XP, 0, math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000)), 0)
+			local level = clampInt(value.Level, 1, maxLevel, 1)
 			xp = capExperienceBelowNextLevel(level, xp, maxLevel, math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000)), CrystalMastery.GetRequiredXP)
 			normalizedMastery[crystalId] = { Level = level, XP = xp }
 		end
@@ -219,6 +219,7 @@ function PlayerData.Reconcile(input)
 	end
 	if not bountyDefinition then
 		bountyDefinition = (DailyBountyConfig.Goals and DailyBountyConfig.Goals[1]) or { Goal = 1, RewardMoney = 0, EnemyType = "" }
+		data.DailyBounty.Date = ""
 		data.DailyBounty.EnemyType = bountyDefinition.EnemyType
 		data.DailyBounty.Progress = 0
 		data.DailyBounty.Claimed = false
