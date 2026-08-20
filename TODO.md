@@ -64,6 +64,8 @@
 - [x] Gegnertypen mit speziellen Angriffen
 - [x] Gegner-HP-Balken
 - [x] Sauberer Enemy-/Boss-Lifecycle mit Respawn-Cleanup
+- [x] Enemy-AI stoppt serverseitig, sobald globaler Shutdown beginnt
+- [x] Enemy-Respawn-Callbacks erzeugen keine neuen NPCs mehr nach Shutdown-Beginn
 - [x] Training Dummy
 - [x] Emberling
 - [x] Tidecrawler
@@ -75,6 +77,7 @@
 - [x] Telegraphierte Phase-2-Bossattacke
 - [x] Guardian-Telegraph an konkrete Bossinstanz gebunden
 - [x] Guardian Quest Reward über zentralen QuestService
+- [x] Guardian-AI und Guardian-Respawn stoppen bei globalem Shutdown
 - [x] Canonical EnemyConfig XP/Money/Loot Rewards ohne Crystal-Fallback
 - [x] Starter Island
 - [x] Tide Island
@@ -98,6 +101,7 @@
 - [x] NPC-Dialoge mit servervalidierten Menü-Optionen
 - [x] NPC-Dialoge als zentraler Einstieg zu Quest/Crystal/Shop/Inventory/Crafting
 - [x] Deferred NPC-Menü-Öffnung an den auslösenden Character gebunden
+- [x] NPC-Menü-Attribute werden beim Respawn und Leave serverseitig entfernt
 - [x] Dialog schließt beim Wechsel in Zielmenüs
 - [x] Legacy-NPC-Remote entfernt
 - [x] HUD für Progression, Loot, Quests, Bounty und Crafting
@@ -127,8 +131,9 @@
 - [x] GitHub-CI für canonical Achievement Titles
 - [x] GitHub-CI für NPC dialog option targets
 - [x] GitHub-CI für Enemy respawn/cleanup compatibility
+- [x] GitHub-CI für shutdown-safe Enemy-/Guardian-Lifecycle
 - [x] GitHub-CI für Portal-Cooldown-Generation über Respawn/Rejoin
-- [x] GitHub-CI für Character-gebundene deferred NPC-Menüöffnung
+- [x] GitHub-CI für Character-gebundene deferred NPC-Menüöffnung und Respawn-Cleanup
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 - [x] Duplicate Cooldown UI entfernt
 - [x] Clientseitige Animation-Controller-Architektur für Basic/Ability vorbereitet
