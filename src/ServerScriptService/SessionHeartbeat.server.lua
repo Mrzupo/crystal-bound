@@ -10,6 +10,7 @@ local shuttingDown = false
 
 local function shutdownProfiles()
 	shuttingDown = true
+	PlayerService.BeginShutdown()
 	local pending = 0
 	for _, player in ipairs(Players:GetPlayers()) do
 		if PlayerService.GetProfile(player) then
@@ -25,11 +26,15 @@ local function shutdownProfiles()
 	end
 
 	local deadline = os.clock() + SHUTDOWN_TIMEOUT
-	while pending > 0 and os.clock() < deadline do
+	while os.clock() < deadline do
+		if pending <= 0 and PlayerService.GetPendingLoadCount() <= 0 then
+			break
+		end
 		task.wait(0.1)
 	end
-	if pending > 0 then
-		warn(("Crystal Bound: shutdown save/release timed out with %d player profile(s) still pending."):format(pending))
+	local pendingLoads = PlayerService.GetPendingLoadCount()
+	if pending > 0 or pendingLoads > 0 then
+		warn(("Crystal Bound: shutdown save/release timed out with %d loaded profile(s) and %d pending load(s)."):format(pending, pendingLoads))
 	end
 end
 
