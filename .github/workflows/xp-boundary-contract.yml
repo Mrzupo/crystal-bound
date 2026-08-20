@@ -1,0 +1,44 @@
+name: XP Boundary Contract
+
+on:
+  push:
+    branches:
+      - "main"
+      - "agent/complete-crystal-bound-foundation"
+      - "agent/status-effect-stale-callback-contract"
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate XP level and cap transitions
+        shell: python
+        run: |
+          from pathlib import Path
+
+          xp = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
+          required = [
+              "function XPService.AddXP(profile, amount)",
+              "if amount == nil then return level, experience, 0 end",
+              "profile.Experience = math.min(XPConfig.MaxExperience, experience + amount)",
+              "while profile.Level < XPConfig.MaxLevel do",
+              "profile.Experience -= required",
+              "profile.Level += 1",
+              "if profile.Level >= XPConfig.MaxLevel then",
+              "profile.Experience = 0",
+          ]
+          missing = [marker for marker in required if marker not in xp]
+          if missing:
+              raise SystemExit("XP boundary guard missing: " + ", ".join(missing))
+
+          if ":TakeDamage(" in xp or "task.spawn" in xp or "task.delay" in xp:
+              raise SystemExit("XP progression service must remain synchronous and side-effect scoped")
+
+          config = Path("src/ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
+          for marker in ("MaxLevel =", "MaxExperience =", "BaseXP =", "Growth =", "function XPConfig.GetRequiredXP(level)"):
+              if marker not in config:
+                  raise SystemExit("XPConfig missing " + marker)
+
+          print("XP level transitions, overflow cap and max-level zero-XP behavior are contract-protected.")
