@@ -59,6 +59,8 @@ jobs:
               raise SystemExit("CraftingService must bound multiplied recipe amounts")
           if 'recipe.Output ~= outputId' not in service:
               raise SystemExit("CraftingService must require recipe Output to match the requested outputId")
+          if 'type(itemId) ~= "string" or not InventoryConfig.GetItemConfig(itemId)' not in service:
+              raise SystemExit("CraftingService must reject unregistered input item IDs at runtime")
           if "CraftingConfig" not in ui:
               raise SystemExit("Crafting UI must consume shared CraftingConfig")
           print("Crafting configuration and item-registration contract validated.")
