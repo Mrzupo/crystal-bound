@@ -48,6 +48,10 @@ jobs:
           if 'local MENU_ATTRIBUTES = {' not in text["dialog"] or 'clearMenuState()' not in text["dialog"]:
               problems.append("NPCDialogMenu must centralize and clear menu attributes")
 
+          if 'local PlayerService = require(script.Parent.Services.PlayerService)' not in text["bridge"]:
+              problems.append("NPCMenuBridge must depend on PlayerService for shutdown lifecycle authority")
+          if 'if PlayerService.ShuttingDown then return end' not in text["bridge"]:
+              problems.append("NPCMenuBridge must reject prompt/deferred menu writes during shutdown")
           if 'local function openDialog(player, npcId, character)' not in text["bridge"]:
               problems.append("NPCMenuBridge must bind deferred dialog opening to the triggering Character")
           if 'player.Character == character and character.Parent' not in text["bridge"]:
@@ -84,4 +88,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, respawn cleanup and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, respawn cleanup, shutdown rejection and close-state contract validated.")
