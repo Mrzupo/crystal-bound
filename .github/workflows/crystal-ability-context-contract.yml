@@ -2,7 +2,7 @@ name: Crystal Ability Context Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/tide-ability-context-contract"]
   pull_request:
 
 jobs:
@@ -17,6 +17,7 @@ jobs:
 
           service = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
           combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          config = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
           pc = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
           mobile = Path("src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua").read_text(encoding="utf-8")
 
@@ -37,11 +38,17 @@ jobs:
 
           for marker in [
               'local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"',
+              'local safeCooldown = boundedPositive(config.Cooldown, 0.05, 60)',
+              'if not isTideSelfAbility and (not safeRange or not safeBaseDamage) then return end',
               'CrystalAbilityService.Execute(player, profile, crystalId, nil, nil, nil)',
               'if not abilityResult.Success then return end',
+              'cooldowns[player][action] = now + safeCooldown',
           ]:
               if marker not in combat:
                   raise SystemExit("CombatService TIDE self-ability context missing: " + marker)
+
+          if 'TIDE = { Name = "Tidal Pulse"' not in config or 'HealAmount = 30' not in config:
+              raise SystemExit('CrystalConfig must retain the targetless TIDE heal semantics')
 
           for text, name in ((pc, "ClientBootstrap"), (mobile, "TouchControls")):
               if 'if action == "Ability" and crystalId == "TIDE" then' not in text:
@@ -49,4 +56,4 @@ jobs:
               if 'combatRemote:FireServer("Ability", nil)' not in text:
                   raise SystemExit(f"{name} must send targetless TIDE Ability requests")
 
-          print("Crystal ability ownership/range context and targetless TIDE self-ability contract validated.")
+          print("Crystal ability ownership/range context, targetless TIDE self-heal semantics and dedicated cooldown path validated.")
