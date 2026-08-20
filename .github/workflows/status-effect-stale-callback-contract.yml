@@ -40,10 +40,13 @@ jobs:
               raise SystemExit("status-effect stale-callback/shutdown guard missing: " + ", ".join(missing))
 
           slow_index = text.index("task.delay(duration, function()")
-          slow_guard = text.index("not isShuttingDown() and humanoid.Health > 0 and state.Slow == token", slow_index)
-          slow_cleanup = text.index("state.Slow = nil", slow_guard)
-          if not (slow_index < slow_guard < slow_cleanup):
-              raise SystemExit("slow expiry must validate shutdown and current token before cleanup")
+          slow_guard = text.index("if not isShuttingDown() and humanoid.Health > 0 and state.BaseWalkSpeed then", slow_index)
+          token_guard = text.index("state.Slow == token", slow_index)
+          slow_cleanup = text.index("state.Slow = nil", token_guard)
+          if not (slow_index < token_guard < slow_cleanup):
+              raise SystemExit("slow expiry must validate its current token before cleanup")
+          if slow_guard <= token_guard:
+              raise SystemExit("slow expiry must decide shutdown restoration before restoring WalkSpeed")
 
           burn_index = text.index("task.spawn(function()")
           burn_guard = text.index("isShuttingDown() or not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token", burn_index)
