@@ -6,6 +6,7 @@ local SafeProfileStore = {}
 local store = DataStoreService:GetDataStore("CrystalBound_PlayerData_v2")
 local RETRIES = 3
 local SESSION_TIMEOUT = 120
+local MAX_SESSION_TIMESTAMP = 4102444800
 local SESSION_ID = game.JobId ~= "" and game.JobId or HttpService:GenerateGUID(false)
 local sessionTokens = setmetatable({}, { __mode = "k" })
 
@@ -72,7 +73,10 @@ function SafeProfileStore.Load(player)
 			end
 			local lock = data.SessionLock
 			local lockTimestamp = lock and tonumber(lock.Timestamp) or nil
-			local age = lockTimestamp and math.max(0, timestamp() - lockTimestamp) or math.huge
+			local validLockTimestamp = lockTimestamp ~= nil
+				and lockTimestamp > 0
+				and lockTimestamp <= MAX_SESSION_TIMESTAMP
+			local age = validLockTimestamp and math.max(0, timestamp() - lockTimestamp) or 0
 			local sameSession = lock and lock.JobId == SESSION_ID and lock.Token == token
 
 			if lock and not sameSession and age < SESSION_TIMEOUT then
@@ -94,7 +98,7 @@ function SafeProfileStore.Load(player)
 		return nil, "Invalid stored profile data"
 	end
 	if malformedSessionLock then
-		warn(("Crystal Bound: refusing to claim profile for %s because SessionLock has an invalid stored type"):format(player.Name))
+		warn(("Crystal Bound: refusing to claim profile for %s because SessionLock has invalid stored type"):format(player.Name))
 		return nil, "Invalid SessionLock data"
 	end
 	if not claimed then
