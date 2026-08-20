@@ -195,7 +195,8 @@ function PlayerService.Load(player)
 	end
 
 	if not isCurrentLoad() then
-		warn(("Crystal Bound: superseded profile load ignored for UserId %d."):format(userId))
+		local released = SafeProfileStore.Release(player)
+		warn(("Crystal Bound: superseded profile load ignored for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile load"
 	end
 	if PlayerService.ShuttingDown or not player.Parent then
@@ -207,7 +208,8 @@ function PlayerService.Load(player)
 
 	profile = PlayerData.Reconcile(profile)
 	if not isCurrentLoad() then
-		warn(("Crystal Bound: superseded profile initialization ignored for UserId %d."):format(userId))
+		local released = SafeProfileStore.Release(player)
+		warn(("Crystal Bound: superseded profile initialization ignored for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile initialization"
 	end
 	if PlayerService.ShuttingDown then
@@ -222,7 +224,8 @@ function PlayerService.Load(player)
 	if not isCurrentLoad() then
 		PlayerService.Profiles[player] = nil
 		PlayerService.ProfileRevisions[player] = nil
-		warn(("Crystal Bound: profile initialization was superseded for UserId %d."):format(userId))
+		local released = SafeProfileStore.Release(player)
+		warn(("Crystal Bound: profile initialization was superseded for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile initialization"
 	end
 	if PlayerService.ShuttingDown or not player.Parent then
