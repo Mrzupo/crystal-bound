@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Guardian spawn owner and reserved identity
+      - name: Validate Guardian spawn owner, reserved identity and shutdown gate
         shell: python
         run: |
           from pathlib import Path
-          text = Path("src/ServerScriptService/BossTelegraph.server.lua").read_text(encoding="utf-8")
+          telegraph = Path("src/ServerScriptService/BossTelegraph.server.lua").read_text(encoding="utf-8")
+          boss = Path("src/ServerScriptService/Services/BossService.lua").read_text(encoding="utf-8")
           required = [
               'local BossService = require(script.Parent.Services.BossService)',
               'local existingGuardian = NPCs:FindFirstChild("CrystalGuardian")',
@@ -23,7 +24,17 @@ jobs:
               'if existingGuardian then existingGuardian:Destroy() end',
               'BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in telegraph]
           if missing:
               raise SystemExit("Guardian active spawn contract missing: " + ", ".join(missing))
-          print("Active Guardian spawn and reserved identity contract validated.")
+
+          boss_required = [
+              'local PlayerService = require(script.Parent.PlayerService)',
+              'if not parent or not parent.Parent or typeof(position) ~= "Vector3" or PlayerService.ShuttingDown then return nil end',
+              'while model.Parent and humanoid.Health > 0 and not PlayerService.ShuttingDown do',
+              'if not PlayerService.ShuttingDown and parent.Parent and not parent:FindFirstChild(bossName) then',
+          ]
+          missing = [marker for marker in boss_required if marker not in boss]
+          if missing:
+              raise SystemExit("Guardian shutdown-safe lifecycle guard missing: " + ", ".join(missing))
+          print("Active Guardian spawn, reserved identity, shutdown gate and respawn lifecycle contract validated.")
