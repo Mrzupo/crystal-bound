@@ -30,6 +30,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-owned character Animator for client animation playback.
 - One-shot confirmed Crystal VFX bridge.
 - Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence.
+- Portal cooldown expiry is generation-safe across respawn/rejoin.
 
 ## Latest hardening work
 - Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after startup, with per-Player deduplication.
@@ -84,7 +85,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - No Luau interpreter or Rojo CLI runtime validation is available here.
 - Current GitHub workflow-run queries provide no verified run for the latest hardening commits; CI must not be called green.
 - Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
-- Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
+- Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling and Roblox network-ownership interactions.
 - The generalized `PlayerService.Saving` gameplay-read gate remains intentionally conservative. Ordinary `GetProfile()` callers are blocked during autosave; selected server reward paths have explicit autosave-safe access and are covered by settle/revision behavior.
 - `GetPlayerData`/`GetQuestData` return detached server-serialized subsets; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
