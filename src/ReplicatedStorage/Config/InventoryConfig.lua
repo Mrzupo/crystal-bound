@@ -22,6 +22,13 @@ local InventoryConfig = {
 	Items = Items,
 }
 
-function InventoryConfig.GetItemConfig(id) return Items[id] end
+local function copyItem(item)
+	if type(item) ~= "table" then return nil end
+	local result = {}
+	for key, value in pairs(item) do result[key] = value end
+	return result
+end
+
+function InventoryConfig.GetItemConfig(id) return copyItem(Items[id]) end
 function InventoryConfig.GetMaxStackSize(id) return (Items[id] and Items[id].MaxStackSize) or InventoryConfig.DefaultMaxStackSize end
 return InventoryConfig
