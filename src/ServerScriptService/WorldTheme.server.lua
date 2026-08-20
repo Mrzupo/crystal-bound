@@ -34,6 +34,7 @@ local portalTolerance = math.clamp(finiteNumber(MovementConfig.PortalArrivalTole
 local portalCooldownDuration = 1
 local portalCandidates = setmetatable({}, { __mode = "k" })
 local portalCooldowns = setmetatable({}, { __mode = "k" })
+local portalCooldownTokens = setmetatable({}, { __mode = "k" })
 local lastPositions = setmetatable({}, { __mode = "k" })
 local portalConnections = setmetatable({}, { __mode = "k" })
 local playerCharacterConnections = setmetatable({}, { __mode = "k" })
@@ -51,6 +52,7 @@ local function rememberPosition(player)
 end
 
 local function clearPortalState(player)
+	portalCooldownTokens[player] = (portalCooldownTokens[player] or 0) + 1
 	portalCandidates[player] = nil
 	portalCooldowns[player] = nil
 	player:SetAttribute("PortalMovementGraceUntil", 0)
@@ -90,9 +92,13 @@ local function bindPortal(portal)
 		local root = character:FindFirstChild("HumanoidRootPart")
 		if not root then return end
 
+		local cooldownToken = (portalCooldownTokens[player] or 0) + 1
+		portalCooldownTokens[player] = cooldownToken
 		portalCooldowns[player] = true
 		task.delay(portalCooldownDuration, function()
-			if player.Parent then portalCooldowns[player] = nil end
+			if player.Parent and portalCooldownTokens[player] == cooldownToken then
+				portalCooldowns[player] = nil
+			end
 		end)
 
 		local snapshot = lastPositions[player]
