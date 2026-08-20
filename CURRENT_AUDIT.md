@@ -23,7 +23,7 @@ Base: `main`
 - Dodge uses finite direction validation, server cooldowns, tokenized invulnerability expiry and current-character Humanoid validation.
 - Player Health mutation is centralized in `PlayerService.Heal()`; NPC/Boss services only initialize NPC Humanoid health.
 - `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks and clears state on lifecycle cleanup.
-- `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace.
+- `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace; both enforcement loops stop when global shutdown begins.
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
 - Portal cooldown callbacks are now generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
 - `NPCMenuBridge` deferred dialog opening is Character-bound, and open menu attributes are cleared again on CharacterAdded so stale UI state cannot survive a respawn.
@@ -33,8 +33,8 @@ Base: `main`
 - Quest completion requires the objective for multi-step quests and is idempotent through QuestSystem state checks.
 - Daily Bounty state and reward values are reconstructed from canonical config; payout only claims after a full reward transaction succeeds.
 - Persisted Daily Bounty state now also enforces the invariant `Claimed => Progress >= Goal`; corrupt `Claimed=true` / incomplete-goal state is normalized back to unclaimed during `PlayerData.Reconcile()`.
-- Enemy respawn callbacks now check `PlayerService.ShuttingDown` so delayed death callbacks cannot create new NPCs after shutdown begins.
-- Guardian creation, AI and delayed respawn are now shutdown-aware and cannot create or keep attacking a Guardian after `BeginShutdown()`.
+- Enemy AI loops stop on global shutdown; delayed enemy respawn callbacks cannot create new NPCs after shutdown begins.
+- Guardian creation, AI and delayed respawn stop on global shutdown.
 - Enemy and Guardian rewards preserve XP/Loot/progression when Money is capped; Money is bounded centrally by EconomyService.
 - Guardian telegraphs are bound to the original Guardian and target Character instances, preventing stale delayed impacts on replacement instances.
 - NPC Pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
@@ -51,15 +51,17 @@ Base: `main`
 - `.github/workflows/inventory-transaction-rollback.yml` is now satisfied by explicit partial-insertion rollback in Shop and Crafting.
 - `.github/workflows/world-init-validation.yml` now guards tokenized portal cooldown expiry across respawn/rejoin.
 - `.github/workflows/menu-attribute-contract.yml` now guards Character-bound deferred NPC dialog opening and respawn menu cleanup.
-- `.github/workflows/enemy-lifecycle-validation.yml` now requires the Bootstrap shutdown gate on delayed enemy respawns.
+- `.github/workflows/enemy-lifecycle-validation.yml` now requires shutdown-safe enemy AI and respawn behavior.
 - `.github/workflows/boss-active-spawn-contract.yml` now requires shutdown-safe Guardian creation, AI and respawn behavior.
-- `STUDIO_PLAYTEST.md` contains explicit portal cooldown stale-callback, NPC menu Character-lifecycle and Daily Bounty reconciliation regression scenarios.
-- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback, Character-lifecycle and shutdown-respawn semantics.
+- `.github/workflows/movement-authority-contract.yml` now requires shutdown-aware WalkSpeed/position loops and Character-bound deferred binds.
+- `STUDIO_PLAYTEST.md` contains explicit portal cooldown stale-callback, NPC menu Character-lifecycle, Daily Bounty reconciliation and shutdown-respawn regression scenarios.
+- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback, Character-lifecycle, movement and shutdown-respawn semantics.
 
 ## Open / runtime-only limitations
 - No real Roblox Studio runtime playtest has been executed from this environment.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
 - Latest checked workflow-run queries do not provide a verified green CI run for this hardening work; CI is not claimed green.
+- `BossArena.server.lua` still runs its periodic hazard loop until the arena folder is destroyed; a direct shutdown gate remains a candidate for a future isolated patch, but connector-side file SHA resolution was inconsistent during this pass, so it was not modified blindly.
 - Movement physics/network ownership thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace and position correction.
 - Ordinary `PlayerService.GetProfile()` callers are conservatively blocked during autosave; selected server reward paths intentionally use an autosave-safe loaded-profile path and rely on revision-settle behavior.
 - Authored Roblox Animation/Sound assets remain pending; current VFX are procedural/placeholder presentation.
@@ -70,8 +72,9 @@ Base: `main`
 2. Autosave mutation/settle and final Release failure behavior.
 3. Combat range, PvP rejection, Dodge and NPC/Boss attacker identity.
 4. Enemy death/respawn, shutdown-respawn suppression and Guardian telegraph replacement races.
-5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, and Dodge/network ownership.
+5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, movement shutdown and Dodge/network ownership.
 6. Shop/Crafting/Consumables and transaction rollback.
+7. Guardian Arena hazard shutdown behavior when executable Studio testing is available.
 
 ## Do not do
 - Do not reset, force-push or otherwise rewrite `main` from this workstream.
