@@ -29,7 +29,7 @@ function EnemyConfig.Get(typeId)
 	local source = EnemyConfig.Types[typeId]
 	if type(source) ~= "table" then return nil end
 	local result = clone(source)
-	result.Respawn = math.clamp(finiteNumber(source.Respawn, 10), 1.5, 600)
+	result.Respawn = math.clamp(finiteNumber(source.Respawn, 10), 2, 600)
 	return result
 end
 
