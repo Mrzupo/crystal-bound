@@ -35,6 +35,8 @@ jobs:
               'earnedMoney < moneyReward',
               'DamageService.ClearTarget(model)',
               'BossService.CreateGuardian(position, parent, bossName)',
+              'not PlayerService.ShuttingDown',
+              'not PlayerService.Closing[player]',
               'PlayerService.HasLoadedProfile(player)',
               'PlayerService.Profiles[player]',
           ]
@@ -78,4 +80,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, lifecycle cleanup, cap validation and drop registration validated.')
+          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, leave/shutdown safety, lifecycle cleanup, cap validation and drop registration validated.')
