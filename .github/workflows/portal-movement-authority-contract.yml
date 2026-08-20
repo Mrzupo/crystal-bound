@@ -36,6 +36,7 @@ jobs:
               'local portalCooldowns = setmetatable({}, { __mode = "k" })',
               'local lastPositions = setmetatable({}, { __mode = "k" })',
               'local portalCooldownDuration = 1',
+              'local function clearPortalState(player)',
               'local function rememberPosition(player)',
               'local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)',
               'local displacement = (root.Position - beforePosition).Magnitude',
@@ -46,10 +47,12 @@ jobs:
               'root.AssemblyLinearVelocity = Vector3.zero',
               'tryArmArrival(player, character, target.Destination, beforePosition, target.RequiredLevel)',
               'player:SetAttribute("PortalMovementGraceUntil", os.clock() + portalGrace)',
+              'player.CharacterAdded:Connect(function(character)',
+              'clearPortalState(player)',
           ]
           missing = [marker for marker in required_theme if marker not in world_theme]
           if missing:
-              raise SystemExit('WorldTheme portal teleport/arrival/cooldown/snapshot guard missing: ' + ', '.join(missing))
+              raise SystemExit('WorldTheme portal teleport/arrival/cooldown/snapshot/respawn guard missing: ' + ', '.join(missing))
 
           for marker in (
               'TidePortal = { Destination = Vector3.new(120, 4, 0)',
@@ -80,4 +83,4 @@ jobs:
           if 'GraceDuration =' not in movement or 'PortalArrivalTolerance =' not in movement:
               raise SystemExit('MovementConfig must expose canonical portal movement bounds')
 
-          print('Single portal movement authority, canonical teleport, cooldown parity, pre-touch snapshot and arrival grace validated.')
+          print('Single portal movement authority, canonical teleport, cooldown parity, pre-touch snapshot, arrival grace and respawn cleanup validated.')
