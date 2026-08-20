@@ -1,0 +1,66 @@
+name: Quest Chain Config Validation
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate linear QuestSystem chain against runtime assumptions
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          text = Path("src/ReplicatedStorage/Modules/QuestSystem.lua").read_text(encoding="utf-8")
+
+          definitions = {}
+          block_match = re.search(r"local Definitions = \{(.*?)\n\}\n\nlocal function finiteNumber", text, re.S)
+          if not block_match:
+              raise SystemExit("QuestSystem Definitions block not found")
+
+          for match in re.finditer(r"(?m)^\s*([A-Z0-9_]+)\s*=\s*\{(.*?)\},$", block_match.group(1), re.S):
+              quest_id, body = match.groups()
+              requires_match = re.search(r"Requires\s*=\s*\"([A-Z0-9_]+)\"", body)
+              definitions[quest_id] = requires_match.group(1) if requires_match else None
+
+          if not definitions:
+              raise SystemExit("QuestSystem must define at least one quest")
+
+          roots = [quest_id for quest_id, requires in definitions.items() if requires is None]
+          if len(roots) != 1:
+              raise SystemExit(f"QuestSystem runtime expects exactly one root quest; found {roots}")
+
+          children = {quest_id: [] for quest_id in definitions}
+          for quest_id, requires in definitions.items():
+              if requires is not None:
+                  if requires not in definitions:
+                      raise SystemExit(f"Quest {quest_id} requires unknown quest {requires}")
+                  children[requires].append(quest_id)
+
+          branching = {quest_id: values for quest_id, values in children.items() if len(values) > 1}
+          if branching:
+              raise SystemExit(f"QuestSystem runtime expects a linear chain, found branches: {branching}")
+
+          visited = []
+          current = roots[0]
+          while current is not None:
+              if current in visited:
+                  raise SystemExit(f"Quest dependency cycle detected at {current}")
+              visited.append(current)
+              next_values = children[current]
+              current = next_values[0] if next_values else None
+
+          if len(visited) != len(definitions):
+              missing = sorted(set(definitions) - set(visited))
+              raise SystemExit(f"Quest definitions are disconnected from the canonical chain: {missing}")
+
+          chain_order_block = re.search(r"function QuestSystem.GetChainOrder\(\)(.*?)\nend\n\nfunction QuestSystem.IsActive", text, re.S)
+          if not chain_order_block or "local roots = {}" not in chain_order_block.group(1) or "current = roots[1]" not in chain_order_block.group(1):
+              raise SystemExit("QuestSystem.GetChainOrder must retain the single-root linear-chain implementation")
+
+          print("Quest definition graph is a single acyclic linear chain compatible with QuestSystem.GetChainOrder.")
