@@ -74,9 +74,16 @@ options.Parent = panel
 
 local currentLines = {}
 local currentIndex = 1
+local dialogRequestGeneration = 0
 
 local function clearOptions()
 	for _, child in ipairs(options:GetChildren()) do child:Destroy() end
+end
+
+local function invalidateDialogRequest()
+	dialogRequestGeneration += 1
+	panel.Visible = false
+	clearMenuState()
 end
 
 local function showNextLine()
@@ -99,8 +106,11 @@ local function openTargetMenu(optionId)
 	end
 end
 
-local function openDialog(npcId)
+local function openDialog(npcId, character, generation)
 	local ok, data = pcall(function() return dialogRequest:InvokeServer(npcId) end)
+	if generation ~= dialogRequestGeneration or player.Character ~= character or not character or not character.Parent or player:GetAttribute("OpenNPCDialog") ~= npcId then
+		return
+	end
 	if not ok or type(data) ~= "table" then
 		panel.Visible = false
 		clearMenuState()
@@ -129,8 +139,27 @@ local function openDialog(npcId)
 end
 
 player:GetAttributeChangedSignal("OpenNPCDialog"):Connect(function()
+	dialogRequestGeneration += 1
+	local generation = dialogRequestGeneration
 	local npcId = player:GetAttribute("OpenNPCDialog")
-	if type(npcId) == "string" and npcId ~= "" then openDialog(npcId) end
+	if type(npcId) == "string" and npcId ~= "" then
+		local character = player.Character
+		if character and character.Parent then
+			openDialog(npcId, character, generation)
+		end
+	else
+		panel.Visible = false
+		clearOptions()
+		currentLines = {}
+		currentIndex = 1
+	end
+end)
+
+player.CharacterAdded:Connect(function()
+	invalidateDialogRequest()
+end)
+player.CharacterRemoving:Connect(function()
+	invalidateDialogRequest()
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
