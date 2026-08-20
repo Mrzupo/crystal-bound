@@ -198,6 +198,13 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 			and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0
 			and moneyReward <= EconomyConfig.MaxMoney
 			and dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil
+		if player and profile and validRewardConfig then
+			local currentMoney = math.clamp(finiteNumber(profile.Money, 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
+			if currentMoney + moneyReward > EconomyConfig.MaxMoney then
+				player:SetAttribute("BossMessage", "Spend some Money before claiming the Guardian reward.")
+				validRewardConfig = false
+			end
+		end
 
 		if validRewardConfig then
 			model:SetAttribute("Rewarded", true)
