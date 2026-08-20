@@ -52,6 +52,14 @@ local function clearState(humanoid, state)
 	state.BaseWalkSpeed = nil
 end
 
+function StatusEffectService.GetSlowMultiplier(humanoid)
+	if not humanoid then return nil end
+	local state = active[humanoid]
+	local slow = state and state.SlowMultiplier
+	if slow == nil then return nil end
+	return math.clamp(finiteNumber(slow, 1), MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
+end
+
 function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
 	multiplier = math.clamp(finiteNumber(multiplier, 0.8), MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
@@ -60,6 +68,7 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	local token = {}
 	if not state.BaseWalkSpeed then state.BaseWalkSpeed = getCurrentBaseWalkSpeed(humanoid) end
 	state.Slow = token
+	state.SlowMultiplier = multiplier
 	humanoid:SetAttribute("CrystalBoundSlowMultiplier", multiplier)
 	humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, state.BaseWalkSpeed * multiplier)
 	task.delay(duration, function()
@@ -67,6 +76,7 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 			humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
 			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
 			state.Slow = nil
+			state.SlowMultiplier = nil
 			state.BaseWalkSpeed = nil
 		end
 	end)
