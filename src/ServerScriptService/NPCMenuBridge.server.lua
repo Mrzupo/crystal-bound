@@ -13,10 +13,19 @@ local MENU_ATTRIBUTES = {
 	"OpenNPCDialog",
 }
 
+local function isCanonicalInteractableModel(model)
+	return model
+		and model:IsA("Model")
+		and (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader")
+		and model:GetAttribute("Interactable") == true
+		and model:IsDescendantOf(Workspace.NPCs)
+end
+
 local function isNearModel(player, model)
+	if not isCanonicalInteractableModel(model) then return false end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local targetRoot = model and (model.PrimaryPart or model:FindFirstChild("Torso"))
+	local targetRoot = model.PrimaryPart or model:FindFirstChild("Torso")
 	return root and targetRoot and (root.Position - targetRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
@@ -26,10 +35,10 @@ local function clearMenus(player)
 	end
 end
 
-local function openDialog(player, npcId)
+local function openDialog(player, npcId, model)
 	clearMenus(player)
 	task.defer(function()
-		if player.Parent then
+		if player.Parent and isCanonicalInteractableModel(model) and isNearModel(player, model) then
 			player:SetAttribute("OpenNPCDialog", npcId)
 		end
 	end)
@@ -39,10 +48,10 @@ local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
 	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
-	if not model then return end
+	if not isCanonicalInteractableModel(model) then return end
 	prompt.Triggered:Connect(function(player)
-		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and isNearModel(player, model) then
-			openDialog(player, model.Name)
+		if isNearModel(player, model) then
+			openDialog(player, model.Name, model)
 		end
 	end)
 end
