@@ -86,7 +86,7 @@ local function ensureGui()
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 8)
 	layout.Parent = list
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12) end)
+	layout:GetPropertyChangedSignal("AbsoluteContentSize").Connect(function() list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12) end)
 	return gui
 end
 
@@ -159,6 +159,14 @@ local function refresh()
 	for id, definition in pairs(defs) do if completedSet[id] then addRow(id, definition, "completed", definition and definition.Goal or 0) end end
 end
 
+local function scheduleCurrentGenerationReload(staleGeneration)
+	task.defer(function()
+		if open and staleGeneration ~= loadGeneration then
+			loadData(true)
+		end
+	end)
+end
+
 loadData = function(force)
 	local now = os.clock()
 	if loading then return end
@@ -172,12 +180,14 @@ loadData = function(force)
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
 	if generation ~= loadGeneration or not open or player.Character ~= character or player:GetAttribute("OpenQuestMenu") ~= expectedOpenState then
 		loading = false
+		scheduleCurrentGenerationReload(generation)
 		return
 	end
 	if ok and type(response) == "table" then data = response end
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
 	if generation ~= loadGeneration or not open or player.Character ~= character or player:GetAttribute("OpenQuestMenu") ~= expectedOpenState then
 		loading = false
+		scheduleCurrentGenerationReload(generation)
 		return
 	end
 	if okAvailable and type(responseAvailable) == "table" then available = responseAvailable end
