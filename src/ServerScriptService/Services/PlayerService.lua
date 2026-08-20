@@ -456,7 +456,7 @@ function PlayerService.Remove(player)
 		if result and result.ReleaseFailed then
 			warn(("Crystal Bound: retaining session lock for %s because final session-lock release failed."):format(player.Name))
 		else
-			warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name)
+			warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
 		end
 		cleanupRemovedPlayer(player)
 		return false
