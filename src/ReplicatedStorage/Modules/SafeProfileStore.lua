@@ -108,7 +108,16 @@ function SafeProfileStore.Load(player)
 		return nil, "Invalid DataStore result"
 	end
 
-	local profile = PlayerData.Reconcile(result)
+	local reconcileOk, profileOrError = xpcall(function()
+		return PlayerData.Reconcile(result)
+	end, debug.traceback)
+	if not reconcileOk then
+		local released = SafeProfileStore.Release(player, token)
+		warn(("Crystal Bound: profile reconciliation failed for %s: %s; session lock release=%s"):format(player.Name, tostring(profileOrError), tostring(released)))
+		return nil, "Profile reconciliation failed"
+	end
+
+	local profile = profileOrError
 	profile.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }
 	sessionTokens[player] = token
 	return profile
