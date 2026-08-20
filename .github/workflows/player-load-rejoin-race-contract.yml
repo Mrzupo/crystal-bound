@@ -2,7 +2,7 @@ name: Player Load Rejoin Race Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/audit-load-semantics"]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate per-UserId load generation, superseded-load release, per-load session tokens and shutdown gate
+      - name: Validate per-UserId load serialization, token release, per-load session tokens and shutdown gate
         shell: python
         run: |
           from pathlib import Path
@@ -24,21 +24,24 @@ jobs:
               "local loadToken = {}",
               "PlayerService.LoadingByUserId[userId] = loadToken",
               "local function isCurrentLoad()",
+              "if PlayerService.LoadingByUserId[userId] then",
+              'return nil, "Profile load already in progress"',
               "local function releaseLoadedToken()",
               "profile and type(profile.SessionLock) == \"table\" and profile.SessionLock.Token",
               "SafeProfileStore.Release(player, token)",
-              "Superseded profile load",
-              "Superseded profile initialization",
+              "if PlayerService.ShuttingDown or not player.Parent then",
               "if PlayerService.ShuttingDown then return nil, \"Server is shutting down\" end",
           )
           missing = [marker for marker in required if marker not in text]
           if missing:
-              raise SystemExit("Player load rejoin/shutdown contract missing: " + ", ".join(missing))
+              raise SystemExit("Player load serialization/shutdown contract missing: " + ", ".join(missing))
 
           if text.count("local released = releaseLoadedToken()") < 4:
               raise SystemExit("All post-load abort paths must release the specific profile-load token")
           if "LoadingByUserId[userId] = nil" not in text:
               raise SystemExit("Player load lifecycle must clear per-UserId load state")
+          if "Superseded profile load" in text or "Superseded profile initialization" in text:
+              raise SystemExit("Runtime currently serializes same-UserId loads; supersede semantics must not be asserted until implemented")
 
           if "local sessionTokens = setmetatable({}, { __mode = \"k\" })" not in store:
               raise SystemExit("SafeProfileStore must keep active per-Player session tokens weak-keyed")
@@ -61,4 +64,4 @@ jobs:
           if 'Players.PlayerAdded:Connect(function(player)' not in bootstrap:
               raise SystemExit("Bootstrap must keep one canonical PlayerAdded load owner")
 
-          print("Per-UserId generation, superseded-load token release, per-load session-token isolation and startup deduplication validated.")
+          print("Same-UserId load serialization, post-load token release, per-load session-token isolation and startup deduplication validated.")
