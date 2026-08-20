@@ -1,0 +1,26 @@
+name: NPC Dialog Snapshot Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate detached NPC dialog results
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Modules/NPCDialogConfig.lua").read_text(encoding="utf-8")
+          required = [
+              "local function copy(value)",
+              "return copy(NPCDialogConfig[npcId])",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("NPC dialog snapshot contract missing: " + ", ".join(missing))
+          print("NPC dialog config returns detached snapshots.")
