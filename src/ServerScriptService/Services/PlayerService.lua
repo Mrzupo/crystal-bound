@@ -117,14 +117,13 @@ end
 
 local function bindCharacterWhenReady(player, character)
 	if PlayerService.ShuttingDown then return end
-	local deadline = os.clock() + OPERATION_TIMEOUT
-	while PlayerService.Saving[player] and os.clock() < deadline do
+	while PlayerService.Saving[player] do
 		task.wait(0.1)
 		if PlayerService.ShuttingDown or not player.Parent or PlayerService.Closing[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then
 			return
 		end
 	end
-	if PlayerService.ShuttingDown or PlayerService.Saving[player] or not PlayerService.Profiles[player] or PlayerService.Closing[player] or not player.Parent or player.Character ~= character or not character.Parent then return end
+	if PlayerService.ShuttingDown or not PlayerService.Profiles[player] or PlayerService.Closing[player] or not player.Parent or player.Character ~= character or not character.Parent then return end
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
 	if PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then return end
 	if humanoid then ensureAnimator(character) end
@@ -209,28 +208,18 @@ function PlayerService.Load(player)
 	local function isCurrentLoad()
 		return PlayerService.LoadingByUserId[userId] == loadToken
 	end
-	local function clearCurrentLoad()
-		if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end
-	end
 	if PlayerService.ShuttingDown then
-		clearCurrentLoad()
+		if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end
 		return nil, "Server is shutting down"
 	end
 
-	local loadSuccess, profile, reason = xpcall(function()
-		return SafeProfileStore.Load(player)
-	end, debug.traceback)
-	if not loadSuccess then
-		clearCurrentLoad()
-		warn(("Crystal Bound: SafeProfileStore.Load crashed for %s: %s"):format(player.Name, tostring(profile)))
-		return nil, "Profile load failed unexpectedly"
-	end
+	local profile, reason = SafeProfileStore.Load(player)
 	local function releaseLoadedToken()
 		local token = profile and type(profile.SessionLock) == "table" and profile.SessionLock.Token or nil
 		return SafeProfileStore.Release(player, token)
 	end
 	if not profile then
-		clearCurrentLoad()
+		if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end
 		player:SetAttribute("ProfileLoadFailed", reason or "Unable to load profile")
 		warn(("Crystal Bound: refusing to create a fresh profile for %s because loading failed: %s"):format(player.Name, tostring(reason)))
 		return nil, reason
@@ -242,14 +231,30 @@ function PlayerService.Load(player)
 		return nil, "Superseded profile load"
 	end
 	if PlayerService.ShuttingDown or not player.Parent then
-		clearCurrentLoad()
+		PlayerService.LoadingByUserId[userId] = nil
 		local released = releaseLoadedToken()
 		warn(("Crystal Bound: player %s left/shutdown while profile loading; session lock release=%s."):format(player.Name, tostring(released)))
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left before profile load completed"
 	end
 
+	local reconcileSuccess, reconciledProfile = xpcall(function()
+		return PlayerData.Reconcile(profile)
+	end, debug.traceback)
+	if not reconcileSuccess or type(reconciledProfile) ~= "table" then
+		PlayerService.LoadingByUserId[userId] = nil
+		local released = releaseLoadedToken()
+		warn(("Crystal Bound: profile reconciliation failed for %s; session lock release=%s; error=%s"):format(player.Name, tostring(released), tostring(reconciledProfile)))
+		return nil, "Profile reconciliation failed"
+	end
+	profile = reconciledProfile
+
+	if not isCurrentLoad() then
+		local released = releaseLoadedToken()
+		warn(("Crystal Bound: superseded profile initialization ignored for UserId %d; session lock release=%s."):format(userId, tostring(released)))
+		return nil, "Superseded profile initialization"
+	end
 	if PlayerService.ShuttingDown then
-		clearCurrentLoad()
+		PlayerService.LoadingByUserId[userId] = nil
 		local released = releaseLoadedToken()
 		warn(("Crystal Bound: shutdown interrupted profile initialization for %s; session lock release=%s."):format(player.Name, tostring(released)))
 		return nil, "Server is shutting down"
@@ -267,13 +272,13 @@ function PlayerService.Load(player)
 	if PlayerService.ShuttingDown or not player.Parent then
 		PlayerService.Profiles[player] = nil
 		PlayerService.ProfileRevisions[player] = nil
-		clearCurrentLoad()
+		PlayerService.LoadingByUserId[userId] = nil
 		local released = releaseLoadedToken()
 		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)))
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
 	end
 
-	clearCurrentLoad()
+	PlayerService.LoadingByUserId[userId] = nil
 	setupLeaderstats(player, profile)
 	cleanupHumanoidConnections(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
@@ -425,7 +430,7 @@ function PlayerService.Remove(player)
 		local started = os.clock()
 		while PlayerService.Closing[player] and os.clock() - started < OPERATION_TIMEOUT do
 			task.wait(0.05)
-		end
+	end
 		if PlayerService.Closing[player] then return false end
 		return PlayerService.RemovalResults[player] == true
 	end
