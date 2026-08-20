@@ -2,7 +2,7 @@ name: Combat Modifier Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/combat-modifier-negative-number-v2"]
   pull_request:
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
               if marker not in service:
                   raise SystemExit(f"CombatModifierService runtime bound missing: {marker}")
           match = re.search(
-              r"BaseChance\s*=\s*([0-9.]+).*?ChancePerMasteryLevel\s*=\s*([0-9.]+).*?MaxChance\s*=\s*([0-9.]+).*?Multiplier\s*=\s*([0-9.]+)",
+              r"BaseChance\s*=\s*(-?[0-9]+(?:\.[0-9]+)?).*?ChancePerMasteryLevel\s*=\s*(-?[0-9]+(?:\.[0-9]+)?).*?MaxChance\s*=\s*(-?[0-9]+(?:\.[0-9]+)?).*?Multiplier\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)",
               config,
               re.S,
           )
@@ -44,4 +44,4 @@ jobs:
               raise SystemExit("Critical MaxChance must be within BaseChance..1")
           if not 1 <= multiplier <= 10:
               raise SystemExit("Critical Multiplier must be within 1..10")
-          print("Combat modifier config and runtime bounds validated.")
+          print("Combat modifier config and runtime bounds validated including negative-value detection.")
