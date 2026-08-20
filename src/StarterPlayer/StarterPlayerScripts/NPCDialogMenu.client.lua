@@ -75,6 +75,7 @@ options.Parent = panel
 local currentLines = {}
 local currentIndex = 1
 local dialogRequestGeneration = 0
+local DIALOG_RETRY_DELAY = 0.25
 
 local function clearOptions()
 	for _, child in ipairs(options:GetChildren()) do child:Destroy() end
@@ -106,14 +107,21 @@ local function openTargetMenu(optionId)
 	end
 end
 
+local function scheduleDialogRetry(npcId, character, generation)
+	task.delay(DIALOG_RETRY_DELAY, function()
+		if generation == dialogRequestGeneration and player.Character == character and character.Parent and player:GetAttribute("OpenNPCDialog") == npcId then
+			openDialog(npcId, character, generation)
+		end
+	end)
+end
+
 local function openDialog(npcId, character, generation)
 	local ok, data = pcall(function() return dialogRequest:InvokeServer(npcId) end)
 	if generation ~= dialogRequestGeneration or player.Character ~= character or not character or not character.Parent or player:GetAttribute("OpenNPCDialog") ~= npcId then
 		return
 	end
 	if not ok or type(data) ~= "table" then
-		panel.Visible = false
-		clearMenuState()
+		scheduleDialogRetry(npcId, character, generation)
 		return
 	end
 	clearMenuState()
