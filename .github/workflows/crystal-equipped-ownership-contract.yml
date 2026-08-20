@@ -1,0 +1,24 @@
+name: Equipped Crystal Ownership Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate equipped Crystal requires ownership
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
+          marker = "return CrystalSystem.Owns(profile, equipped) and equipped or nil"
+          if marker not in text:
+              raise SystemExit("CrystalSystem.GetEquipped must require ownership, not only Crystal existence")
+          for required in ("function CrystalSystem.Owns(profile, id)", "function CrystalSystem.Equip(profile, id)"):
+              if required not in text:
+                  raise SystemExit(f"CrystalSystem missing ownership API: {required}")
+          print("Equipped Crystal ownership contract validated.")
