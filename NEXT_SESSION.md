@@ -3,8 +3,8 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1426 commits ahead, 35 commits behind** `main` (verified with GitHub compare).
-- Current compared main base: `0e0bf1d1dd0ce62b08d06414dcc09268155e3550`.
+- Current compare: **1443 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+- Current compared main base: `18f0f27fcbcb4fd6384f45ecd1d0632f9edad02d`.
 
 ## Current state
 The branch contains the complete Rojo project foundation plus the current gameplay stack and is in the hardening + integration phase ahead of real Roblox Studio runtime verification.
@@ -38,7 +38,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - `PlayerService.Heal()` is the canonical player Health mutation owner; TIDE and Health Potion use it.
 - `UseItemRemote` rolls the potion back if no health can actually be applied.
 - Health Authority CI allows direct Player Health writes only in PlayerService and NPC/Boss spawn-time health initialization.
-- `PlayerService.saveConsistently()` now returns failure if all bounded revision-settle passes still detect profile changes, so AutosaveOk/LastSaveOk cannot falsely report a stale snapshot as consistent.
+- `PlayerService.saveConsistently()` returns failure if all bounded revision-settle passes still detect profile changes, so AutosaveOk/LastSaveOk cannot falsely report a stale snapshot as consistent.
 - Quest completion validates objective/reward data before committing state but no longer blocks valid quest completion on a full Money wallet; XP remains fully awarded and EconomyService caps Money.
 - Achievement unlocks are one-shot/idempotent and no longer blocked by wallet capacity; EconomyService caps the Money reward.
 - Daily Bounty requires full wallet capacity before payout because its claim is tied to a specific daily reward transaction and rolls progress back on payout failure.
@@ -58,8 +58,10 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - `CrystalMastery` mutation/read paths require actual Crystal ownership instead of relying only on Remote-layer checks.
 - CrystalConfig completeness is contract-checked across Definition, UnlockLevel, BasicAttack, Ability and Passive sources.
 - Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
+- `InventoryConfig.GetItemConfig()` now returns a detached item snapshot and has a dedicated config-snapshot contract.
 - NPC dialog/config snapshots are detached and server-distance gated.
 - RemoteFunction contracts now require a single server owner per named RemoteFunction, and critical RemoteEvent contracts require a single server handler.
+- `STUDIO_PLAYTEST.md` contains explicit same-UserId superseded-load, player-leave-during-load and shutdown-race cases for real runtime validation.
 
 ## Security / authority rules
 - `DamageService` is the only direct `Humanoid:TakeDamage()` owner.
