@@ -22,6 +22,12 @@ local InventoryConfig = {
 	Items = Items,
 }
 
+local function finiteNumber(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
+
 local function copyItem(item)
 	if type(item) ~= "table" then return nil end
 	local result = {}
@@ -30,5 +36,8 @@ local function copyItem(item)
 end
 
 function InventoryConfig.GetItemConfig(id) return copyItem(Items[id]) end
-function InventoryConfig.GetMaxStackSize(id) return (Items[id] and Items[id].MaxStackSize) or InventoryConfig.DefaultMaxStackSize end
+function InventoryConfig.GetMaxStackSize(id)
+	local raw = Items[id] and finiteNumber(Items[id].MaxStackSize) or finiteNumber(InventoryConfig.DefaultMaxStackSize)
+	return math.clamp(math.floor(raw or InventoryConfig.DefaultMaxStackSize), 1, 1000)
+end
 return InventoryConfig
