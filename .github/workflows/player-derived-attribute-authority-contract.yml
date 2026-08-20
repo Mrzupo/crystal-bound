@@ -10,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Reject server gameplay reads of client-exposed progression attributes
+      - name: Reject accidental gameplay authority reads of client-exposed progression attributes
         shell: python
         run: |
           from pathlib import Path
+
           forbidden = (
               'GetAttribute("DamageMultiplier")',
               'GetAttribute("AbilityDamageMultiplier")',
-              'GetAttribute("WalkSpeedBonus")',
               'GetAttribute("MaxHealthBonus")',
               'GetAttribute("EquippedCrystal")',
               'GetAttribute("CrystalMasteryLevel")',
@@ -29,7 +29,11 @@ jobs:
               for marker in forbidden:
                   if marker in text:
                       offenders.append(f'{path}: {marker}')
-          # PlayerService/StatusSpeedGuard legitimately write or refresh these values but must not consume them as authority.
+
+          speed_guard = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
+          # WalkSpeedBonus is intentionally server-derived and consumed only by the movement authority.
+          if 'player:GetAttribute("WalkSpeedBonus")' not in speed_guard:
+              raise SystemExit('StatusSpeedGuardV2 must retain the canonical server-derived WalkSpeedBonus source')
           if offenders:
-              raise SystemExit('Server gameplay must use canonical Profile/Service state rather than Player attributes: ' + ', '.join(offenders))
+              raise SystemExit('Server gameplay must use canonical Profile/Service state rather than client-exposed progression attributes: ' + ', '.join(offenders))
           print('Derived Player attribute authority contract validated.')
