@@ -171,7 +171,7 @@ function PlayerService.Load(player)
 	profile = PlayerData.Reconcile(profile)
 	if not isCurrentLoad() then
 		warn(("Crystal Bound: superseded profile initialization ignored for UserId %d."):format(userId))
-		return nil, "Superseded profile load"
+		return nil, "Superseded profile initialization"
 	end
 	if PlayerService.ShuttingDown then
 		PlayerService.LoadingByUserId[userId] = nil
@@ -200,8 +200,9 @@ function PlayerService.Load(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
 		task.defer(function()
-			if not PlayerService.Profiles[player] then return end
+			if not PlayerService.Profiles[player] or player.Character ~= character or not character.Parent then return end
 			local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+			if player.Character ~= character or not character.Parent then return end
 			if humanoid then ensureAnimator(character) end
 			PlayerService.Sync(player)
 			bindHumanoid(player, humanoid)
