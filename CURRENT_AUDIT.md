@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1455 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+Current compare: **1460 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `18f0f27fcbcb4fd6384f45ecd1d0632f9edad02d`.
 
 ## Verified
@@ -67,7 +67,9 @@ Current compare: **1455 commits ahead, 38 commits behind** `main` (verified with
 - NPC dialog requests require canonical NPC identity, server distance and rate-limit checks; config getters return detached copies.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
 - `InventoryConfig.GetItemConfig()` returns a detached item snapshot and has a dedicated config-snapshot contract.
-- `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
+- `InventoryService.GetInventory()` returns a detached normalized snapshot and is now a pure read that does not initialize/mutate `profile.Inventory`.
+- `CombatModifierService.RollCritical()` uses strict `< chance` comparison so a configured 0 critical chance cannot fire at the RNG boundary.
+- legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
 - Shop, UseItem, Crafting, Combat and Guardian server→client inventory outputs use detached InventoryService snapshots.
 - `InventoryRequest` is Client→Server only; `InventoryChanged` is Server→Client only.
 - Server and client NPC/menu bridges enforce single-open menu state; local menu close/toggle clears `Open*` attributes and listeners ignore `nil`.
