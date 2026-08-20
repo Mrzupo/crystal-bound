@@ -1,0 +1,54 @@
+name: Status Effect Stale Callback Contract
+
+on:
+  push:
+    branches:
+      - "main"
+      - "agent/complete-crystal-bound-foundation"
+      - "agent/status-effect-stale-callback-contract"
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Humanoid-scoped status-effect tokens
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
+
+          required = [
+              "local active = setmetatable({}, { __mode = \"k\" })",
+              "local function stateFor(humanoid)",
+              "local state = stateFor(humanoid)",
+              "local token = {}",
+              "state.Slow = token",
+              "state.Burn = token",
+              "state.Slow == token",
+              "state.Burn ~= token",
+              "function StatusEffectService.Clear(humanoid)",
+              "active[humanoid] = nil",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("status-effect stale-callback guard missing: " + ", ".join(missing))
+
+          slow_index = text.index("task.delay(duration, function()")
+          slow_guard = text.index("state.Slow == token", slow_index)
+          slow_cleanup = text.index("state.Slow = nil", slow_guard)
+          if not (slow_index < slow_guard < slow_cleanup):
+              raise SystemExit("slow expiry must validate its current token before cleanup")
+
+          burn_index = text.index("task.spawn(function()")
+          burn_guard = text.index("state.Burn ~= token", burn_index)
+          burn_cleanup = text.index("if state.Burn == token then state.Burn = nil end", burn_guard)
+          if not (burn_index < burn_guard < burn_cleanup):
+              raise SystemExit("burn loop must stop on replacement/cleared state and only clear its own token")
+
+          if "HumanoidRootPart" in text and "Players:GetPlayerFromCharacter" not in text:
+              raise SystemExit("player status effects must resolve current character ownership server-side")
+
+          print("Status-effect delayed callbacks are guarded by Humanoid-scoped replacement tokens and explicit cleanup.")
