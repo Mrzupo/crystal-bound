@@ -16,6 +16,15 @@ jobs:
           from pathlib import Path
           text = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
           required = [
+              'Closing = setmetatable({}, { __mode = "k" })',
+              'function PlayerService.GetProfile(player)',
+              'if PlayerService.Closing[player] then return nil end',
+              'local SAVE_SETTLE_ATTEMPTS = 3',
+              'local function saveConsistently(player, profile)',
+              'local snapshotRevision = PlayerService.ProfileRevisions[player] or 0',
+              'if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then return true end',
+              'if PlayerService.Closing[player] then return false end',
+              'PlayerService.Closing[player] = true',
               'local released = SafeProfileStore.Release(player)',
               'if not released then',
               'ReleaseFailed = true',
@@ -23,6 +32,6 @@ jobs:
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
-              raise SystemExit('missing PlayerService release boundary markers: ' + ', '.join(missing))
-          print('Player remove release contract validated.')
+              raise SystemExit('missing PlayerService remove/save boundary markers: ' + ', '.join(missing))
+          print('Player remove closing-state, save-settle and final session release contract validated.')
           PY
