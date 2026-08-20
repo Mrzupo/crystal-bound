@@ -25,6 +25,7 @@ jobs:
               "local loadToken = {}",
               "PlayerService.LoadingByUserId[userId] = loadToken",
               "local function isCurrentLoad()",
+              "local function clearCurrentLoad()",
               "if PlayerService.LoadingByUserId[userId] then",
               "return nil, \"Profile load already in progress\"",
               "local function releaseLoadedToken()",
@@ -33,13 +34,21 @@ jobs:
               "Superseded profile load",
               "Superseded profile initialization",
               "if PlayerService.ShuttingDown then return nil, \"Server is shutting down\" end",
+              "local loadSuccess, profile, reason = xpcall(function()",
+              "return SafeProfileStore.Load(player)",
+              "if not loadSuccess then",
+              "local reconcileSuccess, reconciledProfile = xpcall(function()",
+              "return PlayerData.Reconcile(profile)",
+              "if not reconcileSuccess or type(reconciledProfile) ~= \"table\" then",
           )
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit("Player load rejoin/shutdown contract missing: " + ", ".join(missing))
 
-          if text.count("local released = releaseLoadedToken()") < 4:
+          if text.count("local released = releaseLoadedToken()") < 5:
               raise SystemExit("All post-load abort paths must release the specific profile-load token")
+          if text.count("clearCurrentLoad()") < 5:
+              raise SystemExit("All normal and exceptional in-flight load exits must clear LoadingByUserId")
           if "LoadingByUserId[userId] = nil" not in text:
               raise SystemExit("Player load lifecycle must clear per-UserId load state")
 
@@ -67,4 +76,4 @@ jobs:
           if "Profile load already in progress" not in text:
               raise SystemExit("A second concurrent load for the same UserId must be explicitly rejected, not superseded")
 
-          print("Per-UserId in-flight load rejection, exact load-token release, session-token isolation and startup deduplication validated.")
+          print("Per-UserId in-flight load rejection, exception-safe cleanup, exact load-token release, session-token isolation and startup deduplication validated.")
