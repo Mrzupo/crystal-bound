@@ -1,25 +1,27 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local DamageService = require(script.Parent.DamageService)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local PlayerService = require(script.Parent.PlayerService)
-local XPService = require(script.Parent.XPService)
-local EconomyService = require(script.Parent.EconomyService)
-local InventoryService = require(script.Parent.InventoryService)
-local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
-local QuestService = require(script.Parent.QuestService)
+local DamageService = require(script.Parent.DamageService)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local CombatModifierService = require(script.Parent.CombatModifierService)
 local CrystalAbilityService = require(script.Parent.CrystalAbilityService)
+local XPService = require(script.Parent.XPService)
+local EconomyService = require(script.Parent.EconomyService)
+local InventoryService = require(script.Parent.InventoryService)
 local DailyBountyService = require(script.Parent.DailyBountyService)
+local QuestService = require(script.Parent.QuestService)
+local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 
 local CombatService = {}
+
+local VALID_ACTIONS = { BasicAttack = true, Ability = true }
+local REQUEST_INTERVAL = 0.08
 local cooldowns = setmetatable({}, { __mode = "k" })
 local nextRequest = setmetatable({}, { __mode = "k" })
-
-local REQUEST_INTERVAL = 0.03
-local VALID_ACTIONS = { Basic = true, Ability = true }
+local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 
 local function finiteNumber(value)
 	local number = tonumber(value)
@@ -36,39 +38,35 @@ end
 local function validNonNegativeInteger(value)
 	local number = finiteNumber(value)
 	if number == nil or number < 0 or number % 1 ~= 0 then return nil end
-	return number
+	return math.floor(number)
 end
 
-local function getCharacter(instance)
-	if instance:IsA("Player") then return instance.Character end
-	if instance:IsA("Model") then return instance end
+local function getCharacter(target)
+	if target and target:IsA("Model") then return target end
+	if target and target:IsA("BasePart") then return target:FindFirstAncestorOfClass("Model") end
 	return nil
 end
 
 local function isPlayerTarget(target)
-	return target:IsA("Player") or (target:IsA("Model") and Players:GetPlayerFromCharacter(target) ~= nil)
+	return target and target:IsA("Player")
 end
 
-local function fireCombatFeedback(targetModel, attacker, action, crystalId, critical, amount)
-	local numericAmount = finiteNumber(amount)
-	if not numericAmount or numericAmount <= 0 then return end
-	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-	local feedback = remotes and remotes:FindFirstChild("CombatFeedback")
-	if not feedback or not feedback:IsA("RemoteEvent") then return end
-	feedback:FireAllClients(targetModel, attacker.UserId, action, crystalId, critical == true, numericAmount)
+local function fireCombatFeedback(targetModel, player, action, crystalId, critical, amount)
+	local remote = remotes and remotes:FindFirstChild("CombatFeedback")
+	if remote and targetModel then
+		remote:FireClient(player, {
+			Target = targetModel,
+			Action = action,
+			Crystal = crystalId,
+			Critical = critical == true,
+			Amount = amount,
+		})
+	end
 end
 
 local function fireProgress(player, levelsGained, mastery)
-	local profile = PlayerService.GetProfile(player)
-	if not profile then return end
-	PlayerService.Sync(player)
-	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-	if not remotes then return end
-	if remotes:FindFirstChild("XPChanged") then remotes.XPChanged:FireClient(player, profile.Experience, profile.Level) end
-	if remotes:FindFirstChild("MoneyChanged") then remotes.MoneyChanged:FireClient(player, profile.Money) end
-	if remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)) end
-	if levelsGained > 0 and remotes:FindFirstChild("LevelUp") then remotes.LevelUp:FireClient(player, profile.Level) end
-	if mastery and remotes:FindFirstChild("CrystalMasteryChanged") then remotes.CrystalMasteryChanged:FireClient(player, mastery.Crystal, mastery.Level, mastery.XP) end
+	if levelsGained and levelsGained > 0 and remotes and remotes:FindFirstChild("LevelUp") then remotes.LevelUp:FireClient(player, player:GetAttribute("Level")) end
+	if mastery and remotes and remotes:FindFirstChild("CrystalMasteryChanged") then remotes.CrystalMasteryChanged:FireClient(player, mastery.Crystal, mastery.Level, mastery.XP) end
 end
 
 local function completeQuest(player, profile, questId, message)
@@ -86,10 +84,14 @@ local function advanceEnemyQuest(player, profile, enemyType)
 end
 
 local function advanceAbilityQuest(player, profile)
-	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return end
+	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return false, false end
 	local complete, progress, goal = QuestSystem.Advance(profile, "CRYSTAL_POWER", 1)
 	player:SetAttribute("QuestProgress", string.format("Crystal Power: %d/%d", progress, goal))
-	if complete then completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
+	if complete then
+		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
+		return true, true
+	end
+	return true, false
 end
 
 local function giveLoot(player, profile, targetModel, enemyConfig)
@@ -172,7 +174,8 @@ function CombatService.HandleRequest(player, action, target)
 		cooldowns[player][action] = now + safeCooldown
 		player:SetAttribute("AbilityCooldownEnd", now + safeCooldown)
 		if abilityResult.Message then player:SetAttribute("CrystalMessage", abilityResult.Message) end
-		advanceAbilityQuest(player, profile)
+		local questChanged, questCompleted = advanceAbilityQuest(player, profile)
+		if questChanged and not questCompleted then PlayerService.Sync(player) end
 		return
 	end
 
@@ -214,7 +217,10 @@ function CombatService.HandleRequest(player, action, target)
 			fireCombatFeedback(hit.Target, player, "Ability", crystalId, false, hit.Amount)
 			if hit.Defeated then rewardDefeat(player, profile, hit.Target, "Ability", crystalId) end
 		end
-		advanceAbilityQuest(player, profile)
+		local questChanged, questCompleted = advanceAbilityQuest(player, profile)
+		if questChanged and not questCompleted and result.Amount > 0 and humanoid.Health > 0 then
+			PlayerService.Sync(player)
+		end
 	end
 	if result.Amount > 0 and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
