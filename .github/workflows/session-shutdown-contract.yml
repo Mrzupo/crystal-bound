@@ -22,6 +22,9 @@ jobs:
               "local ok = PlayerService.Remove(player)",
               "SHUTDOWN_TIMEOUT",
               "shuttingDown = true",
+              "local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")",
+              "ReplicatedStorage:SetAttribute(\"CrystalBoundShuttingDown\", false)",
+              "ReplicatedStorage:SetAttribute(\"CrystalBoundShuttingDown\", true)",
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
@@ -49,4 +52,4 @@ jobs:
           ):
               if marker not in player_service:
                   raise SystemExit("PlayerService missing shutdown guard: " + marker)
-          print("Session shutdown persistence, duplicate-remove serialization and global gameplay shutdown guard validated.")
+          print("Session shutdown persistence, duplicate-remove serialization, global gameplay shutdown guard and published shutdown flag validated.")
