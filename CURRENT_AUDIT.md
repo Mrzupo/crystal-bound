@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1329 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1338 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
@@ -15,6 +15,8 @@ Current compare: **1329 commits ahead, 30 commits behind** `main` (verified with
 - `PlayerService.Load()` uses a per-UserId load-generation token and shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
 - `SafeProfileStore` additionally uses a weak Player-keyed session token inside the persisted SessionLock, distinguishing multiple load sessions even when JobId is the same server.
 - `PlayerService` CharacterAdded callbacks re-check the exact Character instance before and after Humanoid acquisition, preventing stale-respawn callback races.
+- `PlayerService` now marks a player `Closing` before final remove/save, makes `GetProfile()` return nil to late gameplay callers, blocks new Sync/Heal/Refresh/Save operations for that player, and clears the state during cleanup.
+- `PlayerService` keeps a weak per-player ProfileRevision and uses three save-settle passes when a profile mutates while DataStore I/O yields, reducing lost progress during autosave/final-save windows.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
 - `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks.
 - `SafeProfileStore` snapshots profile state inside `UpdateAsync` callbacks and resets Load/Save/Refresh/Release result flags on every callback invocation and outer retry, preventing stale callback state from leaking across DataStore retries.
@@ -44,6 +46,7 @@ Current compare: **1329 commits ahead, 30 commits behind** `main` (verified with
 - Crafting output multiplication is validated before inventory-space error formatting or material mutation, closing malformed-config overflow paths.
 - Shop buying, item use, crafting, enemy rewards, Bootstrap inventory responses and Guardian rewards use detached `InventoryService.GetInventory(profile)` snapshots rather than exposing live profile tables.
 - `InventoryRequest` is request-only; `InventoryChanged` is the server-to-client inventory snapshot event used by `InventoryMenu`.
+- Quest starts now call `PlayerService.Sync()`, so active-quest changes participate in profile revision save settling.
 - Quest completion validates reward data and Money capacity before persistent completion state is committed.
 - Daily Bounty validates Money capacity before payout, only marks `Claimed` after a full reward is actually granted, and rolls progress back safely on failed payout.
 - Enemy defeat rewards use canonical `EnemyConfig`; full Money wallets no longer block XP/Loot rewards.
@@ -60,7 +63,7 @@ Current compare: **1329 commits ahead, 30 commits behind** `main` (verified with
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
 - `GetPlayerData` has an explicit public-data exposure contract excluding SessionLock/SessionId/operation internals.
 - `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
-- `CombatPresentation.client.lua` now rejects stale CharacterAdded health listeners after a Respawn yield, closing the remaining client-only Character lifecycle race.
+- `CombatPresentation.client.lua` now uses a Character-generation token for local HealthChanged reactions and rejects stale delayed callbacks after respawn.
 - Server and client NPC/menu bridges enforce single-open menu state; local menu close/toggle clears the corresponding `Open*` attribute, and listeners ignore `nil` so clearing one menu cannot open another.
 - `WorldDecor` is idempotent via readiness markers and bounded waits; `WorldTheme` deduplicates portal bindings and cleans player state.
 - AI pathfinding uses finite-validated destinations, quantized cache keys, weak Model keys and bounded recomputation.
