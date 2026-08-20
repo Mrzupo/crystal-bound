@@ -119,7 +119,8 @@ local function cast()
 	task.delay(windup, function()
 		if PlayerService.ShuttingDown or not guardian.Parent then return end
 		local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
-		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then
+		local currentGuardianRoot = guardian:FindFirstChild("HumanoidRootPart") or guardian.PrimaryPart
+		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 or not currentGuardianRoot then
 			return
 		end
 		if not player.Parent or player.Character ~= targetCharacter or not targetCharacter.Parent then return end
@@ -127,7 +128,7 @@ local function cast()
 		local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
 		local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
 		if currentHumanoid and currentRoot and currentHumanoid.Health > 0 and (currentRoot.Position - position).Magnitude <= radius then
-			local attackerRange = math.clamp((currentRoot.Position - guardianRoot.Position).Magnitude, 0.1, 1000)
+			local attackerRange = math.clamp((currentRoot.Position - currentGuardianRoot.Position).Magnitude, 0.1, 1000)
 			local applied = DodgeService.ApplyDamage(player, currentHumanoid, damage, guardian, "BossShockwave", attackerRange)
 			if applied then
 				player:SetAttribute("BossMessage", "Guardian Impact!")
