@@ -58,9 +58,15 @@ local function rememberAttacker(targetModel, attacker)
 end
 
 local function isValidTarget(target)
-	if not target or not target:IsA("Instance") or not target:IsDescendantOf(Workspace) then return false end
-	local targetModel = target:IsA("Player") and target.Character or target
-	if not targetModel or not targetModel:IsA("Model") then return false end
+	if not target or not target:IsA("Instance") then return false end
+	local targetModel
+	if target:IsA("Player") then
+		targetModel = target.Character
+		if not targetModel or not targetModel:IsA("Model") or not targetModel:IsDescendantOf(Workspace) then return false end
+	else
+		if not target:IsDescendantOf(Workspace) then return false end
+		targetModel = target
+	end
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return false end
 	if Players:GetPlayerFromCharacter(targetModel) then return true end
