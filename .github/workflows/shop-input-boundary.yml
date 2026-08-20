@@ -9,12 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce integer purchase request validation
+      - name: Enforce integer purchase and canonical trader validation
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           text = Path('src/ServerScriptService/Services/ShopService.lua').read_text(encoding='utf-8')
+          remote = Path('src/ServerScriptService/ShopRemote.server.lua').read_text(encoding='utf-8')
           required = [
               'number == nil or number % 1 ~= 0',
               'Purchase amount must be a positive integer.',
@@ -22,5 +23,19 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing shop input boundary markers: ' + ', '.join(missing))
-          print('Shop input boundary validated.')
+          for marker in (
+              'local now = os.clock()',
+              'if now < (NEXT_REQUEST[player] or 0) then return end',
+              'NEXT_REQUEST[player] = now + REQUEST_INTERVAL',
+              'if action ~= "Buy" then return end',
+              'local function getCanonicalTrader()',
+              'trader.Parent ~= folder',
+              'trader:GetAttribute("Interactable") ~= true',
+              'local ok, message = ShopService.Buy(profile, itemId, amount, InventoryService, EconomyService)',
+          ):
+              if marker not in remote:
+                  raise SystemExit('missing ShopRemote canonical trader/rate-limit marker: ' + marker)
+          if remote.index('NEXT_REQUEST[player] = now + REQUEST_INTERVAL') > remote.index('if action ~= "Buy" then return end'):
+              raise SystemExit('ShopRequest action validation must not precede the per-player rate limit')
+          print('Shop input boundary, pre-validation rate limit and canonical trader identity validated.')
           PY
