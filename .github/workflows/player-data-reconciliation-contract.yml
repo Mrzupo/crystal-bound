@@ -77,4 +77,14 @@ jobs:
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated: canonical crystal validity, progression thresholds, stats, achievements, quest prerequisites + MinLevel, daily-bounty consistency and session-lock bounds/token retention.')
+          text = Path('src/ReplicatedStorage/Modules/PlayerData.lua').read_text(encoding='utf-8')
+          if 'local PlayerData = require(script.Parent.PlayerDataOriginal)' not in text:
+              raise SystemExit('PlayerData wrapper must delegate to PlayerDataOriginal')
+          if 'local originalReconcile = PlayerData.Reconcile' not in text:
+              raise SystemExit('PlayerData wrapper must preserve the canonical reconcile implementation')
+          if 'for _, crystalId in ipairs(data.Crystals.Owned) do' not in text:
+              raise SystemExit('Owned-crystal mastery reconciliation loop missing')
+          if 'data.CrystalMastery[crystalId] = { Level = 1, XP = 0 }' not in text:
+              raise SystemExit('Missing mastery default for owned crystals')
+
+          print('Persisted player-data reconciliation contract validated: canonical crystal validity, progression thresholds, stats, achievements, quest prerequisites + MinLevel, daily-bounty consistency, session-lock bounds and owned-crystal mastery defaults.')
