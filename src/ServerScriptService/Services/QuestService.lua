@@ -3,6 +3,7 @@ local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local XPService = require(script.Parent.XPService)
 local EconomyService = require(script.Parent.EconomyService)
 local PlayerService = require(script.Parent.PlayerService)
+local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 
 local QuestService = {}
 
@@ -73,6 +74,12 @@ function QuestService.Complete(player, profile, questId, message)
 	local rewardMoney = finiteNonNegativeInteger(definition.Money)
 	if rewardXP == nil or rewardMoney == nil then
 		if player then player:SetAttribute("QuestMessage", "Quest reward configuration is unavailable.") end
+		return false
+	end
+
+	local currentMoney = math.clamp(finiteNonNegativeInteger(profile.Money) or 0, EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
+	if currentMoney + rewardMoney > EconomyConfig.MaxMoney then
+		if player then player:SetAttribute("QuestMessage", "Spend some Money before claiming this quest reward.") end
 		return false
 	end
 
