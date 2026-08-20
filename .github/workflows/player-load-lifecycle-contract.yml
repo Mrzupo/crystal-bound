@@ -40,6 +40,8 @@ jobs:
               raise SystemExit("PlayerLoadCatchup must not become a second PlayerAdded load owner")
           if 'PlayerService.LoadingByUserId[player.UserId]' not in catchup:
               raise SystemExit("PlayerLoadCatchup must skip players already being loaded")
+          if 'player:GetAttribute("ProfileLoadFailed") == nil' not in catchup:
+              raise SystemExit("PlayerLoadCatchup must skip known failed profile loads")
           if 'local STARTUP_WINDOW = 30' not in catchup or 'local SCAN_INTERVAL = 0.25' not in catchup:
               raise SystemExit("PlayerLoadCatchup must use a bounded startup scan interval")
           if 'local deadline = os.clock() + STARTUP_WINDOW' not in catchup or 'until os.clock() >= deadline' not in catchup:
