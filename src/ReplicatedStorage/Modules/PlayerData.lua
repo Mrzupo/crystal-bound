@@ -42,6 +42,19 @@ local function CrystalSystemExists(value)
 	return type(value) == "string" and type(CrystalConfig.Definitions[value]) == "table"
 end
 
+local function firstDailyBounty()
+	local goals = DailyBountyConfig.Goals
+	local definition = type(goals) == "table" and goals[1] or {}
+	return {
+		Date = "",
+		EnemyType = type(definition.EnemyType) == "string" and definition.EnemyType or "",
+		Goal = clampInt(definition.Goal, 1, 100, 1),
+		Progress = 0,
+		RewardMoney = clampInt(definition.RewardMoney, 0, EconomyConfig.MaxMoney, 0),
+		Claimed = false,
+	}
+end
+
 function PlayerData.new()
 	return {
 		Version = 4,
@@ -59,7 +72,7 @@ function PlayerData.new()
 		Stats = { Damage = 10, EnemiesDefeated = 0, BossesDefeated = 0, AncientGolemsDefeated = 0, CrystalBatsDefeated = 0 },
 		Achievements = {},
 		Titles = {},
-		DailyBounty = clone(DailyBountyConfig.Default or {}),
+		DailyBounty = firstDailyBounty(),
 		SessionId = "",
 		SessionLockedAt = 0,
 		SessionLock = nil,
@@ -159,15 +172,24 @@ function PlayerData.Reconcile(input)
 
 	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
 	data.DailyBounty.Date = type(data.DailyBounty.Date) == "string" and data.DailyBounty.Date or ""
-	data.DailyBounty.Goal = clampInt(data.DailyBounty.Goal, 1, 100, defaults.DailyBounty.Goal)
-	data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, data.DailyBounty.Goal, 0)
-	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, EconomyConfig.MaxMoney, defaults.DailyBounty.RewardMoney)
 	data.DailyBounty.Claimed = data.DailyBounty.Claimed == true
-	if not isBountyEnemy(data.DailyBounty.EnemyType) then
-		data.DailyBounty.EnemyType = type(DailyBountyConfig.Goals) == "table" and DailyBountyConfig.Goals[1] and DailyBountyConfig.Goals[1].EnemyType or nil
+	local bountyDefinition
+	if isBountyEnemy(data.DailyBounty.EnemyType) then
+		for _, definition in ipairs(DailyBountyConfig.Goals) do
+			if definition.EnemyType == data.DailyBounty.EnemyType then bountyDefinition = definition; break end
+		end
+	end
+	if not bountyDefinition then
+		bountyDefinition = (DailyBountyConfig.Goals and DailyBountyConfig.Goals[1]) or { Goal = 1, RewardMoney = 0, EnemyType = "" }
+		data.DailyBounty.EnemyType = bountyDefinition.EnemyType
 		data.DailyBounty.Progress = 0
 		data.DailyBounty.Claimed = false
+	else
+		data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, clampInt(bountyDefinition.Goal, 1, 100, 1), 0)
 	end
+	data.DailyBounty.Goal = clampInt(bountyDefinition.Goal, 1, 100, 1)
+	data.DailyBounty.Progress = math.clamp(data.DailyBounty.Progress, 0, data.DailyBounty.Goal)
+	data.DailyBounty.RewardMoney = clampInt(bountyDefinition.RewardMoney, 0, EconomyConfig.MaxMoney, 0)
 
 	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
 	data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 4102444800, 0)
