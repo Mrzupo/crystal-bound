@@ -59,9 +59,10 @@ local function fireCombatFeedback(targetModel, attacker, action, crystalId, crit
 end
 
 local function fireProgress(player, levelsGained, mastery)
-	local profile = PlayerService.GetProfile(player)
+	if not player or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] then return end
+	local profile = PlayerService.Profiles[player]
 	if not profile then return end
-	PlayerService.Sync(player)
+	PlayerService.Sync(player, true)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
 	if not remotes then return end
 	if remotes:FindFirstChild("XPChanged") then remotes.XPChanged:FireClient(player, profile.Experience, profile.Level) end
