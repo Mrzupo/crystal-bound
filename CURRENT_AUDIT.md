@@ -3,20 +3,21 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1403 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1413 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
 - `Bootstrap.server.lua` is the single canonical profile-load owner: one `loadPlayer()` path serves `PlayerAdded` and already-present players after startup, with per-Player deduplication.
 - No separate `PlayerLoadCatchup.server.lua` exists or is loaded; startup catch-up is intentionally owned by Bootstrap.
-- `PlayerService.Load()` uses a per-UserId load-generation token, explicitly rejects a second concurrent load for the same UserId, and has a shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
+- `PlayerService.Load()` uses a per-UserId load-generation token; a newer load supersedes an older load for the same UserId, and every superseded/aborted successful load releases the specific SessionLock token it acquired before returning.
 - Superseded successful profile loads explicitly release their own session lock before returning, preventing abandoned same-server locks.
 - `PlayerService` re-checks Player/Profile closing state after waiting on the operation lock before Refresh/Save, preventing heartbeat/autosave access after `Remove()` begins.
 - Dedicated `PlayerLifecycle.server.lua` owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
 - `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks.
 - `SafeProfileStore` snapshots profile state inside `UpdateAsync` callbacks and resets Load/Save/Refresh/Release result flags on every callback invocation and outer retry.
+- `SafeProfileStore` separates per-load claim tokens from the active per-Player Save/Refresh token; `Release(player, expectedToken)` cannot release a different active token.
 - `DamageService` is the sole direct `Humanoid:TakeDamage()` owner; damage types, attackers, targets, ranges and amounts are server-validated.
 - Environmental damage is strictly `Attacker == nil` in both the generic validator and final `DamageService` gate.
 - NPC attackers must be live, parented, `Enemy == true` models inside `Workspace.NPCs`; Player-vs-Player damage is rejected.
@@ -34,9 +35,12 @@ Current compare: **1403 commits ahead, 30 commits behind** `main` (verified with
 - `CrystalAbilityService` TIDE healing and `UseItemRemote` Health Potion healing both route through `PlayerService.Heal()` with actual-applied rollback handling for potion consumption.
 - Crystal ownership is canonicalized by `CrystalSystem`; `GetEquipped()` requires actual ownership and `CrystalService` returns filtered/deduplicated owned-crystal snapshots.
 - Crystal Equipped, Owned and Mastery mutation ownership has explicit regression contracts; repair/reconcile writes are the only documented exceptions.
+- `CrystalMastery` now requires actual crystal ownership for XP, bonuses, upgrade-cost reads and upgrades, independent of request-layer checks.
+- `PlayerData.Reconcile()` uses the same `CrystalSystem.Exists()` completeness rule as runtime Crystal ownership, preventing partially defined crystal IDs from entering persisted ownership.
+- `CrystalConfig` now has a completeness contract requiring identical crystal IDs across Definitions, UnlockLevels, BasicAttack, Abilities and Passives.
 - `PlayerData.Reconcile()` normalizes Level/XP/Money, Inventory, Crystal ownership/mastery, persistent combat Stats, Quest prerequisites/progress, Achievement/Title state, Daily Bounty definitions and SessionLock data.
 - Persisted player XP and CrystalMastery XP are capped below their current level's next threshold; MaxLevel/mastery-cap state forces XP to zero.
-- Invalid persisted Achievement IDs are dropped; Titles are reconstructed only from valid persisted Achievements.
+- Invalid persisted Achievement IDs are dropped; Titles are reconstructed only from valid persisted Achievements and validated through `AchievementSystem.IsValidTitle()`.
 - Persisted DailyBounty EnemyType/Goal/Reward are reconstructed from `DailyBountyConfig`; new profiles receive a concrete valid first-bounty default.
 - CrystalMastery rejects malformed IDs, bounds XP/costs/bonuses and never falls back to EMBER for invalid mutation IDs.
 - Crystal ability services independently revalidate equipped/owned Crystal context, target type, range and numeric bounds.
