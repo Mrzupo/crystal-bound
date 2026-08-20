@@ -26,6 +26,7 @@ jobs:
               "Inventory = profile.Inventory",
               "Achievements = profile.Achievements",
               "Titles = profile.Titles",
+              "return deepCopy({",
           ]
           forbidden = [
               "SessionLock",
@@ -36,7 +37,7 @@ jobs:
           missing = [marker for marker in required if marker not in block]
           leaked = [marker for marker in forbidden if marker in block]
           if missing:
-              raise SystemExit("GetPlayerData is missing expected public fields: " + ", ".join(missing))
+              raise SystemExit("GetPlayerData is missing expected public fields or detached snapshot: " + ", ".join(missing))
           if leaked:
               raise SystemExit("GetPlayerData exposes internal state: " + ", ".join(leaked))
           print("Player data exposure contract validated.")
