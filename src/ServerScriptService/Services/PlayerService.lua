@@ -127,9 +127,6 @@ function PlayerService.Load(player)
 		return nil, reason
 	end
 
-	-- SafeProfileStore.Load can yield. If the player left during that yield, do not
-	-- install a live profile for a player who is already being removed; release the
-	-- session lock immediately instead of orphaning it until timeout.
 	if not player.Parent then
 		local released = SafeProfileStore.Release(player)
 		warn(("Crystal Bound: player %s left while profile loading; session lock release=%s."):format(player.Name, tostring(released)))
@@ -139,8 +136,6 @@ function PlayerService.Load(player)
 	profile = PlayerData.Reconcile(profile)
 	PlayerService.Profiles[player] = profile
 
-	-- PlayerRemoving can race the load completion boundary. Check again after the
-	-- profile enters memory and release the persistent lock if the instance is gone.
 	if not player.Parent then
 		PlayerService.Profiles[player] = nil
 		local released = SafeProfileStore.Release(player)
@@ -237,6 +232,20 @@ function PlayerService.Sync(player)
 		player:SetAttribute("MaxHealth", maxHealth)
 	end
 	syncTitleTag(character, title)
+end
+
+function PlayerService.RefreshSession(player)
+	if not PlayerService.Profiles[player] then return false end
+	if not acquireOperation(player) then return false end
+	local success, result = xpcall(function()
+		return SafeProfileStore.Refresh(player)
+	end, debug.traceback)
+	releaseOperation(player)
+	if not success then
+		warn(("Crystal Bound: PlayerService.RefreshSession failed for %s: %s"):format(player.Name, tostring(result)))
+		return false
+	end
+	return result == true
 end
 
 function PlayerService.Save(player)
