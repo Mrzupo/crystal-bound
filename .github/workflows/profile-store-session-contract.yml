@@ -19,13 +19,17 @@ jobs:
           required = [
               'local sessionTokens = setmetatable({}, { __mode = "k" })',
               'local function getSessionToken(player)',
+              'local function newLoadToken(player)',
+              'local token = newLoadToken(player)',
               'local token = getSessionToken(player)',
               'local sameSession = lock and lock.JobId == SESSION_ID and lock.Token == token',
               'if lock and not sameSession and age < SESSION_TIMEOUT then',
               'data.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }',
               'if type(lock) ~= "table" or lock.JobId ~= SESSION_ID or lock.Token ~= token then',
               'payload.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }',
-              'lock.JobId ~= SESSION_ID or lock.Token ~= token',
+              'function SafeProfileStore.Release(player, expectedToken)',
+              'local token = expectedToken or getSessionToken(player)',
+              'lock.Token == token',
               'current.SessionLock = nil',
               'claimed = false',
               'invalidStoredValue = false',
@@ -48,7 +52,7 @@ jobs:
               end = text.find('function SafeProfileStore.', start + 10)
               block = text[start:] if end == -1 else text[start:end]
               callback_at = block.index('return store:UpdateAsync(key, function(current)')
-              callback_tail = block[callback_at:callback_at + 220]
+              callback_tail = block[callback_at:callback_at + 240]
               for marker in markers[1:]:
                   if marker not in callback_tail:
                       raise SystemExit(f'{operation} must reset callback state on every UpdateAsync invocation: {marker}')
@@ -68,4 +72,4 @@ jobs:
           if 'local profile = PlayerData.Reconcile(result)' not in text or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
               raise SystemExit('Load/Save must reconcile persisted profile data at the storage boundary')
 
-          print('Profile-store session-lock token ownership and UpdateAsync callback retry-state isolation validated.')
+          print('Profile-store per-load token isolation, token-specific release and UpdateAsync callback retry-state isolation validated.')
