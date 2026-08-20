@@ -2,7 +2,7 @@ name: NPC Dialog Config Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-interaction-canonical-identity"]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate server-authorized NPC dialog options
+      - name: Validate server-authorized NPC dialog options and canonical identity
         shell: python
         run: |
           from pathlib import Path
@@ -32,6 +32,9 @@ jobs:
               raise SystemExit(f"Unexpected NPC dialog option IDs: {sorted(option_ids)}")
 
           for marker in (
+              'local function getCanonicalNPC(npcId)',
+              'npc.Parent ~= folder',
+              'npc:GetAttribute("Interactable") ~= true',
               'local config = DialogConfig.Get(npcId)',
               'if not config or not isNearNPC(player, npcId) then return nil end',
               'Players.PlayerRemoving:Connect(function(player)',
@@ -40,6 +43,9 @@ jobs:
                   raise SystemExit(f"NPCDialogRemote authority marker missing: {marker}")
 
           for marker in (
+              'local function isCanonicalNPC(model, npcId)',
+              'model.Parent == folder',
+              'model:GetAttribute("Interactable") == true',
               'model.Name == "CrystalKeeper" or model.Name == "MaterialTrader"',
               'isNearModel(player, model)',
               'player:SetAttribute("OpenNPCDialog", npcId)',
@@ -54,4 +60,4 @@ jobs:
           if 'Inventory & Crystals' not in inventory:
               raise SystemExit('InventoryMenu must remain the combined Inventory & Crystals presentation')
 
-          print("NPC dialog configuration, option ownership, interaction-distance guards and combined inventory/crystal alias validated.")
+          print("NPC dialog configuration, option ownership, canonical NPC identity, interaction-distance guards and combined inventory/crystal alias validated.")
