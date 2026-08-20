@@ -3,8 +3,8 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1455 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
-- Current compared main base: `18f0f27fcbcb4fd6384f45ecd1d0632f9edad02d`.
+- Current compare: **1460 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+- Current compared main base: `18f0f27fcbcb4fd6384f45ecd1d0632f1d0632f9edad02d`.
 
 ## Current state
 The branch contains the complete Rojo project foundation plus the current gameplay stack and is in the hardening + integration phase ahead of real Roblox Studio runtime verification.
@@ -61,6 +61,8 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - CrystalConfig completeness is contract-checked across Definition, UnlockLevel, BasicAttack, Ability and Passive sources.
 - Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
 - `InventoryConfig.GetItemConfig()` now returns a detached item snapshot and has a dedicated config-snapshot contract.
+- `InventoryService.GetInventory()` is a pure read and no longer initializes `profile.Inventory` when returning a snapshot.
+- `CombatModifierService.RollCritical()` uses strict `< chance` comparison so a configured 0 critical chance cannot fire at the RNG boundary.
 - NPC dialog/config snapshots are detached and server-distance gated.
 - RemoteFunction contracts now require a single server owner per named RemoteFunction, and critical RemoteEvent contracts require a single server handler.
 - `STUDIO_PLAYTEST.md` contains explicit same-UserId superseded-load, player-leave-during-load, shutdown-race and Guardian-during-autosave cases for real runtime validation.
@@ -90,7 +92,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 ## Next steps
 1. Apply the pending generalized autosave gameplay/save-settle fix when a safe repository write path is available.
 2. Continue concrete static audits and eliminate newly introduced authority/config drift.
-3. Move toward Roblox Studio multiplayer validation.
+3. Move to Roblox Studio multiplayer validation.
 4. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat the asset contract for TIDE/GALE.
 
 ## Do not do
