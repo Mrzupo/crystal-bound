@@ -41,6 +41,10 @@ jobs:
               problems.append("NPCMenuBridge must centralize menu attributes")
           if 'clearMenus(player)' not in text["bridge"]:
               problems.append("NPCMenuBridge must clear existing menu state before opening a dialog")
+          if 'local MENU_ATTRIBUTES = {' not in text["touch"]:
+              problems.append("TouchMenus must centralize menu attributes")
+          if 'player:SetAttribute(attribute, nil)' not in text["touch"]:
+              problems.append("TouchMenus must clear existing menu state before opening a menu")
           if problems:
               for problem in problems:
                   print(f" - {problem}")
