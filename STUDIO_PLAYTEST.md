@@ -73,13 +73,14 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Force final `Release()` failure in a controlled test environment.
 - Expected: removal reports failure and the persistent session lock is retained.
 - During autosave, trigger a server-authorized gameplay mutation; expected: the settled save path does not report success until the changed profile state is persisted.
+- Persist a controlled `DailyBounty` record with `Claimed=true` and `Progress<Goal`; expected: `PlayerData.Reconcile()` restores `Claimed=false` before gameplay can observe the profile.
 
 ## 8. Transactions / Consumables
 - Buy Health Potions with enough Money; confirm Money decreases exactly once and inventory increases exactly once.
 - Attempt a purchase over the maximum stack; expected: no Money loss.
 - Send fractional purchase/crafting quantities; expected: the server rejects them rather than flooring them.
 - Attempt crafting without enough materials; expected: no materials lost.
-- Force a failed output insertion in a controlled test; expected: all consumed crafting inputs are restored.
+- Force a failed output insertion in a controlled test; expected: all consumed crafting inputs are restored and any partial output insertion is removed.
 - Force a mid-transaction crafting or upgrade material-removal failure; expected: already-consumed inputs are restored.
 - Upgrade a Crystal with valid materials; confirm every required material is consumed exactly once and mastery increases exactly once.
 - Force `CrystalMastery.Upgrade()` to fail after material consumption in a controlled test; expected: all consumed upgrade materials are restored.
@@ -107,6 +108,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - During portal cooldown, attempt to spoof the destination locally; expected: movement authority rejects the displacement.
 - Test every configured portal destination and level gate.
 - Respawn after a portal use; expected: stale portal grace is cleared and cannot authorize the new character.
+- Teleport through a portal, respawn before the original 1-second cooldown expires, then touch a portal again on the new Character; expected: the old delayed cooldown callback must not clear the new Character's cooldown early.
 - Perform a Dodge and verify its server velocity remains subject to the normal position authority.
 
 ## 11. Asset pass
@@ -127,6 +129,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm NPC menu opening is server-distance validated.
 - Confirm WalkSpeed baseline enforcement remains active without a Slow effect.
 - Confirm portal grace is destination-bound and cannot be created during a rejected portal touch/cooldown.
+- Confirm portal cooldown callbacks are generation-safe across respawn/rejoin.
 - Confirm the official rarity ladder is Common → Divine and Ancient is not a rarity.
 - Confirm `main` remains untouched.
 - Record every runtime failure with exact script name, event/action, reproduction steps and expected vs actual behavior.
