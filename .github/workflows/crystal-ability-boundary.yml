@@ -15,6 +15,7 @@ jobs:
       - name: Validate server ability service boundary
         shell: python
         run: |
+          import re
           from pathlib import Path
 
           combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
@@ -41,10 +42,14 @@ jobs:
               problems.append("CrystalAbilityService is missing from default.project.json")
           if "if crystalId == \"TIDE\"" in combat or "elseif crystalId == \"GALE\"" in combat:
               problems.append("Crystal-specific special branches must live in CrystalAbilityService")
+          if "PlayerService.Heal(player, healAmount)" not in ability_text:
+              problems.append("TIDE healing must use the canonical PlayerService.Heal path")
+          if re.search(r'\.(?:Health|MaxHealth)\s*=', ability_text):
+              problems.append("CrystalAbilityService must not directly mutate Humanoid Health/MaxHealth")
 
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("Crystal ability/mastery service boundary validated.")
+          print("Crystal ability/mastery service boundary validated, including canonical Tide healing.")
