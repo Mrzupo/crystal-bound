@@ -79,7 +79,11 @@ local function ensureGui()
 	close.Font = Enum.Font.GothamBold
 	close.TextSize = 18
 	close.Parent = panel
-	close.Activated:Connect(function() open = false; panel.Visible = false end)
+	close.Activated:Connect(function()
+		open = false
+		panel.Visible = false
+		player:SetAttribute("OpenShopMenu", nil)
+	end)
 
 	local status = Instance.new("TextLabel")
 	status.Name = "Status"
@@ -241,7 +245,13 @@ player:GetAttributeChangedSignal("OpenShopMenu"):Connect(function() openMenu() e
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.O then
-		if open then open = false; panel.Visible = false else openMenu() end
+		if open then
+			open = false
+			panel.Visible = false
+			player:SetAttribute("OpenShopMenu", nil)
+		else
+			openMenu()
+		end
 	elseif input.KeyCode == Enum.KeyCode.P then
 		usePotion()
 	end
