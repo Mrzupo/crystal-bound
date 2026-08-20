@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate shared menu attributes and close-state cleanup
+      - name: Validate shared menu attributes and stale-response lifecycle guards
         shell: python
         run: |
           from pathlib import Path
@@ -69,8 +69,31 @@ jobs:
           if 'disconnectPlayer(player)' not in text["bridge"] or 'Players.PlayerRemoving:Connect(function(player)' not in text["bridge"]:
               problems.append("NPCMenuBridge must disconnect per-player lifecycle state on leave")
 
+          quest_guards = (
+              'local loadGeneration = 0',
+              'local loadQueued = false',
+              'local QUEST_RETRY_DELAY = 0.25',
+              'loadGeneration += 1',
+              'local generation = loadGeneration',
+              'local character = player.Character',
+              'generation ~= loadGeneration',
+              'player.Character ~= character',
+              'player:GetAttribute("OpenQuestMenu") ~= expectedOpenState',
+              'player.CharacterAdded:Connect(function()',
+              'player.CharacterRemoving:Connect(function()',
+              'local function scheduleGenerationReload(staleGeneration, delay)',
+              'if loading then',
+              'loadQueued = true',
+              'if loadQueued and open then',
+              'if not ok or type(response) ~= "table" then',
+              'if not okAvailable or type(responseAvailable) ~= "table" then',
+              'if not data or type(data) ~= "table" or not open then return end',
+          )
+          for marker in quest_guards:
+              if marker not in text["quest"]:
+                  problems.append(f"QuestMenu stale-response/retry guard missing: {marker}")
+
           menu_guards = {
-              "quest": "OpenQuestMenu",
               "shop": "OpenShopMenu",
               "crystal": "OpenCrystalMenu",
               "craft": "OpenCraftingMenu",
@@ -88,4 +111,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, respawn cleanup, shutdown rejection and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, stale Quest responses, respawn cleanup, shutdown rejection and close-state contract validated.")
