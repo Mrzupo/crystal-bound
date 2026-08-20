@@ -33,7 +33,7 @@ local function executeTide(player)
 	local abilityConfig = CrystalConfig.Abilities.TIDE or {}
 	local healAmount = math.max(0, safePositive(abilityConfig.HealAmount, 0))
 	local applied = PlayerService.Heal(player, healAmount)
-	if applied <= 0 then return { Success = false, Message = nil, Hits = {} } end
+	if not applied then return { Success = false, Message = nil, Hits = {} } end
 	return {
 		Success = true,
 		Message = "Tidal Pulse restored health.",
