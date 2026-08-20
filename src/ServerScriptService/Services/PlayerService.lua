@@ -16,6 +16,7 @@ local PlayerService = {
 	Operations = setmetatable({}, { __mode = "k" }),
 	ProfileRevisions = setmetatable({}, { __mode = "k" }),
 	Closing = setmetatable({}, { __mode = "k" }),
+	RemovalResults = setmetatable({}, { __mode = "k" }),
 	LoadingByUserId = {},
 	ShuttingDown = false,
 }
@@ -394,10 +395,22 @@ function PlayerService.Save(player)
 end
 
 function PlayerService.Remove(player)
-	if not PlayerService.Profiles[player] then return true end
-	if PlayerService.Closing[player] then return false end
+	if not PlayerService.Profiles[player] then
+		return PlayerService.RemovalResults[player] ~= false
+	end
+	if PlayerService.Closing[player] then
+		local started = os.clock()
+		while PlayerService.Closing[player] and os.clock() - started < OPERATION_TIMEOUT do
+			task.wait(0.05)
+		end
+		if PlayerService.Closing[player] then return false end
+		return PlayerService.RemovalResults[player] == true
+	end
+
 	PlayerService.Closing[player] = true
+	PlayerService.RemovalResults[player] = nil
 	if not acquireOperation(player) then
+		PlayerService.RemovalResults[player] = false
 		PlayerService.Closing[player] = nil
 		return false
 	end
@@ -409,6 +422,7 @@ function PlayerService.Remove(player)
 		if not saved then return { Saved = false } end
 		local released = SafeProfileStore.Release(player)
 		if not released then return { Saved = false, ReleaseFailed = true } end
+		PlayerService.RemovalResults[player] = true
 		cleanupRemovedPlayer(player)
 		return { Saved = true }
 	end, debug.traceback)
@@ -416,6 +430,7 @@ function PlayerService.Remove(player)
 
 	if not success then
 		warn(("Crystal Bound: PlayerService.Remove failed for %s: %s"):format(player.Name, tostring(result)))
+		PlayerService.RemovalResults[player] = false
 		cleanupRemovedPlayer(player)
 		return false
 	end
@@ -425,6 +440,7 @@ function PlayerService.Remove(player)
 		else
 			warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
 		end
+		PlayerService.RemovalResults[player] = false
 		cleanupRemovedPlayer(player)
 		return false
 	end
