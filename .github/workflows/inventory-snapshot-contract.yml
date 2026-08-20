@@ -38,6 +38,8 @@ jobs:
               "src/ServerScriptService/ShopRemote.server.lua": "InventoryService.GetInventory(profile)",
               "src/ServerScriptService/UseItemRemote.server.lua": "InventoryService.GetInventory(profile)",
               "src/ServerScriptService/CraftingRemote.server.lua": "InventoryService.GetInventory(profile)",
+              "src/ServerScriptService/Services/CombatService.lua": "InventoryService.GetInventory(profile)",
+              "src/ServerScriptService/Services/BossService.lua": "InventoryService.GetInventory(profile)",
           }
           problems = []
           for relative, marker in paths.items():
@@ -50,4 +52,4 @@ jobs:
           if problems:
               raise SystemExit("\n".join(problems))
 
-          print("Inventory Service and remote snapshot data-exposure contracts validated.")
+          print("Inventory Service and reward-remote snapshot data-exposure contracts validated.")
