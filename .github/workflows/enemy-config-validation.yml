@@ -40,8 +40,8 @@ jobs:
                   print(f" - EnemyConfig missing field: {problem}")
               raise SystemExit(1)
 
-          if "function EnemyConfig.Get(typeId)" not in text or "return EnemyConfig.Types[typeId]" not in text:
-              raise SystemExit("EnemyConfig.Get must perform strict type lookup")
+          if "function EnemyConfig.Get(typeId)" not in text or "local source = EnemyConfig.Types[typeId]" not in text or "result.Respawn = math.clamp" not in text:
+              raise SystemExit("EnemyConfig.Get must perform strict lookup and central Respawn normalization")
           if "return EnemyConfig.Types.TrainingDummy" in text:
               raise SystemExit("EnemyConfig.Get must not silently fall back to TrainingDummy")
           if "function EnemyConfig.IsValid(typeId)" not in text:
@@ -52,10 +52,10 @@ jobs:
           for marker in (
               "local specialRange =",
               "distance <= specialRange",
-              'math.clamp(tonumber(special.Range) or 14, 0.1, 1000)',
-              'math.clamp(tonumber(special.Range) or 10, 0.1, 1000)',
-              'math.clamp(tonumber(special.TeleportOffset) or 4, 0, math.min(100, range))',
-              'math.clamp(tonumber(special.Cooldown) or 6, 0.25, 60)',
+              'math.clamp(finiteNumber(special.Range, 14), 0.1, 1000)',
+              'math.clamp(finiteNumber(special.Range, 10), 0.1, 1000)',
+              'math.clamp(finiteNumber(special.TeleportOffset, 4), 0, math.min(100, range))',
+              'math.clamp(finiteNumber(special.Cooldown, 6), 0.25, 60)',
           ):
               if marker not in npc:
                   raise SystemExit(f"NPCService special runtime clamp/trigger missing: {marker}")
@@ -105,4 +105,4 @@ jobs:
               if offset < 0 or offset > 100:
                   raise SystemExit("Enemy TeleportOffset is outside 0..100")
 
-          print("EnemyConfig combat bounds, aggro bounds, strict lookup, lifecycle, special movement and canonical loot validated.")
+          print("EnemyConfig combat bounds, aggro bounds, centralized Respawn normalization, strict lookup, lifecycle, special movement and canonical loot validated.")
