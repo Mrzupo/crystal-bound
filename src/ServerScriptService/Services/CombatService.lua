@@ -154,18 +154,20 @@ function CombatService.HandleRequest(player, action, target)
 	local config = action == "Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId)
 	if not config then return end
 
-	local safeRange = boundedPositive(config.Range, 0.1, 1000)
 	local safeCooldown = boundedPositive(config.Cooldown, 0.05, 60)
-	local safeBaseDamage = boundedPositive(config.Damage, 0.1, 1000)
-	if not safeRange or not safeCooldown or not safeBaseDamage then return end
+	if not safeCooldown then return end
+
+	local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"
+	local safeRange = not isTideSelfAbility and boundedPositive(config.Range, 0.1, 1000) or nil
+	local safeBaseDamage = not isTideSelfAbility and boundedPositive(config.Damage, 0.1, 1000) or nil
+	if not isTideSelfAbility and (not safeRange or not safeBaseDamage) then return end
 
 	cooldowns[player] = cooldowns[player] or {}
 	local now = requestNow
 	if now < (cooldowns[player][action] or 0) then return end
 
-	local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"
 	if isTideSelfAbility then
-		local abilityResult = CrystalAbilityService.Execute(player, profile, crystalId, nil, math.min(1000, safeBaseDamage), safeRange)
+		local abilityResult = CrystalAbilityService.Execute(player, profile, crystalId, nil, nil, nil)
 		if not abilityResult.Success then return end
 		cooldowns[player][action] = now + safeCooldown
 		player:SetAttribute("AbilityCooldownEnd", now + safeCooldown)
