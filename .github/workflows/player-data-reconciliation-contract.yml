@@ -17,11 +17,12 @@ jobs:
 
           required = [
               'local function CrystalSystemExists(value)',
+              'local function capExperienceBelowNextLevel(level, experience, maxLevel, maxExperience, requiredXP)',
               'local function firstDailyBounty()',
               'DailyBounty = firstDailyBounty()',
               'data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)',
               'data.Experience = clampInt(data.Experience, 0, XPConfig.MaxExperience, defaults.Experience)',
-              'data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)',
+              'data.Experience = capExperienceBelowNextLevel(data.Level, data.Experience, XPConfig.MaxLevel, XPConfig.MaxExperience, XPConfig.GetRequiredXP)',
               'local inventory = {}',
               'InventoryConfig.GetItemConfig(itemId)',
               'data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)',
@@ -37,6 +38,8 @@ jobs:
               'BossesDefeated = clampInt(stats.BossesDefeated, 0, 1000000000, defaults.Stats.BossesDefeated)',
               'AncientGolemsDefeated = clampInt(stats.AncientGolemsDefeated, 0, 1000000000, defaults.Stats.AncientGolemsDefeated)',
               'CrystalBatsDefeated = clampInt(stats.CrystalBatsDefeated, 0, 1000000000, defaults.Stats.CrystalBatsDefeated)',
+              'xp = capExperienceBelowNextLevel(level, xp, maxLevel',
+              'CrystalMastery.GetRequiredXP',
               'data.Achievements = normalizeList(data.Achievements, isAchievementId)',
               'local canonicalTitles = {}',
               'data.Titles = canonicalTitles',
@@ -64,4 +67,4 @@ jobs:
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated: stats, achievements, quest prerequisites, complete bounty defaults and session-lock bounds.')
+          print('Persisted player-data reconciliation contract validated: progression thresholds, stats, achievements, quest prerequisites, bounty defaults and session-lock bounds.')
