@@ -196,7 +196,7 @@ function PlayerService.GetPendingLoadCount()
 end
 
 function PlayerService.Load(player)
-	PlayerService.Closing[player] = nil
+	if PlayerService.Closing[player] then return nil, "Player is closing" end
 	if PlayerService.ShuttingDown then return nil, "Server is shutting down" end
 	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
 	local userId = player.UserId
@@ -211,9 +211,9 @@ function PlayerService.Load(player)
 	local function clearCurrentLoad()
 		if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end
 	end
-	if PlayerService.ShuttingDown then
+	if PlayerService.ShuttingDown or PlayerService.Closing[player] then
 		clearCurrentLoad()
-		return nil, "Server is shutting down"
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player is closing"
 	end
 
 	local loadSuccess, profile, reason = xpcall(function()
@@ -240,11 +240,11 @@ function PlayerService.Load(player)
 		warn(("Crystal Bound: superseded profile load ignored for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile load"
 	end
-	if PlayerService.ShuttingDown or not player.Parent then
+	if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then
 		clearCurrentLoad()
 		local released = releaseLoadedToken()
 		warn(("Crystal Bound: player %s left/shutdown while profile loading; session lock release=%s."):format(player.Name, tostring(released)))
-		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left before profile load completed"
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or PlayerService.Closing[player] and "Player is closing" or "Player left before profile load completed"
 	end
 
 	PlayerService.Profiles[player] = profile
@@ -257,22 +257,22 @@ function PlayerService.Load(player)
 		warn(("Crystal Bound: profile initialization was superseded for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile initialization"
 	end
-	if PlayerService.ShuttingDown or not player.Parent then
+	if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then
 		PlayerService.Profiles[player] = nil
 		PlayerService.ProfileRevisions[player] = nil
 		clearCurrentLoad()
 		local released = releaseLoadedToken()
 		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)))
-		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or PlayerService.Closing[player] and "Player is closing" or "Player left during profile initialization"
 	end
 
 	clearCurrentLoad()
-	if PlayerService.ShuttingDown or not player.Parent then
+	if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then
 		PlayerService.Profiles[player] = nil
 		PlayerService.ProfileRevisions[player] = nil
 		local released = releaseLoadedToken()
 		warn(("Crystal Bound: shutdown/leave raced post-load initialization for %s; session lock release=%s"):format(player.Name, tostring(released)))
-		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or PlayerService.Closing[player] and "Player is closing" or "Player left during profile initialization"
 	end
 	setupLeaderstats(player, profile)
 	cleanupHumanoidConnections(player)
@@ -283,7 +283,7 @@ function PlayerService.Load(player)
 		end)
 	end)
 	PlayerService.Sync(player)
-	if not PlayerService.ShuttingDown and player.Parent and player.Character then
+	if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent and player.Character then
 		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then ensureAnimator(player.Character) end
 		bindHumanoid(player, humanoid)
