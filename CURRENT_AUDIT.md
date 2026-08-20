@@ -23,7 +23,7 @@ Base: `main`
 - Dodge uses finite direction validation, server cooldowns, tokenized invulnerability expiry and current-character Humanoid validation.
 - Player Health mutation is centralized in `PlayerService.Heal()`; NPC/Boss services only initialize NPC Humanoid health.
 - `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks and clears state on lifecycle cleanup.
-- `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace; both enforcement loops stop when global shutdown begins.
+- `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace; both enforcement loops and deferred Character refreshes stop when global shutdown begins.
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
 - Portal cooldown callbacks are now generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
 - `NPCMenuBridge` deferred dialog opening is Character-bound, and open menu attributes are cleared again on CharacterAdded so stale UI state cannot survive a respawn.
@@ -35,6 +35,7 @@ Base: `main`
 - Persisted Daily Bounty state now also enforces the invariant `Claimed => Progress >= Goal`; corrupt `Claimed=true` / incomplete-goal state is normalized back to unclaimed during `PlayerData.Reconcile()`.
 - Enemy AI loops stop on global shutdown; delayed enemy respawn callbacks cannot create new NPCs after shutdown begins.
 - Guardian creation, AI and delayed respawn stop on global shutdown.
+- Guardian Arena phase-2 hazard damage and its periodic loop stop on global shutdown, and active hazard visuals are disabled when the loop exits.
 - Enemy and Guardian rewards preserve XP/Loot/progression when Money is capped; Money is bounded centrally by EconomyService.
 - Guardian telegraphs are bound to the original Guardian and target Character instances, preventing stale delayed impacts on replacement instances.
 - NPC Pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
@@ -54,6 +55,7 @@ Base: `main`
 - `.github/workflows/enemy-lifecycle-validation.yml` now requires shutdown-safe enemy AI and respawn behavior.
 - `.github/workflows/boss-active-spawn-contract.yml` now requires shutdown-safe Guardian creation, AI and respawn behavior.
 - `.github/workflows/movement-authority-contract.yml` now requires shutdown-aware WalkSpeed/position loops and Character-bound deferred binds.
+- `.github/workflows/boss-attack-contract.yml` now requires shutdown-safe Guardian Arena hazard behavior.
 - `STUDIO_PLAYTEST.md` contains explicit portal cooldown stale-callback, NPC menu Character-lifecycle, Daily Bounty reconciliation and shutdown-respawn regression scenarios.
 - `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback, Character-lifecycle, movement and shutdown-respawn semantics.
 
@@ -61,7 +63,6 @@ Base: `main`
 - No real Roblox Studio runtime playtest has been executed from this environment.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
 - Latest checked workflow-run queries do not provide a verified green CI run for this hardening work; CI is not claimed green.
-- `BossArena.server.lua` still runs its periodic hazard loop until the arena folder is destroyed; a direct shutdown gate remains a candidate for a future isolated patch, but connector-side file SHA resolution was inconsistent during this pass, so it was not modified blindly.
 - Movement physics/network ownership thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace and position correction.
 - Ordinary `PlayerService.GetProfile()` callers are conservatively blocked during autosave; selected server reward paths intentionally use an autosave-safe loaded-profile path and rely on revision-settle behavior.
 - Authored Roblox Animation/Sound assets remain pending; current VFX are procedural/placeholder presentation.
