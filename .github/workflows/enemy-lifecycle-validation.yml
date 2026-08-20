@@ -13,7 +13,8 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          text = Path('src/ServerScriptService/Services/NPCService.lua').read_text(encoding='utf-8')
+          npc = Path('src/ServerScriptService/Services/NPCService.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
           required = [
               'humanoid.Died:Connect(function()',
               'AIPathService.Clear(model)',
@@ -28,8 +29,17 @@ jobs:
               'model:SetAttribute("AIStarted", true)',
               'NPCService.StartEnemyAI(model)',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in npc]
           if missing:
               raise SystemExit('missing enemy lifecycle/attacker/AI guard: ' + ', '.join(missing))
-          print('Enemy lifecycle cleanup, attacker liveness and single-start AI contract validated.')
+
+          bootstrap_required = [
+              'local function spawnEnemy(npcs,typeId,position,uniqueName)',
+              'if PlayerService.ShuttingDown or npcs:FindFirstChild(uniqueName) then return end',
+              'if not PlayerService.ShuttingDown and npcs.Parent then spawnEnemy(npcs,typeId,position,uniqueName) end',
+          ]
+          missing = [marker for marker in bootstrap_required if marker not in bootstrap]
+          if missing:
+              raise SystemExit('missing Bootstrap enemy-respawn shutdown guard: ' + ', '.join(missing))
+          print('Enemy lifecycle cleanup, attacker liveness, single-start AI and shutdown-safe respawn contract validated.')
           PY
