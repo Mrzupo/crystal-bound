@@ -31,10 +31,11 @@ jobs:
               'if not character or humanoid.Parent ~= character then return false end',
               'local function isShuttingDown()',
               'if isShuttingDown() then return false, "Server shutting down" end',
+              'if player:GetAttribute("ProfileLoaded") ~= true then return false, "Profile not ready" end',
           ]
           missing = [marker for marker in required if marker not in service]
           if missing:
-              raise SystemExit("missing Dodge input/target/shutdown boundary markers: " + ", ".join(missing))
+              raise SystemExit("missing Dodge input/target/shutdown/profile boundary markers: " + ", ".join(missing))
 
           for marker in [
               'local PlayerService = require(script.Parent.Services.PlayerService)',
@@ -43,4 +44,4 @@ jobs:
               if marker not in remote:
                   raise SystemExit("DodgeRemote shutdown/profile gate missing: " + marker)
 
-          print("Dodge server input, target identity, runtime-config and shutdown/profile boundary contract validated.")
+          print("Dodge server input, target identity, runtime-config, loaded-profile and shutdown/profile boundary contract validated.")
