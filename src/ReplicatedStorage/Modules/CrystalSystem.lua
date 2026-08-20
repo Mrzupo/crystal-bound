@@ -87,7 +87,7 @@ end
 function CrystalSystem.GetEquipped(profile)
 	if not validProfileCrystals(profile) then return nil end
 	local equipped = profile.Crystals.Equipped
-	return CrystalSystem.Exists(equipped) and equipped or nil
+	return CrystalSystem.Owns(profile, equipped) and equipped or nil
 end
 
 return CrystalSystem
