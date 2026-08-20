@@ -226,3 +226,10 @@ function CombatService.HandleRequest(player, action, target)
 	end
 	if result.Amount > 0 and humanoid.Health <= 0 then rewardDefeat(player, profile, targetModel, action, crystalId) end
 end
+
+function CombatService.CleanupPlayer(player)
+	cooldowns[player] = nil
+	nextRequest[player] = nil
+end
+
+return CombatService
