@@ -38,9 +38,11 @@ jobs:
                   if marker not in text:
                       problems.append(f"{relative} is missing rate-limit marker: {marker}")
 
-              state_marker = markers[-1]
-              table_like = state_marker
-              if 'PlayerRemoving:Connect' not in text:
+              if relative == "src/ServerScriptService/Bootstrap.server.lua":
+                  weak_markers = ['nextQuestRequest = setmetatable({}, { __mode = "k" })', 'nextInventoryRequest = setmetatable({}, { __mode = "k" })', 'nextCrystalRequest = setmetatable({}, { __mode = "k" })', 'nextCrystalUpgradeRequest = setmetatable({}, { __mode = "k" })', 'nextPlayerDataRequest = setmetatable({}, { __mode = "k" })', 'nextQuestDataRequest = setmetatable({}, { __mode = "k" })']
+                  if not all(marker in text for marker in weak_markers):
+                      problems.append(f"{relative} must use weak-key request state when it does not register explicit PlayerRemoving cleanup")
+              elif 'PlayerRemoving:Connect' not in text:
                   problems.append(f"{relative} must clear request state on PlayerRemoving")
 
           if problems:
