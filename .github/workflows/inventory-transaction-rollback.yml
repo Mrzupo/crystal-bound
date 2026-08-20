@@ -20,14 +20,14 @@ jobs:
 
           if "local added = InventoryService.AddItem(profile, itemId, amount)" not in shop:
               raise SystemExit("Shop purchase must capture the actual inventory amount inserted")
-          if "InventoryService.RemoveItem(profile, itemId, added)" not in shop:
+          if "if added > 0 then InventoryService.RemoveItem(profile, itemId, added) end" not in shop:
               raise SystemExit("Shop purchase must remove a partial inventory insertion before refunding Money")
           if "EconomyService.AddMoney(profile, total)" not in shop:
               raise SystemExit("Shop purchase must refund Money after failed inventory insertion")
 
           if "local added = InventoryService.AddItem(profile, recipe.Output, outputAmount)" not in crafting:
               raise SystemExit("Crafting must capture the actual output amount inserted")
-          if "InventoryService.RemoveItem(profile, recipe.Output, added)" not in crafting:
+          if "if added > 0 then InventoryService.RemoveItem(profile, recipe.Output, added) end" not in crafting:
               raise SystemExit("Crafting must remove a partial output insertion before rolling back inputs")
           if "for itemId, consumedAmount in pairs(consumed) do InventoryService.AddItem(profile, itemId, consumedAmount) end" not in crafting:
               raise SystemExit("Crafting must restore every consumed input after output insertion failure")
