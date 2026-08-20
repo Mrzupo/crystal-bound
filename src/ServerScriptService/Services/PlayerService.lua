@@ -13,8 +13,15 @@ local OPERATION_TIMEOUT = 10
 local DEFAULT_CRYSTAL = "EMBER"
 local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
 local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
+local MAX_WALK_SPEED_BONUS = math.clamp(tonumber(MovementConfig.MaxWalkSpeedBonus) or 20, 0, 100)
 local MIN_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MinSlowMultiplier) or 0.2, 0.01, 1)
 local MAX_SLOW_MULTIPLIER = math.clamp(tonumber(MovementConfig.MaxSlowMultiplier) or 1, MIN_SLOW_MULTIPLIER, 10)
+
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
 
 local function setupLeaderstats(player, profile)
 	local leaderstats = player:FindFirstChild("leaderstats") or Instance.new("Folder")
@@ -185,14 +192,16 @@ function PlayerService.Sync(player)
 	local mastery = CrystalMastery.Get(profile, crystalId)
 	local masteryBonuses = CrystalMastery.GetBonuses(profile, crystalId)
 	local title = (profile.Titles and profile.Titles[#profile.Titles]) or ""
+	local walkSpeedBonus = math.clamp((finiteNumber(passive.WalkSpeedBonus, 0) or 0) + (finiteNumber(masteryBonuses.WalkSpeedBonus, 0) or 0), 0, MAX_WALK_SPEED_BONUS)
+	local maxHealthBonus = math.clamp((finiteNumber(passive.MaxHealthBonus, 0) or 0) + (finiteNumber(masteryBonuses.MaxHealthBonus, 0) or 0), 0, 1000)
 	player:SetAttribute("Level", profile.Level)
 	player:SetAttribute("Experience", profile.Experience)
 	player:SetAttribute("Money", profile.Money)
 	player:SetAttribute("EquippedCrystal", crystalId)
 	player:SetAttribute("DamageMultiplier", (passive.DamageMultiplier or 1) * masteryBonuses.DamageMultiplier)
 	player:SetAttribute("AbilityDamageMultiplier", masteryBonuses.AbilityDamageMultiplier)
-	player:SetAttribute("WalkSpeedBonus", (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus)
-	player:SetAttribute("MaxHealthBonus", (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus)
+	player:SetAttribute("WalkSpeedBonus", walkSpeedBonus)
+	player:SetAttribute("MaxHealthBonus", maxHealthBonus)
 	player:SetAttribute("CrystalMasteryLevel", mastery.Level)
 	player:SetAttribute("CrystalMasteryXP", mastery.XP)
 	player:SetAttribute("EnemiesDefeated", (profile.Stats and profile.Stats.EnemiesDefeated) or 0)
@@ -212,7 +221,7 @@ function PlayerService.Sync(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		ensureAnimator(character)
-		local baseWalkSpeed = BASE_WALK_SPEED + (passive.WalkSpeedBonus or 0) + masteryBonuses.WalkSpeedBonus
+		local baseWalkSpeed = BASE_WALK_SPEED + walkSpeedBonus
 		local slowMultiplier = tonumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"))
 		if type(slowMultiplier) == "number" and slowMultiplier == slowMultiplier and slowMultiplier ~= math.huge and slowMultiplier ~= -math.huge then
 			slowMultiplier = math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
@@ -220,7 +229,7 @@ function PlayerService.Sync(player)
 		else
 			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed)
 		end
-		local maxHealth = 100 + (passive.MaxHealthBonus or 0) + masteryBonuses.MaxHealthBonus
+		local maxHealth = 100 + maxHealthBonus
 		local oldMax = math.max(1, humanoid.MaxHealth)
 		local oldHealth = humanoid.Health
 		humanoid.MaxHealth = maxHealth
