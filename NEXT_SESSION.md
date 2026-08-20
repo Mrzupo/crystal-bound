@@ -23,6 +23,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
 - Enemy and Guardian respawns are suppressed once global server shutdown begins.
 - Guardian Arena hazard damage and its periodic loop stop on global shutdown.
+- Status-effect application and delayed Burn/Slow callbacks stop on global shutdown.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
 - Daily Bounty canonicalized from config and safe around wallet caps.
 - Daily Bounty reconcile additionally repairs corrupt persisted `Claimed=true` state when `Progress < Goal`.
@@ -32,7 +33,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-owned character Animator for client animation playback.
 - One-shot confirmed Crystal VFX bridge.
 - Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence; movement enforcement stops during shutdown.
-- Portal cooldown expiry is generation-safe across respawn/rejoin.
+- Portal cooldown expiry is generation-safe across respawn/rejoin; WorldTheme portal state monitoring also stops during shutdown.
 - NPC menu state is Character-bound and cleared on respawn/leave.
 
 ## Latest hardening work
@@ -59,6 +60,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy AI loops stop on global shutdown.
 - Guardian creation and AI stop on global shutdown, and the delayed Guardian respawn callback also checks the shutdown state.
 - Guardian Arena hazard loop stops and disables active hazard visuals on global shutdown.
+- `StatusEffectService` now rejects new effects during shutdown and aborts delayed Burn/Slow callbacks at their next lifecycle boundary.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - Enemy Mastery XP is derived from canonical Enemy XP with no arbitrary minimum fallback.
 - `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences and rejects stale Character deferred binds.
@@ -91,7 +93,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - No actual Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
 - Current GitHub workflow-run queries provide no verified run for the latest hardening commits; CI must not be called green.
-- Movement/physics thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling, movement shutdown and Roblox network-ownership interactions.
+- Movement/physics thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling, movement/status-effect shutdown and Roblox network-ownership interactions.
 - The generalized `PlayerService.Saving` gameplay-read gate remains intentionally conservative. Ordinary `GetProfile()` callers are blocked during autosave; selected server reward paths have explicit autosave-safe access and are covered by settle/revision behavior.
 - `GetPlayerData`/`GetQuestData` return detached server-serialized subsets; no server-side table reference crosses the network boundary.
 - Authored Roblox Animation/Sound assets are still pending; current VFX remain procedural/placeholder-level.
