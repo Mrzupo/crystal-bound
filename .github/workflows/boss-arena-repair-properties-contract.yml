@@ -1,0 +1,37 @@
+name: Boss Arena Repair Properties Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/boss-arena-repair-properties-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Guardian arena repairs existing parts
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/BossArena.server.lua").read_text(encoding="utf-8")
+          required = [
+              "local function ensurePart(name, properties)",
+              "if existing and not existing:IsA(\"Part\") then",
+              "for property, value in pairs(properties) do",
+              "part[property] = value",
+              "ensurePart(\"Floor\"",
+              "ensurePart(\"Ring\"",
+              "ensurePart(\"Pylon\" .. index",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Guardian arena repair marker missing: " + ", ".join(missing))
+
+          create_start = text.index("local function createArena()")
+          create_end = text.index("local function setPhaseHazard", create_start)
+          block = text[create_start:create_end]
+          if 'if arena:FindFirstChild("Floor") then return end' in block:
+              raise SystemExit("Guardian arena bootstrap must not short-circuit on Floor alone")
+          print("Guardian arena startup repairs missing and malformed canonical parts, including their properties.")
