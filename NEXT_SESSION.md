@@ -18,6 +18,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Central QuestSystem / QuestService completion and rewards.
 - SafeProfileStore session lock with active per-player tokens, callback-local retry-state isolation, callback-time save snapshots and profile-revision save settling.
 - Canonical Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
+- Shop and Crafting explicitly roll back partial inventory insertion before reversing a failed transaction.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
@@ -37,6 +38,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Every aborted successful load path releases the exact SessionLock token it acquired before returning.
 - Bootstrap checks `player.Parent` before `Kick()` on load failure.
 - `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
+- `PlayerService.GetProfile()` also rejects ordinary gameplay access during `Saving` and global shutdown; final removal uses explicit internal save access.
 - Shutdown uses `PlayerService.HasLoadedProfile()` so `BeginShutdown()` cannot hide profiles from the final Save/Release sweep.
 - `PlayerService.Heal()` is the canonical player Health mutation owner; TIDE and Health Potion use it.
 - `UseItemRemote` rolls the potion back if no health can actually be applied.
@@ -47,7 +49,8 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Persisted Daily Bounty corruption with `Claimed=true` before the Goal is now repaired during reconcile rather than leaving the bounty permanently unclaimable.
 - Enemy and Guardian rewards preserve XP/Loot/quest progression when Money is capped; EconomyService alone caps Money.
 - Guardian reward ownership is restricted by loaded-player, Closing and shutdown checks while preserving autosave-settle behavior.
-- Shop purchase and inventory selling remain rollback-safe around Money and stack capacity.
+- Shop purchase and inventory selling remain rollback-safe around Money and stack capacity; partial purchase insertion now explicitly rolls back inserted items before the Money refund.
+- Crafting validates recipe/output bounds and now explicitly rolls back partial output insertion before restoring consumed inputs.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - Enemy Mastery XP is derived from canonical Enemy XP with no arbitrary minimum fallback.
 - `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences; `PositionCheckInterval` is currently 0.15 s.
