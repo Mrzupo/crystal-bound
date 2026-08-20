@@ -25,8 +25,10 @@ jobs:
               'state.Slow = nil',
               'state.Burn = nil',
               'active[humanoid] = nil',
+              'if humanoid.Parent and humanoid.Health > 0 and state.Slow == token then',
+              'if not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token then break end',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit("missing status-effect lifecycle markers: " + ", ".join(missing))
-          print("Status effect cancellation and cleanup contract validated.")
+          print("Status effect cancellation, death/destroy guards and cleanup contract validated.")
