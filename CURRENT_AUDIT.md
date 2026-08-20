@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1232 commits ahead, 29 commits behind** `main`.
+Current compare: **1234 commits ahead, 29 commits behind** `main`.
 `main` remains untouched at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
@@ -12,6 +12,7 @@ Current compare: **1232 commits ahead, 29 commits behind** `main`.
 - `PlayerService.Load()` uses a per-UserId load-generation token and shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
 - `SessionHeartbeat` serializes session refresh and periodic autosave through `PlayerService.RefreshSession()` / `PlayerService.Save()` under the shared operation lock.
+- Autosave failure tracking warns and kicks after repeated failures to avoid continuing a session without safe persistence.
 - `DamageService` is the sole direct `Humanoid:TakeDamage()` owner; damage types, attackers, targets, ranges and amounts are server-validated.
 - Environmental damage is strictly `Attacker == nil`; attacker-attributed PvE damage uses canonical attacker validation.
 - NPC attackers must be live, parented, `Enemy == true` models inside `Workspace.NPCs`; Player-vs-Player damage is rejected.
