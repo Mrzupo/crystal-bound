@@ -50,6 +50,17 @@ jobs:
           if load_block[:token_assignment].count('sessionTokens[player] = token') != 0:
               raise SystemExit('Speculative load paths must not overwrite the active profile token')
 
+          reconcile_guard = [
+              'local reconcileOk, profileOrError = xpcall(function()',
+              'return PlayerData.Reconcile(result)',
+              'if not reconcileOk or type(profileOrError) ~= "table" then',
+              'local released = SafeProfileStore.Release(player, token)',
+              'return nil, "Profile reconciliation failed"',
+          ]
+          for marker in reconcile_guard:
+              if marker not in load_block:
+                  raise SystemExit('Load must release the exact claimed token when profile reconciliation fails: ' + marker)
+
           callback_checks = {
               'Load': ('return store:UpdateAsync(key, function(current)', 'claimed = false', 'invalidStoredValue = false'),
               'Save': ('return store:UpdateAsync(key, function(current)', 'saved = false'),
@@ -81,4 +92,4 @@ jobs:
           if 'local profile = PlayerData.Reconcile(result)' not in text or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
               raise SystemExit('Load/Save must reconcile persisted profile data at the storage boundary')
 
-          print('Profile-store active-token isolation, speculative-load token separation, token-specific release and UpdateAsync callback retry-state isolation validated.')
+          print('Profile-store active-token isolation, speculative-load token separation, token-specific release, reconciliation-failure release and UpdateAsync callback retry-state isolation validated.')
