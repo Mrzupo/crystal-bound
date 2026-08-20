@@ -54,10 +54,15 @@ remote.OnServerEvent:Connect(function(player, itemId)
 		player:SetAttribute("ShopMessage", "Unable to consume Health Potion safely.")
 		return
 	end
-	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + healAmount)
+	local applied = PlayerService.Heal(player, healAmount)
+	if applied <= 0 then
+		InventoryService.AddItem(profile, itemId, 1)
+		player:SetAttribute("ShopMessage", "Health Potion could not heal safely.")
+		return
+	end
 	PlayerService.Sync(player)
 	remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile))
-	player:SetAttribute("ShopMessage", string.format("Health Potion restored %d HP.", healAmount))
+	player:SetAttribute("ShopMessage", string.format("Health Potion restored %d HP.", math.floor(applied + 0.5)))
 end)
 
 Players.PlayerRemoving:Connect(function(player)
