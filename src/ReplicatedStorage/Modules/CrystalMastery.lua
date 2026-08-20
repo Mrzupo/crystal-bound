@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 
 local CrystalMastery = {}
 
@@ -143,7 +144,7 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	local multiplier = math.max(1, mastery.Level)
 	for itemId, amount in pairs(base) do
 		local safeAmount = finiteNumber(amount)
-		if type(itemId) ~= "string" or not safeAmount or safeAmount <= 0 or safeAmount % 1 ~= 0 then return nil end
+		if type(itemId) ~= "string" or not InventoryConfig.GetItemConfig(itemId) or not safeAmount or safeAmount <= 0 or safeAmount % 1 ~= 0 then return nil end
 		local total = math.floor(safeAmount) * multiplier
 		if total > 1000000000 then return nil end
 		cost[itemId] = total
