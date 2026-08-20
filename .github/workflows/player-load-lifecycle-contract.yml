@@ -40,7 +40,11 @@ jobs:
               raise SystemExit("PlayerLoadCatchup must not become a second PlayerAdded load owner")
           if 'PlayerService.LoadingByUserId[player.UserId]' not in catchup:
               raise SystemExit("PlayerLoadCatchup must skip players already being loaded")
+          if 'local STARTUP_WINDOW = 30' not in catchup or 'local SCAN_INTERVAL = 0.25' not in catchup:
+              raise SystemExit("PlayerLoadCatchup must use a bounded startup scan interval")
+          if 'local deadline = os.clock() + STARTUP_WINDOW' not in catchup or 'until os.clock() >= deadline' not in catchup:
+              raise SystemExit("PlayerLoadCatchup must stop after its bounded startup window")
           if 'PlayerLoadCatchup' not in project or 'src/ServerScriptService/PlayerLoadCatchup.server.lua' not in project:
               raise SystemExit("PlayerLoadCatchup must be active in default.project.json")
 
-          print("Player load/leave and startup catch-up lifecycle contract validated.")
+          print("Player load/leave and bounded startup catch-up lifecycle contract validated.")
