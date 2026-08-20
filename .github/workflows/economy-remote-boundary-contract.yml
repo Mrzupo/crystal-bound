@@ -1,0 +1,39 @@
+name: Economy Remote Boundary Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/economy-remote-boundaries-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Shop, Crafting and UseItem remote boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src/ServerScriptService")
+          shop = (root / "ShopRemote.server.lua").read_text(encoding="utf-8")
+          craft = (root / "CraftingRemote.server.lua").read_text(encoding="utf-8")
+          use_item = (root / "UseItemRemote.server.lua").read_text(encoding="utf-8")
+
+          for name, text, action in (("Shop", shop, 'if action ~= "Buy" then return end'), ("Crafting", craft, 'if action ~= "Craft" then return end')):
+              if action not in text:
+                  raise SystemExit(f"{name} remote action gate missing")
+              if 'if now < (NEXT_REQUEST[player] or 0) then return end' not in text:
+                  raise SystemExit(f"{name} remote rate-limit gate missing")
+              if 'local function getCanonicalTrader()' not in text:
+                  raise SystemExit(f"{name} remote canonical trader resolver missing")
+              if 'trader.Parent ~= folder' not in text or 'trader:GetAttribute("Interactable") ~= true' not in text:
+                  raise SystemExit(f"{name} remote must require canonical direct-child Interactable trader")
+
+          use_rate = use_item.index('local now = os.clock()')
+          use_gate = use_item.index('if now < (NEXT_USE[player] or 0) then return end')
+          use_validation = use_item.index('local potion = ConsumableConfig.HealthPotion')
+          if not (use_rate <= use_gate < use_validation):
+              raise SystemExit("UseItem rate limit must be consumed before consumable payload/config validation")
+
+          print("Shop/Crafting canonical trader identity and UseItem pre-validation rate limiting validated.")
