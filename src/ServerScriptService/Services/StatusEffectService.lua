@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DodgeService = require(script.Parent.DodgeService)
 local DamageService = require(script.Parent.DamageService)
-local PlayerService = require(script.Parent.PlayerService)
 local DamageTypes = require(ReplicatedStorage.Modules.Combat.DamageTypes)
 local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 
@@ -65,7 +64,7 @@ function StatusEffectService.GetSlowMultiplier(humanoid)
 end
 
 function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
-	if PlayerService.ShuttingDown or not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
+	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
 	multiplier = math.clamp(finiteNumber(multiplier, 0.8), MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
 	duration = math.clamp(finiteNumber(duration, 1), 0.1, 10)
 	local state = stateFor(humanoid)
@@ -76,7 +75,7 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	humanoid:SetAttribute("CrystalBoundSlowMultiplier", multiplier)
 	humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, state.BaseWalkSpeed * multiplier)
 	task.delay(duration, function()
-		if humanoid.Parent and not PlayerService.ShuttingDown and humanoid.Health > 0 and state.Slow == token then
+		if humanoid.Parent and humanoid.Health > 0 and state.Slow == token then
 			humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
 			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
 			state.Slow = nil
@@ -88,7 +87,7 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 end
 
 function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval, attacker, range)
-	if PlayerService.ShuttingDown or not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
+	if not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
 	damagePerTick = math.clamp(finiteNumber(damagePerTick, 3), 1, 100)
 	local normalizedTicks = finiteNumber(ticks, 3)
 	if normalizedTicks == nil or normalizedTicks < 1 or normalizedTicks % 1 ~= 0 then return false end
@@ -100,7 +99,7 @@ function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval,
 	task.spawn(function()
 		for _ = 1, ticks do
 			task.wait(interval)
-			if PlayerService.ShuttingDown or not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token then break end
+			if not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token then break end
 			local character = humanoid.Parent
 			local player = character and Players:GetPlayerFromCharacter(character)
 			if player then
