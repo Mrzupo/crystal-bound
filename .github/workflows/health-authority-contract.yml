@@ -45,6 +45,16 @@ jobs:
           if 'humanoid.MaxHealth =' not in player_service or 'humanoid.Health =' not in player_service:
               raise SystemExit('PlayerService must remain a direct player Health/MaxHealth owner')
 
+          for relative, init_markers in {
+              'src/ServerScriptService/Services/NPCService.lua': ('humanoid.MaxHealth = health', 'humanoid.Health = health'),
+              'src/ServerScriptService/Services/BossService.lua': ('humanoid.MaxHealth = health', 'humanoid.Health = health'),
+          }.items():
+              text = Path(relative).read_text(encoding='utf-8')
+              if any(marker not in text for marker in init_markers):
+                  raise SystemExit(f'{relative} must initialize NPC health through the bounded health variable')
+              if len(health_write.findall(text)) != 2:
+                  raise SystemExit(f'{relative} must not gain additional runtime Health/MaxHealth writes outside spawn initialization')
+
           ability = Path('src/ServerScriptService/Services/CrystalAbilityService.lua').read_text(encoding='utf-8')
           if 'PlayerService.Heal(player, healAmount)' not in ability:
               raise SystemExit('Tide healing must route through PlayerService.Heal')
