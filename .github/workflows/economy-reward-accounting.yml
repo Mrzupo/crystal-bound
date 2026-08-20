@@ -30,10 +30,10 @@ jobs:
           if missing:
               raise SystemExit('missing economy reward accounting contract: ' + ', '.join(missing))
 
-          gate = text.index('if beforeMoney + requestedEarned > Config.MaxMoney then')
-          remove = text.index('if not InventoryService.RemoveItem(profile, itemId, amount) then')
-          if gate > remove:
-              raise SystemExit('wallet-cap gate must execute before inventory mutation')
+          remove_index = text.index('if not InventoryService.RemoveItem(profile, itemId, amount) then')
+          capacity_index = text.index('if beforeMoney + requestedEarned > Config.MaxMoney then')
+          if capacity_index > remove_index:
+              raise SystemExit('Wallet-capacity check must happen before inventory consumption')
 
           owners = []
           for path in root.rglob('*.lua'):
@@ -42,5 +42,5 @@ jobs:
                   owners.append(str(path))
           if owners != ['src/ServerScriptService/Services/EconomyService.lua']:
               raise SystemExit(f'profile.Money mutation must remain EconomyService-owned; found {owners}')
-          print('Economy reward accounting, wallet-cap atomicity, rollback and Money ownership contract validated.')
+          print('Economy reward accounting, full-wallet sale atomicity and Money ownership contract validated.')
           PY
