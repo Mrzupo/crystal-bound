@@ -44,6 +44,7 @@ end
 local function clearState(humanoid, state)
 	if not state then return end
 	state.Slow = nil
+	state.SlowMultiplier = nil
 	state.Burn = nil
 	humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
 	if humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
