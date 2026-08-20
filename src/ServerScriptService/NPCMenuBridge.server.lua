@@ -63,12 +63,14 @@ end
 
 local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
-	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
 	if not model or model.Parent ~= folder then return end
+	if model.Name ~= "CrystalKeeper" and model.Name ~= "MaterialTrader" then return end
+	if not isCanonicalNPC(model, model.Name) then return end
+	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	prompt.Triggered:Connect(function(player)
 		local character = player.Character
-		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and isCanonicalNPC(model, model.Name) and character and isNearModel(player, model) then
+		if character and isNearModel(player, model) then
 			openDialog(player, model.Name, character)
 		end
 	end)
