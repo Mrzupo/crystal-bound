@@ -94,12 +94,17 @@ jobs:
               if forbidden in service:
                   raise SystemExit(f'Guardian rewards must not bypass canonical mutation owners: {forbidden}')
 
+          if 'local PlayerService = require(script.Parent.PlayerService)' not in arena:
+              raise SystemExit('BossArena must depend on PlayerService for lifecycle shutdown authority')
           if 'BossConfig.CrystalGuardian.ArenaHazard' not in arena:
               raise SystemExit('BossArena must consume Guardian ArenaHazard config')
           if 'local center = bossConfig.ArenaCenter' not in arena:
               raise SystemExit('BossArena must use BossConfig.ArenaCenter')
           if 'math.clamp(finiteNumber(config.Interval, 0.75), 0.1, 10)' not in arena:
               raise SystemExit('BossArena must bound the hazard interval to 0.1..10 seconds at runtime')
+          for marker in ['if not phaseActive or PlayerService.ShuttingDown then return end', 'while arena.Parent and not PlayerService.ShuttingDown do', 'setPhaseHazard(false)']:
+              if marker not in arena:
+                  raise SystemExit(f'BossArena shutdown lifecycle marker missing: {marker}')
 
-          print('Guardian phase-2, reward, character-bound telegraph lifecycle and semantic bounds validated.')
+          print('Guardian phase-2, reward, character-bound telegraph lifecycle, semantic bounds and shutdown-safe arena hazard validated.')
           PY
