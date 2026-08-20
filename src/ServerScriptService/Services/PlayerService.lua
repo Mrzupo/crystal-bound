@@ -351,6 +351,10 @@ end
 function PlayerService.RefreshSession(player)
 	if not PlayerService.Profiles[player] or PlayerService.Closing[player] then return false end
 	if not acquireOperation(player) then return false end
+	if not PlayerService.Profiles[player] or PlayerService.Closing[player] then
+		releaseOperation(player)
+		return false
+	end
 	local success, result = xpcall(function()
 		return SafeProfileStore.Refresh(player)
 	end, debug.traceback)
@@ -365,6 +369,10 @@ end
 function PlayerService.Save(player)
 	if not PlayerService.Profiles[player] or PlayerService.Closing[player] then return false end
 	if not acquireOperation(player) then return false end
+	if not PlayerService.Profiles[player] or PlayerService.Closing[player] then
+		releaseOperation(player)
+		return false
+	end
 	local success, result = xpcall(function()
 		local profile = PlayerService.Profiles[player]
 		return saveConsistently(player, profile)
