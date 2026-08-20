@@ -2,7 +2,7 @@ name: Combat Reward Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/combat-reward-autosave-sync-v2"]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate canonical enemy reward source, idempotency and attacker identity
+      - name: Validate canonical enemy reward source, autosave-safe sync, idempotency and attacker identity
         shell: python
         run: |
           from pathlib import Path
@@ -45,6 +45,20 @@ jobs:
               if marker in combat:
                   raise SystemExit(f'Obsolete or implicit reward path still present: {marker}')
 
+          fire_start = combat.index('local function fireProgress')
+          fire_end = combat.index('local function completeQuest', fire_start)
+          fire_block = combat[fire_start:fire_end]
+          for marker in (
+              'PlayerService.ShuttingDown',
+              'PlayerService.Closing[player]',
+              'local profile = PlayerService.Profiles[player]',
+              'PlayerService.Sync(player, true)',
+          ):
+              if marker not in fire_block:
+                  raise SystemExit(f'Combat reward autosave-safe sync marker missing: {marker}')
+          if 'PlayerService.GetProfile(player)' in fire_block:
+              raise SystemExit('Combat reward sync must not rely on GetProfile while autosave is active')
+
           for marker in (
               'targetModel:GetAttribute("DeathRewarded") == true',
               'targetModel:SetAttribute("DeathRewarded", true)',
@@ -71,4 +85,4 @@ jobs:
           ):
               if marker not in damage:
                   raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
-          print('Canonical combat reward source, wallet-cap-safe payout, idempotency, attacker-session, mastery-XP linkage, lethal-hit ordering and attribution cleanup validated.')
+          print('Canonical combat reward source, autosave-safe reward synchronization, wallet-cap-safe payout, idempotency, attacker-session, mastery-XP linkage, lethal-hit ordering and attribution cleanup validated.')
