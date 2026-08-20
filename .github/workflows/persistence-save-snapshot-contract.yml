@@ -9,11 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate callback-time profile snapshot and retry isolation
+      - name: Validate callback-time profile snapshot, revision settle and retry isolation
         run: |
           python - <<'PY'
           from pathlib import Path
+
           source = Path('src/ReplicatedStorage/Modules/SafeProfileStore.lua').read_text(encoding='utf-8')
+          player_service = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
+
           save_block = source.split('function SafeProfileStore.Save', 1)[1].split('function SafeProfileStore.Refresh', 1)[0]
           if 'local payload = PlayerData.Reconcile(clone(profile))' not in save_block:
               raise SystemExit('Save must snapshot the current profile inside UpdateAsync callback')
@@ -23,6 +26,17 @@ jobs:
           if 'saved = false' not in save_block.split('return store:UpdateAsync', 1)[0]:
               raise SystemExit('Save retry state must reset saved before every UpdateAsync attempt')
 
+          for marker in (
+              'ProfileRevisions = setmetatable({}, { __mode = "k" })',
+              'local SAVE_SETTLE_ATTEMPTS = 3',
+              'local function saveConsistently(player, profile)',
+              'PlayerService.Sync(player)',
+              'local snapshotRevision = PlayerService.ProfileRevisions[player] or 0',
+              'if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then',
+          ):
+              if marker not in player_service:
+                  raise SystemExit('PlayerService save-settle revision marker missing: ' + marker)
+
           refresh_block = source.split('function SafeProfileStore.Refresh', 1)[1].split('function SafeProfileStore.Release', 1)[0]
           if 'refreshed = false' not in refresh_block.split('return store:UpdateAsync', 1)[0]:
               raise SystemExit('Refresh retry state must reset refreshed before every UpdateAsync attempt')
@@ -31,5 +45,5 @@ jobs:
           if 'released = false' not in release_block.split('return store:UpdateAsync', 1)[0]:
               raise SystemExit('Release retry state must reset released before every UpdateAsync attempt')
 
-          print('Persistence snapshot and retry-state isolation validated.')
+          print('Persistence callback snapshot, profile-revision save settling and retry-state isolation validated.')
           PY
