@@ -25,12 +25,21 @@ end
 
 local NPC_INTERACTION_RANGE = math.clamp(finiteNumber(InteractionConfig.NPCInteractionRange, 14), 4, 50)
 local nextRequest = setmetatable({}, { __mode = "k" })
+local folder = workspace:WaitForChild("NPCs")
+
+local function getCanonicalNPC(npcId)
+	if type(npcId) ~= "string" then return nil end
+	local npc = folder:FindFirstChild(npcId)
+	if not npc or not npc:IsA("Model") or npc.Parent ~= folder or npc.Name ~= npcId or npc:GetAttribute("Interactable") ~= true then
+		return nil
+	end
+	return npc
+end
 
 local function isNearNPC(player, npcId)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local folder = workspace:FindFirstChild("NPCs")
-	local npc = folder and folder:FindFirstChild(npcId)
+	local npc = getCanonicalNPC(npcId)
 	local npcRoot = npc and (npc.PrimaryPart or npc:FindFirstChild("Torso"))
 	return root and npcRoot and (root.Position - npcRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
@@ -39,7 +48,7 @@ remote.OnServerInvoke = function(player, npcId)
 	local now = os.clock()
 	if now < (nextRequest[player] or 0) then return nil end
 	nextRequest[player] = now + REQUEST_INTERVAL
-	if type(npcId) ~= "string" then return nil end
+	if not getCanonicalNPC(npcId) then return nil end
 	local config = DialogConfig.Get(npcId)
 	if not config or not isNearNPC(player, npcId) then return nil end
 	return {
