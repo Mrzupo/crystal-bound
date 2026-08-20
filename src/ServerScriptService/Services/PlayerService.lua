@@ -147,6 +147,10 @@ function PlayerService.GetProfile(player)
 	return PlayerService.Profiles[player]
 end
 
+function PlayerService.HasLoadedProfile(player)
+	return PlayerService.Profiles[player] ~= nil
+end
+
 function PlayerService.Heal(player, amount)
 	if not player or not player:IsA("Player") or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] then return 0 end
 	local character = player.Character
@@ -316,7 +320,7 @@ function PlayerService.Sync(player, internal)
 	player:SetAttribute("DailyBountyClaimed", bounty.Claimed)
 
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
-	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do player:SetAttribute("Owns_" .. id, table.find(owned, id) ~= nil end
+	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do player:SetAttribute("Owns_" .. id, table.find(owned, id) ~= nil) end
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -345,12 +349,11 @@ end
 
 local function saveConsistently(player, profile)
 	if not profile then return false end
-	local saved = false
 	for attempt = 1, SAVE_SETTLE_ATTEMPTS do
 		if PlayerService.Profiles[player] ~= profile then return false end
 		PlayerService.Sync(player, true)
 		local snapshotRevision = PlayerService.ProfileRevisions[player] or 0
-		saved = SafeProfileStore.Save(player, profile) == true
+		local saved = SafeProfileStore.Save(player, profile) == true
 		if not saved then return false end
 		if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then return true end
 	end
@@ -431,7 +434,6 @@ function PlayerService.Remove(player)
 		return { Saved = true }
 	end, debug.traceback)
 	releaseOperation(player)
-
 	if not success then
 		warn(("Crystal Bound: PlayerService.Remove failed for %s: %s"):format(player.Name, tostring(result)))
 		PlayerService.RemovalResults[player] = false
@@ -439,12 +441,12 @@ function PlayerService.Remove(player)
 		return false
 	end
 	if not result or not result.Saved then
+		PlayerService.RemovalResults[player] = false
 		if result and result.ReleaseFailed then
 			warn(("Crystal Bound: retaining session lock for %s because final session-lock release failed."):format(player.Name))
 		else
 			warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
 		end
-		PlayerService.RemovalResults[player] = false
 		cleanupRemovedPlayer(player)
 		return false
 	end
