@@ -93,8 +93,10 @@ jobs:
               problems.append("DamageService must keep attacker-less damage restricted to Environmental")
           if 'local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)' not in presentation:
               problems.append("CombatPresentation must keep the Character-bound Humanoid acquisition")
-          if 'if player.Character ~= character or not character.Parent then return end' not in presentation:
-              problems.append("CombatPresentation must reject stale CharacterAdded callbacks after Humanoid acquisition")
+          if 'healthGeneration += 1' not in presentation or 'local generation = healthGeneration' not in presentation:
+              problems.append("CombatPresentation must use a Character health-listener generation token")
+          if 'generation ~= healthGeneration or player.Character ~= character or not character.Parent' not in presentation:
+              problems.append("CombatPresentation must reject stale health callbacks after respawn")
 
           if problems:
               print("Combat presentation contract problems:")
