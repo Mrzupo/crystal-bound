@@ -59,7 +59,7 @@ local function fireCombatFeedback(targetModel, attacker, action, crystalId, crit
 end
 
 local function fireProgress(player, levelsGained, mastery)
-	if not player or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] then return end
+	if not player or not player.Parent or PlayerService.Closing[player] then return end
 	local profile = PlayerService.Profiles[player]
 	if not profile then return end
 	PlayerService.Sync(player, true)
