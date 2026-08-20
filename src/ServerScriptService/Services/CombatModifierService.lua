@@ -25,7 +25,7 @@ function CombatModifierService.RollCritical(profile, crystalId)
 	local maxChance = math.clamp(finiteNumber(config.MaxChance, 0.22), baseChance, 1)
 	local multiplier = math.clamp(finiteNumber(config.Multiplier, 1.65), 1, 10)
 	local chance = math.clamp(baseChance + (masteryLevel - 1) * chancePerLevel, 0, maxChance)
-	if rng:NextNumber() <= chance then
+	if rng:NextNumber() < chance then
 		return true, multiplier
 	end
 	return false, 1
