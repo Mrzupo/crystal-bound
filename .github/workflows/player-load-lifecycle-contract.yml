@@ -33,12 +33,16 @@ jobs:
               'if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then',
               'clearCurrentLoad()\n\tif PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then',
               'local released = releaseLoadedToken()',
-              'setupLeaderstats(player, profile)',
+              'player:SetAttribute("ProfileLoaded", false)',
+              'player:SetAttribute("ProfileLoaded", true)',
+              'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent then',
               'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent and player.Character then',
+              'if player.Parent then player:SetAttribute("ProfileLoaded", false) end',
+              'if not PlayerService.ShuttingDown and player:GetAttribute("ProfileLoaded") == true then',
           ]
           missing = [marker for marker in required if marker not in player_service]
           if missing:
-              raise SystemExit("missing PlayerService load lifecycle guard: " + ", ".join(missing))
+              raise SystemExit("missing PlayerService load/profile lifecycle guard: " + ", ".join(missing))
 
           profiles_assignment = player_service.index('PlayerService.Profiles[player] = profile')
           first_guard = player_service.index('if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then')
@@ -84,4 +88,4 @@ jobs:
           if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
               raise SystemExit("Redundant PlayerLoadCatchup file must remain removed")
 
-          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication, Closing/shutdown protection, exception-safe in-flight cleanup, post-load race protection and single-owner load reconciliation validated.")
+          print("Canonical PlayerAdded ownership, startup drain, Closing/shutdown protection, loaded-state invalidation, exception-safe in-flight cleanup, post-load race protection and single-owner load reconciliation validated.")
