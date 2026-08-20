@@ -101,7 +101,9 @@ function DodgeService.IsInvulnerable(player)
 end
 
 function DodgeService.ApplyDamage(player, humanoid, amount, attacker, damageType, range)
-	if not player or not humanoid or humanoid.Health <= 0 then return false end
+	if not player or not player:IsA("Player") or not humanoid or humanoid.Health <= 0 then return false end
+	local character = player.Character
+	if not character or humanoid.Parent ~= character then return false end
 	if DodgeService.IsInvulnerable(player) then
 		player:SetAttribute("DodgeMessage", "Dodged!")
 		return false
