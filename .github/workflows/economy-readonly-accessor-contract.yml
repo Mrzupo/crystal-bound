@@ -1,0 +1,34 @@
+name: Economy Readonly Accessor Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/readonly-progression-economy-accessors-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure economy read APIs do not mutate wallet state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/EconomyService.lua").read_text(encoding="utf-8")
+          get_start = text.index("function EconomyService.GetMoney")
+          afford_start = text.index("function EconomyService.CanAfford")
+          sell_start = text.index("function EconomyService.GetSellPrice")
+          get_block = text[get_start:afford_start]
+          afford_block = text[afford_start:sell_start]
+
+          for name, block in (("GetMoney", get_block), ("CanAfford", afford_block)):
+              if "profile.Money =" in block:
+                  raise SystemExit(f"{name} must not mutate persistent wallet state")
+
+          if "function EconomyService.AddMoney" not in text or "profile.Money = nextMoney" not in text:
+              raise SystemExit("AddMoney must remain the canonical wallet mutation owner")
+          if "function EconomyService.RemoveMoney" not in text:
+              raise SystemExit("RemoveMoney disappeared")
+
+          print("Economy wallet read accessors are side-effect free; mutation remains centralized in AddMoney/RemoveMoney.")
