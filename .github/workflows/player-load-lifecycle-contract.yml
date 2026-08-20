@@ -19,6 +19,7 @@ jobs:
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           project = Path("default.project.json").read_text(encoding="utf-8")
           required = [
+              'if PlayerService.Closing[player] then return nil, "Player is closing" end',
               'if not player.Parent then',
               'local released = SafeProfileStore.Release(player)',
               'player left while profile loading',
@@ -28,23 +29,25 @@ jobs:
               'local loadSuccess, profile, reason = xpcall(function()',
               'return SafeProfileStore.Load(player)',
               'if not loadSuccess then',
-              'clearCurrentLoad()\n\tif PlayerService.ShuttingDown or not player.Parent then',
+              'if PlayerService.ShuttingDown or PlayerService.Closing[player] then',
+              'if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then',
+              'clearCurrentLoad()\n\tif PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then',
               'local released = releaseLoadedToken()',
               'setupLeaderstats(player, profile)',
-              'if not PlayerService.ShuttingDown and player.Parent and player.Character then',
+              'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent and player.Character then',
           ]
           missing = [marker for marker in required if marker not in player_service]
           if missing:
               raise SystemExit("missing PlayerService load lifecycle guard: " + ", ".join(missing))
 
           profiles_assignment = player_service.index('PlayerService.Profiles[player] = profile')
-          first_guard = player_service.index('if PlayerService.ShuttingDown or not player.Parent then')
+          first_guard = player_service.index('if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then')
           if first_guard > profiles_assignment:
-              raise SystemExit("PlayerService must check player.Parent before installing the loaded profile")
-          second_guard = player_service.index('if PlayerService.ShuttingDown or not player.Parent then', profiles_assignment)
+              raise SystemExit("PlayerService must check shutdown/closing/parent state before installing the loaded profile")
+          second_guard = player_service.index('if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then', profiles_assignment)
           if second_guard < profiles_assignment:
-              raise SystemExit("PlayerService must re-check player.Parent after installing the profile")
-          post_clear_guard = player_service.index('clearCurrentLoad()\n\tif PlayerService.ShuttingDown or not player.Parent then')
+              raise SystemExit("PlayerService must re-check shutdown/closing/parent state after installing the profile")
+          post_clear_guard = player_service.index('clearCurrentLoad()\n\tif PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then')
           if post_clear_guard < profiles_assignment:
               raise SystemExit('PlayerService must guard post-load initialization after clearing the in-flight marker')
 
@@ -81,4 +84,4 @@ jobs:
           if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
               raise SystemExit("Redundant PlayerLoadCatchup file must remain removed")
 
-          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication, exception-safe in-flight cleanup, post-load shutdown race protection and single-owner load reconciliation validated.")
+          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication, Closing/shutdown protection, exception-safe in-flight cleanup, post-load race protection and single-owner load reconciliation validated.")
