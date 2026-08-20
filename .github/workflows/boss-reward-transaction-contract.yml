@@ -27,6 +27,8 @@ jobs:
               'xpReward <= XPConfig.MaxExperience',
               'moneyReward <= EconomyConfig.MaxMoney',
               'InventoryConfig.GetItemConfig(dropId) ~= nil',
+              'local currentMoney = math.clamp(finiteNumber(profile.Money, 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)',
+              'if currentMoney + moneyReward > EconomyConfig.MaxMoney then',
               'model:SetAttribute("Rewarded", true)',
               'XPService.AddXP(profile, xpReward)',
               'EconomyService.AddMoney(profile, moneyReward)',
@@ -37,6 +39,8 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('Guardian reward lifecycle markers missing: ' + ', '.join(missing))
+          if text.index('if currentMoney + moneyReward > EconomyConfig.MaxMoney then') > text.index('model:SetAttribute("Rewarded", true)'):
+              raise SystemExit('Guardian reward capacity must be checked before Rewarded is set')
           forbidden = ['profile.Money =', 'profile.Inventory[dropId] =']
           for marker in forbidden:
               if marker in text:
@@ -59,4 +63,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, lifecycle cleanup, cap validation, canonical mutation ownership and drop registration validated.')
+          print('Guardian reward idempotency, payout-capacity gate, lifecycle cleanup, cap validation, canonical mutation ownership and drop registration validated.')
