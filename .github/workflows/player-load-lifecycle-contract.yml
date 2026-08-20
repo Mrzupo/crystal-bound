@@ -35,8 +35,14 @@ jobs:
           if second_guard < profiles_assignment:
               raise SystemExit("PlayerService must re-check player.Parent after installing the profile")
 
-          if 'local function loadPlayer(player)' not in bootstrap or 'Players.PlayerAdded:Connect(loadPlayer)' not in bootstrap:
-              raise SystemExit("Bootstrap must keep the canonical PlayerAdded load owner")
+          if 'local loadingPlayers = setmetatable({}, { __mode = "k" })' not in bootstrap:
+              raise SystemExit("Bootstrap must maintain per-Player startup-load deduplication state")
+          if 'if loadingPlayers[player] then return false end' not in bootstrap:
+              raise SystemExit("Bootstrap must reject duplicate startup loads for the same Player instance")
+          if 'loadingPlayers[player] = true' not in bootstrap:
+              raise SystemExit("Bootstrap must mark a Player as loading before calling PlayerService.Load")
+          if 'local function loadPlayer(player)' not in bootstrap or 'Players.PlayerAdded:Connect(function(player)' not in bootstrap:
+              raise SystemExit("Bootstrap must keep one canonical PlayerAdded load owner")
           if 'for _, player in ipairs(Players:GetPlayers()) do' not in bootstrap or 'task.spawn(loadPlayer, player)' not in bootstrap:
               raise SystemExit("Bootstrap must load players already present when the world finishes initializing")
           if 'if player.Parent then player:Kick(' not in bootstrap:
@@ -46,4 +52,4 @@ jobs:
           if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
               raise SystemExit("Redundant PlayerLoadCatchup file must remain removed")
 
-          print("Canonical PlayerAdded ownership, existing-player startup drain and load/leave race guards validated.")
+          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication and load/leave race guards validated.")
