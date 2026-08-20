@@ -73,11 +73,13 @@ jobs:
               'if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0',
               'if not player.Parent or player.Character ~= targetCharacter or not targetCharacter.Parent then return end',
               'local currentCharacter = player.Character',
+              'local attackerRange = math.clamp((currentRoot.Position - guardianRoot.Position).Magnitude, 0.1, 1000)',
+              'Range = attackerRange',
               'while Workspace.Parent and not PlayerService.ShuttingDown do',
           ]
           for marker in lifecycle:
               if marker not in telegraph:
-                  raise SystemExit(f'Guardian telegraph lifecycle binding missing: {marker}')
+                  raise SystemExit(f'Guardian telegraph lifecycle/range binding missing: {marker}')
 
           reward = [
               'if model:GetAttribute("Rewarded") then return end',
@@ -109,5 +111,5 @@ jobs:
               if marker not in arena:
                   raise SystemExit(f'BossArena shutdown lifecycle marker missing: {marker}')
 
-          print('Guardian phase-2, reward, character-bound telegraph lifecycle, semantic bounds, shutdown-safe telegraph and arena hazard validated.')
+          print('Guardian phase-2, reward, character-bound telegraph lifecycle, semantic bounds, shutdown-safe telegraph range and arena hazard validated.')
           PY
