@@ -17,6 +17,7 @@ local MAX_FEEDBACK_EVENTS = 30
 local feedbackWindowStarted = 0
 local feedbackEvents = 0
 local healthConnection
+local healthGeneration = 0
 
 local function getRoot(model)
 	return model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
@@ -194,19 +195,19 @@ local function createAbilityAccent(model, crystalId)
 			slash.CanCollide = false
 			slash.CanQuery = false
 			slash.CanTouch = false
-		slash.Material = Enum.Material.Neon
-		slash.Color = color
-		slash.Transparency = 0.2
-		slash.Size = Vector3.new(0.3, 5, 0.3)
-		slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
-		slash.Parent = root
-		TweenService:Create(slash, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = Vector3.new(0.3, 9, 0.3),
-			Transparency = 1,
-		}):Play()
-		task.delay(0.26, function()
-			if slash.Parent then slash:Destroy() end
-		end)
+			slash.Material = Enum.Material.Neon
+			slash.Color = color
+			slash.Transparency = 0.2
+			slash.Size = Vector3.new(0.3, 5, 0.3)
+			slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
+			slash.Parent = root
+			TweenService:Create(slash, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = Vector3.new(0.3, 9, 0.3),
+				Transparency = 1,
+			}):Play()
+			task.delay(0.26, function()
+				if slash.Parent then slash:Destroy() end
+			end)
 		end
 	end
 end
@@ -221,7 +222,7 @@ local function shakePlayer()
 		CameraOffset = target,
 	}):Play()
 	task.delay(0.07, function()
-		if humanoid.Parent then
+		if humanoid.Parent and player.Character == character then
 			TweenService:Create(humanoid, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 				CameraOffset = original,
 			}):Play()
@@ -230,15 +231,17 @@ local function shakePlayer()
 end
 
 local function watchPlayerHealth(character)
+	healthGeneration += 1
+	local generation = healthGeneration
 	if healthConnection then
 		healthConnection:Disconnect()
 		healthConnection = nil
 	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
-	if not humanoid then return end
-	if player.Character ~= character or not character.Parent then return end
+	if not humanoid or generation ~= healthGeneration or player.Character ~= character or not character.Parent then return end
 	local lastHealth = humanoid.Health
 	healthConnection = humanoid.HealthChanged:Connect(function(newHealth)
+		if generation ~= healthGeneration or player.Character ~= character or not character.Parent then return end
 		if newHealth < lastHealth then shakePlayer() end
 		lastHealth = newHealth
 	end)
