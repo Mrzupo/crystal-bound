@@ -157,6 +157,7 @@ local function cleanupRemovedPlayer(player)
 	PlayerService.Closing[player] = nil
 	PlayerService.Saving[player] = nil
 	PlayerService.Profiles[player] = nil
+	if player.Parent then player:SetAttribute("ProfileLoaded", false) end
 end
 
 function PlayerService.GetProfile(player)
@@ -205,6 +206,7 @@ function PlayerService.Load(player)
 	end
 	local loadToken = {}
 	PlayerService.LoadingByUserId[userId] = loadToken
+	player:SetAttribute("ProfileLoaded", false)
 	local function isCurrentLoad()
 		return PlayerService.LoadingByUserId[userId] == loadToken
 	end
@@ -288,6 +290,9 @@ function PlayerService.Load(player)
 		if humanoid then ensureAnimator(player.Character) end
 		bindHumanoid(player, humanoid)
 	end
+	if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent then
+		player:SetAttribute("ProfileLoaded", true)
+	end
 	return profile
 end
 
@@ -346,7 +351,7 @@ function PlayerService.Sync(player, internal)
 			local baseWalkSpeed = BASE_WALK_SPEED + walkSpeedBonus
 			local slowMultiplier = StatusEffectService.GetSlowMultiplier(humanoid)
 			if slowMultiplier then
-				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
+				humanoid.WalkSpeed = math.max(MIN_SLOW_MULTIPLIER, baseWalkSpeed * math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
 			else
 				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed)
 			end
