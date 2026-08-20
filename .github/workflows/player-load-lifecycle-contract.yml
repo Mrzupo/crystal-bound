@@ -22,18 +22,33 @@ jobs:
               'local released = SafeProfileStore.Release(player)',
               'player left while profile loading',
               'player left during profile initialization',
+              'local function clearCurrentLoad()',
+              'if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end',
+              'local loadSuccess, profile, reason = xpcall(function()',
+              'return SafeProfileStore.Load(player)',
+              'if not loadSuccess then',
+              'local reconcileSuccess, reconciledProfile = xpcall(function()',
+              'return PlayerData.Reconcile(profile)',
+              'if not reconcileSuccess or type(reconciledProfile) ~= "table" then',
+              'second profile reconciliation failed',
           ]
           missing = [marker for marker in required if marker not in player_service]
           if missing:
               raise SystemExit("missing PlayerService load lifecycle guard: " + ", ".join(missing))
 
           profiles_assignment = player_service.index('PlayerService.Profiles[player] = profile')
-          first_guard = player_service.index('if not player.Parent then')
+          first_guard = player_service.index('if PlayerService.ShuttingDown or not player.Parent then')
           if first_guard > profiles_assignment:
               raise SystemExit("PlayerService must check player.Parent before installing the loaded profile")
-          second_guard = player_service.index('if not player.Parent then', profiles_assignment)
+          second_guard = player_service.index('if PlayerService.ShuttingDown or not player.Parent then', profiles_assignment)
           if second_guard < profiles_assignment:
               raise SystemExit("PlayerService must re-check player.Parent after installing the profile")
+
+          profiles_load_block = player_service[player_service.index('function PlayerService.Load'):player_service.index('function PlayerService.Sync')]
+          if profiles_load_block.count('LoadingByUserId[userId] = nil') < 3:
+              raise SystemExit('Load path must clear the current UserId in-flight marker on normal and exceptional exits')
+          if 'local loadSuccess, profile, reason = xpcall(function()' not in profiles_load_block:
+              raise SystemExit('SafeProfileStore.Load must be wrapped so unexpected throws cannot strand LoadingByUserId')
 
           if 'local loadingPlayers = setmetatable({}, { __mode = "k" })' not in bootstrap:
               raise SystemExit("Bootstrap must maintain per-Player startup-load deduplication state")
@@ -52,4 +67,4 @@ jobs:
           if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
               raise SystemExit("Redundant PlayerLoadCatchup file must remain removed")
 
-          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication and load/leave race guards validated.")
+          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication and load/leave/exception race guards validated.")
