@@ -17,7 +17,9 @@ local nextCast = 0
 local existingGuardian = NPCs:FindFirstChild("CrystalGuardian")
 if not (existingGuardian and existingGuardian:IsA("Model") and existingGuardian:GetAttribute("BossId") == "CrystalGuardian") then
 	if existingGuardian then existingGuardian:Destroy() end
-	BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
+	if not PlayerService.ShuttingDown then
+		BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
+	end
 end
 
 local function finiteNumber(value, fallback)
@@ -45,6 +47,7 @@ local function getTelegraphCooldown()
 end
 
 local function createTelegraph(position)
+	if PlayerService.ShuttingDown then return end
 	local radius = getTelegraphRadius()
 	local windup = getTelegraphWindup()
 	local part = Instance.new("Part")
@@ -69,6 +72,7 @@ local function createTelegraph(position)
 end
 
 local function getTarget()
+	if PlayerService.ShuttingDown then return nil, nil end
 	local guardian = NPCs:FindFirstChild("CrystalGuardian")
 	local humanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
 	local root = guardian and (guardian:FindFirstChild("HumanoidRootPart") or guardian.PrimaryPart)
