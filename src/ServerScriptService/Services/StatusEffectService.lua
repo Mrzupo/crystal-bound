@@ -79,9 +79,11 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	humanoid:SetAttribute("CrystalBoundSlowMultiplier", multiplier)
 	humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, state.BaseWalkSpeed * multiplier)
 	task.delay(duration, function()
-		if humanoid.Parent and not isShuttingDown() and humanoid.Health > 0 and state.Slow == token then
+		if humanoid.Parent and state.Slow == token then
 			humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
-			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
+			if not isShuttingDown() and humanoid.Health > 0 and state.BaseWalkSpeed then
+				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
+			end
 			state.Slow = nil
 			state.SlowMultiplier = nil
 			state.BaseWalkSpeed = nil
