@@ -14,6 +14,7 @@ local PlayerService = {
 	HumanoidConnections = setmetatable({}, { __mode = "k" }),
 	Operations = setmetatable({}, { __mode = "k" }),
 	ProfileRevisions = setmetatable({}, { __mode = "k" }),
+	Closing = setmetatable({}, { __mode = "k" }),
 	LoadingByUserId = {},
 	ShuttingDown = false,
 }
@@ -133,15 +134,17 @@ local function cleanupRemovedPlayer(player)
 	cleanupHumanoidConnections(player)
 	PlayerService.Operations[player] = nil
 	PlayerService.ProfileRevisions[player] = nil
+	PlayerService.Closing[player] = nil
 	PlayerService.Profiles[player] = nil
 end
 
 function PlayerService.GetProfile(player)
+	if PlayerService.Closing[player] then return nil end
 	return PlayerService.Profiles[player]
 end
 
 function PlayerService.Heal(player, amount)
-	if not player or not player:IsA("Player") or not player.Parent then return 0 end
+	if not player or not player:IsA("Player") or not player.Parent or PlayerService.Closing[player] then return 0 end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return 0 end
@@ -168,6 +171,7 @@ function PlayerService.GetPendingLoadCount()
 end
 
 function PlayerService.Load(player)
+	PlayerService.Closing[player] = nil
 	if PlayerService.ShuttingDown then return nil, "Server is shutting down" end
 	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
 	local userId = player.UserId
@@ -235,9 +239,9 @@ function PlayerService.Load(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
 		task.defer(function()
-			if not PlayerService.Profiles[player] or player.Character ~= character or not character.Parent then return end
+			if not PlayerService.Profiles[player] or PlayerService.Closing[player] or player.Character ~= character or not character.Parent then return end
 			local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
-			if player.Character ~= character or not character.Parent then return end
+			if PlayerService.Closing[player] or player.Character ~= character or not character.Parent then return end
 			if humanoid then ensureAnimator(character) end
 			PlayerService.Sync(player)
 			bindHumanoid(player, humanoid)
@@ -255,7 +259,7 @@ end
 
 function PlayerService.Sync(player)
 	local profile = PlayerService.Profiles[player]
-	if not profile then return end
+	if not profile or PlayerService.Closing[player] then return end
 	PlayerService.ProfileRevisions[player] = (PlayerService.ProfileRevisions[player] or 0) + 1
 	local newlyUnlocked = AchievementSystem.Check(profile)
 	for _, definition in ipairs(newlyUnlocked) do
@@ -335,16 +339,14 @@ local function saveConsistently(player, profile)
 		local snapshotRevision = PlayerService.ProfileRevisions[player] or 0
 		saved = SafeProfileStore.Save(player, profile) == true
 		if not saved then return false end
-		if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then
-			return true
-		end
+		if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then return true end
 	end
 	warn(("Crystal Bound: profile changed during all %d save-settle passes for %s; last consistent snapshot retained."):format(SAVE_SETTLE_ATTEMPTS, player.Name))
 	return saved
 end
 
 function PlayerService.RefreshSession(player)
-	if not PlayerService.Profiles[player] then return false end
+	if not PlayerService.Profiles[player] or PlayerService.Closing[player] then return false end
 	if not acquireOperation(player) then return false end
 	local success, result = xpcall(function()
 		return SafeProfileStore.Refresh(player)
@@ -358,7 +360,7 @@ function PlayerService.RefreshSession(player)
 end
 
 function PlayerService.Save(player)
-	if not PlayerService.Profiles[player] then return false end
+	if not PlayerService.Profiles[player] or PlayerService.Closing[player] then return false end
 	if not acquireOperation(player) then return false end
 	local success, result = xpcall(function()
 		local profile = PlayerService.Profiles[player]
@@ -375,19 +377,20 @@ end
 
 function PlayerService.Remove(player)
 	if not PlayerService.Profiles[player] then return true end
-	if not acquireOperation(player) then return false end
+	if PlayerService.Closing[player] then return false end
+	PlayerService.Closing[player] = true
+	if not acquireOperation(player) then
+		PlayerService.Closing[player] = nil
+		return false
+	end
 	local success, result = xpcall(function()
 		local profile = PlayerService.Profiles[player]
 		if not profile then return { Saved = true } end
 		local saved = saveConsistently(player, profile)
 		player:SetAttribute("LastSaveOk", saved)
-		if not saved then
-			return { Saved = false }
-		end
+		if not saved then return { Saved = false } end
 		local released = SafeProfileStore.Release(player)
-		if not released then
-			return { Saved = false, ReleaseFailed = true }
-		end
+		if not released then return { Saved = false, ReleaseFailed = true } end
 		cleanupRemovedPlayer(player)
 		return { Saved = true }
 	end, debug.traceback)
