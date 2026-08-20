@@ -19,17 +19,18 @@ Base: `main`
 - `DamageService` is the only direct `Humanoid:TakeDamage()` owner.
 - Damage requests require finite positive bounded amounts, known DamageTypes, valid attacker/target context and server-side range checks.
 - Environmental damage requires `Attacker == nil`; PvP is rejected in the current PvE foundation.
-- NPC attacker/target identity is exact: relevant NPC Models must be direct children of `Workspace.NPCs`; stale descendant-only assumptions were removed from the PvE attacker-context contract.
-- Last-attacker attribution is instance/session-bound and restored when no damage is actually applied.
+- NPC attacker/target identity is exact: relevant NPC Models must be direct children of `Workspace.NPCs`; normal enemies use `Enemy=true` and Boss models are also valid through `BossId`.
+- Last-attacker attribution is instance/session-bound and restored when no damage is actually applied; Boss models are valid authoritative attackers as well.
 - Dodge uses finite direction validation, server cooldowns, tokenized invulnerability expiry and current-character Humanoid validation.
 - `DodgeRemote.server.lua` rejects new Dodge requests during global shutdown or when the player no longer has an accessible profile.
 - Player Health mutation is centralized in `PlayerService.Heal()`; NPC/Boss services only initialize NPC Humanoid health.
-- `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks and clears state on lifecycle cleanup. A shutdown-specific cancellation guard is intentionally still pending because `PlayerService` depends on `StatusEffectService`; adding a direct reverse require would create a module-init cycle.
+- `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks, rejects new effects after the published shutdown flag, and stops delayed callbacks at the shutdown boundary without introducing a PlayerService module cycle.
 - `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace; both enforcement loops and deferred Character refreshes stop when global shutdown begins.
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
 - Portal cooldown callbacks are generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
 - `WorldTheme` portal-touch/deferred arrival logic and its periodic state monitor stop during global shutdown.
 - `NPCMenuBridge` deferred dialog opening is Character-bound, and open menu attributes are cleared again on CharacterAdded so stale UI state cannot survive a respawn.
+- Character-bound PlayerService health/Animator sync also aborts on global shutdown before touching the new Character.
 - Crystal ownership/equip/unlock and Crystal Mastery read/write paths require canonical Crystal validity and actual ownership.
 - Inventory snapshots are detached and pure; Shop/Crafting/UseItem paths validate inputs before mutation and roll back partial transaction failures.
 - Shop and Crafting explicitly remove any partial inventory insertion before refunding/reversing a failed transaction, matching the inventory rollback contract.
@@ -40,17 +41,19 @@ Base: `main`
 - Guardian creation, AI and delayed respawn stop on global shutdown.
 - Guardian Arena phase-2 hazard damage and its periodic loop stop on global shutdown, and active hazard visuals are disabled when the loop exits.
 - Enemy and Guardian rewards preserve XP/Loot/progression when Money is capped; Money is bounded centrally by EconomyService.
-- Guardian telegraphs are bound to the original Guardian and target Character instances; delayed impacts are canceled for dead/replaced instances and now also stop once global shutdown begins.
+- Guardian telegraphs are bound to the original Guardian and target Character instances; delayed impacts are canceled for dead/replaced instances, remain limited by the 8-stud impact zone, and pass the current Guardian-to-target distance to DamageService.
+- TIDE Tidal Pulse is targetless on PC, mobile and server routing and does not consume its server cooldown when no health can actually be healed.
+- GALE splash damage is centered on the selected enemy and uses the configured AoE radius while keeping the primary attacker-to-target validation separate from secondary splash range.
 - NPC Pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
 - `WorldDecor` and `WorldTheme` use idempotency/lifecycle markers and per-player cleanup state.
 - RemoteFunction ownership is contract-checked to one server handler per named function; important RemoteEvents have explicit direction/rate-limit contracts.
 
 ## Contract changes in this hardening pass
-- `.github/workflows/pve-attacker-context-validation.yml` checks exact `Workspace.NPCs` parent identity instead of the weaker descendant-only assumption.
+- `.github/workflows/pve-attacker-context-validation.yml` checks exact `Workspace.NPCs` parent identity and explicit BossId attacker validity in the central DamageService.
 - `.github/workflows/player-load-rejoin-race-contract.yml` matches runtime duplicate-load rejection rather than claiming superseded loads.
 - `.github/workflows/quest-chain-config-validation.yml` enforces the linear, single-root, acyclic quest dependency graph required by `QuestSystem.GetChainOrder()`.
 - `.github/workflows/persistence-reconcile-contract.yml` and `player-data-reconciliation-contract.yml` guard the Daily Bounty impossible-state invariant.
-- `.github/workflows/profile-store-session-contract.yml` now guards exact SessionLock release when `PlayerData.Reconcile()` fails after a successful load claim.
+- `.github/workflows/profile-store-session-contract.yml` guards exact SessionLock release when `PlayerData.Reconcile()` fails after a successful load claim.
 - `.github/workflows/player-remove-release-contract.yml` matches the combined Shutdown/Closing/Saving guard in `GetProfile()`.
 - `.github/workflows/inventory-transaction-rollback.yml` is satisfied by explicit partial-insertion rollback in Shop and Crafting.
 - `.github/workflows/world-init-validation.yml` guards tokenized portal cooldown expiry and WorldTheme shutdown lifecycle.
@@ -58,9 +61,10 @@ Base: `main`
 - `.github/workflows/enemy-lifecycle-validation.yml` requires shutdown-safe enemy AI and respawn behavior.
 - `.github/workflows/boss-active-spawn-contract.yml` requires shutdown-safe Guardian creation, AI and respawn behavior.
 - `.github/workflows/movement-authority-contract.yml` requires shutdown-aware WalkSpeed/position loops and Character-bound deferred binds.
-- `.github/workflows/boss-attack-contract.yml` requires shutdown-safe Guardian telegraph and Arena hazard behavior.
-- `.github/workflows/dodge-input-boundary.yml` now requires a profile/shutdown gate at the mutating Dodge Remote boundary.
-- `.github/workflows/status-effect-stale-callback-contract.yml` remains focused on Humanoid-scoped replacement-token cleanup; no shutdown guard is claimed for StatusEffectService.
+- `.github/workflows/boss-attack-contract.yml` requires shutdown-safe Guardian telegraph and Arena hazard behavior plus the corrected telegraph-to-DamageService range handoff.
+- `.github/workflows/dodge-input-boundary.yml` requires a profile/shutdown gate at the mutating Dodge Remote boundary.
+- `.github/workflows/status-effect-stale-callback-contract.yml` covers Humanoid-scoped replacement tokens plus the server-published shutdown boundary.
+- `.github/workflows/tide-self-ability-contract.yml` covers targetless TIDE semantics.
 - `STUDIO_PLAYTEST.md`, `TESTING.md`, `TODO.md`, and `NEXT_SESSION.md` are synchronized with the current lifecycle/transaction hardening state.
 
 ## Open / runtime-only limitations
@@ -69,7 +73,6 @@ Base: `main`
 - Latest checked workflow-run queries do not provide a verified green CI run for this hardening work; CI is not claimed green.
 - Movement physics/network ownership thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace and position correction.
 - Ordinary `PlayerService.GetProfile()` callers are conservatively blocked during autosave; selected server reward paths intentionally use an autosave-safe loaded-profile path and rely on revision-settle behavior.
-- StatusEffectService delayed Burn/Slow callbacks still require an explicit shutdown-safe design that avoids the existing PlayerService ↔ StatusEffectService module dependency cycle.
 - Authored Roblox Animation/Sound assets remain pending; current VFX are procedural/placeholder presentation.
 - TIDE/GALE remain level-gated prototype unlocks until the final Crystal acquisition design is decided.
 
