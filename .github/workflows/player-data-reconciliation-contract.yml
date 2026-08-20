@@ -61,8 +61,8 @@ jobs:
           if missing:
               raise SystemExit('PlayerData reconciliation boundary missing: ' + ', '.join(missing))
 
-          if 'if not completedSet[questId] and #filteredActive == 0' not in text:
-              raise SystemExit('Active quest reconciliation must prevent completed/duplicate active state')
+          if 'if not completedSet[questId]' not in text or 'data.Level >= minimumLevel' not in text:
+              raise SystemExit('Active quest reconciliation must enforce both completion/Requires state and canonical MinLevel')
           if 'if not bountyDefinition then' not in text:
               raise SystemExit('Daily bounty reconciliation must repair unknown EnemyType definitions')
           if 'data.DailyBounty.Progress = math.clamp(data.DailyBounty.Progress, 0, data.DailyBounty.Goal)' not in text:
@@ -70,4 +70,4 @@ jobs:
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated: canonical crystal validity, progression thresholds, stats, achievements, quest prerequisites, daily-bounty repair and session-lock bounds.')
+          print('Persisted player-data reconciliation contract validated: canonical crystal validity, progression thresholds, stats, achievements, quest prerequisites + MinLevel, daily-bounty repair and session-lock bounds.')
