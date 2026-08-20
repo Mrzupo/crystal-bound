@@ -9,12 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce bounded status-effect inputs
+      - name: Enforce bounded status-effect inputs and server-owned slow state
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           text = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
+          guard = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
           required = [
               'multiplier = math.clamp(finiteNumber(multiplier, 0.8), MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)',
               'duration = math.clamp(finiteNumber(duration, 1), 0.1, 10)',
@@ -22,9 +23,13 @@ jobs:
               'normalizedTicks % 1 ~= 0',
               'ticks = math.clamp(normalizedTicks, 1, 10)',
               'interval = math.clamp(finiteNumber(interval, 0.7), 0.2, 3)',
+              'function StatusEffectService.GetSlowMultiplier(humanoid)',
+              'local slow = state and state.SlowMultiplier',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing status-effect boundary markers: ' + ', '.join(missing))
-          print('Status effect numeric, integer and lifecycle input boundaries validated.')
+          if 'humanoid:GetAttribute("CrystalBoundSlowMultiplier")' in guard:
+              raise SystemExit('StatusSpeedGuardV2 must not trust the presentation slow attribute for gameplay')
+          print('Status effect numeric, integer, lifecycle and server-owned slow-state boundaries validated.')
           PY
