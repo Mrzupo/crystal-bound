@@ -34,6 +34,27 @@ jobs:
           # WalkSpeedBonus is intentionally server-derived and consumed only by the movement authority.
           if 'player:GetAttribute("WalkSpeedBonus")' not in speed_guard:
               raise SystemExit('StatusSpeedGuardV2 must retain the canonical server-derived WalkSpeedBonus source')
+
+          player_service = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
+          if 'player:SetAttribute("ProfileLoaded", false)' not in player_service or 'player:SetAttribute("ProfileLoaded", true)' not in player_service:
+              raise SystemExit('PlayerService must remain the sole ProfileLoaded lifecycle owner')
+
+          for path in Path('src/ServerScriptService').rglob('*.lua'):
+              if path.as_posix().endswith('/Services/PlayerService.lua'):
+                  continue
+              text = path.read_text(encoding='utf-8')
+              if 'SetAttribute("ProfileLoaded"' in text:
+                  raise SystemExit(f'ProfileLoaded may only be written by PlayerService: {path}')
+
+          damage = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
+          dodge = Path('src/ServerScriptService/Services/DodgeService.lua').read_text(encoding='utf-8')
+          for marker, text in [
+              ('DamageService', damage),
+              ('DodgeService', dodge),
+          ]:
+              if 'GetAttribute("ProfileLoaded")' not in text:
+                  raise SystemExit(f'{marker} must respect ProfileLoaded before mutating gameplay state')
+
           if offenders:
               raise SystemExit('Server gameplay must use canonical Profile/Service state rather than client-exposed progression attributes: ' + ', '.join(offenders))
-          print('Derived Player attribute authority contract validated.')
+          print('Derived Player attribute authority and ProfileLoaded single-owner contract validated.')
