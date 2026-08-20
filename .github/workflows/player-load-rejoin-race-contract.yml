@@ -1,0 +1,36 @@
+name: Player Load Rejoin Race Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate per-UserId load generation
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          required = (
+              "LoadingByUserId = {}",
+              "local loadToken = {}",
+              "PlayerService.LoadingByUserId[userId] = loadToken",
+              "local function isCurrentLoad()",
+              "if not isCurrentLoad() then",
+              "Superseded profile load",
+              "Superseded profile initialization",
+          )
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Player load rejoin-race contract missing: " + ", ".join(missing))
+
+          release_section = text.split('if not player.Parent then', 1)[0]
+          if 'SafeProfileStore.Release(player)' not in text:
+              raise SystemExit("Load lifecycle must retain explicit session-lock release for non-superseded leaves")
+
+          print("Per-UserId player load generation contract validated.")
