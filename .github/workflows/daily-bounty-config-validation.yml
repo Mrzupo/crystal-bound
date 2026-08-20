@@ -37,30 +37,33 @@ jobs:
           if "DailyBountyConfig" not in profile:
               raise SystemExit("PlayerData must consume shared DailyBountyConfig")
 
-      - name: Validate bounty service canonicalizes persisted reward fields and owns payout
+      - name: Validate bounty payout cannot be partially replayed
         shell: python
         run: |
           from pathlib import Path
           root = Path("src/ServerScriptService")
-          service_path = root / "Services" / "DailyBountyService.lua"
-          service = service_path.read_text(encoding="utf-8")
+          service = (root / "Services" / "DailyBountyService.lua").read_text(encoding="utf-8")
           required = (
               "local function findDefinition(enemyType)",
               "definition = findDefinition(profile.DailyBounty.EnemyType)",
               "profile.DailyBounty.Goal =",
               "profile.DailyBounty.RewardMoney =",
               "definition.RewardMoney",
+              "local currentMoney = math.clamp(finiteNumber(profile.Money, 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)",
+              "if currentMoney + bounty.RewardMoney > EconomyConfig.MaxMoney then",
               "bounty.Progress = math.max(0, bounty.Goal - 1)",
-              "earned = finiteNumber(earned, 0)",
-              "if earned < bounty.RewardMoney then",
+              "local _, earned = EconomyService.AddMoney(profile, bounty.RewardMoney)",
+              "if earned ~= bounty.RewardMoney then",
               "bounty.Claimed = true",
-              "EconomyService.AddMoney(profile, bounty.RewardMoney)",
           )
           for marker in required:
               if marker not in service:
-                  raise SystemExit(f"DailyBountyService missing canonicalization/payout marker: {marker}")
-          if service.find("if earned < bounty.RewardMoney then") > service.find("bounty.Claimed = true"):
-              raise SystemExit("Daily bounty must validate payout before marking Claimed")
+                  raise SystemExit(f"DailyBountyService missing replay-protection marker: {marker}")
+          capacity_gate = service.find("if currentMoney + bounty.RewardMoney > EconomyConfig.MaxMoney then")
+          payout = service.find("local _, earned = EconomyService.AddMoney(profile, bounty.RewardMoney)")
+          claimed = service.find("bounty.Claimed = true")
+          if not (capacity_gate >= 0 and payout > capacity_gate and claimed > payout):
+              raise SystemExit("Daily bounty must capacity-check before payout and mark claimed only after full payout")
           owners = []
           marker = "EconomyService.AddMoney(profile, bounty.RewardMoney)"
           for path in root.rglob("*.lua"):
@@ -68,4 +71,4 @@ jobs:
                   owners.append(str(path))
           if owners != ["src/ServerScriptService/Services/DailyBountyService.lua"]:
               raise SystemExit(f"Daily bounty reward must have exactly one server owner; found {owners}")
-          print("Daily bounty persistence canonicalization and reward ownership validated.")
+          print("Daily bounty canonicalization, wallet-cap gate, full-payout requirement and replay protection validated.")
