@@ -17,12 +17,18 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
+local function clone(value)
+	if type(value) ~= "table" then return value end
+	local result = {}
+	for key, child in pairs(value) do result[key] = clone(child) end
+	return result
+end
+
 function EnemyConfig.Get(typeId)
 	if type(typeId) ~= "string" then return nil end
 	local source = EnemyConfig.Types[typeId]
 	if type(source) ~= "table" then return nil end
-	local result = {}
-	for key, value in pairs(source) do result[key] = value end
+	local result = clone(source)
 	result.Respawn = math.clamp(finiteNumber(source.Respawn, 10), 1.5, 600)
 	return result
 end
