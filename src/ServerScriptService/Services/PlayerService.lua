@@ -284,14 +284,29 @@ function PlayerService.Load(player)
 			bindCharacterWhenReady(player, character)
 		end)
 	end)
-	PlayerService.Sync(player)
+	if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then
+		PlayerService.Profiles[player] = nil
+		PlayerService.ProfileRevisions[player] = nil
+		local released = releaseLoadedToken()
+		warn(("Crystal Bound: shutdown/leave raced before initial PlayerService.Sync for %s; session lock release=%s"):format(player.Name, tostring(released)))
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or PlayerService.Closing[player] and "Player is closing" or "Player left during profile initialization"
+	end
+	player:SetAttribute("ProfileLoaded", true)
+	local syncSuccess, syncError = xpcall(function()
+		PlayerService.Sync(player)
+	end, debug.traceback)
+	if not syncSuccess then
+		player:SetAttribute("ProfileLoaded", false)
+		PlayerService.Profiles[player] = nil
+		PlayerService.ProfileRevisions[player] = nil
+		local released = releaseLoadedToken()
+		warn(("Crystal Bound: initial PlayerService.Sync failed for %s; session lock release=%s; error=%s"):format(player.Name, tostring(released), tostring(syncError)))
+		return nil, "Profile initialization failed"
+	end
 	if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent and player.Character then
 		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then ensureAnimator(player.Character) end
 		bindHumanoid(player, humanoid)
-	end
-	if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent then
-		player:SetAttribute("ProfileLoaded", true)
 	end
 	return profile
 end
