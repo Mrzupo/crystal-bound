@@ -10,21 +10,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate malformed SessionLock types fail closed
+      - name: Validate malformed SessionLock values fail closed
         shell: python
         run: |
           from pathlib import Path
 
           source = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
           required = [
+              "local MAX_SESSION_TIMESTAMP = 4102444800",
               "local malformedSessionLock = false",
               "if data.SessionLock ~= nil and type(data.SessionLock) ~= \"table\" then",
               "malformedSessionLock = true",
-              "return current",
+              "local validLockTimestamp = lockTimestamp ~= nil",
+              "and lockTimestamp > 0",
+              "and lockTimestamp <= MAX_SESSION_TIMESTAMP",
+              "local age = validLockTimestamp and math.max(0, timestamp() - lockTimestamp) or 0",
               "if malformedSessionLock then",
               "return nil, \"Invalid SessionLock data\"",
           ]
           missing = [marker for marker in required if marker not in source]
           if missing:
-              raise SystemExit("SessionLock type fail-closed contract missing: " + ", ".join(missing))
-          print("Malformed non-table SessionLock values fail closed and cannot be claimed by a new session.")
+              raise SystemExit("SessionLock fail-closed contract missing: " + ", ".join(missing))
+          if "or math.huge" in source:
+              raise SystemExit("Malformed SessionLock timestamps must not fail open to stale/expired")
+          print("Malformed SessionLock types and timestamps fail closed and cannot trigger unsafe takeover.")
