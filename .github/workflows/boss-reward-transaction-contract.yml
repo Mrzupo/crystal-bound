@@ -35,6 +35,8 @@ jobs:
               'earnedMoney < moneyReward',
               'DamageService.ClearTarget(model)',
               'BossService.CreateGuardian(position, parent, bossName)',
+              'PlayerService.HasLoadedProfile(player)',
+              'PlayerService.Profiles[player]',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
@@ -50,6 +52,14 @@ jobs:
           for marker in forbidden:
               if marker in text:
                   raise SystemExit('Guardian reward path still contains obsolete bypass/loss behavior: ' + marker)
+
+          for path in Path('src/ServerScriptService').rglob('*.lua'):
+              path_text = path.read_text(encoding='utf-8')
+              if 'PlayerService.Profiles[' in path_text and path.as_posix() not in {
+                  'src/ServerScriptService/Services/PlayerService.lua',
+                  'src/ServerScriptService/Services/BossService.lua',
+              }:
+                  raise SystemExit(f'Loaded-profile table access must remain restricted to canonical PlayerService/BossService owners: {path}')
 
           drop_match = re.search(r'Drop\s*=\s*"([A-Za-z0-9_]+)"', boss)
           if not drop_match:
@@ -68,4 +78,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, lifecycle cleanup, cap validation and drop registration validated.')
+          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, lifecycle cleanup, cap validation and drop registration validated.')
