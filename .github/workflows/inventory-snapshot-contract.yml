@@ -29,4 +29,25 @@ jobs:
           if "return profile.Inventory" in text:
               raise SystemExit("InventoryService must not expose the live profile inventory table")
 
-          print("InventoryService snapshot data-exposure contract validated.")
+      - name: Validate server-to-client inventory responses use snapshots
+        shell: python
+        run: |
+          from pathlib import Path
+
+          paths = {
+              "src/ServerScriptService/ShopRemote.server.lua": "InventoryService.GetInventory(profile)",
+              "src/ServerScriptService/UseItemRemote.server.lua": "InventoryService.GetInventory(profile)",
+              "src/ServerScriptService/CraftingRemote.server.lua": "InventoryService.GetInventory(profile)",
+          }
+          problems = []
+          for relative, marker in paths.items():
+              path = Path(relative)
+              text = path.read_text(encoding="utf-8")
+              if marker not in text:
+                  problems.append(f"{relative} must use InventoryService.GetInventory(profile) for client snapshots")
+              if "FireClient(player, profile.Inventory)" in text:
+                  problems.append(f"{relative} must not send live profile.Inventory to the client")
+          if problems:
+              raise SystemExit("\n".join(problems))
+
+          print("Inventory Service and remote snapshot data-exposure contracts validated.")
