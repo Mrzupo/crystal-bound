@@ -8,6 +8,7 @@ on:
 jobs:
   validate-ai-path-input:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -32,8 +33,12 @@ jobs:
               'math.floor(goal.Z / 4)',
               'local cache = setmetatable({}, { __mode = "k" })',
               'local RECOMPUTE_INTERVAL = 0.5',
-              'function AIPathService.Clear(model)',
+              'function isLiveModel(model)',
+              'if not isLiveModel(model) then',
+              'path:ComputeAsync(rootPosition, destination)',
               'cache[model] = nil',
+              'return isLiveModel(model) and (waypoint.Position - rootPosition) or nil',
+              'function AIPathService.Clear(model)',
           ]
 
           missing = [marker for marker in required if marker not in text]
@@ -42,4 +47,4 @@ jobs:
                   print("Missing AI path marker:", marker)
               raise SystemExit(1)
 
-          print("AI path finite-input, weak-cache, rate-limit and cleanup contract passed.")
+          print("AI path finite-input, live-model, weak-cache, post-yield race, rate-limit and cleanup contract passed.")
