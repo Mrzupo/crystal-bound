@@ -63,14 +63,17 @@ jobs:
                   raise SystemExit(f'Guardian telegraph path missing: {marker}')
 
           lifecycle = [
+              'local PlayerService = require(script.Parent.PlayerService)',
               'local player, guardian = getTarget()',
+              'if PlayerService.ShuttingDown then return end',
               'local targetCharacter = character',
               'task.delay(windup, function()',
-              'if not guardian.Parent then return end',
+              'if PlayerService.ShuttingDown or not guardian.Parent then return end',
               'local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")',
               'if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0',
               'if not player.Parent or player.Character ~= targetCharacter or not targetCharacter.Parent then return end',
               'local currentCharacter = player.Character',
+              'while Workspace.Parent and not PlayerService.ShuttingDown do',
           ]
           for marker in lifecycle:
               if marker not in telegraph:
@@ -106,5 +109,5 @@ jobs:
               if marker not in arena:
                   raise SystemExit(f'BossArena shutdown lifecycle marker missing: {marker}')
 
-          print('Guardian phase-2, reward, character-bound telegraph lifecycle, semantic bounds and shutdown-safe arena hazard validated.')
+          print('Guardian phase-2, reward, character-bound telegraph lifecycle, semantic bounds, shutdown-safe telegraph and arena hazard validated.')
           PY
