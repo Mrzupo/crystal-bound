@@ -17,6 +17,7 @@ jobs:
           import re
 
           config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
+          dodge = Path("src/ReplicatedStorage/Config/DodgeConfig.lua").read_text(encoding="utf-8")
           values = {
               key: float(value)
               for key, value in re.findall(
@@ -24,10 +25,14 @@ jobs:
                   config,
               )
           }
+          dodge_values = {
+              key: float(value)
+              for key, value in re.findall(r"(Boost)\s*=\s*([0-9.]+)", dodge)
+          }
           required = ("BaseWalkSpeed", "MaxWalkSpeedBonus", "MaxObservedSpeed", "ExtraDistanceTolerance")
           missing = [key for key in required if key not in values]
-          if missing:
-              raise SystemExit("movement authority config missing: " + ", ".join(missing))
+          if missing or "Boost" not in dodge_values:
+              raise SystemExit("movement/dodge authority config is incomplete: " + ", ".join(missing or []) )
 
           canonical_max = values["BaseWalkSpeed"] + values["MaxWalkSpeedBonus"]
           allowed_observed_max = canonical_max + values["ExtraDistanceTolerance"]
@@ -36,10 +41,15 @@ jobs:
                   f"MaxObservedSpeed {values['MaxObservedSpeed']} exceeds canonical max {canonical_max} "
                   f"plus tolerance {values['ExtraDistanceTolerance']}"
               )
+          if values["MaxObservedSpeed"] < dodge_values["Boost"]:
+              raise SystemExit(
+                  f"MaxObservedSpeed {values['MaxObservedSpeed']} is below the server dodge boost "
+                  f"{dodge_values['Boost']}"
+              )
 
           guard = Path("src/ServerScriptService/StatusSpeedGuardV2.server.lua").read_text(encoding="utf-8")
           for marker in ("MAX_OBSERVED_SPEED", "EXTRA_DISTANCE_TOLERANCE", "displacement > allowed"):
               if marker not in guard:
                   raise SystemExit(f"StatusSpeedGuardV2 missing movement authority marker: {marker}")
 
-          print("Observed movement cap is tied to canonical server WalkSpeed authority plus configured tolerance.")
+          print("Observed movement cap is tied to canonical WalkSpeed authority and still permits the configured dodge impulse.")
