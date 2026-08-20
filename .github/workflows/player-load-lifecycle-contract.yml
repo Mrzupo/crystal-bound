@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate load/leave race guard
+      - name: Validate load/leave race guard and startup catch-up
         shell: python
         run: |
           from pathlib import Path
           player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           catchup = Path("src/ServerScriptService/PlayerLoadCatchup.server.lua").read_text(encoding="utf-8")
           project = Path("default.project.json").read_text(encoding="utf-8")
           required = [
@@ -35,6 +36,11 @@ jobs:
           second_guard = player_service.index('if not player.Parent then', profiles_assignment)
           if second_guard < profiles_assignment:
               raise SystemExit("PlayerService must re-check player.Parent after installing the profile")
+
+          if 'local function loadPlayer(player)' not in bootstrap or 'Players.PlayerAdded:Connect(loadPlayer)' not in bootstrap:
+              raise SystemExit("Bootstrap must keep the canonical PlayerAdded load owner")
+          if 'for _, player in ipairs(Players:GetPlayers()) do' not in bootstrap or 'task.spawn(loadPlayer, player)' not in bootstrap:
+              raise SystemExit("Bootstrap must load players already present when the world finishes initializing")
 
           if 'Players.PlayerAdded' in catchup:
               raise SystemExit("PlayerLoadCatchup must not become a second PlayerAdded load owner")
