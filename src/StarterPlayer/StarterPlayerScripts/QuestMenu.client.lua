@@ -14,6 +14,7 @@ local available = {}
 local loading = false
 local lastLoad = 0
 local LOAD_INTERVAL = 0.2
+local loadGeneration = 0
 local loadData
 
 local function finiteNumber(value, fallback)
@@ -25,6 +26,7 @@ local function finiteNumber(value, fallback)
 end
 
 local function closeMenu(panel)
+	loadGeneration += 1
 	open = false
 	panel.Visible = false
 	player:SetAttribute("OpenQuestMenu", nil)
@@ -142,7 +144,7 @@ local function addRow(questId, definition, state, progress)
 end
 
 local function refresh()
-	if not data or type(data) ~= "table" then return end
+	if not data or type(data) ~= "table" or not open then return end
 	clearList()
 	local active = type(data.Active) == "table" and data.Active or {}
 	local completed = type(data.Completed) == "table" and data.Completed or {}
@@ -163,9 +165,21 @@ loadData = function(force)
 	if not force and now - lastLoad < LOAD_INTERVAL then return end
 	loading = true
 	lastLoad = now
+	loadGeneration += 1
+	local generation = loadGeneration
+	local character = player.Character
+	local expectedOpenState = player:GetAttribute("OpenQuestMenu")
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
+	if generation ~= loadGeneration or not open or player.Character ~= character or player:GetAttribute("OpenQuestMenu") ~= expectedOpenState then
+		loading = false
+		return
+	end
 	if ok and type(response) == "table" then data = response end
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
+	if generation ~= loadGeneration or not open or player.Character ~= character or player:GetAttribute("OpenQuestMenu") ~= expectedOpenState then
+		loading = false
+		return
+	end
 	if okAvailable and type(responseAvailable) == "table" then available = responseAvailable end
 	loading = false
 	refresh()
@@ -178,9 +192,28 @@ local function openMenu()
 end
 
 player:GetAttributeChangedSignal("OpenQuestMenu"):Connect(function()
-	if player:GetAttribute("OpenQuestMenu") == nil then return end
+	if player:GetAttribute("OpenQuestMenu") == nil then
+		loadGeneration += 1
+		open = false
+		panel.Visible = false
+		return
+	end
 	openMenu()
 end)
+
+player.CharacterAdded:Connect(function()
+	loadGeneration += 1
+	open = false
+	panel.Visible = false
+	player:SetAttribute("OpenQuestMenu", nil)
+end)
+player.CharacterRemoving:Connect(function()
+	loadGeneration += 1
+	open = false
+	panel.Visible = false
+	player:SetAttribute("OpenQuestMenu", nil)
+end)
+
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.J then
