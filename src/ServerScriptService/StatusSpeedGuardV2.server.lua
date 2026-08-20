@@ -61,9 +61,7 @@ local function enforcePosition(player, now)
 	local humanoid = getHumanoid(player)
 	local root = getRoot(player)
 	if not humanoid or humanoid.Health <= 0 or not root then
-		if positionState[player] and positionState[player].Character ~= player.Character then
-			resetPositionState(player)
-		end
+		resetPositionState(player)
 		return
 	end
 
@@ -184,7 +182,6 @@ for _, player in ipairs(Players:GetPlayers()) do bind(player) end
 
 task.spawn(function()
 	while true do
-		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			refresh(player)
 		end
