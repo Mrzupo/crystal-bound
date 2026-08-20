@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1401 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1403 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
@@ -50,7 +50,7 @@ Current compare: **1401 commits ahead, 30 commits behind** `main` (verified with
 - Enemy defeat rewards use canonical `EnemyConfig`; full Money wallets no longer block XP/Loot rewards.
 - Achievement unlocks are one-shot/idempotent and no longer gated by wallet capacity; `EconomyService` alone caps the Money reward.
 - Economy item selling checks wallet capacity before consuming inventory and restores both Money and inventory on unexpected partial payout.
-- Guardian rewards use canonical config, bounded XP/Money, registered Drop IDs and idempotent `Rewarded` state; full Money does not block XP/Drop.
+- Guardian rewards use canonical config, bounded XP/Money, registered Drop IDs and idempotent `Rewarded` state; the active Guardian Trial uses a combined Boss+Quest Money-cap preflight.
 - Guardian creation is idempotent and destroys a corrupt/non-boss object occupying the reserved `CrystalGuardian` name before spawning the canonical boss.
 - Guardian telegraph impacts are bound to the original Guardian and original Character instances, preventing stale windups from damaging respawned Players or replacement Guardians.
 - NPC AI is server-only, bounded by aggro/attack/special ranges, uses weak-key path caches and clears path/status state on death.
