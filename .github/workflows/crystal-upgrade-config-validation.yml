@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Crystal mastery costs, bounds and strict ID handling
+      - name: Validate Crystal mastery costs, bounds and strict ID/ownership handling
         shell: python
         run: |
           import re
@@ -56,8 +56,9 @@ jobs:
 
           required_mastery_markers = [
               "local function validCrystalId(crystalId)",
+              "local function ownsCrystal(profile, crystalId)",
               "local function ensure(profile, crystalId)",
-              "if type(profile) ~= \"table\" or not validCrystalId(crystalId) then return nil end",
+              "if type(profile) ~= \"table\" or not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end",
               "function CrystalMastery.Get(profile, crystalId)",
               "return mastery and { Level = mastery.Level, XP = mastery.XP } or neutralMastery()",
               "function CrystalMastery.AddXP",
@@ -70,6 +71,6 @@ jobs:
           ]
           missing = [marker for marker in required_mastery_markers if marker not in mastery]
           if missing:
-              raise SystemExit("CrystalMastery strict ID/bonus boundary missing: " + ", ".join(missing))
+              raise SystemExit("CrystalMastery strict ID/ownership/bonus boundary missing: " + ", ".join(missing))
 
-          print("Crystal upgrade config, bonus bounds, material ownership and strict invalid-ID semantics validated.")
+          print("Crystal upgrade config, bonus bounds, material ownership and strict invalid-ID/ownership semantics validated.")
