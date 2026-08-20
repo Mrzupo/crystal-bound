@@ -19,6 +19,8 @@ jobs:
           config = Path("src/ReplicatedStorage/Modules/NPCDialogConfig.lua").read_text(encoding="utf-8")
           remote = Path("src/ServerScriptService/NPCDialogRemote.server.lua").read_text(encoding="utf-8")
           bridge = Path("src/ServerScriptService/NPCMenuBridge.server.lua").read_text(encoding="utf-8")
+          menu = Path("src/StarterPlayer/StarterPlayerScripts/NPCDialogMenu.client.lua").read_text(encoding="utf-8")
+          inventory = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
 
           for npc in ("CrystalKeeper", "MaterialTrader"):
               if npc not in config:
@@ -45,4 +47,11 @@ jobs:
               if marker not in bridge:
                   raise SystemExit(f"NPC menu bridge authority marker missing: {marker}")
 
-          print("NPC dialog configuration, option ownership and interaction-distance guards validated.")
+          if 'optionId == "CRYSTAL" or optionId == "INVENTORY"' not in menu:
+              raise SystemExit('NPCDialogMenu must keep INVENTORY mapped to the combined crystal/inventory menu')
+          if 'player:SetAttribute("OpenCrystalMenu", os.clock())' not in menu:
+              raise SystemExit('NPCDialogMenu must open the combined crystal/inventory menu through OpenCrystalMenu')
+          if 'Inventory & Crystals' not in inventory:
+              raise SystemExit('InventoryMenu must remain the combined Inventory & Crystals presentation')
+
+          print("NPC dialog configuration, option ownership, interaction-distance guards and combined inventory/crystal alias validated.")
