@@ -24,6 +24,12 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
+local function closeMenu(panel)
+	open = false
+	panel.Visible = false
+	player:SetAttribute("OpenQuestMenu", nil)
+end
+
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
 	local gui = playerGui:FindFirstChild("QuestMenu")
@@ -63,7 +69,7 @@ local function ensureGui()
 	close.Font = Enum.Font.GothamBold
 	close.TextSize = 18
 	close.Parent = panel
-	close.Activated:Connect(function() open = false; panel.Visible = false end)
+	close.Activated:Connect(function() closeMenu(panel) end)
 
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "List"
@@ -177,7 +183,7 @@ player:GetAttributeChangedSignal("OpenQuestMenu"):Connect(openMenu)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.J then
-		if open then open = false; panel.Visible = false else openMenu() end
+		if open then closeMenu(panel) else openMenu() end
 	end
 end)
 
