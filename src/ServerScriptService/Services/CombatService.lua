@@ -66,7 +66,7 @@ local function fireProgress(player, levelsGained, mastery)
 	if not remotes then return end
 	if remotes:FindFirstChild("XPChanged") then remotes.XPChanged:FireClient(player, profile.Experience, profile.Level) end
 	if remotes:FindFirstChild("MoneyChanged") then remotes.MoneyChanged:FireClient(player, profile.Money) end
-	if remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
+	if remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)) end
 	if levelsGained > 0 and remotes:FindFirstChild("LevelUp") then remotes.LevelUp:FireClient(player, profile.Level) end
 	if mastery and remotes:FindFirstChild("CrystalMasteryChanged") then remotes.CrystalMasteryChanged:FireClient(player, mastery.Crystal, mastery.Level, mastery.XP) end
 end
