@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1443 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+Current compare: **1448 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `18f0f27fcbcb4fd6384f45ecd1d0632f9edad02d`.
 
 ## Verified
@@ -14,6 +14,7 @@ Current compare: **1443 commits ahead, 38 commits behind** `main` (verified with
 - `PlayerService` re-checks Player/Profile closing state after waiting on the operation lock before Refresh/Save, preventing heartbeat/autosave access after `Remove()` begins.
 - `PlayerService.saveConsistently()` uses bounded revision-settle passes and returns failure if the final pass still detects an in-memory revision change, preventing stale autosave success reporting.
 - Dedicated `PlayerLifecycle.server.lua` owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
+- Shutdown now enumerates loaded profiles through `PlayerService.HasLoadedProfile()` before calling `BeginShutdown()`, so the global shutdown guard cannot hide profiles from final Save/Release.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
 - `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks.
 - `SafeProfileStore` snapshots profile state inside `UpdateAsync` callbacks and resets Load/Save/Refresh/Release result flags on every callback invocation and outer retry.
@@ -64,7 +65,7 @@ Current compare: **1443 commits ahead, 38 commits behind** `main` (verified with
 - `EnemyConfig.Get()` returns detached deep copies, including nested `Special` config, while normalizing Respawn.
 - NPC dialog requests require canonical NPC identity, server distance and rate-limit checks; config getters return detached copies.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
-- `InventoryConfig.GetItemConfig()` now returns a detached item snapshot; item config data is not exposed as a mutable server table through the canonical getter.
+- `InventoryConfig.GetItemConfig()` returns a detached item snapshot and has a dedicated config-snapshot contract.
 - `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
 - Shop, UseItem, Crafting, Combat and Guardian server→client inventory outputs use detached InventoryService snapshots.
 - `InventoryRequest` is Client→Server only; `InventoryChanged` is Server→Client only.
@@ -78,15 +79,16 @@ Current compare: **1443 commits ahead, 38 commits behind** `main` (verified with
 - The latest Combined Status query returned no status objects and commit-specific workflow-run queries returned no runs; CI is therefore not called green.
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
+- The current `PlayerService.Saving` gate was found to block `GetProfile()` during autosave, which can suppress a simultaneous Boss/NPC reward callback. The intended fix is to allow gameplay profile reads during Save and settle the save on a full pre/post-profile snapshot, but that larger `PlayerService` write was blocked by the repository tool and is **not yet applied**.
 - `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets with detached server-side snapshots; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently unlock through level gates; the long-term design includes Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - White Queen intro/story rules remain unchanged.
 
 ## Next technical direction
-1. Continue concrete static audits and eliminate newly introduced authority/config drift.
-2. Move to Roblox Studio multiplayer validation when executable runtime access is available.
-3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat asset contracts for TIDE/GALE.
-4. Keep gameplay authority in server systems; animation/VFX never decide damage, timing or rewards.
+1. Apply the pending autosave gameplay/save-settle fix when a safe repository write path is available.
+2. Continue concrete static audits and eliminate newly introduced authority/config drift.
+3. Move to Roblox Studio multiplayer validation when executable runtime access is available.
+4. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat asset contracts for TIDE/GALE.
 
 ## Do not do
 - Do not merge, reset or force-update `main` from this workstream.
