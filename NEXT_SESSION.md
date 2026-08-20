@@ -21,6 +21,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - SafeProfileStore session lock with active per-player tokens, callback-local retry-state isolation, callback-time save snapshots and profile-revision save settling.
 - SafeProfileStore releases the exact claimed SessionLock if post-claim `PlayerData.Reconcile()` fails.
 - PlayerService load errors clear the per-UserId in-flight load marker before returning, preventing stale rejoin blocks.
+- PlayerService rejects loads for players already entering `Closing` and uses post-load shutdown/leave guards before final initialization.
 - Canonical Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
 - Shop and Crafting explicitly roll back partial inventory insertion before reversing a failed transaction.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
@@ -41,6 +42,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Mutating Dodge requests are rejected during shutdown or when the player profile is unavailable.
 - The canonical `DamageService` rejects all new damage requests once the server shutdown flag is published.
 - `DamageService` accepts both ordinary enemy models (`Enemy=true`) and boss models (`BossId`) as authoritative NPC attackers and preserves last-attacker attribution accordingly.
+- `DamageService` also requires `ProfileLoaded=true` for Player attackers and Player targets, preventing NPC/Boss damage from touching characters whose profile is still loading or is being removed.
 - Guardian telegraph selection may use the configured target range, but final impact remains inside the configured impact radius and passes the current Guardian-to-target distance to DamageService.
 
 ## Latest hardening work
@@ -53,6 +55,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - `SafeProfileStore.Load()` now catches reconciliation errors after a successful lock claim and releases the exact claimed token before failing the load.
 - Bootstrap checks `player.Parent` before `Kick()` on load failure.
 - `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
+- `PlayerService` publishes `ProfileLoaded=false` at load start and only flips it to `true` after profile installation, character initialization and shutdown/leave guards all pass; removal clears the marker.
 - `PlayerService.GetProfile()` also rejects ordinary gameplay access during `Saving` and global shutdown; final removal uses explicit internal save access.
 - Shutdown publishes `CrystalBoundShuttingDown` before calling `PlayerService.BeginShutdown()`, then removes loaded profiles through the normal Save/Release path while separately draining pending loads.
 - `PlayerService.Heal()` is the canonical player Health mutation owner; TIDE and Health Potion use it.
@@ -85,7 +88,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
 - NPC dialog/config snapshots are detached and server-distance gated.
 - RemoteFunction contracts require a single server owner per named RemoteFunction, and critical RemoteEvent contracts require a single server handler.
-- PvE damage contracts require exact NPC model identity under `Workspace.NPCs`; BossId attacker identity is explicitly covered.
+- PvE damage contracts require exact NPC model identity under `Workspace.NPCs`; BossId attacker identity and loaded-player gating are explicitly covered.
 
 ## Security / authority rules
 - `DamageService` is the only direct `Humanoid:TakeDamage()` owner.
@@ -99,7 +102,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Important Remotes are rate-limited and per-player cleanup is contract-checked.
 
 ## Open decisions / limitations
-- No actual Roblox Studio runtime playtest has been executed here.
+- No actual Roblox Studio runtime playtest has been executed.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
 - Current GitHub workflow-run queries provide no verified run for the latest hardening commits; CI must not be called green.
 - Movement/physics thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling, movement shutdown and Roblox network-ownership interactions.
