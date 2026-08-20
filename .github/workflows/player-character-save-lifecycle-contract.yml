@@ -1,0 +1,37 @@
+name: Player Character Save Lifecycle Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/character-save-wait-recovery"]
+  pull_request:
+
+jobs:
+  validate-character-save-lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate CharacterAdded waits through autosave without dropping initialization
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          start = source.find("local function bindCharacterWhenReady")
+          end = source.find("\nlocal function acquireOperation", start)
+          if start < 0 or end < 0:
+              raise SystemExit("bindCharacterWhenReady block not found")
+          block = source[start:end]
+          if "while PlayerService.Saving[player] do" not in block:
+              raise SystemExit("Character initialization must remain pending while autosave is active")
+          if "while PlayerService.Saving[player] and os.clock() < deadline do" in block:
+              raise SystemExit("Character initialization must not permanently abandon the current Character after a fixed save timeout")
+          for marker in (
+              "player.Character ~= character",
+              "not character.Parent",
+              "PlayerService.Profiles[player] == nil",
+              "PlayerService.Sync(player)",
+              "bindHumanoid(player, humanoid)",
+          ):
+              if marker not in block:
+                  raise SystemExit(f"Character lifecycle guard missing: {marker}")
+          print("Character initialization remains bound to the current Character/Profile until autosave completes or lifecycle invalidates it.")
