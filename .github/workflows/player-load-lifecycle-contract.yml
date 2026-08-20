@@ -10,13 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate load/leave race guard and startup catch-up
+      - name: Validate canonical profile load ownership and startup drain
         shell: python
         run: |
           from pathlib import Path
           player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
-          catchup = Path("src/ServerScriptService/PlayerLoadCatchup.server.lua").read_text(encoding="utf-8")
           project = Path("default.project.json").read_text(encoding="utf-8")
           required = [
               'if not player.Parent then',
@@ -32,7 +31,6 @@ jobs:
           first_guard = player_service.index('if not player.Parent then')
           if first_guard > profiles_assignment:
               raise SystemExit("PlayerService must check player.Parent before installing the loaded profile")
-
           second_guard = player_service.index('if not player.Parent then', profiles_assignment)
           if second_guard < profiles_assignment:
               raise SystemExit("PlayerService must re-check player.Parent after installing the profile")
@@ -41,18 +39,9 @@ jobs:
               raise SystemExit("Bootstrap must keep the canonical PlayerAdded load owner")
           if 'for _, player in ipairs(Players:GetPlayers()) do' not in bootstrap or 'task.spawn(loadPlayer, player)' not in bootstrap:
               raise SystemExit("Bootstrap must load players already present when the world finishes initializing")
+          if 'PlayerLoadCatchup' in bootstrap or 'PlayerLoadCatchup' in project:
+              raise SystemExit("Redundant PlayerLoadCatchup loader must remain removed")
+          if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
+              raise SystemExit("Redundant PlayerLoadCatchup file must remain removed")
 
-          if 'Players.PlayerAdded' in catchup:
-              raise SystemExit("PlayerLoadCatchup must not become a second PlayerAdded load owner")
-          if 'PlayerService.LoadingByUserId[player.UserId]' not in catchup:
-              raise SystemExit("PlayerLoadCatchup must skip players already being loaded")
-          if 'player:GetAttribute("ProfileLoadFailed") == nil' not in catchup:
-              raise SystemExit("PlayerLoadCatchup must skip known failed profile loads")
-          if 'local STARTUP_WINDOW = 30' not in catchup or 'local SCAN_INTERVAL = 0.25' not in catchup:
-              raise SystemExit("PlayerLoadCatchup must use a bounded startup scan interval")
-          if 'local deadline = os.clock() + STARTUP_WINDOW' not in catchup or 'until os.clock() >= deadline' not in catchup:
-              raise SystemExit("PlayerLoadCatchup must stop after its bounded startup window")
-          if 'PlayerLoadCatchup' not in project or 'src/ServerScriptService/PlayerLoadCatchup.server.lua' not in project:
-              raise SystemExit("PlayerLoadCatchup must be active in default.project.json")
-
-          print("Player load/leave and bounded startup catch-up lifecycle contract validated.")
+          print("Canonical PlayerAdded ownership, existing-player startup drain and load/leave race guards validated.")
