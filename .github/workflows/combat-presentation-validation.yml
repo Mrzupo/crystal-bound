@@ -91,6 +91,10 @@ jobs:
               problems.append("Environmental damage must remain an explicit approved damage type")
           if "DamageType == DamageTypes.Environmental and request.Attacker == nil" not in damage_service:
               problems.append("DamageService must keep attacker-less damage restricted to Environmental")
+          if 'local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)' not in presentation:
+              problems.append("CombatPresentation must keep the Character-bound Humanoid acquisition")
+          if 'if player.Character ~= character or not character.Parent then return end' not in presentation:
+              problems.append("CombatPresentation must reject stale CharacterAdded callbacks after Humanoid acquisition")
 
           if problems:
               print("Combat presentation contract problems:")
