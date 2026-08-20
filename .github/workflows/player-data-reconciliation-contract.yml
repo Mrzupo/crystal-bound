@@ -17,6 +17,8 @@ jobs:
 
           required = [
               'local function CrystalSystemExists(value)',
+              'local function firstDailyBounty()',
+              'DailyBounty = firstDailyBounty()',
               'data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)',
               'data.Experience = clampInt(data.Experience, 0, XPConfig.MaxExperience, defaults.Experience)',
               'data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)',
@@ -35,7 +37,9 @@ jobs:
               'local function isBountyEnemy(value)',
               'for _, definition in ipairs(DailyBountyConfig.Goals) do',
               'data.DailyBounty.Claimed = data.DailyBounty.Claimed == true',
-              'if not isBountyEnemy(data.DailyBounty.EnemyType) then',
+              'local bountyDefinition',
+              'data.DailyBounty.Goal = clampInt(bountyDefinition.Goal, 1, 100, 1)',
+              'data.DailyBounty.RewardMoney = clampInt(bountyDefinition.RewardMoney, 0, EconomyConfig.MaxMoney, 0)',
               'data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""',
               'data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 4102444800, 0)',
               'data.Version = defaults.Version',
@@ -47,9 +51,11 @@ jobs:
 
           if 'if not completedSet[questId] and #filteredActive == 0' not in text:
               raise SystemExit('Active quest reconciliation must prevent completed/duplicate active state')
-          if 'data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, EconomyConfig.MaxMoney' not in text:
-              raise SystemExit('Daily bounty reward must be bounded by EconomyConfig.MaxMoney')
+          if 'if not bountyDefinition then' not in text:
+              raise SystemExit('Daily bounty reconciliation must repair unknown EnemyType definitions')
+          if 'data.DailyBounty.Progress = math.clamp(data.DailyBounty.Progress, 0, data.DailyBounty.Goal)' not in text:
+              raise SystemExit('Daily bounty progress must be clamped to canonical goal after definition repair')
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated, including stats and bounty bounds.')
+          print('Persisted player-data reconciliation contract validated, including stats, complete bounty defaults and canonical bounty definitions.')
