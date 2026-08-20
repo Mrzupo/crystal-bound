@@ -50,12 +50,17 @@ jobs:
               "profile.DailyBounty.Goal =",
               "profile.DailyBounty.RewardMoney =",
               "definition.RewardMoney",
+              "bounty.Progress = math.max(0, bounty.Goal - 1)",
+              "earned = finiteNumber(earned, 0)",
+              "if earned < bounty.RewardMoney then",
               "bounty.Claimed = true",
               "EconomyService.AddMoney(profile, bounty.RewardMoney)",
           )
           for marker in required:
               if marker not in service:
                   raise SystemExit(f"DailyBountyService missing canonicalization/payout marker: {marker}")
+          if service.find("if earned < bounty.RewardMoney then") > service.find("bounty.Claimed = true"):
+              raise SystemExit("Daily bounty must validate payout before marking Claimed")
           owners = []
           marker = "EconomyService.AddMoney(profile, bounty.RewardMoney)"
           for path in root.rglob("*.lua"):
