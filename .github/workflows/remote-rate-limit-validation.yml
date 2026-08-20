@@ -2,7 +2,7 @@ name: Crystal Bound Remote Rate Limit Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/remote-rate-limit-contract-sync"]
   pull_request:
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
 
           required = {
               "src/ServerScriptService/Bootstrap.server.lua": ["QUEST_REQUEST_INTERVAL", "nextQuestRequest"],
-              "src/ServerScriptService/ShopRemote.server.lua": ["REQUEST_INTERVAL", "nextRequest"],
+              "src/ServerScriptService/ShopRemote.server.lua": ["REQUEST_INTERVAL", "NEXT_REQUEST"],
               "src/ServerScriptService/CraftingRemote.server.lua": ["REQUEST_INTERVAL", "NEXT_REQUEST"],
               "src/ServerScriptService/UseItemRemote.server.lua": ["USE_INTERVAL", "NEXT_USE"],
               "src/ServerScriptService/DodgeRemote.server.lua": ["REQUEST_INTERVAL", "nextRequest"],
@@ -42,7 +42,7 @@ jobs:
                   weak_markers = ['nextQuestRequest = setmetatable({}, { __mode = "k" })', 'nextInventoryRequest = setmetatable({}, { __mode = "k" })', 'nextCrystalRequest = setmetatable({}, { __mode = "k" })', 'nextCrystalUpgradeRequest = setmetatable({}, { __mode = "k" })', 'nextPlayerDataRequest = setmetatable({}, { __mode = "k" })', 'nextQuestDataRequest = setmetatable({}, { __mode = "k" })']
                   if not all(marker in text for marker in weak_markers):
                       problems.append(f"{relative} must use weak-key request state when it does not register explicit PlayerRemoving cleanup")
-              elif 'PlayerRemoving:Connect' not in text:
+              elif 'Players.PlayerRemoving:Connect' not in text:
                   problems.append(f"{relative} must clear request state on PlayerRemoving")
 
           if problems:
@@ -51,4 +51,4 @@ jobs:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("Critical remote rate-limit and player-lifecycle contracts validated.")
+          print("Critical remote rate-limit and player-lifecycle contracts validated against current runtime marker names.")
