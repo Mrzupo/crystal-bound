@@ -40,9 +40,10 @@ function SafeProfileStore.Load(player)
 		claimed = false
 		invalidStoredValue = false
 		return store:UpdateAsync(key, function(current)
+			claimed = false
+			invalidStoredValue = false
 			if current ~= nil and type(current) ~= "table" then
 				invalidStoredValue = true
-				claimed = false
 				return current
 			end
 
@@ -53,7 +54,6 @@ function SafeProfileStore.Load(player)
 			local sameServer = lock and lock.JobId == SESSION_ID
 
 			if lock and not sameServer and age < SESSION_TIMEOUT then
-				claimed = false
 				return current
 			end
 
@@ -93,6 +93,7 @@ function SafeProfileStore.Save(player, profile)
 	local ok, result = retry(function()
 		saved = false
 		return store:UpdateAsync(key, function(current)
+			saved = false
 			if type(current) ~= "table" then
 				return current
 			end
@@ -124,6 +125,7 @@ function SafeProfileStore.Refresh(player)
 	local ok, result = retry(function()
 		refreshed = false
 		return store:UpdateAsync(key, function(current)
+			refreshed = false
 			if type(current) ~= "table" then return current end
 			local lock = current.SessionLock
 			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID then
@@ -148,6 +150,7 @@ function SafeProfileStore.Release(player)
 	local ok, result = retry(function()
 		released = false
 		return store:UpdateAsync(key, function(current)
+			released = false
 			if type(current) ~= "table" then return current end
 			local lock = current.SessionLock
 			if type(lock) == "table" and lock.JobId == SESSION_ID then
