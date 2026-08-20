@@ -1,0 +1,37 @@
+name: Session Lock Integrity Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/session-lock-type-fail-closed-v2"]
+  pull_request:
+
+jobs:
+  validate-session-lock-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate fail-closed SessionLock and post-claim cleanup
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
+          required = [
+              "local MAX_SESSION_TIMESTAMP = 4102444800",
+              "local malformedSessionLock = false",
+              "if data.SessionLock ~= nil and type(data.SessionLock) ~= \"table\" then",
+              "local validLockTimestamp = lockTimestamp ~= nil",
+              "and lockTimestamp > 0",
+              "and lockTimestamp <= MAX_SESSION_TIMESTAMP",
+              "local age = validLockTimestamp and math.max(0, timestamp() - lockTimestamp) or 0",
+              "local reconcileOk, profileOrError = xpcall(function()",
+              "return PlayerData.Reconcile(result)",
+              "local released = SafeProfileStore.Release(player, token)",
+              "return nil, \"Profile reconciliation failed\"",
+          ]
+          missing = [marker for marker in required if marker not in source]
+          if missing:
+              raise SystemExit("SessionLock integrity contract missing: " + ", ".join(missing))
+          if "or math.huge" in source:
+              raise SystemExit("Malformed SessionLock timestamps must not fail open to stale/expired")
+          print("SessionLock type/timestamp corruption fails closed and post-claim reconciliation failures attempt exact-token release.")
