@@ -64,11 +64,12 @@ jobs:
 
           lifecycle = [
               'local player, guardian = getTarget()',
+              'local targetCharacter = character',
               'task.delay(windup, function()',
               'if not guardian.Parent then return end',
               'local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")',
               'if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0',
-              'if not player.Parent then return end',
+              'if not player.Parent or player.Character ~= targetCharacter or not targetCharacter.Parent then return end',
               'local currentCharacter = player.Character',
           ]
           for marker in lifecycle:
@@ -98,5 +99,5 @@ jobs:
           if 'local center = bossConfig.ArenaCenter' not in arena:
               raise SystemExit('BossArena must use BossConfig.ArenaCenter')
 
-          print('Guardian phase-2, reward, lifecycle binding and semantic bounds validated.')
+          print('Guardian phase-2, reward, character-bound telegraph lifecycle and semantic bounds validated.')
           PY
