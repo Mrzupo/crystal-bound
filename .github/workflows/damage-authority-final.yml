@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce single TakeDamage authority and known damage types
+      - name: Enforce single TakeDamage authority, known damage types and shutdown gate
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -21,6 +21,15 @@ jobs:
                   offenders.append(path.as_posix())
           if offenders:
               raise SystemExit('direct TakeDamage outside DamageService: ' + ', '.join(offenders))
+          damage_service = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
+          for marker in [
+              'local function isShuttingDown()',
+              'ReplicatedStorage:GetAttribute("CrystalBoundShuttingDown") == true',
+              'if isShuttingDown() then return false end',
+              'isShuttingDown() and "Server shutting down" or "Invalid or out-of-range request"',
+          ]:
+              if marker not in damage_service:
+                  raise SystemExit('DamageService shutdown authority marker missing: ' + marker)
           damage_types = Path('src/ReplicatedStorage/Modules/Combat/DamageTypes.lua').read_text(encoding='utf-8')
           for name in ['Physical', 'Crystal', 'BossShockwave', 'Environmental']:
               if name not in damage_types:
