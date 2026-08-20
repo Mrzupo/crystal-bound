@@ -22,6 +22,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
 - Daily Bounty canonicalized from config and safe around wallet caps.
+- Daily Bounty reconcile additionally repairs corrupt persisted `Claimed=true` state when `Progress < Goal`.
 - Achievement Titles derived from earned Achievement IDs; Achievement unlocks are idempotent and not blocked by wallet capacity.
 - PC/Mobile controls and UI.
 - Server-confirmed CombatFeedback presentation.
@@ -43,6 +44,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Quest completion validates objective/reward data before committing state but no longer blocks valid quest completion on a full Money wallet; XP remains fully awarded and EconomyService caps Money.
 - Achievement unlocks are one-shot/idempotent and no longer blocked by wallet capacity; EconomyService caps the Money reward.
 - Daily Bounty requires full wallet capacity before payout because its claim is tied to a specific daily reward transaction and rolls progress back on payout failure.
+- Persisted Daily Bounty corruption with `Claimed=true` before the Goal is now repaired during reconcile rather than leaving the bounty permanently unclaimable.
 - Enemy and Guardian rewards preserve XP/Loot/quest progression when Money is capped; EconomyService alone caps Money.
 - Guardian reward ownership is restricted by loaded-player, Closing and shutdown checks while preserving autosave-settle behavior.
 - Shop purchase and inventory selling remain rollback-safe around Money and stack capacity.
