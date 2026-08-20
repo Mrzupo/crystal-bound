@@ -1,0 +1,35 @@
+name: Enemy Respawn Boundary Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-respawn-boundary-race"]
+  pull_request:
+
+jobs:
+  validate-respawn-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate respawn exceeds NPC corpse cleanup interval
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path("src/ReplicatedStorage/Config/EnemyConfig.lua").read_text(encoding="utf-8")
+          npc = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+
+          match = re.search(r"result\.Respawn\s*=\s*math\.clamp\(finiteNumber\(source\.Respawn,\s*10\),\s*([0-9.]+),\s*600\)", config)
+          if not match:
+              raise SystemExit("EnemyConfig.Get Respawn normalization marker missing")
+          minimum_respawn = float(match.group(1))
+          if minimum_respawn <= 1.5:
+              raise SystemExit("Enemy respawn minimum must exceed the 1.5s NPC corpse cleanup delay")
+
+          if "task.delay(1.5, function()" not in npc:
+              raise SystemExit("NPCService corpse cleanup timing changed; review respawn boundary contract")
+          if "task.delay(config.Respawn,function()" not in bootstrap:
+              raise SystemExit("Bootstrap enemy respawn scheduling marker missing")
+
+          print(f"Enemy respawn minimum {minimum_respawn}s safely exceeds corpse cleanup delay 1.5s.")
