@@ -1,0 +1,33 @@
+name: Module Dependency Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject unsafe PlayerService/StatusEffectService top-level require cycle
+        shell: python
+        run: |
+          from pathlib import Path
+
+          player = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
+          status = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
+
+          player_header = player.split('local PlayerService = {', 1)[0]
+          status_header = status.split('local StatusEffectService = {}', 1)[0]
+
+          if 'local StatusEffectService = require(script.Parent.StatusEffectService)' in player_header:
+              raise SystemExit('PlayerService must not top-level require StatusEffectService; this creates an init-cycle if StatusEffectService reads PlayerService shutdown state')
+          if 'local PlayerService = require(script.Parent.PlayerService)' in status_header:
+              raise SystemExit('StatusEffectService must not top-level require PlayerService while PlayerService depends on StatusEffectService')
+
+          if 'local StatusEffectService = require(script.Parent.StatusEffectService)' not in player:
+              raise SystemExit('PlayerService must retain its documented runtime StatusEffectService dependency until a safe lazy-module refactor is implemented')
+          if 'local active = setmetatable({}, { __mode = "k" })' not in status:
+              raise SystemExit('StatusEffectService must retain weak Humanoid state storage')
+
+          print('Player/StatusEffectService module-init dependency boundary validated; no top-level circular require is permitted.')
