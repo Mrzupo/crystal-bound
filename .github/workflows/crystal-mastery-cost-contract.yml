@@ -1,0 +1,38 @@
+name: Crystal Mastery Cost Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/crystal-mastery-cost-readonly-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate read-only cost lookup and registered material identity
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+          start = text.index("function CrystalMastery.GetUpgradeCost")
+          end = text.index("function CrystalMastery.Upgrade", start)
+          block = text[start:end]
+
+          required = [
+              "local masteryState = type(profile.CrystalMastery) == \"table\" and profile.CrystalMastery[crystalId] or nil",
+              "local safeLevel = math.clamp(math.floor(masteryLevel or 1), 1, maxLevel)",
+              "Config.BaseCosts",
+              "ownsCrystal(profile, crystalId)",
+              "InventoryConfig.GetItemConfig(itemId)",
+          ]
+          missing = [marker for marker in required if marker not in block]
+          if missing:
+              raise SystemExit("Crystal mastery cost guard missing: " + ", ".join(missing))
+          if "ensure(profile, crystalId)" in block:
+              raise SystemExit("GetUpgradeCost must remain read-only and must not call mutating ensure")
+          if "profile.CrystalMastery =" in block:
+              raise SystemExit("GetUpgradeCost must not initialize profile mastery state")
+
+          print("Crystal mastery upgrade-cost lookup is read-only and rejects unregistered material IDs.")
