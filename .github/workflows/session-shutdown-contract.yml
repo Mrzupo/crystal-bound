@@ -25,10 +25,16 @@ jobs:
               "local ReplicatedStorage = game:GetService(\"ReplicatedStorage\")",
               "ReplicatedStorage:SetAttribute(\"CrystalBoundShuttingDown\", false)",
               "ReplicatedStorage:SetAttribute(\"CrystalBoundShuttingDown\", true)",
+              "PlayerService.BeginShutdown()",
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit("Shutdown persistence contract missing: " + ", ".join(missing))
+
+          flag_index = text.index('ReplicatedStorage:SetAttribute("CrystalBoundShuttingDown", true)')
+          begin_shutdown_index = text.index('PlayerService.BeginShutdown()', flag_index)
+          if flag_index > begin_shutdown_index:
+              raise SystemExit('The global shutdown flag must be published before PlayerService enters shutdown state')
 
           root = Path("src/ServerScriptService")
           remove_calls = []
@@ -52,4 +58,4 @@ jobs:
           ):
               if marker not in player_service:
                   raise SystemExit("PlayerService missing shutdown guard: " + marker)
-          print("Session shutdown persistence, duplicate-remove serialization, global gameplay shutdown guard and published shutdown flag validated.")
+          print("Session shutdown persistence, duplicate-remove serialization, global gameplay shutdown guard and ordered published shutdown flag validated.")
