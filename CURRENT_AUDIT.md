@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1293 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1297 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
@@ -23,6 +23,7 @@ Current compare: **1293 commits ahead, 30 commits behind** `main` (verified with
 - Dodge invulnerability end-tasks use per-player tokens, so stale delayed callbacks cannot cancel a later dodge after re-dodge or respawn.
 - `StatusSpeedGuardV2` enforces server-derived WalkSpeed and bounded position authority with rollback, portal-arrival grace and respawn reset.
 - Movement speed refresh and position enforcement now run on separate cadences; `PositionCheckInterval` is honored exactly instead of being masked by the 0.25-second enforcement loop.
+- Slow multiplier movement authority is now sourced from server-only `StatusEffectService` state; `StatusSpeedGuardV2` no longer trusts the Humanoid `CrystalBoundSlowMultiplier` attribute for gameplay.
 - Missing Humanoid/RootPart resets the movement position snapshot, preventing stale `sampleDt` from inflating teleport tolerance.
 - Portal authority belongs only to `WorldTheme.server.lua`; Bootstrap is definition-only and cannot register a second teleport handler.
 - Portal destination vectors and canonical WorldConfig level gates are protected against Bootstrap/WorldTheme drift by contract.
