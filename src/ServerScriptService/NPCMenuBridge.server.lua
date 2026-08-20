@@ -4,6 +4,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
 
 local NPC_INTERACTION_RANGE = math.max(1, tonumber(InteractionConfig.NPCInteractionRange) or 14)
+local MENU_ATTRIBUTES = {
+	"OpenQuestMenu",
+	"OpenShopMenu",
+	"OpenCrystalMenu",
+	"OpenCraftingMenu",
+	"OpenNPCDialog",
+}
 
 local function isNearModel(player, model)
 	local character = player.Character
@@ -12,8 +19,14 @@ local function isNearModel(player, model)
 	return root and targetRoot and (root.Position - targetRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
+local function clearMenus(player)
+	for _, attribute in ipairs(MENU_ATTRIBUTES) do
+		player:SetAttribute(attribute, nil)
+	end
+end
+
 local function openDialog(player, npcId)
-	player:SetAttribute("OpenNPCDialog", nil)
+	clearMenus(player)
 	task.defer(function()
 		if player.Parent then
 			player:SetAttribute("OpenNPCDialog", npcId)
@@ -38,9 +51,5 @@ for _, descendant in ipairs(folder:GetDescendants()) do bindPrompt(descendant) e
 folder.DescendantAdded:Connect(bindPrompt)
 
 Players.PlayerRemoving:Connect(function(player)
-	player:SetAttribute("OpenQuestMenu", nil)
-	player:SetAttribute("OpenShopMenu", nil)
-	player:SetAttribute("OpenCrystalMenu", nil)
-	player:SetAttribute("OpenCraftingMenu", nil)
-	player:SetAttribute("OpenNPCDialog", nil)
+	clearMenus(player)
 end)
