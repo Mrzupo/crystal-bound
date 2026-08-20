@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1448 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+Current compare: **1455 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `18f0f27fcbcb4fd6384f45ecd1d0632f9edad02d`.
 
 ## Verified
@@ -58,6 +58,7 @@ Current compare: **1448 commits ahead, 38 commits behind** `main` (verified with
 - Achievement unlocks are one-shot/idempotent and no longer gated by wallet capacity; `EconomyService` alone caps the Money reward.
 - Economy item selling checks wallet capacity before consuming inventory and restores both Money and inventory on unexpected partial payout.
 - Guardian rewards use canonical config, bounded XP/Money and registered Drop IDs; a full Money wallet only caps the Money portion and does not block XP, Drop, Boss stats or active Guardian Trial completion.
+- Guardian reward ownership is autosave-safe: a loaded Player profile can still be used by the canonical Guardian reward callback while `PlayerService.Saving` is active, but rewards are rejected after Player leave, Closing or global shutdown begins.
 - Guardian creation is idempotent and destroys a corrupt/non-boss object occupying the reserved `CrystalGuardian` name before spawning the canonical boss.
 - Guardian telegraph impacts are bound to the original Guardian and original Character instances, preventing stale windups from damaging respawned Players or replacement Guardians.
 - NPC AI is server-only, bounded by aggro/attack/special ranges, uses weak-key path caches and clears path/status state on death.
@@ -79,13 +80,13 @@ Current compare: **1448 commits ahead, 38 commits behind** `main` (verified with
 - The latest Combined Status query returned no status objects and commit-specific workflow-run queries returned no runs; CI is therefore not called green.
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
-- The current `PlayerService.Saving` gate was found to block `GetProfile()` during autosave, which can suppress a simultaneous Boss/NPC reward callback. The intended fix is to allow gameplay profile reads during Save and settle the save on a full pre/post-profile snapshot, but that larger `PlayerService` write was blocked by the repository tool and is **not yet applied**.
+- The general `PlayerService.Saving` gate still blocks `GetProfile()` for ordinary gameplay requests during autosave. A broader safe fix would allow gameplay profile reads during Save and settle the save on a complete pre/post-profile snapshot; the larger `PlayerService` write for that generalized behavior was blocked by the repository tool and is not applied. The canonical Guardian reward path has its own approved autosave-safe profile access and is protected by dedicated contracts.
 - `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets with detached server-side snapshots; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently unlock through level gates; the long-term design includes Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - White Queen intro/story rules remain unchanged.
 
 ## Next technical direction
-1. Apply the pending autosave gameplay/save-settle fix when a safe repository write path is available.
+1. Apply the pending generalized autosave gameplay/save-settle fix when a safe repository write path is available.
 2. Continue concrete static audits and eliminate newly introduced authority/config drift.
 3. Move to Roblox Studio multiplayer validation when executable runtime access is available.
 4. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat asset contracts for TIDE/GALE.
