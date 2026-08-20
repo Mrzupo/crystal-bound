@@ -1,0 +1,39 @@
+name: Boss Arena Idempotency
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/boss-arena-idempotent-repair"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate partial Guardian arena repair
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/BossArena.server.lua").read_text(encoding="utf-8")
+          required = [
+              "local function ensureFloor()",
+              "local function ensureRing()",
+              "local function ensurePylon(index, position)",
+              "ensureFloor()",
+              "ensureRing()",
+              "ensurePylon(index, position)",
+          ]
+          missing = [marker for marker in required if marker not in source]
+          if missing:
+              raise SystemExit("Guardian arena repair contract missing: " + ", ".join(missing))
+          start = source.find("local function createArena()")
+          end = source.find("\nlocal function setPhaseHazard", start)
+          if start < 0 or end < 0:
+              raise SystemExit("createArena block not found")
+          block = source[start:end]
+          if "if arena:FindFirstChild(\"Floor\") then return end" in block:
+              raise SystemExit("createArena must not treat Floor alone as proof of complete arena readiness")
+          if block.count("ensurePylon(index, position)") != 1:
+              raise SystemExit("createArena must repair all four canonical pylons")
+          print("Guardian arena partial-state repair and idempotent readiness contract validated.")
