@@ -10,12 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate per-UserId load generation and shutdown gate
+      - name: Validate per-UserId load generation, session token and shutdown gate
         shell: python
         run: |
           from pathlib import Path
 
           text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          store = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           required = (
               "LoadingByUserId = {}",
               "ShuttingDown = false",
@@ -38,4 +40,19 @@ jobs:
           if "SafeProfileStore.Release(player)" not in text:
               raise SystemExit("Load lifecycle must retain explicit session-lock release for non-superseded leaves")
 
-          print("Per-UserId player load generation and shutdown contract validated.")
+          for marker in (
+              'local sessionTokens = setmetatable({}, { __mode = "k" })',
+              'local function getSessionToken(player)',
+              'local sameSession = lock and lock.JobId == SESSION_ID and lock.Token == token',
+              'lock.Token ~= token',
+              'Token = token',
+          ):
+              if marker not in store:
+                  raise SystemExit("SafeProfileStore same-server rejoin token guard missing: " + marker)
+
+          if 'local function loadPlayer(player)' not in bootstrap or 'for _, player in ipairs(Players:GetPlayers()) do' not in bootstrap:
+              raise SystemExit("Bootstrap must retain one canonical startup loader plus existing-player catch-up")
+          if 'PlayerLoadCatchup' in bootstrap:
+              raise SystemExit("Redundant PlayerLoadCatchup loader must remain removed")
+
+          print("Per-UserId player load generation, same-server session token and shutdown contract validated.")
