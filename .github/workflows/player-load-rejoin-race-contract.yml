@@ -35,10 +35,10 @@ jobs:
           if missing:
               raise SystemExit("Player load rejoin/shutdown contract missing: " + ", ".join(missing))
 
+          if text.count("local released = SafeProfileStore.Release(player)") < 3:
+              raise SystemExit("Every successful-but-superseded load exit must release its own session lock")
           if "LoadingByUserId[userId] = nil" not in text:
               raise SystemExit("Player load lifecycle must clear per-UserId load state")
-          if "SafeProfileStore.Release(player)" not in text:
-              raise SystemExit("Load lifecycle must retain explicit session-lock release for non-superseded leaves")
 
           for marker in (
               'local sessionTokens = setmetatable({}, { __mode = "k" })',
@@ -55,4 +55,4 @@ jobs:
           if 'PlayerLoadCatchup' in bootstrap:
               raise SystemExit("Redundant PlayerLoadCatchup loader must remain removed")
 
-          print("Per-UserId player load generation, same-server session token and shutdown contract validated.")
+          print("Per-UserId player load generation, superseded-lock release, same-server session token and shutdown contract validated.")
