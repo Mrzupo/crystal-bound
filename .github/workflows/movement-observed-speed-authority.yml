@@ -1,0 +1,45 @@
+name: Movement Observed Speed Authority
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/movement-authority-cap-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure observed movement cap stays tied to canonical authority
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
+          values = {
+              key: float(value)
+              for key, value in re.findall(
+                  r"(BaseWalkSpeed|MaxWalkSpeedBonus|MaxObservedSpeed|ExtraDistanceTolerance)\s*=\s*([0-9.]+)",
+                  config,
+              )
+          }
+          required = ("BaseWalkSpeed", "MaxWalkSpeedBonus", "MaxObservedSpeed", "ExtraDistanceTolerance")
+          missing = [key for key in required if key not in values]
+          if missing:
+              raise SystemExit("movement authority config missing: " + ", ".join(missing))
+
+          canonical_max = values["BaseWalkSpeed"] + values["MaxWalkSpeedBonus"]
+          allowed_observed_max = canonical_max + values["ExtraDistanceTolerance"]
+          if values["MaxObservedSpeed"] > allowed_observed_max:
+              raise SystemExit(
+                  f"MaxObservedSpeed {values['MaxObservedSpeed']} exceeds canonical max {canonical_max} "
+                  f"plus tolerance {values['ExtraDistanceTolerance']}"
+              )
+
+          guard = Path("src/ServerScriptService/StatusSpeedGuardV2.server.lua").read_text(encoding="utf-8")
+          for marker in ("MAX_OBSERVED_SPEED", "EXTRA_DISTANCE_TOLERANCE", "displacement > allowed"):
+              if marker not in guard:
+                  raise SystemExit(f"StatusSpeedGuardV2 missing movement authority marker: {marker}")
+
+          print("Observed movement cap is tied to canonical server WalkSpeed authority plus configured tolerance.")
