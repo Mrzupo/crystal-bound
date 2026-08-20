@@ -29,6 +29,7 @@ Base: `main`
 - Inventory snapshots are detached and pure; Shop/Crafting/UseItem paths validate inputs before mutation and roll back partial transaction failures.
 - Quest completion requires the objective for multi-step quests and is idempotent through QuestSystem state checks.
 - Daily Bounty state and reward values are reconstructed from canonical config; payout only claims after a full reward transaction succeeds.
+- Persisted Daily Bounty state now also enforces the invariant `Claimed => Progress >= Goal`; corrupt `Claimed=true` / incomplete-goal state is normalized back to unclaimed during `PlayerData.Reconcile()`.
 - Enemy and Guardian rewards preserve XP/Loot/progression when Money is capped; Money is bounded centrally by EconomyService.
 - Guardian telegraphs are bound to the original Guardian and target Character instances, preventing stale delayed impacts on replacement instances.
 - NPC Pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
@@ -39,7 +40,8 @@ Base: `main`
 - `.github/workflows/pve-attacker-context-validation.yml` now checks exact `Workspace.NPCs` parent identity instead of the weaker descendant-only assumption.
 - `.github/workflows/player-load-rejoin-race-contract.yml` now matches the actual runtime: duplicate same-UserId loads are rejected while the first load is in flight, rather than claiming superseded loads.
 - `.github/workflows/quest-chain-config-validation.yml` now enforces the linear, single-root, acyclic quest dependency graph required by `QuestSystem.GetChainOrder()`.
-- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency semantics.
+- `.github/workflows/persistence-reconcile-contract.yml` now matches the actual `PlayerData.Reconcile()` implementation and explicitly guards the Daily Bounty `Claimed => Progress >= Goal` invariant.
+- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency semantics and Daily Bounty integrity behavior.
 
 ## Open / runtime-only limitations
 - No real Roblox Studio runtime playtest has been executed from this environment.
