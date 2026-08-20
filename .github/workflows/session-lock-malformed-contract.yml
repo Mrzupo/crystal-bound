@@ -1,0 +1,31 @@
+name: Session Lock Malformed Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/session-lock-malformed-fail-closed"]
+  pull_request:
+
+jobs:
+  validate-session-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate malformed SessionLock cannot be treated as stale
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
+          required = [
+              "local MAX_SESSION_TIMESTAMP = 4102444800",
+              "local validLockTimestamp = lockTimestamp ~= nil",
+              "and lockTimestamp > 0",
+              "and lockTimestamp <= MAX_SESSION_TIMESTAMP",
+              "local age = validLockTimestamp and math.max(0, timestamp() - lockTimestamp) or 0",
+          ]
+          missing = [marker for marker in required if marker not in source]
+          if missing:
+              raise SystemExit("SessionLock fail-closed contract missing: " + ", ".join(missing))
+          if "or math.huge" in source:
+              raise SystemExit("Malformed SessionLock timestamp must not fail open to stale/expired")
+          print("Malformed SessionLock timestamps fail closed and cannot trigger stale-lock takeover.")
