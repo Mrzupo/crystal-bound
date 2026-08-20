@@ -188,7 +188,7 @@ function PlayerService.Load(player)
 		return PlayerService.LoadingByUserId[userId] == loadToken
 	end
 	if PlayerService.ShuttingDown then
-		if isCurrentLoad() then PlayerService.LoadingByUserId[user.UserId] = nil end
+		if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end
 		return nil, "Server is shutting down"
 	end
 
