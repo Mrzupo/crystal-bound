@@ -3,9 +3,11 @@ local Players = game:GetService("Players")
 local PlayerService = require(script.Parent.Services.PlayerService)
 
 local HEARTBEAT_INTERVAL = 45
+local AUTOSAVE_INTERVAL = 60
 local MAX_CONSECUTIVE_FAILURES = 2
 local SHUTDOWN_TIMEOUT = 25
 local failures = setmetatable({}, { __mode = "k" })
+local autosaveFailures = setmetatable({}, { __mode = "k" })
 local shuttingDown = false
 
 local function shutdownProfiles()
@@ -55,6 +57,28 @@ task.spawn(function()
 					warn(("Crystal Bound: session heartbeat failed for %s."):format(player.Name))
 					if failures[player] >= MAX_CONSECUTIVE_FAILURES then
 						player:Kick("Crystal Bound lost the save-session lock. Please rejoin to protect your progress.")
+					end
+				end
+			end
+		end
+	end
+end)
+
+task.spawn(function()
+	while not shuttingDown do
+		task.wait(AUTOSAVE_INTERVAL)
+		if shuttingDown then break end
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player.Parent and PlayerService.GetProfile(player) then
+				local ok = PlayerService.Save(player)
+				player:SetAttribute("AutosaveOk", ok == true)
+				if ok then
+					autosaveFailures[player] = 0
+				else
+					autosaveFailures[player] = (autosaveFailures[player] or 0) + 1
+					warn(("Crystal Bound: autosave failed for %s."):format(player.Name))
+					if autosaveFailures[player] >= MAX_CONSECUTIVE_FAILURES then
+						player:Kick("Crystal Bound could not safely save your progress. Please rejoin to protect it.")
 					end
 				end
 			end
