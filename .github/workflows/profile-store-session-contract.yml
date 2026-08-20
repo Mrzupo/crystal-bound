@@ -42,6 +42,14 @@ jobs:
           if missing:
               raise SystemExit('Profile-store session contract missing: ' + ', '.join(missing))
 
+          load_block = text[text.index('function SafeProfileStore.Load'):text.index('function SafeProfileStore.Save')]
+          token_assignment = load_block.index('sessionTokens[player] = token')
+          claim_assignment = load_block.index('claimed = true')
+          if token_assignment < claim_assignment:
+              raise SystemExit('Active session token must not be installed before the load claim succeeds')
+          if load_block[:token_assignment].count('sessionTokens[player] = token') != 0:
+              raise SystemExit('Speculative load paths must not overwrite the active profile token')
+
           callback_checks = {
               'Load': ('return store:UpdateAsync(key, function(current)', 'claimed = false', 'invalidStoredValue = false'),
               'Save': ('return store:UpdateAsync(key, function(current)', 'saved = false'),
