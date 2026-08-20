@@ -41,7 +41,7 @@ local function isValidAttacker(instance)
 		local humanoid = instance:FindFirstChildOfClass("Humanoid")
 		local npcFolder = getNPCRoot()
 		return npcFolder ~= nil
-			and instance:IsDescendantOf(npcFolder)
+			and instance.Parent == npcFolder
 			and instance:GetAttribute("Enemy") == true
 			and humanoid ~= nil
 			and humanoid.Health > 0
@@ -72,7 +72,7 @@ local function isValidTarget(target)
 	if Players:GetPlayerFromCharacter(targetModel) then return true end
 	local npcFolder = getNPCRoot()
 	return npcFolder ~= nil
-		and targetModel:IsDescendantOf(npcFolder)
+		and targetModel.Parent == npcFolder
 		and (targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil)
 end
 
@@ -120,7 +120,7 @@ function DamageService.GetLastAttacker(targetModel)
 	elseif record.Kind == "Model" then
 		local model = record.Instance
 		local npcFolder = getNPCRoot()
-		if model and model.Parent and npcFolder and model:IsDescendantOf(npcFolder) and model:GetAttribute("Enemy") == true then
+		if model and model.Parent == npcFolder and model:GetAttribute("Enemy") == true then
 			return model
 		end
 	end
