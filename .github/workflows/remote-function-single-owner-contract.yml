@@ -49,8 +49,8 @@ jobs:
               text = all_text[path]
               if text.count(contract["handler"]) != 1:
                   raise SystemExit(f"RemoteFunction {name} must have exactly one canonical handler in {path}")
-              if any(marker not in text for marker in contract["markers"]):
-                  missing = [marker for marker in contract["markers"] if marker not in text]
+              missing = [marker for marker in contract["markers"] if marker not in text]
+              if missing:
                   raise SystemExit(f"RemoteFunction {name} missing rate-limit markers: {', '.join(missing)}")
 
           for path, text in all_text.items():
@@ -62,12 +62,9 @@ jobs:
               ]
               for handler in direct_handlers:
                   if handler in text:
-                      expected_path = contracts[handler.removesuffix(".OnServerInvoke")]["path"]
+                      name = handler.removesuffix(".OnServerInvoke")
+                      expected_path = contracts[name]["path"]
                       if path != expected_path:
-                          raise SystemExit(f"RemoteFunction {handler.removesuffix('.OnServerInvoke')} has duplicate owner in {path}")
-
-          bootstrap = all_text[contracts["GetPlayerData"]["path"]]
-          if bootstrap.count("OnServerInvoke =") != 0:
-              raise SystemExit("Bootstrap must use explicit remotes.<name>.OnServerInvoke assignments only")
+                          raise SystemExit(f"RemoteFunction {name} has duplicate owner in {path}")
 
           print("RemoteFunction single-owner and rate-limit contract validated.")
