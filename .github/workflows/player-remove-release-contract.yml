@@ -17,8 +17,9 @@ jobs:
           text = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
           required = [
               'Closing = setmetatable({}, { __mode = "k" })',
+              'Saving = setmetatable({}, { __mode = "k" })',
               'function PlayerService.GetProfile(player)',
-              'if PlayerService.Closing[player] then return nil end',
+              'if PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] then return nil end',
               'function PlayerService.Sync(player, internal)',
               'if not profile or (PlayerService.Closing[player] and not internal) then return end',
               'local SAVE_SETTLE_ATTEMPTS = 3',
