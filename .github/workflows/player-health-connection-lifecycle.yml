@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate player humanoid connection lifecycle
+      - name: Validate player humanoid connection lifecycle and Save-time respawn handling
         shell: python
         run: |
           from pathlib import Path
@@ -22,8 +22,14 @@ jobs:
               "PlayerService.HumanoidConnections[player] = nil",
               "player.Character ~= character",
               "not character.Parent",
+              "local function bindCharacterWhenReady(player, character)",
+              "local deadline = os.clock() + OPERATION_TIMEOUT",
+              "while PlayerService.Saving[player] and os.clock() < deadline do",
+              "task.wait(0.1)",
+              "if PlayerService.Saving[player] or not PlayerService.Profiles[player] or PlayerService.Closing[player]",
+              "bindCharacterWhenReady(player, character)",
           ]
           for marker in required:
               if marker not in text:
                   raise SystemExit(f"PlayerService missing lifecycle marker: {marker}")
-          print("Player humanoid connection lifecycle and stale CharacterAdded callback validation passed.")
+          print("Player humanoid connection lifecycle, stale CharacterAdded handling and Save-time respawn recovery validated.")
