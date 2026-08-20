@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1443 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1448 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
 - Current compared main base: `18f0f27fcbcb4fd6384f45ecd1d0632f9edad02d`.
 
 ## Current state
@@ -35,6 +35,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - `PlayerService.Load()` uses a per-UserId generation token: a newer load supersedes an older load for the same UserId, and every superseded/aborted successful load releases the exact SessionLock token it acquired.
 - Bootstrap checks `player.Parent` before `Kick()` on load failure.
 - `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
+- Shutdown now uses `PlayerService.HasLoadedProfile()` so `BeginShutdown()` cannot hide profiles from the final Save/Release sweep.
 - `PlayerService.Heal()` is the canonical player Health mutation owner; TIDE and Health Potion use it.
 - `UseItemRemote` rolls the potion back if no health can actually be applied.
 - Health Authority CI allows direct Player Health writes only in PlayerService and NPC/Boss spawn-time health initialization.
@@ -80,15 +81,16 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Latest Combined Status/workflow-run queries provide no verified CI run/status; do not call CI green without actual evidence.
 - Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
+- A concrete autosave gameplay race remains: current `PlayerService.Saving` blocks `GetProfile()` during an autosave, so an NPC/Boss death callback arriving during the save can lose its reward lookup. The intended fix is to allow gameplay profile reads during Save and settle the save on a full pre/post-profile snapshot. The larger PlayerService write was attempted but blocked by the repository tool, so this fix is **not applied yet**.
 - `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as acquisition activities; decide the final model before building acquisition content.
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
 
 ## Next steps
-1. Continue concrete static audits and eliminate newly introduced authority/config drift.
-2. Move toward Roblox Studio multiplayer validation.
-3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat the asset contract for TIDE/GALE.
-4. Keep gameplay authority in server systems; animation/VFX never decide damage, timing or rewards.
+1. Apply the pending autosave gameplay/save-settle fix when a safe repository write path is available.
+2. Continue concrete static audits and eliminate newly introduced authority/config drift.
+3. Move toward Roblox Studio multiplayer validation.
+4. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat the asset contract for TIDE/GALE.
 
 ## Do not do
 - Do not merge, reset or force-update `main` from this workstream.
