@@ -29,10 +29,16 @@ jobs:
               raise SystemExit("PlayerService must own session refresh operations")
           if "if not acquireOperation(player) then return false end" not in player_service:
               raise SystemExit("RefreshSession must acquire the PlayerService operation lock")
+          if player_service.count('if not PlayerService.Profiles[player] or PlayerService.Closing[player] then') < 4:
+              raise SystemExit("PlayerService must re-check profile/closing state after waits and before persistent operations")
           if "SafeProfileStore.Refresh(player)" not in player_service:
               raise SystemExit("RefreshSession must delegate to SafeProfileStore.Refresh")
+          if "function PlayerService.Save(player)" not in player_service:
+              raise SystemExit("PlayerService must own autosave operations")
+          if "return saveConsistently(player, profile)" not in player_service:
+              raise SystemExit("Save must use the consistent snapshot/save path")
           if "function PlayerService.BeginShutdown()" not in player_service:
               raise SystemExit("PlayerService must expose a shutdown gate")
           if "function PlayerService.GetPendingLoadCount()" not in player_service:
               raise SystemExit("PlayerService must expose pending-load accounting")
-          print("Session heartbeat and shutdown ownership contract validated.")
+          print("Session heartbeat, autosave, post-lock close-state recheck and shutdown ownership contract validated.")
