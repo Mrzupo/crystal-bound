@@ -1,0 +1,61 @@
+name: RemoteFunction Single Owner Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/remote-function-contract-v2"]
+  pull_request:
+
+jobs:
+  validate-remote-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical RemoteFunction owners and rate limits
+        shell: python
+        run: |
+          from pathlib import Path
+
+          contracts = {
+              "src/ServerScriptService/QuestAvailability.server.lua": {
+                  "remote": "GetAvailableQuests",
+                  "markers": ["remote.OnServerInvoke = function(player)", "REQUEST_INTERVAL", "nextRequest[player]"],
+              },
+              "src/ServerScriptService/NPCDialogRemote.server.lua": {
+                  "remote": "NPCDialogRequest",
+                  "markers": ["remote.OnServerInvoke = function(player, npcId)", "REQUEST_INTERVAL", "nextRequest[player]"],
+              },
+              "src/ServerScriptService/Bootstrap.server.lua": {
+                  "remote": "GetPlayerData",
+                  "markers": ["remotes.GetPlayerData.OnServerInvoke = function(player)", "PLAYER_DATA_REQUEST_INTERVAL", "nextPlayerDataRequest[player]"],
+              },
+          }
+
+          server_root = Path("src/ServerScriptService")
+          lua_files = list(server_root.rglob("*.lua"))
+          all_text = {path: path.read_text(encoding="utf-8") for path in lua_files}
+
+          for path, contract in contracts.items():
+              file = Path(path)
+              if file not in all_text:
+                  raise SystemExit(f"Missing canonical RemoteFunction owner: {path}")
+              text = all_text[file]
+              marker = contract["markers"][0]
+              if text.count("OnServerInvoke =") != 1:
+                  raise SystemExit(f"{path} must define exactly one OnServerInvoke owner")
+              if marker not in text:
+                  raise SystemExit(f"{path} missing canonical handler marker: {marker}")
+              missing = [m for m in contract["markers"][1:] if m not in text]
+              if missing:
+                  raise SystemExit(f"{path} missing rate-limit markers: {', '.join(missing)}")
+
+          canonical_names = {"GetAvailableQuests", "NPCDialogRequest", "GetPlayerData", "GetQuestData"}
+          for name in canonical_names:
+              owners = [path for path, text in all_text.items() if f"{name}.OnServerInvoke" in text]
+              if name == "GetQuestData":
+                  expected = ["src/ServerScriptService/Bootstrap.server.lua"]
+              else:
+                  expected = [next(path for path, cfg in contracts.items() if cfg["remote"] == name)]
+              if sorted(str(path) for path in owners) != sorted(expected):
+                  raise SystemExit(f"RemoteFunction {name} ownership drift: {owners}")
+
+          print("RemoteFunction single-owner and rate-limit contract validated.")
