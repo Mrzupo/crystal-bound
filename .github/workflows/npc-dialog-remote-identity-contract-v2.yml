@@ -1,0 +1,30 @@
+name: NPC Dialog Remote Identity V2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical NPC identity at dialog remote boundary
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/NPCDialogRemote.server.lua").read_text(encoding="utf-8")
+          required = [
+              'if npcId ~= "CrystalKeeper" and npcId ~= "MaterialTrader" then return false end',
+              'npc.Parent ~= folder',
+              'npc:GetAttribute("Interactable") ~= true',
+              'if not config or not isNearCanonicalNPC(player, npcId) then return nil end',
+              'if now < (nextRequest[player] or 0) then return nil end',
+              'nextRequest[player] = now + REQUEST_INTERVAL',
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise SystemExit(f"NPC dialog remote authority marker missing: {marker}")
+          print("NPC dialog remote requires canonical interactable identity plus the existing per-player rate limit.")
