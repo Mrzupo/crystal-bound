@@ -43,14 +43,22 @@ local function getTargetRange(action)
 end
 
 local function canPresentCombat(action, target)
-	if not target then return false end
-	local range = getTargetRange(action)
-	if not range then return false end
-	local character = player.Character
-	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
-	local targetRoot = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
-	if not playerRoot or not targetRoot then return false end
-	if (playerRoot.Position - targetRoot.Position).Magnitude > range then return false end
+	local crystalId = getEquippedCrystal()
+	if action == "Ability" and crystalId == "TIDE" then
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not humanoid or humanoid.Health <= 0 or humanoid.Health >= humanoid.MaxHealth then return false end
+	else
+		if not target then return false end
+		local range = getTargetRange(action)
+		if not range then return false end
+		local character = player.Character
+		local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+		local targetRoot = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
+		if not playerRoot or not targetRoot then return false end
+		if (playerRoot.Position - targetRoot.Position).Magnitude > range then return false end
+	end
+
 	if action == "Ability" then
 		local now = os.clock()
 		local cooldownEnd = finiteNumber(player:GetAttribute("AbilityCooldownEnd"), 0)
@@ -145,7 +153,13 @@ end)
 
 makeButton("Ability", "Q", UDim2.new(1, -195, 1, -165), UDim2.fromOffset(74, 74), function()
 	local hit = getTarget()
-	if hit and canPresentCombat("Ability", hit) then
+	local crystalId = getEquippedCrystal()
+	if crystalId == "TIDE" then
+		if canPresentCombat("Ability", nil) then
+			playPresentation("Ability")
+			combatRemote:FireServer("Ability", nil)
+		end
+	elseif hit and canPresentCombat("Ability", hit) then
 		playPresentation("Ability")
 		combatRemote:FireServer("Ability", hit)
 	end
