@@ -59,6 +59,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Stay in the telegraph and confirm `BossShockwave` damage.
 - Defeat Guardian.
 - Confirm Guardian reward/quest/achievement state is granted once and the boss respawns on schedule.
+- Force a controlled 60-second autosave window and defeat Guardian during that save; expected: Guardian XP/loot/quest/stats still commit and are persisted by the next settled save pass.
 
 ## 7. Persistence
 - Change level, money, inventory, crystal mastery and quest state.
@@ -71,6 +72,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm the server does not silently release a lost lock.
 - Force final `Release()` failure in a controlled test environment.
 - Expected: removal reports failure and the persistent session lock is retained.
+- During autosave, trigger a server-authorized gameplay mutation; expected: the settled save path does not report success until the changed profile state is persisted.
 
 ## 8. Transactions / Consumables
 - Buy Health Potions with enough Money; confirm Money decreases exactly once and inventory increases exactly once.
