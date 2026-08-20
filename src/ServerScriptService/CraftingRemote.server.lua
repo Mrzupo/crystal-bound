@@ -54,7 +54,7 @@ remote.OnServerEvent:Connect(function(player, action, outputId, amount)
 	player:SetAttribute("CraftingMessage", message)
 	if ok then
 		PlayerService.Sync(player)
-		remotes.InventoryChanged:FireClient(player, profile.Inventory)
+		remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile))
 	end
 end)
 
