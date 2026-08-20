@@ -10,36 +10,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate RemoteFunction ownership and limits
+        shell: python
         run: |
-          python - <<'PY'
           from pathlib import Path
-          files = list(Path('src/ServerScriptService').rglob('*.server.lua'))
-          text = '\n'.join(p.read_text(encoding='utf-8') for p in files)
-          required = [
-              'NPCDialogRequest',
-              'GetAvailableQuests',
-              'GetPlayerData',
-              'GetQuestData',
-          ]
-          for remote in required:
-              if remote not in text:
-                  raise SystemExit(f'missing RemoteFunction reference: {remote}')
-          handlers = {
+
+          root = Path('src/ServerScriptService')
+          files = list(root.rglob('*.server.lua'))
+          required = {
               'NPCDialogRequest': 'NPCDialogRemote.server.lua',
               'GetAvailableQuests': 'QuestAvailability.server.lua',
               'GetPlayerData': 'Bootstrap.server.lua',
               'GetQuestData': 'Bootstrap.server.lua',
           }
-          for remote, owner in handlers.items():
-              body = Path('src/ServerScriptService').joinpath(owner).read_text(encoding='utf-8')
-              if 'OnServerInvoke' not in body:
+
+          for remote, owner in required.items():
+              owners = []
+              marker = f'"{remote}"'
+              for path in files:
+                  text = path.read_text(encoding='utf-8')
+                  if marker in text and 'OnServerInvoke' in text:
+                      owners.append(path.name)
+              if owners != [owner]:
+                  raise SystemExit(f'{remote} must have exactly one RemoteFunction server owner; found {owners}')
+
+              owner_text = root.joinpath(owner).read_text(encoding='utf-8')
+              if 'OnServerInvoke' not in owner_text:
                   raise SystemExit(f'{owner}: missing OnServerInvoke for {remote}')
-          assert 'REQUEST_INTERVAL = 0.2' in Path('src/ServerScriptService/NPCDialogRemote.server.lua').read_text(encoding='utf-8')
-          assert 'REQUEST_INTERVAL = 0.2' in Path('src/ServerScriptService/QuestAvailability.server.lua').read_text(encoding='utf-8')
-          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+
+          npc = root.joinpath('NPCDialogRemote.server.lua').read_text(encoding='utf-8')
+          quests = root.joinpath('QuestAvailability.server.lua').read_text(encoding='utf-8')
+          bootstrap = root.joinpath('Bootstrap.server.lua').read_text(encoding='utf-8')
+          assert 'REQUEST_INTERVAL = 0.2' in npc
+          assert 'REQUEST_INTERVAL = 0.2' in quests
           assert 'PLAYER_DATA_REQUEST_INTERVAL = 0.2' in bootstrap
           assert 'QUEST_DATA_REQUEST_INTERVAL = 0.35' in bootstrap
           assert 'nextPlayerDataRequest[player]' in bootstrap
           assert 'nextQuestDataRequest[player]' in bootstrap
           print('RemoteFunction ownership and rate-limit contract validated.')
-          PY
