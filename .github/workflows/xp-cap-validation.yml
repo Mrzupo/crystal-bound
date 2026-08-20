@@ -10,11 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate shared XP cap and growth boundary
+      - name: Validate shared XP cap, growth boundary and persisted threshold
         shell: python
         run: |
           from pathlib import Path
-          import re
           config = Path("src/ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
           service = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
           player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
@@ -30,6 +29,10 @@ jobs:
               raise SystemExit("XPService must consume XPConfig.MaxExperience")
           if "XPConfig.MaxExperience" not in player_data:
               raise SystemExit("PlayerData must consume XPConfig.MaxExperience")
-          if "math.min(1000000000" in service or "0, 1000000000" in player_data:
+          if "local function capExperienceBelowNextLevel(level, experience, maxLevel, maxExperience, requiredXP)" not in player_data:
+              raise SystemExit("PlayerData must cap persisted XP below the current level threshold")
+          if "data.Experience = capExperienceBelowNextLevel(data.Level, data.Experience, data.Level >= XPConfig.MaxLevel and 0 or XPConfig.MaxLevel" not in player_data and "data.Experience = capExperienceBelowNextLevel(data.Level, data.Experience, XPConfig.MaxLevel, XPConfig.MaxExperience, XPConfig.GetRequiredXP)" not in player_data:
+              raise SystemExit("PlayerData must apply the canonical XP threshold cap")
+          if "math.min(1000000000" in service:
               raise SystemExit("XP cap must not be hardcoded outside XPConfig")
-          print("XP cap, growth and required-XP contracts validated.")
+          print("XP cap, growth, required-XP and persisted-threshold contracts validated.")
