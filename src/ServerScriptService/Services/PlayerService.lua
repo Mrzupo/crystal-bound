@@ -127,7 +127,15 @@ local function bindCharacterWhenReady(player, character)
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
 	if PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then return end
 	if humanoid then ensureAnimator(character) end
-	PlayerService.Sync(player)
+	player:SetAttribute("ProfileLoaded", true)
+	local syncSuccess, syncError = xpcall(function()
+		PlayerService.Sync(player)
+	end, debug.traceback)
+	if not syncSuccess then
+		player:SetAttribute("ProfileLoaded", false)
+		warn(("Crystal Bound: Character PlayerService.Sync failed for %s; error=%s"):format(player.Name, tostring(syncError)))
+		return
+	end
 	bindHumanoid(player, humanoid)
 	player:SetAttribute("DeathMessage", "")
 end
@@ -280,6 +288,7 @@ function PlayerService.Load(player)
 	cleanupHumanoidConnections(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+		player:SetAttribute("ProfileLoaded", false)
 		task.defer(function()
 			bindCharacterWhenReady(player, character)
 		end)
