@@ -49,7 +49,11 @@ local function ensureGui()
 
 	local close = Instance.new("TextButton")
 	close.Name = "Close"; close.Position = UDim2.fromOffset(640, 14); close.Size = UDim2.fromOffset(40, 36); close.Text = "X"; close.Font = Enum.Font.GothamBold; close.TextSize = 20; close.Parent = panel
-	close.Activated:Connect(function() open = false; panel.Visible = false end)
+	close.Activated:Connect(function()
+		open = false
+		panel.Visible = false
+		player:SetAttribute("OpenCrystalMenu", nil)
+	end)
 
 	local info = Instance.new("TextLabel")
 	info.Name = "Info"; info.Position = UDim2.fromOffset(20, 58); info.Size = UDim2.fromOffset(660, 40); info.BackgroundTransparency = 1; info.TextXAlignment = Enum.TextXAlignment.Left; info.Font = Enum.Font.GothamMedium; info.TextSize = 15; info.Parent = panel
@@ -149,7 +153,13 @@ end
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.I then
-		if open then open = false; panel.Visible = false else openMenu() end
+		if open then
+			open = false
+			panel.Visible = false
+			player:SetAttribute("OpenCrystalMenu", nil)
+		else
+			openMenu()
+		end
 	elseif input.KeyCode == Enum.KeyCode.P then
 		useItemRequest:FireServer("HealthPotion")
 	end
