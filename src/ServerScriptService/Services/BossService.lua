@@ -13,6 +13,7 @@ local XPService = require(script.Parent.XPService)
 local QuestService = require(script.Parent.QuestService)
 local DamageService = require(script.Parent.DamageService)
 local DodgeService = require(script.Parent.DodgeService)
+local PlayerService = require(script.Parent.PlayerService)
 local BossService = { Bound = false }
 
 local function finiteNumber(value, fallback)
@@ -117,7 +118,7 @@ end
 function BossService.IsBoss(model) return model and model:GetAttribute("BossId") ~= nil end
 
 function BossService.CreateGuardian(position, parent, uniqueName)
-	if not parent or not parent.Parent or typeof(position) ~= "Vector3" then return nil end
+	if not parent or not parent.Parent or typeof(position) ~= "Vector3" or PlayerService.ShuttingDown then return nil end
 	local bossName = uniqueName or "CrystalGuardian"
 	local existing = parent:FindFirstChild(bossName)
 	if existing then
@@ -146,7 +147,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 	attachBossHealthBar(model, humanoid, root)
 	local nextAttack, nextAbility = 0, 0
 	task.spawn(function()
-		while model.Parent and humanoid.Health > 0 do
+		while model.Parent and humanoid.Health > 0 and not PlayerService.ShuttingDown do
 			local nearestPlayer, nearestDistance = nil, aggroRange
 			for _, player in ipairs(Players:GetPlayers()) do
 				local character = player.Character
@@ -192,7 +193,6 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 
 		local creator = DamageService.GetLastAttacker(model)
 		local player = creator and (creator:IsA("Player") and creator or Players:GetPlayerFromCharacter(creator))
-		local PlayerService = require(script.Parent.PlayerService)
 		local profile = player and player.Parent and not PlayerService.ShuttingDown and not PlayerService.Closing[player] and PlayerService.HasLoadedProfile(player) and PlayerService.Profiles[player] or nil
 		local xpReward = finiteNumber(config.XP)
 		local moneyReward = finiteNumber(config.Money)
@@ -233,7 +233,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 			if model.Parent then model:Destroy() end
 		end)
 		task.delay(respawn + 1.5, function()
-			if parent.Parent and not parent:FindFirstChild(bossName) then
+			if not PlayerService.ShuttingDown and parent.Parent and not parent:FindFirstChild(bossName) then
 				BossService.CreateGuardian(position, parent, bossName)
 			end
 		end)
