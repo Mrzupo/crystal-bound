@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1404 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1413 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 - Current compared main base: `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Current state
@@ -16,7 +16,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Canonical `CrystalConfig` + `CrystalSystem` + `CrystalMastery`.
 - TIDE/GALE level gates enforced inside `CrystalSystem.Unlock()` as well as request-layer checks.
 - Central QuestSystem / QuestService completion and rewards.
-- SafeProfileStore session lock with per-player token, per-load token generation, callback-local retry state isolation, save snapshots and profile-revision settle passes.
+- SafeProfileStore session lock with active per-player tokens, separate per-load claim tokens, callback-local retry-state isolation, callback-time snapshots and profile-revision save settling.
 - Canonical Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
@@ -32,9 +32,8 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 ## Latest hardening work
 - Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after world initialization, with per-Player deduplication.
 - Redundant `PlayerLoadCatchup.server.lua` was removed from the repository and Rojo tree to avoid two concurrent startup load owners.
-- `PlayerService.Load()` rejects a second simultaneous load for the same UserId before replacing `LoadingByUserId[userId]`.
+- `PlayerService.Load()` uses a per-UserId generation token: a newer load supersedes an older load for the same UserId, and every superseded/aborted successful load releases the exact SessionLock token it acquired. This intentionally supports safe same-UserId rejoin races rather than deadlocking the newer load.
 - Bootstrap checks `player.Parent` before `Kick()` on load failure.
-- Superseded successful profile loads release the exact per-load session token before returning.
 - `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
 - `PlayerService.Heal()` is the canonical player Health mutation owner; Tide and Health Potion use it.
 - `UseItemRemote` rolls the potion back if no health can actually be applied.
@@ -46,11 +45,14 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Shop purchase and inventory selling remain rollback-safe around Money and stack capacity.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences; `PositionCheckInterval` is currently 0.15 s.
-- Missing Humanoid/RootPart resets movement position state; portal grace remains Character-bound.
-- Dodge invulnerability end tasks use per-player tokens.
+- Missing Humanoid/RootPart resets movement position state; portal grace remains Character-bound and clears on respawn/leave.
+- Dodge invulnerability end tasks use per-player tokens and `ApplyDamage()` requires the current Player Character Humanoid.
 - CharacterAdded health binding checks exact Character identity before/after Humanoid acquisition.
 - Guardian telegraph windups are bound to the original Guardian and original target Character instances.
 - AI pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
+- `PlayerData.Reconcile()` now uses canonical `CrystalSystem.Exists()` validity, finite/integer progression thresholds, canonical Achievement title validation, quest prerequisite repair, daily-bounty definition repair and persistent-stat bounds.
+- `CrystalMastery` mutation/read paths require actual Crystal ownership instead of relying only on Remote-layer checks.
+- CrystalConfig completeness is contract-checked across Definition, UnlockLevel, BasicAttack, Ability and Passive sources.
 - Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
 - NPC dialog/config snapshots are detached and server-distance gated.
 
