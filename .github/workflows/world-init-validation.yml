@@ -35,6 +35,10 @@ jobs:
               'Players.PlayerRemoving:Connect(function(player)',
               'portalCandidates[player] = nil',
               'portalCooldowns[player] = nil',
+              'portalCooldownTokens[player] = (portalCooldownTokens[player] or 0) + 1',
+              'portalCooldownTokens = setmetatable({}, { __mode = "k" })',
+              'local cooldownToken = (portalCooldownTokens[player] or 0) + 1',
+              'portalCooldownTokens[player] == cooldownToken',
               'lastPositions[player] = nil',
               'local playerCharacterConnections = setmetatable({}, { __mode = "k" })',
               'local function disconnectPlayerCharacter(player)',
@@ -67,5 +71,5 @@ jobs:
           if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
               raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
 
-          print('World initialization, monotonic progression, bounded config, portal authority and per-player portal lifecycle validated.')
+          print('World initialization, monotonic progression, bounded config, portal authority and tokenized per-player portal lifecycle validated.')
           PY
