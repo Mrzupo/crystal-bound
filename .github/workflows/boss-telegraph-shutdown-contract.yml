@@ -1,0 +1,28 @@
+name: Boss Telegraph Shutdown Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/boss-telegraph-shutdown-guard"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate telegraph shutdown guards
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/BossTelegraph.server.lua").read_text(encoding="utf-8")
+          required = [
+              "local PlayerService = require(script.Parent.Services.PlayerService)",
+              "if PlayerService.ShuttingDown then return end",
+              "while Workspace.Parent and not PlayerService.ShuttingDown do",
+              "if PlayerService.ShuttingDown or not guardian.Parent then return end",
+          ]
+          missing = [marker for marker in required if marker not in source]
+          if missing:
+              raise SystemExit("Boss telegraph shutdown contract missing: " + ", ".join(missing))
+          print("Guardian telegraph startup, cast loop and delayed impact are shutdown-guarded.")
