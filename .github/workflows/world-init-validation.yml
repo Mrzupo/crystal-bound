@@ -30,7 +30,8 @@ jobs:
                   raise SystemExit(f'missing world theme: {island}')
 
           required_tracking = [
-              'while islands.Parent do',
+              'local PlayerService = require(script.Parent.Services.PlayerService)',
+              'while islands.Parent and not PlayerService.ShuttingDown do',
               'task.wait(0.1)',
               'Players.PlayerRemoving:Connect(function(player)',
               'portalCandidates[player] = nil',
@@ -44,6 +45,8 @@ jobs:
               'local function disconnectPlayerCharacter(player)',
               'playerCharacterConnections[player] = player.CharacterAdded:Connect',
               'disconnectPlayerCharacter(player)',
+              'if not player or PlayerService.ShuttingDown or player.Character ~= character or portalCooldowns[player] then return end',
+              'if not player.Parent or PlayerService.ShuttingDown or player.Character ~= character then return end',
           ]
           for marker in required_tracking:
               if marker not in theme:
@@ -71,5 +74,5 @@ jobs:
           if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
               raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
 
-          print('World initialization, monotonic progression, bounded config, portal authority and tokenized per-player portal lifecycle validated.')
+          print('World initialization, monotonic progression, bounded config, portal authority, tokenized portal lifecycle and shutdown lifecycle validated.')
           PY
