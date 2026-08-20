@@ -28,6 +28,12 @@ jobs:
           if any(value <= 0 for value in numbers):
               raise SystemExit("DodgeConfig values must all be positive")
 
+          cooldown = re.search(r"Cooldown\s*=\s*(-?\d+(?:\.\d+)?)", config)
+          if not cooldown or not 0.1 <= float(cooldown.group(1)) <= 60:
+              raise SystemExit("DodgeConfig.Cooldown must be within 0.1..60")
+          if "local COOLDOWN = math.clamp(finiteNumber(DodgeConfig.Cooldown, 2.5), 0.1, 60)" not in service:
+              raise SystemExit("DodgeService must runtime-bound the cooldown to 0.1..60 seconds")
+
           lifecycle = [
               'local playerConnections = setmetatable({}, { __mode = "k" })',
               'local invulnerabilityTokens = setmetatable({}, { __mode = "k" })',
@@ -43,4 +49,4 @@ jobs:
           for marker in lifecycle:
               if marker not in service:
                   raise SystemExit(f"DodgeService delayed-task lifecycle cleanup missing: {marker}")
-          print("DodgeConfig, CharacterAdded cleanup and stale invulnerability-task token contract validated.")
+          print("DodgeConfig runtime bounds, CharacterAdded cleanup and stale invulnerability-task token contract validated.")
