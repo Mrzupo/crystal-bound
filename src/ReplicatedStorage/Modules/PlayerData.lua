@@ -123,9 +123,10 @@ function PlayerData.Reconcile(input)
 		if CrystalSystemExists(crystalId) and table.find(owned, crystalId) then
 			local value = type(state) == "table" and state or {}
 			local maxLevel = math.max(1, math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel) or 10))
-			local xp = clampInt(value.XP, 0, math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000)), 0)
+			local maxExperience = math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000))
+			local xp = clampInt(value.XP, 0, maxExperience, 0)
 			local level = clampInt(value.Level, 1, maxLevel, 1)
-			xp = capExperienceBelowNextLevel(level, xp, maxLevel, math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000)), CrystalMastery.GetRequiredXP)
+			xp = capExperienceBelowNextLevel(level, xp, maxLevel, maxExperience, CrystalMastery.GetRequiredXP)
 			normalizedMastery[crystalId] = { Level = level, XP = xp }
 		end
 	end
@@ -204,7 +205,7 @@ function PlayerData.Reconcile(input)
 	local canonicalTitles = {}
 	for _, achievementId in ipairs(data.Achievements) do
 		local definition = AchievementSystem.Get(achievementId)
-		if definition and definition.Title and not table.find(canonicalTitles, definition.Title) then table.insert(canonicalTitles, definition.Title) end
+		if definition and definition.Title and AchievementSystem.IsValidTitle(definition.Title) and not table.find(canonicalTitles, definition.Title) then table.insert(canonicalTitles, definition.Title) end
 	end
 	data.Titles = canonicalTitles
 
