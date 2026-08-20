@@ -19,6 +19,10 @@ local INVULNERABILITY = math.clamp(finiteNumber(DodgeConfig.Invulnerability, 0.4
 local BOOST = math.clamp(finiteNumber(DodgeConfig.Boost, 42), 1, 100)
 local MAX_DIRECTION_MAGNITUDE = math.clamp(finiteNumber(DodgeConfig.MaxDirectionMagnitude, 1000), 1, 10000)
 
+local function isShuttingDown()
+	return ReplicatedStorage:GetAttribute("CrystalBoundShuttingDown") == true
+end
+
 local function clearForceField(character)
 	local forceField = character and character:FindFirstChild("CrystalBoundDodgeForceField")
 	if forceField then forceField:Destroy() end
@@ -51,6 +55,7 @@ local function finiteDamage(value)
 end
 
 function DodgeService.TryDodge(player, direction)
+	if isShuttingDown() then return false, "Server shutting down" end
 	if not player or not player:IsA("Player") then return false, "Invalid player" end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
