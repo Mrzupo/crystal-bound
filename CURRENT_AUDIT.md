@@ -27,6 +27,7 @@ Base: `main`
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
 - Crystal ownership/equip/unlock and Crystal Mastery read/write paths require canonical Crystal validity and actual ownership.
 - Inventory snapshots are detached and pure; Shop/Crafting/UseItem paths validate inputs before mutation and roll back partial transaction failures.
+- Shop and Crafting now explicitly remove any partial inventory insertion before refunding/reversing a failed transaction, matching the inventory rollback contract.
 - Quest completion requires the objective for multi-step quests and is idempotent through QuestSystem state checks.
 - Daily Bounty state and reward values are reconstructed from canonical config; payout only claims after a full reward transaction succeeds.
 - Persisted Daily Bounty state now also enforces the invariant `Claimed => Progress >= Goal`; corrupt `Claimed=true` / incomplete-goal state is normalized back to unclaimed during `PlayerData.Reconcile()`.
@@ -41,7 +42,10 @@ Base: `main`
 - `.github/workflows/player-load-rejoin-race-contract.yml` now matches the actual runtime: duplicate same-UserId loads are rejected while the first load is in flight, rather than claiming superseded loads.
 - `.github/workflows/quest-chain-config-validation.yml` now enforces the linear, single-root, acyclic quest dependency graph required by `QuestSystem.GetChainOrder()`.
 - `.github/workflows/persistence-reconcile-contract.yml` now matches the actual `PlayerData.Reconcile()` implementation and explicitly guards the Daily Bounty `Claimed => Progress >= Goal` invariant.
-- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency semantics and Daily Bounty integrity behavior.
+- `.github/workflows/player-data-reconciliation-contract.yml` also enforces the same Daily Bounty impossible-state invariant.
+- `.github/workflows/player-remove-release-contract.yml` now matches the current combined Shutdown/Closing/Saving guard in `GetProfile()`.
+- `.github/workflows/inventory-transaction-rollback.yml` is now satisfied by explicit partial-insertion rollback in Shop and Crafting.
+- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty and transaction-rollback semantics.
 
 ## Open / runtime-only limitations
 - No real Roblox Studio runtime playtest has been executed from this environment.
