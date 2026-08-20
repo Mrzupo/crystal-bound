@@ -18,6 +18,12 @@ local function getSessionToken(player)
 	return token
 end
 
+local function newLoadToken(player)
+	local token = HttpService:GenerateGUID(false)
+	sessionTokens[player] = token
+	return token
+end
+
 local function retry(callback)
 	local lastError
 	for attempt = 1, RETRIES do
@@ -44,7 +50,7 @@ end
 
 function SafeProfileStore.Load(player)
 	local key = tostring(player.UserId)
-	local token = getSessionToken(player)
+	local token = newLoadToken(player)
 	local claimed = false
 	local invalidStoredValue = false
 	local ok, result = retry(function()
@@ -157,9 +163,9 @@ function SafeProfileStore.Refresh(player)
 	return refreshed, refreshed and nil or "Profile lock lost"
 end
 
-function SafeProfileStore.Release(player)
+function SafeProfileStore.Release(player, expectedToken)
 	local key = tostring(player.UserId)
-	local token = getSessionToken(player)
+	local token = expectedToken or getSessionToken(player)
 	local released = false
 	local ok, result = retry(function()
 		released = false
