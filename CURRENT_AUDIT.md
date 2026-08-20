@@ -10,6 +10,7 @@ Base: `main`
 - `Bootstrap.server.lua` is the single canonical profile-load owner with one `PlayerAdded` path plus startup catch-up and per-Player deduplication.
 - `PlayerService.Load()` uses a per-UserId in-flight guard. A second concurrent load for the same UserId is rejected with `Profile load already in progress`; the current runtime does not implement a newer-load-takes-over model.
 - Every successful-but-aborted profile load path releases the exact SessionLock token returned by that load.
+- `SafeProfileStore.Load()` now catches `PlayerData.Reconcile()` failures after a successful DataStore lock claim and releases that exact claimed SessionLock token before returning failure.
 - `PlayerService` checks `player.Parent` before installing a loaded profile and again immediately after installation; startup failure only kicks a still-present Player.
 - `PlayerService` marks `Closing` before final removal; normal gameplay `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
 - Shutdown blocks new loads and removes loaded profiles through the normal Save/Release path while separately draining pending loads.
@@ -21,6 +22,7 @@ Base: `main`
 - NPC attacker/target identity is exact: relevant NPC Models must be direct children of `Workspace.NPCs`; stale descendant-only assumptions were removed from the PvE attacker-context contract.
 - Last-attacker attribution is instance/session-bound and restored when no damage is actually applied.
 - Dodge uses finite direction validation, server cooldowns, tokenized invulnerability expiry and current-character Humanoid validation.
+- `DodgeRemote.server.lua` rejects new Dodge requests during global shutdown or when the player no longer has an accessible profile.
 - Player Health mutation is centralized in `PlayerService.Heal()`; NPC/Boss services only initialize NPC Humanoid health.
 - `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks and clears state on lifecycle cleanup. A shutdown-specific cancellation guard is intentionally still pending because `PlayerService` depends on `StatusEffectService`; adding a direct reverse require would create a module-init cycle.
 - `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace; both enforcement loops and deferred Character refreshes stop when global shutdown begins.
@@ -48,6 +50,7 @@ Base: `main`
 - `.github/workflows/player-load-rejoin-race-contract.yml` matches runtime duplicate-load rejection rather than claiming superseded loads.
 - `.github/workflows/quest-chain-config-validation.yml` enforces the linear, single-root, acyclic quest dependency graph required by `QuestSystem.GetChainOrder()`.
 - `.github/workflows/persistence-reconcile-contract.yml` and `player-data-reconciliation-contract.yml` guard the Daily Bounty impossible-state invariant.
+- `.github/workflows/profile-store-session-contract.yml` now guards exact SessionLock release when `PlayerData.Reconcile()` fails after a successful load claim.
 - `.github/workflows/player-remove-release-contract.yml` matches the combined Shutdown/Closing/Saving guard in `GetProfile()`.
 - `.github/workflows/inventory-transaction-rollback.yml` is satisfied by explicit partial-insertion rollback in Shop and Crafting.
 - `.github/workflows/world-init-validation.yml` guards tokenized portal cooldown expiry and WorldTheme shutdown lifecycle.
@@ -56,7 +59,8 @@ Base: `main`
 - `.github/workflows/boss-active-spawn-contract.yml` requires shutdown-safe Guardian creation, AI and respawn behavior.
 - `.github/workflows/movement-authority-contract.yml` requires shutdown-aware WalkSpeed/position loops and Character-bound deferred binds.
 - `.github/workflows/boss-attack-contract.yml` requires shutdown-safe Guardian telegraph and Arena hazard behavior.
-- `.github/workflows/status-effect-stale-callback-contract.yml` intentionally remains focused on Humanoid-scoped replacement-token cleanup; no shutdown guard is claimed for StatusEffectService.
+- `.github/workflows/dodge-input-boundary.yml` now requires a profile/shutdown gate at the mutating Dodge Remote boundary.
+- `.github/workflows/status-effect-stale-callback-contract.yml` remains focused on Humanoid-scoped replacement-token cleanup; no shutdown guard is claimed for StatusEffectService.
 - `STUDIO_PLAYTEST.md`, `TESTING.md`, `TODO.md`, and `NEXT_SESSION.md` are synchronized with the current lifecycle/transaction hardening state.
 
 ## Open / runtime-only limitations
