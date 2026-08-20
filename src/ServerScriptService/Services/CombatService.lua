@@ -141,10 +141,11 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 end
 
 function CombatService.HandleRequest(player, action, target)
-	if not player:IsA("Player") or not VALID_ACTIONS[action] then return end
+	if not player:IsA("Player") then return end
 	local requestNow = os.clock()
 	if requestNow < (nextRequest[player] or 0) then return end
 	nextRequest[player] = requestNow + REQUEST_INTERVAL
+	if not VALID_ACTIONS[action] then return end
 
 	local profile = PlayerService.GetProfile(player)
 	if not profile or not profile.Crystals then return end
