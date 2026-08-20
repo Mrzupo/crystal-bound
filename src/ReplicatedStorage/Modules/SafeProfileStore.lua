@@ -51,19 +51,26 @@ function SafeProfileStore.Load(player)
 	local token = newLoadToken()
 	local claimed = false
 	local invalidStoredValue = false
+	local malformedSessionLock = false
 	local ok, result = retry(function()
 		claimed = false
 		invalidStoredValue = false
+		malformedSessionLock = false
 		return store:UpdateAsync(key, function(current)
 			claimed = false
 			invalidStoredValue = false
+			malformedSessionLock = false
 			if current ~= nil and type(current) ~= "table" then
 				invalidStoredValue = true
 				return current
 			end
 
 			local data = type(current) == "table" and current or PlayerData.new()
-			local lock = type(data.SessionLock) == "table" and data.SessionLock or nil
+			if data.SessionLock ~= nil and type(data.SessionLock) ~= "table" then
+				malformedSessionLock = true
+				return current
+			end
+			local lock = data.SessionLock
 			local lockTimestamp = lock and tonumber(lock.Timestamp) or nil
 			local age = lockTimestamp and math.max(0, timestamp() - lockTimestamp) or math.huge
 			local sameSession = lock and lock.JobId == SESSION_ID and lock.Token == token
@@ -85,6 +92,10 @@ function SafeProfileStore.Load(player)
 	if invalidStoredValue then
 		warn(("Crystal Bound: refusing to replace invalid stored value for %s"):format(player.Name))
 		return nil, "Invalid stored profile data"
+	end
+	if malformedSessionLock then
+		warn(("Crystal Bound: refusing to claim profile for %s because SessionLock has an invalid stored type"):format(player.Name))
+		return nil, "Invalid SessionLock data"
 	end
 	if not claimed then
 		return nil, "Profile is already open on another server"
