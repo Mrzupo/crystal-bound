@@ -351,8 +351,8 @@ local function saveConsistently(player, profile)
 		if not saved then return false end
 		if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then return true end
 	end
-	warn(("Crystal Bound: profile changed during all %d save-settle passes for %s; last consistent snapshot retained."):format(SAVE_SETTLE_ATTEMPTS, player.Name))
-	return saved
+	warn(("Crystal Bound: profile changed during all %d save-settle passes for %s; retry required."):format(SAVE_SETTLE_ATTEMPTS, player.Name))
+	return false
 end
 
 function PlayerService.RefreshSession(player)
