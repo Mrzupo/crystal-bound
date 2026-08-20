@@ -1,0 +1,37 @@
+name: Quest State Write Ownership
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Quest state mutation owners
+        shell: python
+        run: |
+          from pathlib import Path
+          root = Path("src")
+          allowed = {
+              "ReplicatedStorage/Modules/QuestSystem.lua",
+              "ReplicatedStorage/Modules/PlayerData.lua",
+          }
+          tokens = (
+              "profile.ActiveQuests =",
+              "profile.CompletedQuests =",
+              "profile.QuestProgress =",
+              "table.insert(profile.ActiveQuests",
+              "table.insert(profile.CompletedQuests",
+          )
+          violations = []
+          for path in root.rglob("*.lua"):
+              relative = str(path.relative_to(root))
+              text = path.read_text(encoding="utf-8")
+              if any(token in text for token in tokens) and relative not in allowed:
+                  violations.append(relative)
+          if violations:
+              raise SystemExit("Quest state writes outside canonical owners: " + ", ".join(violations))
+          print("Quest state write ownership validated.")
