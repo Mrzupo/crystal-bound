@@ -47,7 +47,8 @@ jobs:
                   if marker not in config:
                       problems.append(f"CrystalConfig {section} missing {crystal}")
 
-          for field, values in re.findall(r"\b(Damage|Range|Cooldown|HealAmount|UnlockLevels)\s*=\s*([0-9]+(?:\.[0-9]+)?)", config):
+          numeric_matches = re.findall(r"\b(Damage|Range|Cooldown|HealAmount|UnlockLevels)\s*=\s*([0-9]+(?:\.[0-9]+)?)", config)
+          for field, values in numeric_matches:
               value = float(values)
               if field == "Damage" and not 0 <= value <= 1000:
                   problems.append(f"Crystal {field} outside 0..1000: {value}")
@@ -59,6 +60,17 @@ jobs:
                   problems.append(f"Crystal {field} outside 0..1000: {value}")
               elif field == "UnlockLevels" and not 1 <= value <= 1000:
                   problems.append(f"Crystal {field} outside 1..1000: {value}")
+
+          passive_blocks = re.findall(r'([A-Z]+)\s*=\s*\{\s*DamageMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*WalkSpeedBonus\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*MaxHealthBonus\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*\}', config)
+          if len(passive_blocks) != 3:
+              problems.append("CrystalConfig must define all three Passive records with canonical fields")
+          for crystal, damage_multiplier, speed_bonus, health_bonus in passive_blocks:
+              if not 0.1 <= float(damage_multiplier) <= 10:
+                  problems.append(f"Crystal passive DamageMultiplier outside 0.1..10: {crystal}")
+              if not 0 <= float(speed_bonus) <= 20:
+                  problems.append(f"Crystal passive WalkSpeedBonus outside 0..20: {crystal}")
+              if not 0 <= float(health_bonus) <= 1000:
+                  problems.append(f"Crystal passive MaxHealthBonus outside 0..1000: {crystal}")
 
           tide_block = re.search(r'TIDE\s*=\s*\{(?P<body>.*?)\n\s*\}', config, re.S)
           if not tide_block or not re.search(r'HealAmount\s*=\s*([0-9]+(?:\.[0-9]+)?)', tide_block.group("body")):
@@ -93,4 +105,4 @@ jobs:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("CrystalConfig contract validated, including strict complete-config IDs and semantic numeric bounds.")
+          print("CrystalConfig contract validated, including strict complete-config IDs, passive bounds and semantic numeric bounds.")
