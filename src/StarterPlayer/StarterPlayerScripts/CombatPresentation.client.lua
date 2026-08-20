@@ -194,19 +194,19 @@ local function createAbilityAccent(model, crystalId)
 			slash.CanCollide = false
 			slash.CanQuery = false
 			slash.CanTouch = false
-			slash.Material = Enum.Material.Neon
-			slash.Color = color
-			slash.Transparency = 0.2
-			slash.Size = Vector3.new(0.3, 5, 0.3)
-			slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
-			slash.Parent = root
-			TweenService:Create(slash, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Size = Vector3.new(0.3, 9, 0.3),
-				Transparency = 1,
-			}):Play()
-			task.delay(0.26, function()
-				if slash.Parent then slash:Destroy() end
-			end)
+		slash.Material = Enum.Material.Neon
+		slash.Color = color
+		slash.Transparency = 0.2
+		slash.Size = Vector3.new(0.3, 5, 0.3)
+		slash.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(index * 65), math.rad(index * 25))
+		slash.Parent = root
+		TweenService:Create(slash, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.3, 9, 0.3),
+			Transparency = 1,
+		}):Play()
+		task.delay(0.26, function()
+			if slash.Parent then slash:Destroy() end
+		end)
 		end
 	end
 end
@@ -236,6 +236,7 @@ local function watchPlayerHealth(character)
 	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
 	if not humanoid then return end
+	if player.Character ~= character or not character.Parent then return end
 	local lastHealth = humanoid.Health
 	healthConnection = humanoid.HealthChanged:Connect(function(newHealth)
 		if newHealth < lastHealth then shakePlayer() end
