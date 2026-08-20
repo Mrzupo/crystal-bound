@@ -26,7 +26,7 @@ jobs:
                   raise SystemExit(f'missing Guardian config marker: {marker}')
 
           numeric_fields = re.findall(
-              r'\b(Health|XP|Money|AttackCooldown|AttackRange|AttackDamage|AbilityCooldown|AbilityRadius|AbilityDamage|Respawn|Windup|Radius|Damage|TargetRange|Cooldown|HealthThreshold|AttackDamageMultiplier|AbilityRangeMultiplier|Interval|HalfExtent)\s*=\s*([0-9]+(?:\.[0-9]+)?)',
+              r'\b(Health|XP|Money|AttackCooldown|AttackRange|AttackDamage|AbilityCooldown|AbilityRadius|AbilityDamage|Respawn|Windup|Radius|Damage|TargetRange|Cooldown|HealthThreshold|AttackDamageMultiplier|AbilityRangeMultiplier|Interval|HalfExtent)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)',
               config,
           )
           for field, raw in numeric_fields:
