@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Health Potion server contract
+      - name: Validate Health Potion server contract and request gating
         run: |
           python - <<'PY'
           import re
@@ -19,6 +19,8 @@ jobs:
               'local potion = ConsumableConfig.HealthPotion',
               'if type(itemId) ~= "string" or itemId ~= potion.ItemId then return end',
               'USE_INTERVAL = 0.2',
+              'if now < (NEXT_USE[player] or 0) then return end',
+              'NEXT_USE[player] = now + USE_INTERVAL',
               'InventoryService.HasItem(profile, itemId, 1)',
               'humanoid.Health >= humanoid.MaxHealth',
               'InventoryService.RemoveItem(profile, itemId, 1)',
@@ -33,5 +35,7 @@ jobs:
               raise SystemExit('UseItemRemote must not directly mutate Humanoid Health/MaxHealth')
           if 'math.clamp(healAmount, 0.1, 1000)' not in text:
               raise SystemExit('Health Potion heal amount must remain runtime bounded')
-          print('Health Potion server contract validated with canonical PlayerService healing.')
+          if text.index('NEXT_USE[player] = now + USE_INTERVAL') > text.index('local potion = ConsumableConfig.HealthPotion'):
+              raise SystemExit('UseItemRemote must consume the request rate limit before item/config validation')
+          print('Health Potion server contract validated with pre-validation rate limiting and canonical PlayerService healing.')
           PY
