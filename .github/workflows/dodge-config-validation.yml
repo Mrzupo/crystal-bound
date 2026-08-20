@@ -30,16 +30,16 @@ jobs:
 
           lifecycle = [
               'local playerConnections = setmetatable({}, { __mode = "k" })',
+              'local invulnerabilityTokens = setmetatable({}, { __mode = "k" })',
               'local function disconnectPlayer(player)',
+              'local function invalidateInvulnerability(player)',
               'if connection and connection.Connected then connection:Disconnect() end',
+              'invalidateInvulnerability(player)',
+              'invulnerabilityTokens[player] == token',
               'disconnectPlayer(player)',
               'Players.PlayerRemoving:Connect(function(player)',
           ]
-          # The implementation intentionally uses a weak player connection table.
-          # Fail loudly if cleanup scaffolding regresses.
-          if 'local playerConnections = setmetatable({}, { __mode = "k" })' not in service:
-              raise SystemExit("DodgeService must keep player CharacterAdded connections in weak state")
-          for marker in lifecycle[1:]:
+          for marker in lifecycle:
               if marker not in service:
-                  raise SystemExit(f"DodgeService lifecycle cleanup missing: {marker}")
-          print("DodgeConfig and CharacterAdded lifecycle contract validated.")
+                  raise SystemExit(f"DodgeService delayed-task lifecycle cleanup missing: {marker}")
+          print("DodgeConfig, CharacterAdded cleanup and stale invulnerability-task token contract validated.")
