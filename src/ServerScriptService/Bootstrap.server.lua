@@ -46,6 +46,7 @@ local nextCrystalRequest = setmetatable({}, { __mode = "k" })
 local nextCrystalUpgradeRequest = setmetatable({}, { __mode = "k" })
 local nextPlayerDataRequest = setmetatable({}, { __mode = "k" })
 local nextQuestDataRequest = setmetatable({}, { __mode = "k" })
+local loadingPlayers = setmetatable({}, { __mode = "k" })
 
 local function ensureRemote(className, name)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -223,6 +224,8 @@ local function syncAllPlayerData()
 end
 
 local function loadPlayer(player)
+	if loadingPlayers[player] then return false end
+	loadingPlayers[player] = true
 	local profile, reason = PlayerService.Load(player)
 	if not profile then
 		if player.Parent then player:Kick(reason or "Unable to load your Crystal Bound profile safely.") end
