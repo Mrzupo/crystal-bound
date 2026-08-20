@@ -1,0 +1,23 @@
+name: Daily Bounty Snapshot Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate detached Daily Bounty read API
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          if "local function snapshot(bounty)" not in text:
+              raise SystemExit("DailyBountyService must define a detached snapshot helper")
+          if "return snapshot(DailyBountyService.Refresh(profile))" not in text:
+              raise SystemExit("DailyBountyService.Get must return a detached snapshot")
+          print("Daily Bounty snapshot contract validated.")
