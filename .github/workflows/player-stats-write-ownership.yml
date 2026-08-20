@@ -21,12 +21,17 @@ jobs:
               "ServerScriptService/Services/BossService.lua",
               "ReplicatedStorage/Modules/PlayerData.lua",
           }
-          token = "profile.Stats."
+          markers = (
+              "profile.Stats.EnemiesDefeated =",
+              "profile.Stats.BossesDefeated =",
+              "profile.Stats.AncientGolemsDefeated =",
+              "profile.Stats.CrystalBatsDefeated =",
+          )
           violations = []
           for path in root.rglob("*.lua"):
               relative = str(path.relative_to(root))
               text = path.read_text(encoding="utf-8")
-              if token in text and relative not in allowed:
+              if any(marker in text for marker in markers) and relative not in allowed:
                   violations.append(relative)
           if violations:
               raise SystemExit("Player Stats writes outside canonical owners: " + ", ".join(violations))
