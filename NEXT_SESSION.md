@@ -3,8 +3,8 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1460 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
-- Current compared main base: `18f0f27fcbcb4fd6384f45ecd1d0632f1d0632f9edad02d`.
+- Current compare: verify with GitHub compare before continuing.
+- `main` remains untouched by this workstream.
 
 ## Current state
 The branch contains the complete Rojo project foundation plus the current gameplay stack and is in the hardening + integration phase ahead of real Roblox Studio runtime verification.
@@ -16,7 +16,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Canonical `CrystalConfig` + `CrystalSystem` + `CrystalMastery`.
 - TIDE/GALE level gates enforced inside `CrystalSystem.Unlock()` as well as request-layer checks.
 - Central QuestSystem / QuestService completion and rewards.
-- SafeProfileStore session lock with active per-player tokens, separate per-load claim tokens, callback-local retry-state isolation, callback-time snapshots and profile-revision save settling.
+- SafeProfileStore session lock with active per-player tokens, callback-local retry-state isolation, callback-time save snapshots and profile-revision save settling.
 - Canonical Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
@@ -30,28 +30,27 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence.
 
 ## Latest hardening work
-- Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after world initialization, with per-Player deduplication.
+- Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after startup, with per-Player deduplication.
 - Redundant `PlayerLoadCatchup.server.lua` was removed from the repository and Rojo tree to avoid two concurrent startup load owners.
-- `PlayerService.Load()` uses a per-UserId generation token: a newer load supersedes an older load for the same UserId, and every superseded/aborted successful load releases the exact SessionLock token it acquired.
+- `PlayerService.Load()` uses a per-UserId in-flight guard: a second concurrent load for the same UserId is rejected until the current load finishes. Do not describe this as a superseding-load implementation; the current runtime intentionally blocks the second load rather than taking over its lock.
+- Every aborted successful load path releases the exact SessionLock token it acquired before returning.
 - Bootstrap checks `player.Parent` before `Kick()` on load failure.
 - `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
-- Shutdown now uses `PlayerService.HasLoadedProfile()` so `BeginShutdown()` cannot hide profiles from the final Save/Release sweep.
+- Shutdown uses `PlayerService.HasLoadedProfile()` so `BeginShutdown()` cannot hide profiles from the final Save/Release sweep.
 - `PlayerService.Heal()` is the canonical player Health mutation owner; TIDE and Health Potion use it.
 - `UseItemRemote` rolls the potion back if no health can actually be applied.
-- Health Authority CI allows direct Player Health writes only in PlayerService and NPC/Boss spawn-time health initialization.
 - `PlayerService.saveConsistently()` returns failure if all bounded revision-settle passes still detect profile changes, so AutosaveOk/LastSaveOk cannot falsely report a stale snapshot as consistent.
 - Quest completion validates objective/reward data before committing state but no longer blocks valid quest completion on a full Money wallet; XP remains fully awarded and EconomyService caps Money.
 - Achievement unlocks are one-shot/idempotent and no longer blocked by wallet capacity; EconomyService caps the Money reward.
 - Daily Bounty requires full wallet capacity before payout because its claim is tied to a specific daily reward transaction and rolls progress back on payout failure.
 - Enemy and Guardian rewards preserve XP/Loot/quest progression when Money is capped; EconomyService alone caps Money.
-- Guardian Rewarded state is only committed for a valid loaded player/profile and validated reward configuration.
-- Guardian reward uses a trusted direct loaded-profile path while autosave is active, but refuses rewards once Player leave/Closing or global shutdown begins.
+- Guardian reward ownership is restricted by loaded-player, Closing and shutdown checks while preserving autosave-settle behavior.
 - Shop purchase and inventory selling remain rollback-safe around Money and stack capacity.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - Enemy Mastery XP is derived from canonical Enemy XP with no arbitrary minimum fallback.
 - `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences; `PositionCheckInterval` is currently 0.15 s.
 - `StatusEffectService` restores Slow expiry speed with the same canonical `MaxWalkSpeedBonus` cap used by PlayerService/MovementConfig.
-- Missing Humanoid/RootPart resets movement position state; portal grace is Character-bound and clears through centralized `WorldTheme.clearPortalState()` on respawn/leave.
+- Missing Humanoid/RootPart resets movement position state; portal grace is Character-bound and clears through centralized `WorldTheme` state cleanup on respawn/leave.
 - Dodge invulnerability end tasks use per-player tokens and `ApplyDamage()` requires the current Player Character Humanoid.
 - CharacterAdded health binding checks exact Character identity before/after Humanoid acquisition.
 - Guardian telegraph windups are bound to the original Guardian and original target Character instances.
@@ -60,12 +59,9 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - `CrystalMastery` mutation/read paths require actual Crystal ownership instead of relying only on Remote-layer checks.
 - CrystalConfig completeness is contract-checked across Definition, UnlockLevel, BasicAttack, Ability and Passive sources.
 - Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
-- `InventoryConfig.GetItemConfig()` now returns a detached item snapshot and has a dedicated config-snapshot contract.
-- `InventoryService.GetInventory()` is a pure read and no longer initializes `profile.Inventory` when returning a snapshot.
-- `CombatModifierService.RollCritical()` uses strict `< chance` comparison so a configured 0 critical chance cannot fire at the RNG boundary.
 - NPC dialog/config snapshots are detached and server-distance gated.
-- RemoteFunction contracts now require a single server owner per named RemoteFunction, and critical RemoteEvent contracts require a single server handler.
-- `STUDIO_PLAYTEST.md` contains explicit same-UserId superseded-load, player-leave-during-load, shutdown-race and Guardian-during-autosave cases for real runtime validation.
+- RemoteFunction contracts require a single server owner per named RemoteFunction, and critical RemoteEvent contracts require a single server handler.
+- PvE damage contracts require exact NPC model identity under `Workspace.NPCs`; stale descendant-only assumptions were removed from the attacker/target contract.
 
 ## Security / authority rules
 - `DamageService` is the only direct `Humanoid:TakeDamage()` owner.
@@ -81,19 +77,19 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 ## Open decisions / limitations
 - No actual Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
-- Latest Combined Status/workflow-run queries provide no verified CI run/status; do not call CI green without actual evidence.
+- Current GitHub workflow-run queries provide no verified run for the latest hardening commits; CI must not be called green.
 - Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
-- The general `PlayerService.Saving` gate still blocks `GetProfile()` for ordinary gameplay requests during autosave. A broader safe fix would allow gameplay profile reads during Save and settle the save on a complete pre/post-profile snapshot; the larger `PlayerService` write for that generalized behavior was blocked by the repository tool and is not applied. The canonical Guardian reward path has its own approved autosave-safe profile access and is protected by dedicated contracts.
-- `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary.
-- TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as acquisition activities; decide the final model before building acquisition content.
+- The generalized `PlayerService.Saving` gameplay-read gate remains intentionally conservative. Ordinary `GetProfile()` callers are blocked during autosave; selected server reward paths have explicit autosave-safe access and are covered by settle/revision behavior.
+- `GetPlayerData`/`GetQuestData` return detached server-serialized subsets; no server-side table reference crosses the network boundary.
+- TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
 
 ## Next steps
-1. Apply the pending generalized autosave gameplay/save-settle fix when a safe repository write path is available.
-2. Continue concrete static audits and eliminate newly introduced authority/config drift.
-3. Move to Roblox Studio multiplayer validation.
-4. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat the asset contract for TIDE/GALE.
+1. Continue concrete static audits and eliminate newly introduced authority/config drift.
+2. Move to Roblox Studio multiplayer validation when executable runtime access is available.
+3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat the asset contract for TIDE/GALE.
+4. Keep gameplay authority in server systems; animation/VFX never decide damage, timing or rewards.
 
 ## Do not do
 - Do not merge, reset or force-update `main` from this workstream.
