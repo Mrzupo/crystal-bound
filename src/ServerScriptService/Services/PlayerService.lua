@@ -8,7 +8,7 @@ local DailyBountyService = require(script.Parent.DailyBountyService)
 local EconomyService = require(script.Parent.EconomyService)
 local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 
-local PlayerService = { Profiles = {}, CharacterConnections = {}, HumanoidConnections = {}, Operations = {}, LoadingByUserId = {} }
+local PlayerService = { Profiles = {}, CharacterConnections = {}, HumanoidConnections = {}, Operations = {}, LoadingByUserId = {}, ShuttingDown = false }
 local OPERATION_TIMEOUT = 10
 local DEFAULT_CRYSTAL = "EMBER"
 local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
@@ -125,13 +125,28 @@ end
 
 function PlayerService.GetProfile(player) return PlayerService.Profiles[player] end
 
+function PlayerService.BeginShutdown()
+	PlayerService.ShuttingDown = true
+end
+
+function PlayerService.GetPendingLoadCount()
+	local count = 0
+	for _ in pairs(PlayerService.LoadingByUserId) do count += 1 end
+	return count
+end
+
 function PlayerService.Load(player)
+	if PlayerService.ShuttingDown then return nil, "Server is shutting down" end
 	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
 	local userId = player.UserId
 	local loadToken = {}
 	PlayerService.LoadingByUserId[userId] = loadToken
 	local function isCurrentLoad()
 		return PlayerService.LoadingByUserId[userId] == loadToken
+	end
+	if PlayerService.ShuttingDown then
+		if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end
+		return nil, "Server is shutting down"
 	end
 
 	local profile, reason = SafeProfileStore.Load(player)
@@ -146,17 +161,23 @@ function PlayerService.Load(player)
 		warn(("Crystal Bound: superseded profile load ignored for UserId %d."):format(userId))
 		return nil, "Superseded profile load"
 	end
-	if not player.Parent then
+	if PlayerService.ShuttingDown or not player.Parent then
 		PlayerService.LoadingByUserId[userId] = nil
 		local released = SafeProfileStore.Release(player)
-		warn(("Crystal Bound: player %s left while profile loading; session lock release=%s."):format(player.Name, tostring(released)))
-		return nil, "Player left before profile load completed"
+		warn(("Crystal Bound: player %s left/shutdown while profile loading; session lock release=%s."):format(player.Name, tostring(released)))
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left before profile load completed"
 	end
 
 	profile = PlayerData.Reconcile(profile)
 	if not isCurrentLoad() then
 		warn(("Crystal Bound: superseded profile initialization ignored for UserId %d."):format(userId))
 		return nil, "Superseded profile load"
+	end
+	if PlayerService.ShuttingDown then
+		PlayerService.LoadingByUserId[userId] = nil
+		local released = SafeProfileStore.Release(player)
+		warn(("Crystal Bound: shutdown interrupted profile initialization for %s; session lock release=%s."):format(player.Name, tostring(released)))
+		return nil, "Server is shutting down"
 	end
 	PlayerService.Profiles[player] = profile
 
@@ -165,12 +186,12 @@ function PlayerService.Load(player)
 		warn(("Crystal Bound: profile initialization was superseded for UserId %d."):format(userId))
 		return nil, "Superseded profile initialization"
 	end
-	if not player.Parent then
+	if PlayerService.ShuttingDown or not player.Parent then
 		PlayerService.Profiles[player] = nil
 		PlayerService.LoadingByUserId[userId] = nil
 		local released = SafeProfileStore.Release(player)
-		warn(("Crystal Bound: player %s left during profile initialization; session lock release=%s."):format(player.Name, tostring(released)))
-		return nil, "Player left during profile initialization"
+		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s."):format(player.Name, tostring(released)))
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
 	end
 
 	PlayerService.LoadingByUserId[userId] = nil
