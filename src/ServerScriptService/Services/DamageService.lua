@@ -14,6 +14,10 @@ local function finiteNumber(value)
 	return number
 end
 
+local function isShuttingDown()
+	return ReplicatedStorage:GetAttribute("CrystalBoundShuttingDown") == true
+end
+
 local function getNPCRoot()
 	return Workspace:FindFirstChild("NPCs")
 end
@@ -86,6 +90,7 @@ function DamageService.ValidateRequest(request)
 end
 
 function DamageService.CanDamage(request)
+	if isShuttingDown() then return false end
 	if not DamageService.ValidateRequest(request) then return false end
 	if not isValidTarget(request.Target) then return false end
 
@@ -134,7 +139,7 @@ end
 
 function DamageService.ProcessDamage(request)
 	if not DamageService.CanDamage(request) then
-		return DamageResult.new(false, 0, "Invalid or out-of-range request")
+		return DamageResult.new(false, 0, isShuttingDown() and "Server shutting down" or "Invalid or out-of-range request")
 	end
 
 	local targetModel = request.Target:IsA("Player") and request.Target.Character or request.Target
