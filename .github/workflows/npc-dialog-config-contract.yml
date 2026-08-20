@@ -2,7 +2,7 @@ name: NPC Dialog Config Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-dialog-hardening-current"]
   pull_request:
 
 jobs:
@@ -33,14 +33,16 @@ jobs:
 
           for marker in (
               'local config = DialogConfig.Get(npcId)',
-              'if not config or not isNearNPC(player, npcId) then return nil end',
+              'if not config or not isNearCanonicalNPC(player, npcId) then return nil end',
+              'npc:GetAttribute("Interactable") ~= true',
               'Players.PlayerRemoving:Connect(function(player)',
           ):
               if marker not in remote:
                   raise SystemExit(f"NPCDialogRemote authority marker missing: {marker}")
 
           for marker in (
-              'model.Name == "CrystalKeeper" or model.Name == "MaterialTrader"',
+              'model:GetAttribute("Interactable") == true',
+              'model:IsDescendantOf(Workspace.NPCs)',
               'isNearModel(player, model)',
               'player:SetAttribute("OpenNPCDialog", npcId)',
           ):
@@ -54,4 +56,4 @@ jobs:
           if 'Inventory & Crystals' not in inventory:
               raise SystemExit('InventoryMenu must remain the combined Inventory & Crystals presentation')
 
-          print("NPC dialog configuration, option ownership, interaction-distance guards and combined inventory/crystal alias validated.")
+          print("NPC dialog configuration, canonical interactable identity, interaction-distance guards and combined inventory/crystal alias validated.")
