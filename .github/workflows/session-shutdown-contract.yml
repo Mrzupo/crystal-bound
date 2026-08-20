@@ -18,7 +18,7 @@ jobs:
           player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
           required = [
               "game:BindToClose(shutdownProfiles)",
-              "PlayerService.GetProfile(player)",
+              "PlayerService.HasLoadedProfile(player)",
               "local ok = PlayerService.Remove(player)",
               "SHUTDOWN_TIMEOUT",
               "shuttingDown = true",
@@ -38,13 +38,14 @@ jobs:
 
           for marker in (
               "RemovalResults = setmetatable({}, { __mode = \"k\" })",
+              "function PlayerService.HasLoadedProfile(player)",
               "if PlayerService.Closing[player] then",
               "while PlayerService.Closing[player] and os.clock() - started < OPERATION_TIMEOUT do",
               "return PlayerService.RemovalResults[player] == true",
               "PlayerService.RemovalResults[player] = true",
               "PlayerService.RemovalResults[player] = false",
-              "function PlayerService.GetProfile(player)\n\tif PlayerService.ShuttingDown or PlayerService.Closing[player] then return nil end",
-              "function PlayerService.Heal(player, amount)\n\tif not player or not player:IsA(\"Player\") or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] then return 0 end",
+              "function PlayerService.GetProfile(player)\n\tif PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] then return nil end",
+              "function PlayerService.Heal(player, amount)\n\tif not player or not player:IsA(\"Player\") or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] then return 0 end",
           ):
               if marker not in player_service:
                   raise SystemExit("PlayerService missing shutdown guard: " + marker)
