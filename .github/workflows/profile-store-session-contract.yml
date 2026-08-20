@@ -19,12 +19,13 @@ jobs:
           required = [
               'local sessionTokens = setmetatable({}, { __mode = "k" })',
               'local function getSessionToken(player)',
-              'local function newLoadToken(player)',
-              'local token = newLoadToken(player)',
+              'local function newLoadToken()',
+              'local token = newLoadToken()',
               'local token = getSessionToken(player)',
               'local sameSession = lock and lock.JobId == SESSION_ID and lock.Token == token',
               'if lock and not sameSession and age < SESSION_TIMEOUT then',
               'data.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }',
+              'sessionTokens[player] = token',
               'if type(lock) ~= "table" or lock.JobId ~= SESSION_ID or lock.Token ~= token then',
               'payload.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }',
               'function SafeProfileStore.Release(player, expectedToken)',
@@ -72,4 +73,4 @@ jobs:
           if 'local profile = PlayerData.Reconcile(result)' not in text or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
               raise SystemExit('Load/Save must reconcile persisted profile data at the storage boundary')
 
-          print('Profile-store per-load token isolation, token-specific release and UpdateAsync callback retry-state isolation validated.')
+          print('Profile-store active-token isolation, speculative-load token separation, token-specific release and UpdateAsync callback retry-state isolation validated.')
