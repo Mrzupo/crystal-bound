@@ -1,7 +1,5 @@
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SafeProfileStore = require(ReplicatedStorage.Modules.SafeProfileStore)
 local PlayerService = require(script.Parent.Services.PlayerService)
 
 local HEARTBEAT_INTERVAL = 45
@@ -42,14 +40,14 @@ task.spawn(function()
 		task.wait(HEARTBEAT_INTERVAL)
 		if shuttingDown then break end
 		for _, player in ipairs(Players:GetPlayers()) do
-			if PlayerService.GetProfile(player) then
-				local ok, reason = SafeProfileStore.Refresh(player)
+			if player.Parent and PlayerService.GetProfile(player) then
+				local ok = PlayerService.RefreshSession(player)
 				player:SetAttribute("SessionHeartbeatOk", ok == true)
 				if ok then
 					failures[player] = 0
 				else
 					failures[player] = (failures[player] or 0) + 1
-					warn(("Crystal Bound: session heartbeat failed for %s: %s"):format(player.Name, tostring(reason)))
+					warn(("Crystal Bound: session heartbeat failed for %s."):format(player.Name))
 					if failures[player] >= MAX_CONSECUTIVE_FAILURES then
 						player:Kick("Crystal Bound lost the save-session lock. Please rejoin to protect your progress.")
 					end
