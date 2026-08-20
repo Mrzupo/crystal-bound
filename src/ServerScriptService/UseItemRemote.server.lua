@@ -56,7 +56,7 @@ remote.OnServerEvent:Connect(function(player, itemId)
 	end
 	humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + healAmount)
 	PlayerService.Sync(player)
-	remotes.InventoryChanged:FireClient(player, profile.Inventory)
+	remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile))
 	player:SetAttribute("ShopMessage", string.format("Health Potion restored %d HP.", healAmount))
 end)
 
