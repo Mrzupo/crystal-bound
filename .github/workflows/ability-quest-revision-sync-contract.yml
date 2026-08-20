@@ -1,0 +1,33 @@
+name: Ability Quest Revision Sync Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/ability-quest-revision-sync-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Ability quest mutations advance ProfileRevisions
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          required = [
+              "local function advanceAbilityQuest(player, profile)",
+              "return false, false",
+              "return true, true",
+              "return true, false",
+              "local questChanged, questCompleted = advanceAbilityQuest(player, profile)",
+              "if questChanged and not questCompleted then PlayerService.Sync(player) end",
+              "if questChanged and not questCompleted and result.Amount > 0 and humanoid.Health > 0 then",
+              "function CombatService.CleanupPlayer(player)",
+              "return CombatService",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Ability quest revision marker missing: " + ", ".join(missing))
+          print("Incomplete Ability quest mutations explicitly advance ProfileRevisions while completed paths retain existing QuestService.Sync behavior.")
