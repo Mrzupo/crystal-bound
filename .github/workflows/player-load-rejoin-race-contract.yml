@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate per-UserId load generation, superseded-load release, per-load session tokens and shutdown gate
+      - name: Validate per-UserId in-flight load guard, exact release tokens and shutdown gate
         shell: python
         run: |
           from pathlib import Path
@@ -18,12 +18,15 @@ jobs:
           text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
           store = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+
           required = (
               "LoadingByUserId = {},",
               "ShuttingDown = false,",
               "local loadToken = {}",
               "PlayerService.LoadingByUserId[userId] = loadToken",
               "local function isCurrentLoad()",
+              "if PlayerService.LoadingByUserId[userId] then",
+              "return nil, \"Profile load already in progress\"",
               "local function releaseLoadedToken()",
               "profile and type(profile.SessionLock) == \"table\" and profile.SessionLock.Token",
               "SafeProfileStore.Release(player, token)",
@@ -52,7 +55,7 @@ jobs:
               'lock.Token == token',
           ):
               if marker not in store:
-                  raise SystemExit("SafeProfileStore per-load token guard missing: " + marker)
+                  raise SystemExit("SafeProfileStore session-token guard missing: " + marker)
 
           if 'local loadingPlayers = setmetatable({}, { __mode = "k" })' not in bootstrap:
               raise SystemExit("Bootstrap must maintain per-Player startup-load deduplication state")
@@ -61,4 +64,7 @@ jobs:
           if 'Players.PlayerAdded:Connect(function(player)' not in bootstrap:
               raise SystemExit("Bootstrap must keep one canonical PlayerAdded load owner")
 
-          print("Per-UserId generation, superseded-load token release, per-load session-token isolation and startup deduplication validated.")
+          if "Profile load already in progress" not in text:
+              raise SystemExit("A second concurrent load for the same UserId must be explicitly rejected, not superseded")
+
+          print("Per-UserId in-flight load rejection, exact load-token release, session-token isolation and startup deduplication validated.")
