@@ -44,10 +44,14 @@ jobs:
               "local hasMastery = function(crystalId)",
               "table.find(owned, crystalId) ~= nil",
               "finiteNumber(mastery[crystalId].Level, 0) >= masteryMaxLevel",
+              "local unlocked = {}",
+              "local unlockedDefinition = AchievementSystem.Unlock(profile, id)",
           )
           for marker in required_system:
               if marker not in system:
                   raise SystemExit(f"AchievementSystem ownership/boundary marker missing: {marker}")
+          if "projectedMoney" in system or "EconomyConfig" in system:
+              raise SystemExit("Achievement unlocks must not be gated by wallet capacity; EconomyService owns reward capping")
 
           max_money_match = re.search(r"MaxMoney\s*=\s*(\d+)", economy)
           max_money = int(max_money_match.group(1)) if max_money_match else 1000000000
@@ -63,4 +67,4 @@ jobs:
           if len(reward_owners) != 1 or reward_owners[0] != "src/ServerScriptService/Services/PlayerService.lua":
               raise SystemExit(f"Achievement Money rewards must have exactly one server owner; found {reward_owners}")
 
-          print("Achievement canonical source, title integrity, bounded mastery threshold, ownership gate, reward ownership and economy bounds validated.")
+          print("Achievement canonical source, title integrity, bounded mastery threshold, ownership gate, one-shot unlock semantics, reward ownership and economy bounds validated.")
