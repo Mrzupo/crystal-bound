@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DodgeService = require(script.Parent.Services.DodgeService)
+local PlayerService = require(script.Parent.Services.PlayerService)
 local BossService = require(script.Parent.Services.BossService)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local NPCs = Workspace:WaitForChild("NPCs")
@@ -16,7 +17,9 @@ local nextCast = 0
 local existingGuardian = NPCs:FindFirstChild("CrystalGuardian")
 if not (existingGuardian and existingGuardian:IsA("Model") and existingGuardian:GetAttribute("BossId") == "CrystalGuardian") then
 	if existingGuardian then existingGuardian:Destroy() end
-	BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
+	if not PlayerService.ShuttingDown then
+		BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
+	end
 end
 
 local function finiteNumber(value, fallback)
@@ -44,6 +47,7 @@ local function getTelegraphCooldown()
 end
 
 local function createTelegraph(position)
+	if PlayerService.ShuttingDown then return end
 	local radius = getTelegraphRadius()
 	local windup = getTelegraphWindup()
 	local part = Instance.new("Part")
@@ -68,6 +72,7 @@ local function createTelegraph(position)
 end
 
 local function getTarget()
+	if PlayerService.ShuttingDown then return nil, nil end
 	local guardian = NPCs:FindFirstChild("CrystalGuardian")
 	local humanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
 	local root = guardian and (guardian:FindFirstChild("HumanoidRootPart") or guardian.PrimaryPart)
@@ -93,6 +98,7 @@ local function getTarget()
 end
 
 local function cast()
+	if PlayerService.ShuttingDown then return end
 	local player, guardian = getTarget()
 	if not player or not guardian then return end
 	local guardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
@@ -111,7 +117,7 @@ local function cast()
 	local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)
 	createTelegraph(position)
 	task.delay(windup, function()
-		if not guardian.Parent then return end
+		if PlayerService.ShuttingDown or not guardian.Parent then return end
 		local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
 		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then
 			return
@@ -122,7 +128,7 @@ local function cast()
 		local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
 		if currentHumanoid and currentRoot and currentHumanoid.Health > 0 and (currentRoot.Position - position).Magnitude <= radius then
 			local applied = DodgeService.ApplyDamage(player, currentHumanoid, damage, guardian, "BossShockwave", radius)
-			if applied then
+			if applied and not PlayerService.ShuttingDown then
 				player:SetAttribute("BossMessage", "Guardian Impact!")
 			end
 		end
@@ -130,7 +136,7 @@ local function cast()
 end
 
 task.spawn(function()
-	while Workspace.Parent do
+	while Workspace.Parent and not PlayerService.ShuttingDown do
 		if os.clock() >= nextCast then
 			local guardian = NPCs:FindFirstChild("CrystalGuardian")
 			local phase = guardian and guardian:GetAttribute("BossPhase") or 1
@@ -143,4 +149,4 @@ task.spawn(function()
 		end
 		task.wait(RUN_INTERVAL)
 	end
-end
+end)
