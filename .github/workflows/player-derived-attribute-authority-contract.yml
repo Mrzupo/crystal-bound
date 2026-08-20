@@ -1,0 +1,35 @@
+name: Player Derived Attribute Authority Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject server gameplay reads of client-exposed progression attributes
+        shell: python
+        run: |
+          from pathlib import Path
+          forbidden = (
+              'GetAttribute("DamageMultiplier")',
+              'GetAttribute("AbilityDamageMultiplier")',
+              'GetAttribute("WalkSpeedBonus")',
+              'GetAttribute("MaxHealthBonus")',
+              'GetAttribute("EquippedCrystal")',
+              'GetAttribute("CrystalMasteryLevel")',
+              'GetAttribute("CrystalMasteryXP")',
+          )
+          offenders = []
+          for path in Path('src/ServerScriptService').rglob('*.lua'):
+              text = path.read_text(encoding='utf-8')
+              for marker in forbidden:
+                  if marker in text:
+                      offenders.append(f'{path}: {marker}')
+          # PlayerService/StatusSpeedGuard legitimately write or refresh these values but must not consume them as authority.
+          if offenders:
+              raise SystemExit('Server gameplay must use canonical Profile/Service state rather than Player attributes: ' + ', '.join(offenders))
+          print('Derived Player attribute authority contract validated.')
