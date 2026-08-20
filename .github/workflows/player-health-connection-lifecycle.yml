@@ -23,13 +23,16 @@ jobs:
               "player.Character ~= character",
               "not character.Parent",
               "local function bindCharacterWhenReady(player, character)",
+              "if PlayerService.ShuttingDown then return end",
               "local deadline = os.clock() + OPERATION_TIMEOUT",
               "while PlayerService.Saving[player] and os.clock() < deadline do",
               "task.wait(0.1)",
-              "if PlayerService.Saving[player] or not PlayerService.Profiles[player] or PlayerService.Closing[player]",
+              "if PlayerService.ShuttingDown or not player.Parent or PlayerService.Closing[player]",
+              "if PlayerService.ShuttingDown or PlayerService.Saving[player] or not PlayerService.Profiles[player]",
+              "if not PlayerService.ShuttingDown then",
               "bindCharacterWhenReady(player, character)",
           ]
           for marker in required:
               if marker not in text:
                   raise SystemExit(f"PlayerService missing lifecycle marker: {marker}")
-          print("Player humanoid connection lifecycle, stale CharacterAdded handling and Save-time respawn recovery validated.")
+          print("Player humanoid connection lifecycle, stale CharacterAdded handling, Save-time respawn recovery and shutdown-safe character synchronization validated.")
