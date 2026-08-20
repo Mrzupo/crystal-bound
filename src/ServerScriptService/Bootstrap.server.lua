@@ -217,7 +217,7 @@ end
 local function loadPlayer(player)
 	local profile, reason = PlayerService.Load(player)
 	if not profile then
-		player:Kick(reason or "Unable to load your Crystal Bound profile safely.")
+		if player.Parent then player:Kick(reason or "Unable to load your Crystal Bound profile safely.") end
 		return
 	end
 	PlayerService.Sync(player)
