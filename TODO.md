@@ -10,6 +10,7 @@
 - [x] Explizite SessionLock-Daten-Reconciliation
 - [x] Sicherer Profil-Ladefehlerpfad ohne leeres Fallback-Profil
 - [x] Persistente Daten-Normalisierung für Zahlen, Kristalle, Inventar, Quests und Daily Bounty
+- [x] Persistierte Daily-Bounty-Konsistenz: `Claimed=true` bei `Progress<Goal` wird repariert
 - [x] Canonical Daily-Bounty Goal/Reward-Reconciliation aus DailyBountyConfig
 - [x] Economy-/Save-Cap ist an EconomyConfig gekoppelt
 - [x] XP- und Levelsystem mit sauberem Max-Level-Cap
@@ -21,6 +22,8 @@
 - [x] Crafting mit Health-Potion-Rezept und Stack-Kapazitätsprüfung
 - [x] Servervalidierte Consumable-Nutzung
 - [x] Server-Rate-Limits für Shop, Crafting, Inventory und Consumables
+- [x] Partial-Shop-Insert-Rollback vor Money-Refund
+- [x] Partial-Crafting-Output-Rollback vor Input-Restore
 - [x] Crystal-System mit EMBER/TIDE/GALE
 - [x] Crystal-Level-Freischaltungen
 - [x] Canonical Crystal unlock gate inside CrystalSystem.Unlock
@@ -78,11 +81,13 @@
 - [x] Wind Island
 - [x] Ancient Ruins
 - [x] Levelgesperrte Portale
+- [x] Portal-Cooldown-Generation gegen stale Callback nach Respawn/Rejoin abgesichert
 - [x] Questdefinitionen + Fortschritt
 - [x] Servervalidierte Questvoraussetzungen
 - [x] Zentralisierter Quest-Completion-/Reward-Pfad
 - [x] Ungültige Quest-Fortschrittswerte werden abgelehnt
 - [x] Automatische Questkette bis Ancient Ruins
+- [x] Quest-Definitionen als lineare, eindeutige, azyklische Kette contract-validiert
 - [x] Automatischer Queststart nach erreichter Levelvoraussetzung
 - [x] Quest Journal
 - [x] Achievements + Titles
@@ -92,6 +97,7 @@
 - [x] Tägliche Bounty mit persistentem Fortschritt
 - [x] NPC-Dialoge mit servervalidierten Menü-Optionen
 - [x] NPC-Dialoge als zentraler Einstieg zu Quest/Crystal/Shop/Inventory/Crafting
+- [x] Deferred NPC-Menü-Öffnung an den auslösenden Character gebunden
 - [x] Dialog schließt beim Wechsel in Zielmenüs
 - [x] Legacy-NPC-Remote entfernt
 - [x] HUD für Progression, Loot, Quests, Bounty und Crafting
@@ -121,6 +127,8 @@
 - [x] GitHub-CI für canonical Achievement Titles
 - [x] GitHub-CI für NPC dialog option targets
 - [x] GitHub-CI für Enemy respawn/cleanup compatibility
+- [x] GitHub-CI für Portal-Cooldown-Generation über Respawn/Rejoin
+- [x] GitHub-CI für Character-gebundene deferred NPC-Menüöffnung
 - [x] Combat-Cooldown-Cleanup beim Player-Verlassen
 - [x] Duplicate Cooldown UI entfernt
 - [x] Clientseitige Animation-Controller-Architektur für Basic/Ability vorbereitet
