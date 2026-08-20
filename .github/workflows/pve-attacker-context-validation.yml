@@ -42,10 +42,11 @@ jobs:
           for marker in [
               'local function getNPCRoot()',
               'instance.Parent == npcFolder',
+              '(instance:GetAttribute("Enemy") == true or instance:GetAttribute("BossId") ~= nil)',
               'targetModel:IsDescendantOf(Workspace)',
               'targetModel.Parent == npcFolder',
-              'model.Parent == npcFolder',
               'targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil',
+              '(model:GetAttribute("Enemy") == true or model:GetAttribute("BossId") ~= nil)',
               'if target:IsA("Player") then',
               'targetModel = target.Character',
           ]:
@@ -56,4 +57,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("PvE attacker context and exact Workspace.NPCs model identity are covered by the central DamageService boundary.")
+          print("PvE attacker context, boss attacker identity and exact Workspace.NPCs model identity are covered by the central DamageService boundary.")
