@@ -115,6 +115,23 @@ local function syncTitleTag(character, title)
 	label.Parent = tag
 end
 
+local function bindCharacterWhenReady(player, character)
+	local deadline = os.clock() + OPERATION_TIMEOUT
+	while PlayerService.Saving[player] and os.clock() < deadline do
+		task.wait(0.1)
+		if not player.Parent or PlayerService.Closing[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then
+			return
+		end
+	end
+	if PlayerService.Saving[player] or not PlayerService.Profiles[player] or PlayerService.Closing[player] or not player.Parent or player.Character ~= character or not character.Parent then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+	if PlayerService.Closing[player] or PlayerService.Saving[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then return end
+	if humanoid then ensureAnimator(character) end
+	PlayerService.Sync(player)
+	bindHumanoid(player, humanoid)
+	player:SetAttribute("DeathMessage", "")
+end
+
 local function acquireOperation(player)
 	local started = os.clock()
 	while PlayerService.Operations[player] do
@@ -257,13 +274,7 @@ function PlayerService.Load(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
 		task.defer(function()
-			if not PlayerService.Profiles[player] or PlayerService.Closing[player] or PlayerService.Saving[player] or player.Character ~= character or not character.Parent then return end
-			local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
-			if PlayerService.Closing[player] or PlayerService.Saving[player] or player.Character ~= character or not character.Parent then return end
-			if humanoid then ensureAnimator(character) end
-			PlayerService.Sync(player)
-			bindHumanoid(player, humanoid)
-			player:SetAttribute("DeathMessage", "")
+			bindCharacterWhenReady(player, character)
 		end)
 	end)
 	PlayerService.Sync(player)
