@@ -106,6 +106,7 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 
 	local added = InventoryService.AddItem(profile, recipe.Output, outputAmount)
 	if added ~= outputAmount then
+		if added > 0 then InventoryService.RemoveItem(profile, recipe.Output, added) end
 		for itemId, consumedAmount in pairs(consumed) do InventoryService.AddItem(profile, itemId, consumedAmount) end
 		return false, "Crafting output could not be added safely."
 	end
