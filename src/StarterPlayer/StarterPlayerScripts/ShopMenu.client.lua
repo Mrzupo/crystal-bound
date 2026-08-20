@@ -240,7 +240,10 @@ inventoryChanged.OnClientEvent:Connect(function(data)
 	if type(data) == "table" then inventory = data; refresh() end
 end)
 
-player:GetAttributeChangedSignal("OpenShopMenu"):Connect(function() openMenu() end)
+player:GetAttributeChangedSignal("OpenShopMenu"):Connect(function()
+	if player:GetAttribute("OpenShopMenu") == nil then return end
+	openMenu()
+end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
