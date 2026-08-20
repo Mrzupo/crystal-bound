@@ -14,9 +14,10 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm EMBER Basic attack can damage an enemy in range.
 - Confirm Q triggers the EMBER presentation path and server damage.
 - Reach the TIDE unlock level and equip TIDE.
-- Verify TIDE passive health bonus and Tidal Pulse heal.
+- Verify TIDE passive health bonus and Tidal Pulse heal without selecting an enemy target.
+- Use Tidal Pulse while at full HP; expected: no heal, no consumed cooldown on the server and no false success message.
 - Reach the GALE unlock level and equip GALE.
-- Verify Gale Strike plus secondary splash hits only enemies in the configured radius.
+- Verify Gale Strike primary damage and confirm secondary splash is centered on the selected enemy, including enemies near the configured AoE edge that may be farther from the player than the primary target.
 - Confirm crystal switching never changes server-side damage authority to the client.
 - Controlled config test: malformed/non-integer Crystal UnlockLevel must cause that crystal boundary to reject the ID rather than silently floor the requirement.
 - Controlled server test: malformed CrystalMastery mutation ID must be rejected without changing EMBER mastery.
@@ -30,6 +31,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Attempt malformed/fractional/oversized damage through a controlled server-side test harness.
 - Perform a dodge during an incoming hit.
 - Expected: invalid/out-of-range/Player targets deal no damage; invalid damage is rejected; dodged hits return zero applied damage.
+- Trigger a controlled server shutdown while a delayed combat/status callback is pending; expected: no new damage is applied after shutdown begins.
 
 ## 4. Quest security
 - Start `FIRST_FIGHT` and defeat the Training Dummy; confirm the one-step server trigger completes it once.
@@ -78,6 +80,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - During autosave, trigger a server-authorized gameplay mutation; expected: the settled save path does not report success until the changed profile state is persisted.
 - Persist a controlled `DailyBounty` record with `Claimed=true` and `Progress<Goal`; expected: `PlayerData.Reconcile()` restores `Claimed=false` before gameplay can observe the profile.
 - Inject a controlled `PlayerData.Reconcile()` failure after a successful DataStore lock claim; expected: `SafeProfileStore.Load()` releases the exact claimed SessionLock before returning the load failure.
+- Inject a controlled unexpected exception around profile loading; expected: `PlayerService.Load()` clears the in-flight UserId marker so a later join is not permanently blocked by stale `LoadingByUserId` state.
 
 ## 8. Transactions / Consumables
 - Buy Health Potions with enough Money; confirm Money decreases exactly once and inventory increases exactly once.
@@ -100,6 +103,8 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Trigger Crystal Keeper/Material Trader prompts from inside the configured distance.
 - Controlled server test: attempt the same NPC prompt action from outside range; expected: menu does not open.
 - Test mobile ATK/Q/target selection.
+- Test mobile TIDE Q with no selected target; expected: Tidal Pulse works identically to PC.
+- Test mobile GALE Q with a selected target and verify centered splash range.
 - Test mobile dodge and verify the same server cooldown/invulnerability behavior as PC.
 - Confirm local animations/VFX never decide damage.
 - Change local `Humanoid.WalkSpeed` in a controlled client test; expected: the server restores the derived value immediately.
@@ -132,6 +137,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm no duplicate NPC/Boss instances appear after respawn.
 - Confirm NPC/Guardian delayed respawn callbacks do not create new instances after shutdown begins.
 - Confirm delayed Guardian telegraph impacts do not damage Players after shutdown begins.
+- Confirm delayed Burn/Slow callbacks do not continue gameplay mutation after shutdown begins.
 - Confirm no malformed Crystal UnlockLevel can be floored into an unintended lower gate.
 - Confirm malformed CrystalMastery mutation IDs cannot modify EMBER mastery.
 - Confirm NPC menu opening is server-distance validated.
@@ -140,7 +146,8 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm WalkSpeed baseline enforcement remains active without a Slow effect.
 - Confirm portal grace is destination-bound and cannot be created during a rejected portal touch/cooldown.
 - Confirm portal cooldown callbacks are generation-safe across respawn/rejoin.
-- Confirm StatusEffect Slow/Burn replacement tokens clear stale callbacks on replacement/cleanup; explicit shutdown cancellation remains an open follow-up until the module dependency is refactored safely.
+- Confirm StatusEffect Slow/Burn replacement tokens clear stale callbacks on replacement/cleanup and shutdown.
+- Confirm the global `CrystalBoundShuttingDown` flag is published before final profile removal and is honored by DamageService, DodgeService and StatusEffectService.
 - Confirm the official rarity ladder is Common → Divine and Ancient is not a rarity.
 - Confirm `main` remains untouched.
 - Record every runtime failure with exact script name, event/action, reproduction steps and expected vs actual behavior.
