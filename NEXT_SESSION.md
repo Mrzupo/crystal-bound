@@ -22,6 +22,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
 - Enemy and Guardian respawns are suppressed once global server shutdown begins.
+- Guardian Arena hazard damage and its periodic loop stop on global shutdown.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
 - Daily Bounty canonicalized from config and safe around wallet caps.
 - Daily Bounty reconcile additionally repairs corrupt persisted `Claimed=true` state when `Progress < Goal`.
@@ -30,7 +31,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-confirmed CombatFeedback presentation.
 - Server-owned character Animator for client animation playback.
 - One-shot confirmed Crystal VFX bridge.
-- Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence.
+- Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence; movement enforcement stops during shutdown.
 - Portal cooldown expiry is generation-safe across respawn/rejoin.
 - NPC menu state is Character-bound and cleared on respawn/leave.
 
@@ -55,10 +56,12 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Shop purchase and inventory selling remain rollback-safe around Money and stack capacity; partial purchase insertion now explicitly rolls back inserted items before the Money refund.
 - Crafting validates recipe/output bounds and now explicitly rolls back partial output insertion before restoring consumed inputs.
 - Enemy delayed respawn callbacks check `PlayerService.ShuttingDown` so shutdown cannot create fresh NPC instances.
+- Enemy AI loops stop on global shutdown.
 - Guardian creation and AI stop on global shutdown, and the delayed Guardian respawn callback also checks the shutdown state.
+- Guardian Arena hazard loop stops and disables active hazard visuals on global shutdown.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - Enemy Mastery XP is derived from canonical Enemy XP with no arbitrary minimum fallback.
-- `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences; `PositionCheckInterval` is currently 0.15 s.
+- `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences and rejects stale Character deferred binds.
 - `StatusEffectService` restores Slow expiry speed with the same canonical `MaxWalkSpeedBonus` cap used by PlayerService/MovementConfig.
 - Missing Humanoid/RootPart resets movement position state; portal grace is Character-bound and clears through centralized `WorldTheme` state cleanup on respawn/leave.
 - Dodge invulnerability end tasks use per-player tokens and `ApplyDamage()` requires the current Player Character Humanoid.
@@ -88,10 +91,10 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - No actual Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
 - Current GitHub workflow-run queries provide no verified run for the latest hardening commits; CI must not be called green.
-- Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
-- Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling and Roblox network-ownership interactions.
+- Movement/physics thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling, movement shutdown and Roblox network-ownership interactions.
 - The generalized `PlayerService.Saving` gameplay-read gate remains intentionally conservative. Ordinary `GetProfile()` callers are blocked during autosave; selected server reward paths have explicit autosave-safe access and are covered by settle/revision behavior.
 - `GetPlayerData`/`GetQuestData` return detached server-serialized subsets; no server-side table reference crosses the network boundary.
+- Authored Roblox Animation/Sound assets are still pending; current VFX remain procedural/placeholder-level.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
 
