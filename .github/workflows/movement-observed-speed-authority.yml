@@ -53,11 +53,16 @@ jobs:
                   raise SystemExit(f"StatusSpeedGuardV2 missing movement authority marker: {marker}")
 
           client_writers = []
+          authoritative_patterns = (
+              r"\b(?:root|playerRoot|humanoidRootPart)\.AssemblyLinearVelocity\s*=",
+              r"\b(?:root|playerRoot|humanoidRootPart)\.CFrame\s*=",
+              r"\b(?:character|playerCharacter)\s*:\s*PivotTo\s*\(",
+          )
           for path in Path("src/StarterPlayer").rglob("*.lua"):
               text = path.read_text(encoding="utf-8")
-              if re.search(r"\.AssemblyLinearVelocity\s*=|\.CFrame\s*=", text):
+              if any(re.search(pattern, text) for pattern in authoritative_patterns):
                   client_writers.append(str(path))
           if client_writers:
-              raise SystemExit("Client scripts must not write authoritative movement physics: " + ", ".join(client_writers))
+              raise SystemExit("Client scripts must not write authoritative Character movement physics: " + ", ".join(client_writers))
 
-          print("Observed movement cap is tied to canonical server authority and configured Dodge Boost.")
+          print("Observed movement cap is tied to canonical server authority and configured Dodge Boost; client presentation CFrame writes are allowed.")
