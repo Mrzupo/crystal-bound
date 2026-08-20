@@ -1,0 +1,32 @@
+name: Inventory UI Remote Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate InventoryRequest/InventoryChanged direction
+        shell: python
+        run: |
+          from pathlib import Path
+
+          client = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
+          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+
+          if 'local inventoryRequest = remotes:WaitForChild("InventoryRequest")' not in client:
+              raise SystemExit("InventoryMenu must use InventoryRequest for Client -> Server inventory snapshots")
+          if 'inventoryRequest.OnClientEvent' in client:
+              raise SystemExit("InventoryRequest must remain a Client -> Server request remote, not a response event")
+          if 'local inventoryChanged = remotes:WaitForChild("InventoryChanged")' not in client:
+              raise SystemExit("InventoryMenu must listen to InventoryChanged for Server -> Client inventory snapshots")
+          if 'inventoryChanged.OnClientEvent' not in client:
+              raise SystemExit("InventoryMenu must consume InventoryChanged server snapshots")
+          if 'remotes.InventoryChanged:FireClient(player, profile.Inventory)' not in bootstrap:
+              raise SystemExit("Bootstrap must publish inventory snapshots through InventoryChanged")
+
+          print("Inventory UI remote direction validated.")
