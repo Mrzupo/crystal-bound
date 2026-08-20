@@ -15,8 +15,8 @@ ReplicatedStorage:SetAttribute("CrystalBoundShuttingDown", false)
 
 local function shutdownProfiles()
 	shuttingDown = true
-	PlayerService.BeginShutdown()
 	ReplicatedStorage:SetAttribute("CrystalBoundShuttingDown", true)
+	PlayerService.BeginShutdown()
 	local pending = 0
 	for _, player in ipairs(Players:GetPlayers()) do
 		if PlayerService.HasLoadedProfile(player) then
