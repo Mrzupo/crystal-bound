@@ -9,18 +9,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce integer purchase request validation
+      - name: Enforce integer purchase validation and remote request gates
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          text = Path('src/ServerScriptService/Services/ShopService.lua').read_text(encoding='utf-8')
+          service = Path('src/ServerScriptService/Services/ShopService.lua').read_text(encoding='utf-8')
+          remote = Path('src/ServerScriptService/ShopRemote.server.lua').read_text(encoding='utf-8')
           required = [
               'number == nil or number % 1 ~= 0',
               'Purchase amount must be a positive integer.',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in service]
+          missing += [marker for marker in (
+              'local NEXT_REQUEST = setmetatable({}, { __mode = "k" })',
+              'if now < (NEXT_REQUEST[player] or 0) then return end',
+              'NEXT_REQUEST[player] = now + REQUEST_INTERVAL',
+              'if action ~= "Buy" then return end',
+              'local function getCanonicalTrader()',
+              'trader.Parent ~= NPC_FOLDER',
+              'trader:GetAttribute("Interactable") ~= true',
+          ) if marker not in remote]
           if missing:
-              raise SystemExit('missing shop input boundary markers: ' + ', '.join(missing))
-          print('Shop input boundary validated.')
+              raise SystemExit('missing shop input/remote boundary markers: ' + ', '.join(missing))
+          if remote.index('NEXT_REQUEST[player] = now + REQUEST_INTERVAL') > remote.index('if action ~= "Buy" then return end'):
+              raise SystemExit('ShopRemote must consume the rate limit before validating the action')
+          print('Shop input boundary, pre-validation rate limiting and canonical trader identity validated.')
           PY
