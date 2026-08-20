@@ -1,0 +1,70 @@
+name: RemoteFunction Single Owner Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/remote-function-contract-v3"]
+  pull_request:
+
+jobs:
+  validate-remote-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical RemoteFunction owners and rate limits
+        shell: python
+        run: |
+          from pathlib import Path
+
+          contracts = {
+              "GetAvailableQuests": {
+                  "path": Path("src/ServerScriptService/QuestAvailability.server.lua"),
+                  "handler": "remote.OnServerInvoke = function(player)",
+                  "markers": ["REQUEST_INTERVAL", "nextRequest[player]"],
+              },
+              "NPCDialogRequest": {
+                  "path": Path("src/ServerScriptService/NPCDialogRemote.server.lua"),
+                  "handler": "remote.OnServerInvoke = function(player, npcId)",
+                  "markers": ["REQUEST_INTERVAL", "nextRequest[player]"],
+              },
+              "GetPlayerData": {
+                  "path": Path("src/ServerScriptService/Bootstrap.server.lua"),
+                  "handler": "remotes.GetPlayerData.OnServerInvoke = function(player)",
+                  "markers": ["PLAYER_DATA_REQUEST_INTERVAL", "nextPlayerDataRequest[player]"],
+              },
+              "GetQuestData": {
+                  "path": Path("src/ServerScriptService/Bootstrap.server.lua"),
+                  "handler": "remotes.GetQuestData.OnServerInvoke = function(player)",
+                  "markers": ["QUEST_DATA_REQUEST_INTERVAL", "nextQuestDataRequest[player]"],
+              },
+          }
+
+          server_root = Path("src/ServerScriptService")
+          lua_files = list(server_root.rglob("*.lua"))
+          all_text = {path: path.read_text(encoding="utf-8") for path in lua_files}
+
+          for name, contract in contracts.items():
+              path = contract["path"]
+              if path not in all_text:
+                  raise SystemExit(f"Missing canonical RemoteFunction owner for {name}: {path}")
+              text = all_text[path]
+              if text.count(contract["handler"]) != 1:
+                  raise SystemExit(f"RemoteFunction {name} must have exactly one canonical handler in {path}")
+              missing = [marker for marker in contract["markers"] if marker not in text]
+              if missing:
+                  raise SystemExit(f"RemoteFunction {name} missing rate-limit markers: {', '.join(missing)}")
+
+          for path, text in all_text.items():
+              direct_handlers = [
+                  "GetPlayerData.OnServerInvoke",
+                  "GetQuestData.OnServerInvoke",
+                  "GetAvailableQuests.OnServerInvoke",
+                  "NPCDialogRequest.OnServerInvoke",
+              ]
+              for handler in direct_handlers:
+                  if handler in text:
+                      name = handler.removesuffix(".OnServerInvoke")
+                      expected_path = contracts[name]["path"]
+                      if path != expected_path:
+                          raise SystemExit(f"RemoteFunction {name} has duplicate owner in {path}")
+
+          print("RemoteFunction single-owner and rate-limit contract validated.")
