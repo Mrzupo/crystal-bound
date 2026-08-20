@@ -57,6 +57,8 @@ jobs:
               raise SystemExit("CraftingService must reject invalid craft amounts")
           if "safeProduct" not in service:
               raise SystemExit("CraftingService must bound multiplied recipe amounts")
+          if 'recipe.Output ~= outputId' not in service:
+              raise SystemExit("CraftingService must require recipe Output to match the requested outputId")
           if "CraftingConfig" not in ui:
               raise SystemExit("Crafting UI must consume shared CraftingConfig")
           print("Crafting configuration and item-registration contract validated.")
