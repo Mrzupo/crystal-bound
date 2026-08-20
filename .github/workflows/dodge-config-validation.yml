@@ -33,6 +33,7 @@ jobs:
               'local invulnerabilityTokens = setmetatable({}, { __mode = "k" })',
               'local function disconnectPlayer(player)',
               'local function invalidateInvulnerability(player)',
+              'local token = invulnerabilityTokens[player]',
               'if connection and connection.Connected then connection:Disconnect() end',
               'invalidateInvulnerability(player)',
               'invulnerabilityTokens[player] == token',
