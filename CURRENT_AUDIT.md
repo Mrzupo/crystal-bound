@@ -4,7 +4,7 @@ Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
 Current compare: **1464 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
-`main` remains untouched by this workstream; the current compared base is `18f0f27fcbcb4fd6384f45ecd1d0632f1d0632f1fc...`.
+`main` remains untouched by this workstream; the current compared base is `18f0f27fcbcb4fd6384f45ecd1d0632f1d0632f9edad02d`.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
@@ -20,7 +20,8 @@ Current compare: **1464 commits ahead, 38 commits behind** `main` (verified with
 - `SafeProfileStore` separates per-load claim tokens from active per-Player Save/Refresh tokens; `Release(player, expectedToken)` cannot release a different active token.
 - `DamageService` is the sole direct `Humanoid:TakeDamage()` owner; damage types, attackers, targets, ranges and amounts are server-validated.
 - Environmental damage is strictly `Attacker == nil` in both the generic validator and final `DamageService` gate.
-- NPC attackers must be live, parented, `Enemy == true` models inside `Workspace.NPCs`; Player-vs-Player damage is rejected.
+- NPC attackers must be live, direct children of `Workspace.NPCs`, and carry `Enemy == true`; Player-vs-Player damage is rejected.
+- NPC damage/target identity is now protected by an exact-parent contract in both runtime and CI: nested/non-canonical models under `Workspace.NPCs` are not treated as valid attacker/target models merely because they are descendants.
 - Last-attacker attribution is instance/session-bound, pinned before lethal `TakeDamage()`, restored on zero-applied damage and cleared after successful enemy reward processing.
 - Dodge validates finite directions, bounded ranges and cooldowns; `ApplyDamage()` additionally requires the supplied Humanoid to be the current Player Character's Humanoid.
 - Dodge invulnerability end-tasks use per-player tokens, so stale delayed callbacks cannot cancel a later dodge after re-dodge or respawn.
