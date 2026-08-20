@@ -25,7 +25,10 @@ jobs:
               'local inventory = {}',
               'InventoryConfig.GetItemConfig(itemId)',
               'data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)',
-              'data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)',
+              'local candidateCompleted = normalizeList(data.CompletedQuests, isQuestId)',
+              'local normalizedCompleted = {}',
+              '(not definition.Requires or completedSet[definition.Requires])',
+              'data.CompletedQuests = normalizedCompleted',
               'data.QuestProgress = normalizedProgress',
               'data.UnlockedIslands = normalizeList(data.UnlockedIslands, isIslandId)',
               'local stats = type(data.Stats) == "table" and data.Stats or {}',
@@ -34,6 +37,9 @@ jobs:
               'BossesDefeated = clampInt(stats.BossesDefeated, 0, 1000000000, defaults.Stats.BossesDefeated)',
               'AncientGolemsDefeated = clampInt(stats.AncientGolemsDefeated, 0, 1000000000, defaults.Stats.AncientGolemsDefeated)',
               'CrystalBatsDefeated = clampInt(stats.CrystalBatsDefeated, 0, 1000000000, defaults.Stats.CrystalBatsDefeated)',
+              'data.Achievements = normalizeList(data.Achievements, isAchievementId)',
+              'local canonicalTitles = {}',
+              'data.Titles = canonicalTitles',
               'local function isBountyEnemy(value)',
               'for _, definition in ipairs(DailyBountyConfig.Goals) do',
               'data.DailyBounty.Claimed = data.DailyBounty.Claimed == true',
@@ -58,4 +64,4 @@ jobs:
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated, including stats, complete bounty defaults and canonical bounty definitions.')
+          print('Persisted player-data reconciliation contract validated: stats, achievements, quest prerequisites, complete bounty defaults and session-lock bounds.')
