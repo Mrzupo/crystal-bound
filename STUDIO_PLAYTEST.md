@@ -49,6 +49,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm dead enemies stop AI/status callbacks before respawn.
 - Confirm each enemy respawns exactly once and no duplicate named instances appear.
 - Trigger a controlled server shutdown while an enemy is inside its delayed respawn window; expected: shutdown does not create a replacement NPC.
+- During an active Burn effect, trigger controlled server shutdown; expected: no additional Burn tick executes after shutdown begins.
 
 ## 6. Guardian
 - Bring Guardian below 50% HP.
@@ -62,6 +63,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm Guardian reward/quest/achievement state is granted once and the boss respawns on schedule.
 - Force a controlled 60-second autosave window and defeat Guardian during that save; expected: Guardian XP/loot/quest/stats still commit and are persisted by the next settled save pass.
 - Trigger a controlled server shutdown while the Guardian is in its delayed respawn window; expected: shutdown does not create a replacement Guardian and Guardian AI stops.
+- Trigger controlled server shutdown during a Guardian telegraph windup; expected: the delayed impact callback does not deal damage.
 
 ## 7. Persistence
 - Change level, money, inventory, crystal mastery and quest state.
@@ -112,6 +114,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Respawn after a portal use; expected: stale portal grace is cleared and cannot authorize the new character.
 - Teleport through a portal, respawn before the original 1-second cooldown expires, then touch a portal again on the new Character; expected: the old delayed cooldown callback must not clear the new Character's cooldown early.
 - Perform a Dodge and verify its server velocity remains subject to the normal position authority.
+- Trigger controlled server shutdown while the player is near a portal; expected: WorldTheme stops monitoring portal candidates and no new portal movement grace is armed.
 
 ## 11. Asset pass
 - Insert the authored animation objects under the six configured names.
@@ -127,6 +130,8 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm no Daily Bounty or Achievement reward can be granted twice.
 - Confirm no duplicate NPC/Boss instances appear after respawn.
 - Confirm NPC/Guardian delayed respawn callbacks do not create new instances after shutdown begins.
+- Confirm delayed Burn/Slow callbacks do not continue gameplay mutation after shutdown begins.
+- Confirm delayed Guardian telegraph impacts do not damage Players after shutdown begins.
 - Confirm no malformed Crystal UnlockLevel can be floored into an unintended lower gate.
 - Confirm malformed CrystalMastery mutation IDs cannot modify EMBER mastery.
 - Confirm NPC menu opening is server-distance validated.
