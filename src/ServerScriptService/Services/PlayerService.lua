@@ -351,7 +351,7 @@ function PlayerService.Sync(player, internal)
 			local baseWalkSpeed = BASE_WALK_SPEED + walkSpeedBonus
 			local slowMultiplier = StatusEffectService.GetSlowMultiplier(humanoid)
 			if slowMultiplier then
-				humanoid.WalkSpeed = math.max(MIN_SLOW_MULTIPLIER, baseWalkSpeed * math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
+				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
 			else
 				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed)
 			end
