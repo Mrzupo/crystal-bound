@@ -24,9 +24,7 @@ end
 local function clone(value)
 	if type(value) ~= "table" then return value end
 	local result = {}
-	for key, child in pairs(value) do
-		result[key] = clone(child)
-	end
+	for key, child in pairs(value) do result[key] = clone(child) end
 	return result
 end
 
@@ -39,6 +37,8 @@ function SafeProfileStore.Load(player)
 	local claimed = false
 	local invalidStoredValue = false
 	local ok, result = retry(function()
+		claimed = false
+		invalidStoredValue = false
 		return store:UpdateAsync(key, function(current)
 			if current ~= nil and type(current) ~= "table" then
 				invalidStoredValue = true
@@ -91,6 +91,7 @@ function SafeProfileStore.Save(player, profile)
 	local key = tostring(player.UserId)
 	local saved = false
 	local ok, result = retry(function()
+		saved = false
 		return store:UpdateAsync(key, function(current)
 			if type(current) ~= "table" then
 				return current
@@ -121,6 +122,7 @@ function SafeProfileStore.Refresh(player)
 	local key = tostring(player.UserId)
 	local refreshed = false
 	local ok, result = retry(function()
+		refreshed = false
 		return store:UpdateAsync(key, function(current)
 			if type(current) ~= "table" then return current end
 			local lock = current.SessionLock
@@ -144,6 +146,7 @@ function SafeProfileStore.Release(player)
 	local key = tostring(player.UserId)
 	local released = false
 	local ok, result = retry(function()
+		released = false
 		return store:UpdateAsync(key, function(current)
 			if type(current) ~= "table" then return current end
 			local lock = current.SessionLock
