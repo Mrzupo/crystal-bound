@@ -20,7 +20,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Central QuestSystem / QuestService completion and rewards.
 - SafeProfileStore session lock with active per-player tokens, callback-local retry-state isolation, callback-time save snapshots and profile-revision save settling.
 - SafeProfileStore releases the exact claimed SessionLock if post-claim `PlayerData.Reconcile()` fails.
-- PlayerService load errors and second reconciliation failures clear the per-UserId in-flight load marker before returning, preventing stale rejoin blocks.
+- PlayerService load errors clear the per-UserId in-flight load marker before returning, preventing stale rejoin blocks.
 - Canonical Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
 - Shop and Crafting explicitly roll back partial inventory insertion before reversing a failed transaction.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
@@ -45,7 +45,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after startup, with per-Player deduplication.
 - Redundant `PlayerLoadCatchup.server.lua` was removed from the repository and Rojo tree to avoid two concurrent startup load owners.
 - `PlayerService.Load()` uses a per-UserId in-flight guard: a second concurrent load for the same UserId is rejected until the current load finishes. Do not describe this as a superseding-load implementation; the current runtime intentionally blocks the second load rather than taking over its lock.
-- Unexpected `SafeProfileStore.Load()` throws and unexpected second `PlayerData.Reconcile()` throws are wrapped by `PlayerService.Load()`; the active `LoadingByUserId` marker is cleared before failure return, and a successfully claimed lock is released through the exact token available to the path.
+- Unexpected `SafeProfileStore.Load()` throws are wrapped by `PlayerService.Load()`; the active `LoadingByUserId` marker is cleared before failure return, and a successfully claimed lock is released through the exact token available to the path.
 - Every aborted successful load path releases the exact SessionLock token it acquired before returning.
 - `SafeProfileStore.Load()` now catches reconciliation errors after a successful lock claim and releases the exact claimed token before failing the load.
 - Bootstrap checks `player.Parent` before `Kick()` on load failure.
