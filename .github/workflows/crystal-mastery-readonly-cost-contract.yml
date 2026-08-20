@@ -1,0 +1,30 @@
+name: Crystal Mastery Readonly Cost Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure GetUpgradeCost does not mutate persisted mastery state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+          start = text.index("function CrystalMastery.GetUpgradeCost")
+          end = text.index("function CrystalMastery.Upgrade", start)
+          block = text[start:end]
+
+          if "ensure(profile, crystalId)" in block:
+              raise SystemExit("GetUpgradeCost must remain read-only and must not call the mutating ensure helper")
+          if "profile.CrystalMastery =" in block or ("profile.CrystalMastery[" in block and "=" in block):
+              raise SystemExit("GetUpgradeCost must not write profile mastery state")
+          if "Config.BaseCosts" not in block or "ownsCrystal(profile, crystalId)" not in block:
+              raise SystemExit("GetUpgradeCost lost canonical ownership/config validation")
+
+          print("Crystal mastery upgrade-cost lookup is read-only and cannot create persisted mastery state.")
