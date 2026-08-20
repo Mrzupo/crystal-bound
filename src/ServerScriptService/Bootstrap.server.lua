@@ -222,11 +222,19 @@ local function syncAllPlayerData()
 	end
 end
 
-Players.PlayerAdded:Connect(function(player)
+local function loadPlayer(player)
 	local profile, reason = PlayerService.Load(player)
 	if not profile then
-		player:Kick(reason or "Unable to load your Crystal Bound profile safely.")
-		return
+		if player.Parent then player:Kick(reason or "Unable to load your Crystal Bound profile safely.") end
+		return false
 	end
 	PlayerService.Sync(player)
+	return true
+end
+
+Players.PlayerAdded:Connect(function(player)
+	task.spawn(loadPlayer, player)
 end)
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(loadPlayer, player)
+end
