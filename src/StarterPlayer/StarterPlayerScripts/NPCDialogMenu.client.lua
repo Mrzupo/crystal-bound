@@ -6,6 +6,21 @@ local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local dialogRequest = remotes:WaitForChild("NPCDialogRequest")
 
+local MENU_ATTRIBUTES = {
+	"OpenQuestMenu",
+	"OpenShopMenu",
+	"OpenCrystalMenu",
+	"OpenCraftingMenu",
+	"OpenAchievementMenu",
+	"OpenNPCDialog",
+}
+
+local function clearMenuState()
+	for _, attribute in ipairs(MENU_ATTRIBUTES) do
+		player:SetAttribute(attribute, nil)
+	end
+end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "NPCDialogMenu"
 gui.ResetOnSpawn = false
@@ -35,7 +50,10 @@ close.Size = UDim2.fromOffset(36, 32)
 close.Text = "X"
 close.Font = Enum.Font.GothamBold
 close.Parent = panel
-close.Activated:Connect(function() panel.Visible = false end)
+close.Activated:Connect(function()
+	panel.Visible = false
+	clearMenuState()
+end)
 
 local line = Instance.new("TextLabel")
 line.Position = UDim2.fromOffset(18, 52)
@@ -56,20 +74,6 @@ options.Parent = panel
 
 local currentLines = {}
 local currentIndex = 1
-local MENU_ATTRIBUTES = {
-	"OpenQuestMenu",
-	"OpenShopMenu",
-	"OpenCrystalMenu",
-	"OpenCraftingMenu",
-	"OpenAchievementMenu",
-	"OpenNPCDialog",
-}
-
-local function clearMenuState()
-	for _, attribute in ipairs(MENU_ATTRIBUTES) do
-		player:SetAttribute(attribute, nil)
-	end
-end
 
 local function clearOptions()
 	for _, child in ipairs(options:GetChildren()) do child:Destroy() end
@@ -99,6 +103,7 @@ local function openDialog(npcId)
 	local ok, data = pcall(function() return dialogRequest:InvokeServer(npcId) end)
 	if not ok or type(data) ~= "table" then
 		panel.Visible = false
+		clearMenuState()
 		return
 	end
 	clearMenuState()
