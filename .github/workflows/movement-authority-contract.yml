@@ -33,10 +33,15 @@ jobs:
               'isValidPortalArrival(player, root, now)',
               'player:SetAttribute("PortalMovementGraceUntil", 0)',
               'player:SetAttribute("PortalExpectedDestination", nil)',
+              'task.wait(ENFORCEMENT_INTERVAL)',
+              'task.wait(POSITION_CHECK_INTERVAL)',
           ]
           missing = [marker for marker in required if marker not in server_guard]
           if missing:
               raise SystemExit('Server movement authority guard missing: ' + ', '.join(missing))
+
+          if 'positionElapsed' in server_guard:
+              raise SystemExit('Position authority must not hide the configured interval behind a fixed accumulator loop')
 
           for marker in ('MaxObservedSpeed =', 'ExtraDistanceTolerance =', 'PositionCheckInterval =', 'PortalArrivalTolerance ='):
               if marker not in movement_config:
