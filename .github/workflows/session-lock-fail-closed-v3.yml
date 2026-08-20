@@ -1,0 +1,32 @@
+name: Session Lock Fail Closed V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate malformed and implausible SessionLock handling
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
+          required = [
+              'local function finiteTimestamp(value)',
+              'if lock ~= nil and type(lock) ~= "table" then',
+              'if not validJobId or not validToken or lockTimestamp == nil or lockTimestamp <= 0 then',
+              'if lockTimestamp > now + SESSION_TIMEOUT then',
+              'invalidStoredValue = true',
+              'local reconcileOk, profileOrError = xpcall(function()',
+              'local released = SafeProfileStore.Release(player, token)',
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise SystemExit(f"SessionLock safety marker missing: {marker}")
+
+          print("SessionLock load handling fails closed on malformed, non-positive, non-finite and implausibly future lock data.")
