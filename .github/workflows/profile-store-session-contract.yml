@@ -89,7 +89,9 @@ jobs:
           if timeout <= heartbeat * 2:
               raise SystemExit(f'SESSION_TIMEOUT ({timeout}) must exceed two heartbeat intervals ({heartbeat * 2})')
 
-          if 'local profile = PlayerData.Reconcile(result)' not in text or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
+          if 'return PlayerData.Reconcile(result)' not in load_block or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
               raise SystemExit('Load/Save must reconcile persisted profile data at the storage boundary')
+          if 'local profile = PlayerData.Reconcile(result)' in text:
+              raise SystemExit('Load must use the guarded reconciliation path rather than an unprotected direct assignment')
 
           print('Profile-store active-token isolation, speculative-load token separation, token-specific release, reconciliation-failure release and UpdateAsync callback retry-state isolation validated.')
