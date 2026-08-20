@@ -57,6 +57,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm phase changes to 2.
 - Confirm boss bar tracks `CrystalGuardian`.
 - Verify the boss-centered Phase-2 AoE and the separate targeted telegraph are distinct attacks.
+- Keep the Guardian at a distance inside the configured `TargetRange` and stay inside the telegraph circle; expected: the delayed `BossShockwave` still applies when you remain inside the target-centered telegraph, rather than being rejected by the smaller telegraph radius as an attacker range.
 - Wait for telegraph and dodge out of the radius.
 - Expected: no damage and no false impact message after a dodge.
 - Stay in the telegraph and confirm `BossShockwave` damage.
