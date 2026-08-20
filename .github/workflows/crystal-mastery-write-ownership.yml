@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate CrystalMastery mutation owners
+      - name: Validate CrystalMastery mutation owners and ownership guards
         shell: python
         run: |
           from pathlib import Path
@@ -33,4 +33,14 @@ jobs:
                   violations.append(relative)
           if violations:
               raise SystemExit("CrystalMastery writes outside canonical owners: " + ", ".join(violations))
-          print("CrystalMastery write ownership validated.")
+
+          mastery = (root / "ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+          for marker in (
+              'local function ownsCrystal(profile, crystalId)',
+              'not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId)',
+              'type(profile) ~= "table" or not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId)',
+          ):
+              if marker not in mastery:
+                  raise SystemExit("CrystalMastery ownership guard missing: " + marker)
+
+          print("CrystalMastery write ownership and profile-ownership guards validated.")
