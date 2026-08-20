@@ -23,6 +23,14 @@ jobs:
               raise SystemExit("SessionHeartbeat must route autosaves through PlayerService.Save")
           if "function PlayerService.Save(player)" not in player_service:
               raise SystemExit("PlayerService must own autosave operations")
+          if "function saveConsistently(player, profile)" not in player_service:
+              raise SystemExit("PlayerService must expose the revision-settled save path")
+          if "local revisionBefore = PlayerService.ProfileRevisions[player] or 0" not in player_service:
+              raise SystemExit("PlayerService.saveConsistently must snapshot the profile revision before persistence")
+          if "if PlayerService.ProfileRevisions[player] ~= revisionBefore then" not in player_service:
+              raise SystemExit("PlayerService.saveConsistently must detect mutations during persistence")
+          if "SAVE_SETTLE_ATTEMPTS =" not in player_service:
+              raise SystemExit("PlayerService.saveConsistently must retain a bounded settle-attempt budget")
           if "if not acquireOperation(player) then return false end" not in player_service:
               raise SystemExit("PlayerService.Save must serialize autosave with other profile operations")
-          print("Session autosave ownership contract validated.")
+          print("Session autosave ownership and revision-settled save contract validated.")
