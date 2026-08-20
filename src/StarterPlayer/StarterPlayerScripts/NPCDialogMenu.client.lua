@@ -56,6 +56,20 @@ options.Parent = panel
 
 local currentLines = {}
 local currentIndex = 1
+local MENU_ATTRIBUTES = {
+	"OpenQuestMenu",
+	"OpenShopMenu",
+	"OpenCrystalMenu",
+	"OpenCraftingMenu",
+	"OpenAchievementMenu",
+	"OpenNPCDialog",
+}
+
+local function clearMenuState()
+	for _, attribute in ipairs(MENU_ATTRIBUTES) do
+		player:SetAttribute(attribute, nil)
+	end
+end
 
 local function clearOptions()
 	for _, child in ipairs(options:GetChildren()) do child:Destroy() end
@@ -69,6 +83,7 @@ end
 
 local function openTargetMenu(optionId)
 	panel.Visible = false
+	clearMenuState()
 	if optionId == "QUEST" then
 		player:SetAttribute("OpenQuestMenu", os.clock())
 	elseif optionId == "CRYSTAL" or optionId == "INVENTORY" then
@@ -86,6 +101,7 @@ local function openDialog(npcId)
 		panel.Visible = false
 		return
 	end
+	clearMenuState()
 	currentLines = type(data.Lines) == "table" and data.Lines or {}
 	currentIndex = 1
 	title.Text = data.Name or npcId
