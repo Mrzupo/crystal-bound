@@ -24,6 +24,9 @@ jobs:
           required = [
               'if model:GetAttribute("Rewarded") then return end',
               'local validRewardConfig =',
+              'local questDefinition = QuestSystem.GetDefinition("GUARDIAN_TRIAL")',
+              'local questActive = profile ~= nil and QuestSystem.IsActive(profile, "GUARDIAN_TRIAL")',
+              'currentMoney + math.max(0, moneyReward or 0) + questMoney <= EconomyConfig.MaxMoney',
               'xpReward <= XPConfig.MaxExperience',
               'moneyReward <= EconomyConfig.MaxMoney',
               'InventoryConfig.GetItemConfig(dropId) ~= nil',
@@ -67,4 +70,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, canonical mutation ownership, wallet-cap-safe payout, lifecycle cleanup, cap validation and drop registration validated.')
+          print('Guardian reward idempotency, combined quest/boss wallet preflight, canonical mutation ownership, lifecycle cleanup, cap validation and drop registration validated.')
