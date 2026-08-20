@@ -1,0 +1,31 @@
+name: Inventory System Legacy Cleanup
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prevent InventorySystem from becoming a server authority bypass
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src/ServerScriptService")
+          problems = []
+          forbidden = (
+              "ReplicatedStorage.Modules.InventorySystem",
+              "Modules.InventorySystem",
+              "InventorySystem",
+          )
+          for path in root.rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if any(marker in text for marker in forbidden):
+                  problems.append(str(path))
+          if problems:
+              raise SystemExit("Server code must not depend on legacy InventorySystem: " + ", ".join(problems))
+          print("InventorySystem legacy-authority cleanup validated.")
