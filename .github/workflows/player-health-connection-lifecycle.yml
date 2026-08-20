@@ -29,10 +29,23 @@ jobs:
               "task.wait(0.1)",
               "if PlayerService.ShuttingDown or not player.Parent or PlayerService.Closing[player]",
               "if PlayerService.ShuttingDown or PlayerService.Saving[player] or not PlayerService.Profiles[player]",
+              "player:SetAttribute(\"ProfileLoaded\", true)",
+              "local syncSuccess, syncError = xpcall(function()",
+              "PlayerService.Sync(player)",
+              "if not syncSuccess then",
+              "player:SetAttribute(\"ProfileLoaded\", false)",
+              "bindHumanoid(player, humanoid)",
               "if not PlayerService.ShuttingDown then",
               "bindCharacterWhenReady(player, character)",
           ]
           for marker in required:
               if marker not in text:
                   raise SystemExit(f"PlayerService missing lifecycle marker: {marker}")
-          print("Player humanoid connection lifecycle, stale CharacterAdded handling, Save-time respawn recovery and shutdown-safe character synchronization validated.")
+
+          character_added = text.index('PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)')
+          false_marker = text.index('player:SetAttribute("ProfileLoaded", false)', character_added)
+          bind_ready = text.index('local function bindCharacterWhenReady', character_added)
+          if false_marker < bind_ready:
+              raise SystemExit('CharacterAdded must invalidate ProfileLoaded before deferred character initialization begins')
+
+          print("Player humanoid connection lifecycle, stale CharacterAdded handling, ProfileLoaded readiness gating, Save-time respawn recovery and shutdown-safe character synchronization validated.")
