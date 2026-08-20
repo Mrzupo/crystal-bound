@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce integer crafting request validation
+      - name: Enforce integer crafting request validation and overflow-safe output ordering
         shell: bash
         run: |
           python - <<'PY'
@@ -18,9 +18,14 @@ jobs:
           required = [
               'number == nil or number % 1 ~= 0',
               'Craft amount must be a positive integer.',
+              'local outputAmount = safeProduct(recipeAmount, amount)',
+              'if not outputAmount then',
+              'if outputAmount > availableOutputSpace then',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
-              raise SystemExit('missing crafting input boundary markers: ' + ', '.join(missing))
-          print('Crafting input boundary validated.')
+              raise SystemExit('missing crafting input/overflow boundary markers: ' + ', '.join(missing))
+          if text.index('local outputAmount = safeProduct(recipeAmount, amount)') > text.index('if outputAmount > availableOutputSpace then'):
+              raise SystemExit('Crafting must calculate the safe product before inventory-space comparison')
+          print('Crafting input and overflow boundary validated.')
           PY
