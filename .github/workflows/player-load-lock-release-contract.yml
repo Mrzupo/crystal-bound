@@ -1,0 +1,37 @@
+name: Player Load Lock Release Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PlayerService load failure cleanup boundary
+        shell: python
+        run: |
+          from pathlib import Path
+
+          wrapper = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          original = Path("src/ServerScriptService/Services/PlayerServiceOriginal.lua").read_text(encoding="utf-8")
+
+          required = [
+              'local PlayerService = require(script.Parent.PlayerServiceOriginal)',
+              'local originalLoad = PlayerService.Load',
+              'local success, profile, reason = xpcall(function()',
+              'local released = SafeProfileStore.Release(player)',
+              'return nil, "Profile load initialization failed"',
+          ]
+          for marker in required:
+              if marker not in wrapper:
+                  raise SystemExit(f"PlayerService wrapper marker missing: {marker}")
+
+          if 'function PlayerService.Load(player)' not in wrapper:
+              raise SystemExit("PlayerService.Load wrapper missing")
+          if 'function PlayerService.Load(player)' not in original:
+              raise SystemExit("PlayerServiceOriginal lost canonical Load implementation")
+
+          print("PlayerService load failures are caught at the public boundary and attempt session-lock release.")
