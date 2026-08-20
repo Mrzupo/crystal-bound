@@ -24,9 +24,6 @@ jobs:
           required = [
               'if model:GetAttribute("Rewarded") then return end',
               'local validRewardConfig =',
-              'local questDefinition = QuestSystem.GetDefinition("GUARDIAN_TRIAL")',
-              'local questActive = profile ~= nil and QuestSystem.IsActive(profile, "GUARDIAN_TRIAL")',
-              'currentMoney + math.max(0, moneyReward or 0) + questMoney <= EconomyConfig.MaxMoney',
               'xpReward <= XPConfig.MaxExperience',
               'moneyReward <= EconomyConfig.MaxMoney',
               'InventoryConfig.GetItemConfig(dropId) ~= nil',
@@ -34,6 +31,7 @@ jobs:
               'XPService.AddXP(profile, xpReward)',
               'local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)',
               'InventoryService.AddItem(profile, dropId, 1)',
+              'QuestService.Complete(player, profile, "GUARDIAN_TRIAL"',
               'earnedMoney < moneyReward',
               'DamageService.ClearTarget(model)',
               'BossService.CreateGuardian(position, parent, bossName)',
@@ -46,7 +44,7 @@ jobs:
           forbidden = [
               'profile.Money =',
               'profile.Inventory[dropId] =',
-              'currentMoney + moneyReward > EconomyConfig.MaxMoney',
+              'currentMoney + math.max(0, moneyReward or 0) + questMoney <= EconomyConfig.MaxMoney',
               'Spend some Money before claiming the Guardian reward.',
           ]
           for marker in forbidden:
@@ -70,4 +68,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, combined quest/boss wallet preflight, canonical mutation ownership, lifecycle cleanup, cap validation and drop registration validated.')
+          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, lifecycle cleanup, cap validation and drop registration validated.')
