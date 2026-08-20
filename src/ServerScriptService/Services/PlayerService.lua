@@ -247,21 +247,6 @@ function PlayerService.Load(player)
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left before profile load completed"
 	end
 
-	local reconcileSuccess, reconciledProfile = xpcall(function()
-		return PlayerData.Reconcile(profile)
-	end, debug.traceback)
-	if not reconcileSuccess or type(reconciledProfile) ~= "table" then
-		clearCurrentLoad()
-		local released = releaseLoadedToken()
-		warn(("Crystal Bound: second profile reconciliation failed for %s; session lock release=%s; error=%s"):format(player.Name, tostring(released), tostring(reconciledProfile)))
-		return nil, "Profile reconciliation failed"
-	end
-	profile = reconciledProfile
-	if not isCurrentLoad() then
-		local released = releaseLoadedToken()
-		warn(("Crystal Bound: superseded profile initialization ignored for UserId %d; session lock release=%s."):format(userId, tostring(released)))
-		return nil, "Superseded profile initialization"
-	end
 	if PlayerService.ShuttingDown then
 		clearCurrentLoad()
 		local released = releaseLoadedToken()
