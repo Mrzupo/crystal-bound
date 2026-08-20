@@ -2,7 +2,7 @@ name: Daily Bounty State Write Ownership
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/daily-bounty-revision-sync-clean"]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Daily Bounty mutation owners
+      - name: Validate Daily Bounty mutation owners and revision synchronization
         shell: python
         run: |
           from pathlib import Path
@@ -23,9 +23,6 @@ jobs:
           tokens = (
               "profile.DailyBounty =",
               "profile.DailyBounty = type(",
-          )
-          indexed_tokens = (
-              "profile.DailyBounty[",
           )
           violations = []
           for path in root.rglob("*.lua"):
@@ -42,4 +39,11 @@ jobs:
                   violations.append(relative)
           if violations:
               raise SystemExit("Daily Bounty writes outside canonical owners: " + ", ".join(violations))
-          print("Daily Bounty write ownership validated.")
+
+          service = (root / "ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          progress_write = service.index('bounty.Progress = math.min(bounty.Goal, bounty.Progress + 1)')
+          non_completion_sync = service.index('PlayerService.Sync(player)\n\tplayer:SetAttribute("BountyMessage", string.format("Daily Bounty:')
+          if non_completion_sync <= progress_write:
+              raise SystemExit("Daily Bounty non-completion progress must synchronize ProfileRevisions after mutation")
+
+          print("Daily Bounty write ownership and revision synchronization validated.")
