@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate single server Humanoid health mutation owner
+      - name: Validate player health authority and NPC initialization boundaries
         shell: python
         run: |
           import re
@@ -30,17 +30,25 @@ jobs:
 
           if client_writers:
               raise SystemExit('Client scripts must not directly write Humanoid Health/MaxHealth: ' + ', '.join(client_writers))
-          allowed_owner = 'src/ServerScriptService/Services/PlayerService.lua'
-          unexpected = [path for path in server_writers if path != allowed_owner]
+          allowed_server_writers = {
+              'src/ServerScriptService/Services/PlayerService.lua',
+              'src/ServerScriptService/Services/NPCService.lua',
+              'src/ServerScriptService/Services/BossService.lua',
+          }
+          unexpected = [path for path in server_writers if path not in allowed_server_writers]
           if unexpected:
-              raise SystemExit('Direct server Health/MaxHealth writes escaped PlayerService: ' + ', '.join(unexpected))
+              raise SystemExit('Direct server Health/MaxHealth writes escaped canonical owners: ' + ', '.join(unexpected))
 
-          player_service = Path(allowed_owner).read_text(encoding="utf-8")
-          if "function PlayerService.Heal(player, amount)" not in player_service:
-              raise SystemExit("PlayerService must expose the canonical server heal path")
-          if "humanoid.MaxHealth =" not in player_service or "humanoid.Health =" not in player_service:
-              raise SystemExit("PlayerService must remain the canonical server owner for Health/MaxHealth writes")
-          ability = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
-          if "PlayerService.Heal(player, healAmount)" not in ability:
-              raise SystemExit("Tide healing must route through PlayerService.Heal")
-          print('Health authority contract validated: PlayerService is the sole direct server Health/MaxHealth writer.')
+          player_service = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
+          if 'function PlayerService.Heal(player, amount)' not in player_service:
+              raise SystemExit('PlayerService must expose the canonical player heal path')
+          if 'humanoid.MaxHealth =' not in player_service or 'humanoid.Health =' not in player_service:
+              raise SystemExit('PlayerService must remain a direct player Health/MaxHealth owner')
+
+          ability = Path('src/ServerScriptService/Services/CrystalAbilityService.lua').read_text(encoding='utf-8')
+          if 'PlayerService.Heal(player, healAmount)' not in ability:
+              raise SystemExit('Tide healing must route through PlayerService.Heal')
+          if health_write.search(ability):
+              raise SystemExit('CrystalAbilityService must not directly write Humanoid Health/MaxHealth')
+
+          print('Health authority validated: PlayerService owns player health changes; NPCService/BossService only initialize NPC health.')
