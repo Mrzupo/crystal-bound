@@ -14,11 +14,18 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          text = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
+          crystal_system = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
+          combat_service = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+
           marker = "return CrystalSystem.Owns(profile, equipped) and equipped or nil"
-          if marker not in text:
+          if marker not in crystal_system:
               raise SystemExit("CrystalSystem.GetEquipped must require ownership, not only Crystal existence")
           for required in ("function CrystalSystem.Owns(profile, id)", "function CrystalSystem.Equip(profile, id)"):
-              if required not in text:
+              if required not in crystal_system:
                   raise SystemExit(f"CrystalSystem missing ownership API: {required}")
+
+          if "local crystalId = CrystalSystem.GetEquipped(profile)" not in combat_service:
+              raise SystemExit("CombatService must resolve the equipped crystal through CrystalSystem.GetEquipped")
+          if "local crystalId = profile.Crystals.Equipped" in combat_service:
+              raise SystemExit("CombatService must not trust profile.Crystals.Equipped directly")
           print("Equipped Crystal ownership contract validated.")
