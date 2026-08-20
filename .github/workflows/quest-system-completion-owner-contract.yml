@@ -23,14 +23,16 @@ jobs:
               'local progress = QuestSystem.GetProgress(profile, questId)',
               'local reachedGoal = progress >= (definition.Goal or 0)',
               'if not reachedGoal and not SERVER_TRIGGERED_SINGLE_STEP[questId] then',
-              'if currentMoney + rewardMoney > EconomyConfig.MaxMoney then',
               'if not QuestSystem.Complete(profile, questId) then return false end',
               'XPService.AddXP(profile, rewardXP)',
-              'EconomyService.AddMoney(profile, rewardMoney)',
+              'local _, earnedMoney = EconomyService.AddMoney(profile, rewardMoney)',
+              'if earnedMoney < rewardMoney then',
           ]
           for marker in required:
               if marker not in quest_service:
                   raise SystemExit('QuestService completion boundary missing: ' + marker)
+          if 'currentMoney + rewardMoney > EconomyConfig.MaxMoney' in quest_service:
+              raise SystemExit('Quest completion must not block progression on a full wallet; EconomyService owns Money capping')
 
           offenders = []
           root = Path('src/ServerScriptService')
@@ -43,4 +45,4 @@ jobs:
           if offenders:
               raise SystemExit('Server scripts must route quest completion through QuestService: ' + ', '.join(offenders))
 
-          print('QuestService completion ownership, goal validation, single-step exception and reward-cap contract validated.')
+          print('QuestService completion ownership, objective validation, single-step exceptions and EconomyService-owned Money cap validated.')
