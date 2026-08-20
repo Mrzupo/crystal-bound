@@ -9,12 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce integer crafting request validation and overflow-safe output ordering
+      - name: Enforce integer crafting request validation, overflow-safe ordering and remote identity/rate-limit guards
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          text = Path('src/ServerScriptService/Services/CraftingService.lua').read_text(encoding='utf-8')
+          service = Path('src/ServerScriptService/Services/CraftingService.lua').read_text(encoding='utf-8')
+          remote = Path('src/ServerScriptService/CraftingRemote.server.lua').read_text(encoding='utf-8')
           required = [
               'number == nil or number % 1 ~= 0',
               'Craft amount must be a positive integer.',
@@ -22,10 +23,21 @@ jobs:
               'if not outputAmount then',
               'if outputAmount > availableOutputSpace then',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in service]
           if missing:
               raise SystemExit('missing crafting input/overflow boundary markers: ' + ', '.join(missing))
-          if text.index('local outputAmount = safeProduct(recipeAmount, amount)') > text.index('if outputAmount > availableOutputSpace then'):
+          if service.index('local outputAmount = safeProduct(recipeAmount, amount)') > service.index('if outputAmount > availableOutputSpace then'):
               raise SystemExit('Crafting must calculate the safe product before inventory-space comparison')
-          print('Crafting input and overflow boundary validated.')
+          for marker in (
+              'local now = os.clock()',
+              'if now < (NEXT_REQUEST[player] or 0) then return end',
+              'NEXT_REQUEST[player] = now + REQUEST_INTERVAL',
+              'if action ~= "Craft" then return end',
+              'local function getCanonicalTrader()',
+              'trader.Parent ~= folder',
+              'trader:GetAttribute("Interactable") ~= true',
+          ):
+              if marker not in remote:
+                  raise SystemExit('missing CraftingRemote guard: ' + marker)
+          print('Crafting input/overflow, pre-validation rate-limit and canonical trader identity validated.')
           PY
