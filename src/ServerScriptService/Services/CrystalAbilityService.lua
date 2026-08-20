@@ -54,10 +54,16 @@ local function executeGale(player, targetModel, abilityDamage, abilityRange)
 	if not playerRoot or not targetRoot then
 		return { Success = false, Message = nil, Hits = {} }
 	end
-	if (targetRoot.Position - playerRoot.Position).Magnitude > safeRange then
+	local playerToTarget = (targetRoot.Position - playerRoot.Position).Magnitude
+	if playerToTarget > safeRange then
 		return { Success = false, Message = nil, Hits = {} }
 	end
 
+	-- The splash hitbox is centered on the selected target. DamageService also performs
+	-- an attacker-to-target range check, so expand only that secondary check by the
+	-- already validated player-to-primary-target distance. The actual AoE boundary
+	-- remains safeRange around targetRoot.
+	local splashDamageRange = math.min(1000, safeRange + playerToTarget)
 	local hits = {}
 	for _, enemy in ipairs(HitboxService.GetEnemyModels(targetRoot.Position, safeRange, targetModel)) do
 		local humanoid = enemy:FindFirstChildOfClass("Humanoid")
@@ -66,7 +72,7 @@ local function executeGale(player, targetModel, abilityDamage, abilityRange)
 				Attacker = player,
 				Target = enemy,
 				Amount = safeDamage * 0.45,
-				Range = safeRange,
+				Range = splashDamageRange,
 				DamageType = "CrystalAbilitySplash",
 			})
 			if result.Success and result.Amount > 0 then
