@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1320 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1329 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
@@ -13,6 +13,7 @@ Current compare: **1320 commits ahead, 30 commits behind** `main` (verified with
 - The redundant `PlayerLoadCatchup.server.lua` loader was removed from source and Rojo wiring to prevent concurrent startup Load owners.
 - Bootstrap load failure handling checks `player.Parent` before calling `Kick()`.
 - `PlayerService.Load()` uses a per-UserId load-generation token and shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
+- `SafeProfileStore` additionally uses a weak Player-keyed session token inside the persisted SessionLock, distinguishing multiple load sessions even when JobId is the same server.
 - `PlayerService` CharacterAdded callbacks re-check the exact Character instance before and after Humanoid acquisition, preventing stale-respawn callback races.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
 - `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks.
@@ -59,6 +60,7 @@ Current compare: **1320 commits ahead, 30 commits behind** `main` (verified with
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
 - `GetPlayerData` has an explicit public-data exposure contract excluding SessionLock/SessionId/operation internals.
 - `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
+- `CombatPresentation.client.lua` now rejects stale CharacterAdded health listeners after a Respawn yield, closing the remaining client-only Character lifecycle race.
 - Server and client NPC/menu bridges enforce single-open menu state; local menu close/toggle clears the corresponding `Open*` attribute, and listeners ignore `nil` so clearing one menu cannot open another.
 - `WorldDecor` is idempotent via readiness markers and bounded waits; `WorldTheme` deduplicates portal bindings and cleans player state.
 - AI pathfinding uses finite-validated destinations, quantized cache keys, weak Model keys and bounded recomputation.
@@ -69,7 +71,6 @@ Current compare: **1320 commits ahead, 30 commits behind** `main` (verified with
 - The latest Combined Status query returned no status objects; CI is therefore not called green.
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
-- `CombatPresentation.client.lua` still has a client-only stale-Humanoid presentation edge case around its `WaitForChild("Humanoid", 5)` CharacterAdded handler; the server gameplay authority is unaffected, and the file was intentionally not blindly rewritten during this pass.
 - `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently unlock through level gates; the long-term design includes Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - White Queen intro/story rules remain unchanged.
