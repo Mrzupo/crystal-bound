@@ -98,6 +98,8 @@ jobs:
               raise SystemExit('BossArena must consume Guardian ArenaHazard config')
           if 'local center = bossConfig.ArenaCenter' not in arena:
               raise SystemExit('BossArena must use BossConfig.ArenaCenter')
+          if 'math.clamp(finiteNumber(config.Interval, 0.75), 0.1, 10)' not in arena:
+              raise SystemExit('BossArena must bound the hazard interval to 0.1..10 seconds at runtime')
 
           print('Guardian phase-2, reward, character-bound telegraph lifecycle and semantic bounds validated.')
           PY
