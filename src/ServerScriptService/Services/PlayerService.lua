@@ -125,6 +125,23 @@ end
 
 function PlayerService.GetProfile(player) return PlayerService.Profiles[player] end
 
+function PlayerService.Heal(player, amount)
+	if not player or not player:IsA("Player") or not player.Parent then return 0 end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return 0 end
+	local safeAmount = tonumber(amount)
+	if type(safeAmount) ~= "number" or safeAmount ~= safeAmount or safeAmount == math.huge or safeAmount == -math.huge or safeAmount <= 0 then return 0 end
+	safeAmount = math.clamp(safeAmount, 0, 1000)
+	local before = math.max(0, humanoid.Health)
+	local maximum = math.max(1, humanoid.MaxHealth)
+	humanoid.Health = math.min(maximum, before + safeAmount)
+	local applied = math.max(0, humanoid.Health - before)
+	player:SetAttribute("Health", math.max(0, humanoid.Health))
+	player:SetAttribute("MaxHealth", maximum)
+	return applied
+end
+
 function PlayerService.BeginShutdown()
 	PlayerService.ShuttingDown = true
 end
