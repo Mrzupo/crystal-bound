@@ -84,7 +84,7 @@ Base: `main`
 5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, movement shutdown and Dodge/network ownership.
 6. Shop/Crafting/Consumables and transaction rollback.
 7. Guardian Arena hazard shutdown behavior when executable Studio testing is available.
-8. StatusEffect Burn/Slow shutdown cancellation after a safe module-graph refactor is available.
+8. StatusEffect Burn/Slow shutdown behavior in real Studio runtime (static shutdown boundary is implemented).
 
 ## Do not do
 - Do not reset, force-push or otherwise rewrite `main` from this workstream.
