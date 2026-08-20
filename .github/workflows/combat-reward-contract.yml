@@ -23,9 +23,11 @@ jobs:
           for marker in (
               'local enemyConfig = EnemyConfig.Types[enemyType]',
               'if type(enemyConfig) ~= "table" then return end',
-              'local xpGain = enemyConfig.XP',
-              'local moneyGain = enemyConfig.Money',
-              'local itemId = enemyConfig.Drop',
+              'local xpGain = validNonNegativeInteger(enemyConfig.XP)',
+              'local moneyGain = validNonNegativeInteger(enemyConfig.Money)',
+              'local itemId = enemyConfig and enemyConfig.Drop',
+              'local currentMoney = math.clamp(finiteNumber(profile.Money) or 0, EconomyConfig.MinMoney, EconomyConfig.MaxMoney)',
+              'if currentMoney + moneyGain > EconomyConfig.MaxMoney then',
           ):
               if marker not in combat:
                   raise SystemExit(f'CombatService must use canonical EnemyConfig reward marker: {marker}')
@@ -47,6 +49,9 @@ jobs:
               if marker not in combat:
                   raise SystemExit(f'Combat reward idempotency/cleanup marker missing: {marker}')
 
+          if combat.index('if currentMoney + moneyGain > EconomyConfig.MaxMoney then') > combat.index('targetModel:SetAttribute("DeathRewarded", true)'):
+              raise SystemExit('Enemy reward capacity must be checked before DeathRewarded is set')
+
           for marker in (
               'lastAttackers[targetModel] = { Kind = "Player", Instance = attacker, UserId = attacker.UserId }',
               'Players:GetPlayerByUserId(record.UserId) == player',
@@ -58,4 +63,4 @@ jobs:
           ):
               if marker not in damage:
                   raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
-          print('Canonical combat reward source, idempotency, attacker-session, lethal-hit ordering and attribution cleanup validated.')
+          print('Canonical combat reward source, payout-capacity gate, idempotency, attacker-session, lethal-hit ordering and attribution cleanup validated.')
