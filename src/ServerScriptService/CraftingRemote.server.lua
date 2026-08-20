@@ -28,20 +28,27 @@ end
 
 local NPC_INTERACTION_RANGE = math.clamp(finiteNumber(InteractionConfig.NPCInteractionRange, 14), 4, 50)
 
+local function getCanonicalTrader()
+	local folder = workspace:FindFirstChild("NPCs")
+	local trader = folder and folder:FindFirstChild("MaterialTrader")
+	if not folder or not trader or not trader:IsA("Model") or trader.Parent ~= folder then return nil end
+	if trader.Name ~= "MaterialTrader" or trader:GetAttribute("Interactable") ~= true then return nil end
+	return trader
+end
+
 local function isNearTrader(player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local folder = workspace:FindFirstChild("NPCs")
-	local trader = folder and folder:FindFirstChild("MaterialTrader")
+	local trader = getCanonicalTrader()
 	local traderRoot = trader and (trader.PrimaryPart or trader:FindFirstChild("Torso"))
 	return root and traderRoot and (root.Position - traderRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
 remote.OnServerEvent:Connect(function(player, action, outputId, amount)
-	if action ~= "Craft" then return end
 	local now = os.clock()
 	if now < (NEXT_REQUEST[player] or 0) then return end
 	NEXT_REQUEST[player] = now + REQUEST_INTERVAL
+	if action ~= "Craft" then return end
 
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
