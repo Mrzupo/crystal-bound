@@ -27,6 +27,7 @@ jobs:
           for marker in [
               'GetEnemyModels(targetRoot.Position, safeRange, targetModel)',
               'local playerToTarget = (targetRoot.Position - playerRoot.Position).Magnitude',
+              'if playerToTarget > safeRange then',
               'local splashDamageRange = math.min(1000, safeRange + playerToTarget)',
               'Range = splashDamageRange',
           ]:
