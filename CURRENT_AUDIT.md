@@ -26,6 +26,7 @@ Base: `main`
 - `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace.
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
 - Portal cooldown callbacks are now generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
+- `NPCMenuBridge` deferred dialog opening is now Character-bound, preventing a prompt callback queued on an old Character from opening a stale menu after respawn.
 - Crystal ownership/equip/unlock and Crystal Mastery read/write paths require canonical Crystal validity and actual ownership.
 - Inventory snapshots are detached and pure; Shop/Crafting/UseItem paths validate inputs before mutation and roll back partial transaction failures.
 - Shop and Crafting now explicitly remove any partial inventory insertion before refunding/reversing a failed transaction, matching the inventory rollback contract.
@@ -47,8 +48,9 @@ Base: `main`
 - `.github/workflows/player-remove-release-contract.yml` now matches the current combined Shutdown/Closing/Saving guard in `GetProfile()`.
 - `.github/workflows/inventory-transaction-rollback.yml` is now satisfied by explicit partial-insertion rollback in Shop and Crafting.
 - `.github/workflows/world-init-validation.yml` now guards tokenized portal cooldown expiry across respawn/rejoin.
-- `STUDIO_PLAYTEST.md` contains an explicit portal cooldown stale-callback regression scenario.
-- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback and portal-lifecycle semantics.
+- `.github/workflows/menu-attribute-contract.yml` now guards Character-bound deferred NPC dialog opening.
+- `STUDIO_PLAYTEST.md` contains explicit portal cooldown stale-callback and Daily Bounty reconciliation regression scenarios.
+- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback and Character-lifecycle semantics.
 
 ## Open / runtime-only limitations
 - No real Roblox Studio runtime playtest has been executed from this environment.
@@ -64,7 +66,7 @@ Base: `main`
 2. Autosave mutation/settle and final Release failure behavior.
 3. Combat range, PvP rejection, Dodge and NPC/Boss attacker identity.
 4. Enemy death/respawn and Guardian telegraph replacement races.
-5. Portal movement authority, stale cooldown callbacks across respawn, and Dodge/network ownership.
+5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, and Dodge/network ownership.
 6. Shop/Crafting/Consumables and transaction rollback.
 
 ## Do not do
