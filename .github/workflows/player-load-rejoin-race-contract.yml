@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate per-UserId load generation, duplicate-load rejection, per-load session tokens and shutdown gate
+      - name: Validate per-UserId load generation, superseded-load release, per-load session tokens and shutdown gate
         shell: python
         run: |
           from pathlib import Path
@@ -22,8 +22,6 @@ jobs:
               "LoadingByUserId = {},",
               "ShuttingDown = false,",
               "local loadToken = {}",
-              "if PlayerService.LoadingByUserId[userId] then",
-              'return nil, "Profile load already in progress"',
               "PlayerService.LoadingByUserId[userId] = loadToken",
               "local function isCurrentLoad()",
               "local function releaseLoadedToken()",
@@ -42,10 +40,12 @@ jobs:
           if "LoadingByUserId[userId] = nil" not in text:
               raise SystemExit("Player load lifecycle must clear per-UserId load state")
 
+          if "local sessionTokens = setmetatable({}, { __mode = \"k\" })" not in store:
+              raise SystemExit("SafeProfileStore must keep active per-Player session tokens weak-keyed")
           for marker in (
-              'local sessionTokens = setmetatable({}, { __mode = "k" })',
               'local function getSessionToken(player)',
               'local function newLoadToken()',
+              'local token = newLoadToken()',
               'sessionTokens[player] = token',
               'function SafeProfileStore.Release(player, expectedToken)',
               'local token = expectedToken or getSessionToken(player)',
@@ -61,4 +61,4 @@ jobs:
           if 'Players.PlayerAdded:Connect(function(player)' not in bootstrap:
               raise SystemExit("Bootstrap must keep one canonical PlayerAdded load owner")
 
-          print("Per-UserId generation, duplicate-load rejection, per-load session tokens, token-specific superseded release and startup deduplication validated.")
+          print("Per-UserId generation, superseded-load token release, per-load session-token isolation and startup deduplication validated.")
