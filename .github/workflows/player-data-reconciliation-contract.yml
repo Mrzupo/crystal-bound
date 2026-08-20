@@ -54,6 +54,8 @@ jobs:
               'data.DailyBounty.RewardMoney = clampInt(bountyDefinition.RewardMoney, 0, EconomyConfig.MaxMoney, 0)',
               'data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""',
               'data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 4102444800, 0)',
+              'local token = type(data.SessionLock.Token) == "string" and data.SessionLock.Token or ""',
+              'data.SessionLock = jobId ~= "" and token ~= "" and sessionTimestamp > 0 and { JobId = jobId, Token = token, Timestamp = sessionTimestamp } or nil',
               'data.Version = defaults.Version',
               'data.LegacyVersion = oldVersion',
           ]
@@ -70,4 +72,4 @@ jobs:
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated: canonical crystal validity, progression thresholds, stats, achievements, quest prerequisites + MinLevel, daily-bounty repair and session-lock bounds.')
+          print('Persisted player-data reconciliation contract validated: canonical crystal validity, progression thresholds, stats, achievements, quest prerequisites + MinLevel, daily-bounty repair and session-lock bounds/token retention.')
