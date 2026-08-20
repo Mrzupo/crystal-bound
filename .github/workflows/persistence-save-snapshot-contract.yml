@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate callback-time profile snapshot, revision settle and retry isolation
+      - name: Validate callback-time profile snapshot, revision settle, retry isolation and save mutation gate
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -30,12 +30,16 @@ jobs:
               'ProfileRevisions = setmetatable({}, { __mode = "k" })',
               'local SAVE_SETTLE_ATTEMPTS = 3',
               'local function saveConsistently(player, profile)',
-              'PlayerService.Sync(player)',
+              'PlayerService.Sync(player, true)',
               'local snapshotRevision = PlayerService.ProfileRevisions[player] or 0',
               'if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then',
+              'Saving = setmetatable({}, { __mode = "k" })',
+              'if PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] then return nil end',
+              'PlayerService.Saving[player] = true',
+              'PlayerService.Saving[player] = nil',
           ):
               if marker not in player_service:
-                  raise SystemExit('PlayerService save-settle revision marker missing: ' + marker)
+                  raise SystemExit('PlayerService save/mutation serialization marker missing: ' + marker)
 
           refresh_block = source.split('function SafeProfileStore.Refresh', 1)[1].split('function SafeProfileStore.Release', 1)[0]
           if 'refreshed = false' not in refresh_block.split('return store:UpdateAsync', 1)[0]:
@@ -45,5 +49,5 @@ jobs:
           if 'released = false' not in release_block.split('return store:UpdateAsync', 1)[0]:
               raise SystemExit('Release retry state must reset released before every UpdateAsync attempt')
 
-          print('Persistence callback snapshot, profile-revision save settling and retry-state isolation validated.')
+          print('Persistence callback snapshot, revision settle, retry-state isolation and save-time gameplay mutation gate validated.')
           PY
