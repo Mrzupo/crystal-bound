@@ -1,0 +1,54 @@
+name: TIDE Self Ability Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate targetless Tidal Pulse semantics
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path('src/ReplicatedStorage/Config/CrystalConfig.lua').read_text(encoding='utf-8')
+          ability = Path('src/ServerScriptService/Services/CrystalAbilityService.lua').read_text(encoding='utf-8')
+          combat = Path('src/ServerScriptService/Services/CombatService.lua').read_text(encoding='utf-8')
+          pc = Path('src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua').read_text(encoding='utf-8')
+          mobile = Path('src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua').read_text(encoding='utf-8')
+
+          match = re.search(r'TIDE\s*=\s*\{\s*Name\s*=\s*"Tidal Pulse"\s*,\s*Damage\s*=\s*([0-9.]+)\s*,\s*Range\s*=\s*([0-9.]+)\s*,\s*Cooldown\s*=\s*([0-9.]+)\s*,\s*HealAmount\s*=\s*([0-9.]+)', config)
+          if not match:
+              raise SystemExit('TIDE must define Tidal Pulse with Cooldown and HealAmount')
+          if float(match.group(4)) <= 0 or float(match.group(4)) > 1000:
+              raise SystemExit('TIDE HealAmount must be bounded to 0..1000')
+
+          for marker in [
+              'local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"',
+              'local safeRange = not isTideSelfAbility and boundedPositive(config.Range, 0.1, 1000) or nil',
+              'local safeBaseDamage = not isTideSelfAbility and boundedPositive(config.Damage, 0.1, 1000) or nil',
+              'CrystalAbilityService.Execute(player, profile, crystalId, nil, nil, nil)',
+          ]:
+              if marker not in combat:
+                  raise SystemExit('CombatService TIDE routing marker missing: ' + marker)
+
+          for marker in [
+              'if crystalId == "TIDE" then',
+              'local applied = PlayerService.Heal(player, healAmount)',
+              'Success = true',
+          ]:
+              if marker not in ability:
+                  raise SystemExit('CrystalAbilityService TIDE self-heal marker missing: ' + marker)
+
+          for text, name in ((pc, 'ClientBootstrap'), (mobile, 'TouchControls')):
+              if 'if action == "Ability" and crystalId == "TIDE" then' not in text:
+                  raise SystemExit(f'{name} must permit targetless TIDE Ability')
+              if 'combatRemote:FireServer("Ability", nil)' not in text:
+                  raise SystemExit(f'{name} must send nil target for TIDE Ability')
+
+          print('TIDE Tidal Pulse targetless self-ability contract validated.')
