@@ -18,6 +18,10 @@ local function isShuttingDown()
 	return ReplicatedStorage:GetAttribute("CrystalBoundShuttingDown") == true
 end
 
+local function isProfileLoaded(player)
+	return player and player:IsA("Player") and player:GetAttribute("ProfileLoaded") == true
+end
+
 local function getNPCRoot()
 	return Workspace:FindFirstChild("NPCs")
 end
@@ -39,7 +43,7 @@ local function isValidAttacker(instance)
 	if instance:IsA("Player") then
 		local character = instance.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		return instance.Parent ~= nil and humanoid ~= nil and humanoid.Health > 0
+		return isProfileLoaded(instance) and instance.Parent ~= nil and humanoid ~= nil and humanoid.Health > 0
 	end
 	if instance:IsA("Model") then
 		local humanoid = instance:FindFirstChildOfClass("Humanoid")
@@ -65,6 +69,7 @@ local function isValidTarget(target)
 	if not target or not target:IsA("Instance") then return false end
 	local targetModel
 	if target:IsA("Player") then
+		if not isProfileLoaded(target) then return false end
 		targetModel = target.Character
 		if not targetModel or not targetModel:IsA("Model") or not targetModel:IsDescendantOf(Workspace) then return false end
 	else
@@ -73,7 +78,8 @@ local function isValidTarget(target)
 	end
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return false end
-	if Players:GetPlayerFromCharacter(targetModel) then return true end
+	local owner = Players:GetPlayerFromCharacter(targetModel)
+	if owner then return isProfileLoaded(owner) end
 	local npcFolder = getNPCRoot()
 	return npcFolder ~= nil
 		and targetModel.Parent == npcFolder
@@ -119,7 +125,7 @@ function DamageService.GetLastAttacker(targetModel)
 	if not record then return nil end
 	if record.Kind == "Player" then
 		local player = record.Instance
-		if player and player.Parent and Players:GetPlayerByUserId(record.UserId) == player then
+		if player and isProfileLoaded(player) and player.Parent and Players:GetPlayerByUserId(record.UserId) == player then
 			return player
 		end
 	elseif record.Kind == "Model" then
