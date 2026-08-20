@@ -183,17 +183,21 @@ Players.PlayerRemoving:Connect(cleanup)
 for _, player in ipairs(Players:GetPlayers()) do bind(player) end
 
 task.spawn(function()
-	local positionElapsed = 0
 	while true do
-		local dt = task.wait(ENFORCEMENT_INTERVAL)
-		positionElapsed += dt
 		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			refresh(player)
-			if positionElapsed >= POSITION_CHECK_INTERVAL then
-				enforcePosition(player, now)
-			end
 		end
-		if positionElapsed >= POSITION_CHECK_INTERVAL then positionElapsed = 0 end
+		task.wait(ENFORCEMENT_INTERVAL)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		local now = os.clock()
+		for _, player in ipairs(Players:GetPlayers()) do
+			enforcePosition(player, now)
+		end
+		task.wait(POSITION_CHECK_INTERVAL)
 	end
 end)
