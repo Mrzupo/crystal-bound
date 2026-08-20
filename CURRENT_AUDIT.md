@@ -3,16 +3,16 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1413 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
-`main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
+Current compare: **1426 commits ahead, 35 commits behind** `main` (verified with GitHub compare).
+`main` remains untouched by this workstream; the current compared base is `0e0bf1d1dd0ce62b08d06414dcc09268155e3550`.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
 - `Bootstrap.server.lua` is the single canonical profile-load owner: one `loadPlayer()` path serves `PlayerAdded` and already-present players after startup, with per-Player deduplication.
 - No separate `PlayerLoadCatchup.server.lua` exists or is loaded; startup catch-up is intentionally owned by Bootstrap.
 - `PlayerService.Load()` uses a per-UserId load-generation token; a newer load supersedes an older load for the same UserId, and every superseded/aborted successful load releases the specific SessionLock token it acquired before returning.
-- Superseded successful profile loads explicitly release their own session lock before returning, preventing abandoned same-server locks.
 - `PlayerService` re-checks Player/Profile closing state after waiting on the operation lock before Refresh/Save, preventing heartbeat/autosave access after `Remove()` begins.
+- `PlayerService.saveConsistently()` uses bounded revision-settle passes and returns failure if the final pass still detects an in-memory revision change, preventing stale autosave success reporting.
 - Dedicated `PlayerLifecycle.server.lua` owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
 - `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks.
@@ -25,8 +25,9 @@ Current compare: **1413 commits ahead, 30 commits behind** `main` (verified with
 - Dodge validates finite directions, bounded ranges and cooldowns; `ApplyDamage()` additionally requires the supplied Humanoid to be the current Player Character's Humanoid.
 - Dodge invulnerability end-tasks use per-player tokens, so stale delayed callbacks cannot cancel a later dodge after re-dodge or respawn.
 - `StatusSpeedGuardV2` enforces server-derived WalkSpeed and bounded position authority with rollback, portal-arrival grace and respawn reset.
-- Slow multiplier movement authority is sourced from server-only `StatusEffectService` state; neither `PlayerService` nor `StatusSpeedGuardV2` trusts the Humanoid `CrystalBoundSlowMultiplier` attribute for gameplay.
+- Slow multiplier movement authority is sourced from server-only `StatusEffectService`; neither `PlayerService` nor `StatusSpeedGuardV2` trusts the Humanoid `CrystalBoundSlowMultiplier` attribute for gameplay.
 - `StatusEffectService.Clear()` clears the server-owned SlowMultiplier and all delayed Slow/Burn state; token cancellation remains Humanoid-keyed.
+- `StatusEffectService` restores player base speed using the canonical `MaxWalkSpeedBonus` cap during Slow expiry.
 - Portal authority belongs only to `WorldTheme.server.lua`; Bootstrap is definition-only and cannot register a second teleport handler.
 - Portal destination vectors and canonical WorldConfig level gates are protected against Bootstrap/WorldTheme drift by contract.
 - Client authority contracts reject direct client Health/MaxHealth/WalkSpeed/CFrame/PivotTo/AssemblyLinearVelocity mutations.
@@ -35,9 +36,10 @@ Current compare: **1413 commits ahead, 30 commits behind** `main` (verified with
 - `CrystalAbilityService` TIDE healing and `UseItemRemote` Health Potion healing both route through `PlayerService.Heal()` with actual-applied rollback handling for potion consumption.
 - Crystal ownership is canonicalized by `CrystalSystem`; `GetEquipped()` requires actual ownership and `CrystalService` returns filtered/deduplicated owned-crystal snapshots.
 - Crystal Equipped, Owned and Mastery mutation ownership has explicit regression contracts; repair/reconcile writes are the only documented exceptions.
-- `CrystalMastery` now requires actual crystal ownership for XP, bonuses, upgrade-cost reads and upgrades, independent of request-layer checks.
+- `CrystalMastery` requires actual crystal ownership for XP, bonuses, upgrade-cost reads and upgrades, independent of request-layer checks.
+- `CrystalMastery` enemy mastery rewards are derived from canonical Enemy XP with no arbitrary minimum fallback.
 - `PlayerData.Reconcile()` uses the same `CrystalSystem.Exists()` completeness rule as runtime Crystal ownership, preventing partially defined crystal IDs from entering persisted ownership.
-- `CrystalConfig` now has a completeness contract requiring identical crystal IDs across Definitions, UnlockLevels, BasicAttack, Abilities and Passives.
+- `CrystalConfig` has a completeness contract requiring identical crystal IDs across Definitions, UnlockLevels, BasicAttack, Abilities and Passives.
 - `PlayerData.Reconcile()` normalizes Level/XP/Money, Inventory, Crystal ownership/mastery, persistent combat Stats, Quest prerequisites/progress, Achievement/Title state, Daily Bounty definitions and SessionLock data.
 - Persisted player XP and CrystalMastery XP are capped below their current level's next threshold; MaxLevel/mastery-cap state forces XP to zero.
 - Invalid persisted Achievement IDs are dropped; Titles are reconstructed only from valid persisted Achievements and validated through `AchievementSystem.IsValidTitle()`.
@@ -54,7 +56,7 @@ Current compare: **1413 commits ahead, 30 commits behind** `main` (verified with
 - Enemy defeat rewards use canonical `EnemyConfig`; full Money wallets no longer block XP/Loot rewards.
 - Achievement unlocks are one-shot/idempotent and no longer gated by wallet capacity; `EconomyService` alone caps the Money reward.
 - Economy item selling checks wallet capacity before consuming inventory and restores both Money and inventory on unexpected partial payout.
-- Guardian rewards use canonical config, bounded XP/Money, registered Drop IDs and idempotent `Rewarded` state; the active Guardian Trial uses a combined Boss+Quest Money-cap preflight.
+- Guardian rewards use canonical config, bounded XP/Money and registered Drop IDs; a full Money wallet only caps the Money portion and does not block XP, Drop, Boss stats or active Guardian Trial completion.
 - Guardian creation is idempotent and destroys a corrupt/non-boss object occupying the reserved `CrystalGuardian` name before spawning the canonical boss.
 - Guardian telegraph impacts are bound to the original Guardian and original Character instances, preventing stale windups from damaging respawned Players or replacement Guardians.
 - NPC AI is server-only, bounded by aggro/attack/special ranges, uses weak-key path caches and clears path/status state on death.
