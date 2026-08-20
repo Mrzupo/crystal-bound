@@ -148,7 +148,6 @@ function CombatService.HandleRequest(player, action, target)
 
 	local profile = PlayerService.GetProfile(player)
 	if not profile or not profile.Crystals then return end
-	if typeof(target) ~= "Instance" or target == player or isPlayerTarget(target) then return end
 
 	local crystalId = CrystalSystem.GetEquipped(profile)
 	if not crystalId then return end
@@ -164,6 +163,18 @@ function CombatService.HandleRequest(player, action, target)
 	local now = requestNow
 	if now < (cooldowns[player][action] or 0) then return end
 
+	local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"
+	if isTideSelfAbility then
+		local abilityResult = CrystalAbilityService.Execute(player, profile, crystalId, nil, math.min(1000, safeBaseDamage), safeRange)
+		if not abilityResult.Success then return end
+		cooldowns[player][action] = now + safeCooldown
+		player:SetAttribute("AbilityCooldownEnd", now + safeCooldown)
+		if abilityResult.Message then player:SetAttribute("CrystalMessage", abilityResult.Message) end
+		advanceAbilityQuest(player, profile)
+		return
+	end
+
+	if typeof(target) ~= "Instance" or target == player or isPlayerTarget(target) then return end
 	local targetModel = getCharacter(target)
 	if not targetModel then return end
 	local humanoid = targetModel:FindFirstChildOfClass("Humanoid")
