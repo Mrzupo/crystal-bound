@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1297 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1299 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
