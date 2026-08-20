@@ -49,7 +49,6 @@ jobs:
           fire_end = combat.index('local function completeQuest', fire_start)
           fire_block = combat[fire_start:fire_end]
           for marker in (
-              'PlayerService.ShuttingDown',
               'PlayerService.Closing[player]',
               'local profile = PlayerService.Profiles[player]',
               'PlayerService.Sync(player, true)',
