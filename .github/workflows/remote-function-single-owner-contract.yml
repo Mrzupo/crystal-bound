@@ -16,17 +16,25 @@ jobs:
           from pathlib import Path
 
           contracts = {
-              "src/ServerScriptService/QuestAvailability.server.lua": {
-                  "remote": "GetAvailableQuests",
-                  "markers": ["remote.OnServerInvoke = function(player)", "REQUEST_INTERVAL", "nextRequest[player]"],
+              "GetAvailableQuests": {
+                  "path": Path("src/ServerScriptService/QuestAvailability.server.lua"),
+                  "handler": "remote.OnServerInvoke = function(player)",
+                  "markers": ["REQUEST_INTERVAL", "nextRequest[player]"],
               },
-              "src/ServerScriptService/NPCDialogRemote.server.lua": {
-                  "remote": "NPCDialogRequest",
-                  "markers": ["remote.OnServerInvoke = function(player, npcId)", "REQUEST_INTERVAL", "nextRequest[player]"],
+              "NPCDialogRequest": {
+                  "path": Path("src/ServerScriptService/NPCDialogRemote.server.lua"),
+                  "handler": "remote.OnServerInvoke = function(player, npcId)",
+                  "markers": ["REQUEST_INTERVAL", "nextRequest[player]"],
               },
-              "src/ServerScriptService/Bootstrap.server.lua": {
-                  "remote": "GetPlayerData",
-                  "markers": ["remotes.GetPlayerData.OnServerInvoke = function(player)", "PLAYER_DATA_REQUEST_INTERVAL", "nextPlayerDataRequest[player]"],
+              "GetPlayerData": {
+                  "path": Path("src/ServerScriptService/Bootstrap.server.lua"),
+                  "handler": "remotes.GetPlayerData.OnServerInvoke = function(player)",
+                  "markers": ["PLAYER_DATA_REQUEST_INTERVAL", "nextPlayerDataRequest[player]"],
+              },
+              "GetQuestData": {
+                  "path": Path("src/ServerScriptService/Bootstrap.server.lua"),
+                  "handler": "remotes.GetQuestData.OnServerInvoke = function(player)",
+                  "markers": ["QUEST_DATA_REQUEST_INTERVAL", "nextQuestDataRequest[player]"],
               },
           }
 
@@ -34,28 +42,32 @@ jobs:
           lua_files = list(server_root.rglob("*.lua"))
           all_text = {path: path.read_text(encoding="utf-8") for path in lua_files}
 
-          for path, contract in contracts.items():
-              file = Path(path)
-              if file not in all_text:
-                  raise SystemExit(f"Missing canonical RemoteFunction owner: {path}")
-              text = all_text[file]
-              marker = contract["markers"][0]
-              if text.count("OnServerInvoke =") != 1:
-                  raise SystemExit(f"{path} must define exactly one OnServerInvoke owner")
-              if marker not in text:
-                  raise SystemExit(f"{path} missing canonical handler marker: {marker}")
-              missing = [m for m in contract["markers"][1:] if m not in text]
-              if missing:
-                  raise SystemExit(f"{path} missing rate-limit markers: {', '.join(missing)}")
+          for name, contract in contracts.items():
+              path = contract["path"]
+              if path not in all_text:
+                  raise SystemExit(f"Missing canonical RemoteFunction owner for {name}: {path}")
+              text = all_text[path]
+              if text.count(contract["handler"]) != 1:
+                  raise SystemExit(f"RemoteFunction {name} must have exactly one canonical handler in {path}")
+              if any(marker not in text for marker in contract["markers"]):
+                  missing = [marker for marker in contract["markers"] if marker not in text]
+                  raise SystemExit(f"RemoteFunction {name} missing rate-limit markers: {', '.join(missing)}")
 
-          canonical_names = {"GetAvailableQuests", "NPCDialogRequest", "GetPlayerData", "GetQuestData"}
-          for name in canonical_names:
-              owners = [path for path, text in all_text.items() if f"{name}.OnServerInvoke" in text]
-              if name == "GetQuestData":
-                  expected = ["src/ServerScriptService/Bootstrap.server.lua"]
-              else:
-                  expected = [next(path for path, cfg in contracts.items() if cfg["remote"] == name)]
-              if sorted(str(path) for path in owners) != sorted(expected):
-                  raise SystemExit(f"RemoteFunction {name} ownership drift: {owners}")
+          for path, text in all_text.items():
+              direct_handlers = [
+                  "GetPlayerData.OnServerInvoke",
+                  "GetQuestData.OnServerInvoke",
+                  "GetAvailableQuests.OnServerInvoke",
+                  "NPCDialogRequest.OnServerInvoke",
+              ]
+              for handler in direct_handlers:
+                  if handler in text:
+                      expected_path = contracts[handler.removesuffix(".OnServerInvoke")]["path"]
+                      if path != expected_path:
+                          raise SystemExit(f"RemoteFunction {handler.removesuffix('.OnServerInvoke')} has duplicate owner in {path}")
+
+          bootstrap = all_text[contracts["GetPlayerData"]["path"]]
+          if bootstrap.count("OnServerInvoke =") != 0:
+              raise SystemExit("Bootstrap must use explicit remotes.<name>.OnServerInvoke assignments only")
 
           print("RemoteFunction single-owner and rate-limit contract validated.")
