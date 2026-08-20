@@ -55,19 +55,18 @@ function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	local maxPerCraft = positiveInteger(CraftingConfig.MaxPerCraft) or 1
 	if amount > maxPerCraft then return false, "Craft amount exceeds the per-request limit." end
 
-	InventoryService.GetInventory(profile)
+	local inventorySnapshot = InventoryService.GetInventory(profile)
 	local outputConfig = InventoryConfig.GetItemConfig(recipe.Output)
 	if not outputConfig then return false, "Crafting output is not registered." end
 
-	local currentRaw = profile.Inventory[recipe.Output]
-	local currentOutput = math.max(0, math.floor(finiteNumber(currentRaw) or 0))
+	local currentOutput = inventorySnapshot[recipe.Output] or 0
 	local recipeAmount = positiveInteger(recipe.Amount)
 	if not recipeAmount then return false, "Crafting recipe output amount is invalid." end
 	local outputAmount = safeProduct(recipeAmount, amount)
 	if not outputAmount then
 		return false, "Crafting output amount is out of bounds."
 	end
-	local maxStack = InventoryService.GetInventory(profile) and InventoryConfig.GetMaxStackSize(recipe.Output) or 0
+	local maxStack = InventoryConfig.GetMaxStackSize(recipe.Output)
 	local availableOutputSpace = math.max(0, maxStack - currentOutput)
 	if outputAmount > availableOutputSpace then
 		return false, string.format("Not enough inventory space for %d %s.", outputAmount, recipe.Output)
