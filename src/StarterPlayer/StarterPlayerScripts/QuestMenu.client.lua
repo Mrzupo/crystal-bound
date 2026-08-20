@@ -166,9 +166,7 @@ loadData = function(force)
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
 	if ok and type(response) == "table" then data = response end
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
-	if okAvailable and type(responseAvailable) == "table" then
-		available = responseAvailable
-	end
+	if okAvailable and type(responseAvailable) == "table" then available = responseAvailable end
 	loading = false
 	refresh()
 end
@@ -179,7 +177,10 @@ local function openMenu()
 	loadData(true)
 end
 
-player:GetAttributeChangedSignal("OpenQuestMenu"):Connect(openMenu)
+player:GetAttributeChangedSignal("OpenQuestMenu"):Connect(function()
+	if player:GetAttribute("OpenQuestMenu") == nil then return end
+	openMenu()
+end)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.J then
