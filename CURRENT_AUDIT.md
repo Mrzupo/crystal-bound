@@ -9,17 +9,11 @@ Current compare: **1345 commits ahead, 30 commits behind** `main` (verified with
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
 - Dedicated `PlayerLifecycle.server.lua` owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
-- Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handling plus an explicit existing-player drain after world initialization completes.
-- The redundant `PlayerLoadCatchup.server.lua` loader was removed from source and Rojo wiring to prevent concurrent startup Load owners.
-- Bootstrap load failure handling checks `player.Parent` before calling `Kick()`.
+- `PlayerLoadCatchup.server.lua` covers players entering during Bootstrap world initialization with a bounded 30-second scan, while refusing to become a second `PlayerAdded` owner, skipping active loads and known failed loads.
 - `PlayerService.Load()` uses a per-UserId load-generation token and shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
-- `SafeProfileStore` additionally uses a weak Player-keyed session token inside the persisted SessionLock, distinguishing multiple load sessions even when JobId is the same server.
-- `PlayerService` CharacterAdded callbacks re-check the exact Character instance before and after Humanoid acquisition, preventing stale-respawn callback races.
-- `PlayerService` marks a player `Closing` before final removal work; external profile access, Sync, Save, Refresh and Heal paths reject closing players, preventing late gameplay mutation after final-save ownership begins.
-- The final save path uses an internal-only `PlayerService.Sync(player, true)` so Achievement/Daily-Bounty reconciliation still runs while the external Closing guard remains active.
-- `PlayerService` keeps a weak per-player ProfileRevision and uses three save-settle passes when a profile mutates while DataStore I/O yields, reducing progress loss during autosave/final-save windows.
+- `PlayerService` CharacterAdded callbacks re-check the exact Character instance before binding Humanoid/health state, preventing stale-respawn callback races.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
-- `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks; closing players are skipped by the PlayerService gate.
+- `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks.
 - `SafeProfileStore` snapshots profile state inside `UpdateAsync` callbacks and resets Load/Save/Refresh/Release result flags on every callback invocation and outer retry, preventing stale callback state from leaking across DataStore retries.
 - `DamageService` is the sole direct `Humanoid:TakeDamage()` owner; damage types, attackers, targets, ranges and amounts are server-validated.
 - Environmental damage is strictly `Attacker == nil` in both the generic validator and final `DamageService` gate.
@@ -35,8 +29,6 @@ Current compare: **1345 commits ahead, 30 commits behind** `main` (verified with
 - Portal destination vectors and canonical WorldConfig level gates are protected against Bootstrap/WorldTheme drift by contract.
 - Client authority contracts reject direct client Health/MaxHealth/WalkSpeed/CFrame/PivotTo/AssemblyLinearVelocity mutations.
 - PC/mobile clients request actions only; gameplay damage, cooldowns, ownership and rewards remain server-side.
-- Player Health changes are centralized through `PlayerService.Heal()`; TIDE and Health Potion healing route through that service, while NPCService/BossService only initialize NPC health.
-- Health Authority and Consumable contracts reject direct Player Health/MaxHealth writes outside the canonical owner paths.
 - Crystal ownership is canonicalized by `CrystalSystem`; `GetEquipped()` requires actual ownership and `CrystalService` returns filtered/deduplicated owned-crystal snapshots.
 - Crystal Equipped, Owned and Mastery mutation ownership has explicit regression contracts; repair/reconcile writes are the only documented exceptions.
 - `PlayerData.Reconcile()` normalizes persisted numeric values, Crystal ownership/equip/mastery, inventory, quests, islands, bounty and SessionLock data.
@@ -45,9 +37,7 @@ Current compare: **1345 commits ahead, 30 commits behind** `main` (verified with
 - Economy, Inventory, XP, Quest, Achievement, persistent combat Stats, Daily Bounty and Crystal progression mutations have explicit server ownership contracts.
 - Shop and Crafting require positive integers, canonical IDs, bounded totals and rollback-safe mutations.
 - Crafting output multiplication is validated before inventory-space error formatting or material mutation, closing malformed-config overflow paths.
-- Shop buying, item use, crafting, enemy rewards, Bootstrap inventory responses and Guardian rewards use detached `InventoryService.GetInventory(profile)` snapshots rather than exposing live profile tables.
-- `InventoryRequest` is request-only; `InventoryChanged` is the server-to-client inventory snapshot event used by `InventoryMenu`.
-- Quest starts call `PlayerService.Sync()`, so active-quest mutations participate in profile revision save settling.
+- Shop buying, item use, crafting, enemy rewards and Guardian rewards consume/restore canonical detached inventory snapshots rather than exposing live profile tables to clients.
 - Quest completion validates reward data and Money capacity before persistent completion state is committed.
 - Daily Bounty validates Money capacity before payout, only marks `Claimed` after a full reward is actually granted, and rolls progress back safely on failed payout.
 - Enemy defeat rewards use canonical `EnemyConfig`; full Money wallets no longer block XP/Loot rewards.
@@ -58,13 +48,14 @@ Current compare: **1345 commits ahead, 30 commits behind** `main` (verified with
 - Guardian phase values and telegraph lifecycle are contract-protected.
 - NPC AI is server-only, bounded by aggro/attack/special ranges, uses weak-key path caches and clears path/status state on death.
 - AI pathfinding validates that the NPC is still live after the yielded `ComputeAsync()` call, preventing stale path results from being applied after death/destroy.
-- `EnemyConfig.Get()` returns a recursively detached config copy, including nested `Special` config, while centrally normalizing Respawn.
+- `EnemyConfig.Get()` returns a detached deep copy, including nested `Special` config, while centrally normalizing Respawn.
 - Status effects use Humanoid-keyed token cancellation; Slow/Burn tasks stop on death/destroy or token replacement.
 - NPC dialog requests require canonical NPC identity, server distance and rate-limit checks; config getters return detached copies.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
-- `GetPlayerData` has an explicit public-data exposure contract excluding SessionLock/SessionId/operation internals.
+- `InventoryRequest` is request-only; `InventoryChanged` is the server-to-client inventory snapshot event used by `InventoryMenu`.
+- `GetPlayerData` has an explicit public-data exposure contract excluding SessionLock/SessionId/operation internals and now returns a detached deep-copy snapshot.
+- `GetQuestData` returns detached Active/Completed/Progress/Definitions snapshots; a dedicated quest-data exposure contract protects this boundary.
 - `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
-- `CombatPresentation.client.lua` uses a Character-generation token for local HealthChanged reactions and rejects stale delayed callbacks after respawn.
 - Server and client NPC/menu bridges enforce single-open menu state; local menu close/toggle clears the corresponding `Open*` attribute, and listeners ignore `nil` so clearing one menu cannot open another.
 - `WorldDecor` is idempotent via readiness markers and bounded waits; `WorldTheme` deduplicates portal bindings and cleans player state.
 - AI pathfinding uses finite-validated destinations, quantized cache keys, weak Model keys and bounded recomputation.
@@ -72,10 +63,10 @@ Current compare: **1345 commits ahead, 30 commits behind** `main` (verified with
 ## Open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
-- The latest Combined Status query returned no status objects; CI is therefore not called green.
+- The latest Combined Status query returned no status objects and the latest commit-specific workflow-run query returned no runs; CI is therefore not called green.
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
-- `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary.
+- `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets with detached server-side snapshots; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently unlock through level gates; the long-term design includes Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - White Queen intro/story rules remain unchanged.
 
@@ -83,7 +74,7 @@ Current compare: **1345 commits ahead, 30 commits behind** `main` (verified with
 1. Continue concrete static audits and eliminate newly introduced authority/config drift.
 2. Move to Roblox Studio multiplayer validation when executable runtime access is available.
 3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat asset contracts for TIDE/GALE.
-4. Keep gameplay authority in server systems; animation/VFX never decide gameplay, timing or rewards.
+4. Keep gameplay authority in server systems; animation/VFX never decide damage, timing or rewards.
 
 ## Do not do
 - Do not merge, reset or force-update `main` from this workstream.
