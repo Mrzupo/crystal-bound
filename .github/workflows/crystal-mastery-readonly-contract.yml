@@ -1,0 +1,40 @@
+name: Crystal Mastery Readonly Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/crystal-mastery-all-readers-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure CrystalMastery read APIs do not mutate profile state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+          readers = (
+              ("Get", "function CrystalMastery.Get", "function CrystalMastery.GetRequiredXP"),
+              ("GetBonuses", "function CrystalMastery.GetBonuses", "function CrystalMastery.GetUpgradeCost"),
+              ("GetUpgradeCost", "function CrystalMastery.GetUpgradeCost", "function CrystalMastery.Upgrade"),
+          )
+          for name, start_marker, end_marker in readers:
+              start = text.index(start_marker)
+              end = text.index(end_marker, start)
+              block = text[start:end]
+              if "ensure(profile, crystalId)" in block:
+                  raise SystemExit(f"{name} must not call mutating ensure()")
+              if "profile.CrystalMastery =" in block:
+                  raise SystemExit(f"{name} must not initialize persisted mastery state")
+
+          if "local function readMastery(profile, crystalId)" not in text:
+              raise SystemExit("CrystalMastery must centralize side-effect-free mastery reads")
+          if "function CrystalMastery.AddXP" not in text or "function CrystalMastery.Upgrade" not in text:
+              raise SystemExit("CrystalMastery mutation owners disappeared")
+          if "InventoryConfig.GetItemConfig(itemId)" not in text:
+              raise SystemExit("CrystalMastery cost lookup must validate configured material IDs")
+
+          print("CrystalMastery read APIs are side-effect free; mutation remains isolated to explicit write operations.")
