@@ -12,6 +12,7 @@ jobs:
       - name: Validate Health Potion server contract
         run: |
           python - <<'PY'
+          import re
           from pathlib import Path
           text = Path('src/ServerScriptService/UseItemRemote.server.lua').read_text(encoding='utf-8')
           required = [
@@ -21,12 +22,16 @@ jobs:
               'InventoryService.HasItem(profile, itemId, 1)',
               'humanoid.Health >= humanoid.MaxHealth',
               'InventoryService.RemoveItem(profile, itemId, 1)',
-              'math.min(humanoid.MaxHealth, humanoid.Health + healAmount)',
+              'PlayerService.Heal(player, healAmount)',
+              'if applied <= 0 then',
+              'InventoryService.AddItem(profile, itemId, 1)',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing consumable guard: ' + ', '.join(missing))
+          if re.search(r'\.(?:Health|MaxHealth)\s*=', text):
+              raise SystemExit('UseItemRemote must not directly mutate Humanoid Health/MaxHealth')
           if 'math.clamp(healAmount, 0.1, 1000)' not in text:
               raise SystemExit('Health Potion heal amount must remain runtime bounded')
-          print('Health Potion server contract validated.')
+          print('Health Potion server contract validated with canonical PlayerService healing.')
           PY
