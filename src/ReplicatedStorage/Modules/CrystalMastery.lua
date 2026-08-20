@@ -24,6 +24,13 @@ local function validCrystalId(crystalId)
 		and type(CrystalConfig.Passives[crystalId]) == "table"
 end
 
+local function ownsCrystal(profile, crystalId)
+	return type(profile) == "table"
+		and type(profile.Crystals) == "table"
+		and type(profile.Crystals.Owned) == "table"
+		and table.find(profile.Crystals.Owned, crystalId) ~= nil
+end
+
 local function neutralMastery()
 	return { Level = 1, XP = 0 }
 end
@@ -35,7 +42,7 @@ local function boundedPositiveConfig(value, fallback, maximum)
 end
 
 local function ensure(profile, crystalId)
-	if type(profile) ~= "table" or not validCrystalId(crystalId) then return nil end
+	if not type(profile) == "table" or not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end
 	profile.CrystalMastery = type(profile.CrystalMastery) == "table" and profile.CrystalMastery or {}
 	local mastery = profile.CrystalMastery[crystalId]
 	if type(mastery) ~= "table" then
@@ -67,7 +74,7 @@ function CrystalMastery.GetRequiredXP(level)
 end
 
 function CrystalMastery.AddXP(profile, crystalId, amount)
-	if not validCrystalId(crystalId) then return 1, 0, 0 end
+	if not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return 1, 0, 0 end
 	local mastery = ensure(profile, crystalId)
 	if not mastery then return 1, 0, 0 end
 	local maxLevel = math.max(1, math.floor(finiteNumber(Config.MaxLevel) or 10))
@@ -94,7 +101,7 @@ function CrystalMastery.AddXP(profile, crystalId, amount)
 end
 
 function CrystalMastery.GetBonuses(profile, crystalId)
-	if not validCrystalId(crystalId) then
+	if not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then
 		return {
 			DamageMultiplier = 1,
 			AbilityDamageMultiplier = 1,
@@ -125,7 +132,7 @@ function CrystalMastery.GetBonuses(profile, crystalId)
 end
 
 function CrystalMastery.GetUpgradeCost(profile, crystalId)
-	if not validCrystalId(crystalId) then return nil end
+	if not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end
 	local mastery = ensure(profile, crystalId)
 	if not mastery then return nil end
 	local maxLevel = math.max(1, math.floor(finiteNumber(Config.MaxLevel) or 10))
@@ -145,7 +152,7 @@ function CrystalMastery.GetUpgradeCost(profile, crystalId)
 end
 
 function CrystalMastery.Upgrade(profile, crystalId)
-	if not validCrystalId(crystalId) then return false, 0 end
+	if not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return false, 0 end
 	local mastery = ensure(profile, crystalId)
 	if not mastery then return false, 0 end
 	local maxLevel = math.max(1, math.floor(finiteNumber(Config.MaxLevel) or 10))
