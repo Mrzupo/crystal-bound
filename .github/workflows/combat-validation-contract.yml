@@ -2,7 +2,7 @@ name: Combat Validation Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/combat-rate-limit-before-validation"]
   pull_request:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate combat bounds
+      - name: Validate combat bounds and request gating
         shell: python
         run: |
           from pathlib import Path
@@ -41,6 +41,10 @@ jobs:
               "local function validNonNegativeInteger",
               "if xpGain == nil or moneyGain == nil then return end",
               "targetModel:SetAttribute(\"DeathRewarded\", true)",
+              "local requestNow = os.clock()",
+              "if requestNow < (nextRequest[player] or 0) then return end",
+              "nextRequest[player] = requestNow + REQUEST_INTERVAL",
+              "if not VALID_ACTIONS[action] then return end",
           ):
               if marker not in combat:
                   problems.append(f"CombatService missing runtime boundary marker: {marker}")
@@ -49,4 +53,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Combat validation, request bounds and defeat-reward config gates validated.")
+          print("Combat validation, request bounds, defeat-reward config gates and pre-validation rate limiting validated.")
