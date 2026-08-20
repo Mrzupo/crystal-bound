@@ -6,6 +6,7 @@ local DodgeConfig = require(ReplicatedStorage.Config.DodgeConfig)
 local DodgeService = {}
 local cooldowns = setmetatable({}, { __mode = "k" })
 local playerConnections = setmetatable({}, { __mode = "k" })
+local invulnerabilityTokens = setmetatable({}, { __mode = "k" })
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
@@ -27,6 +28,10 @@ local function disconnectPlayer(player)
 	local connection = playerConnections[player]
 	if connection and connection.Connected then connection:Disconnect() end
 	playerConnections[player] = nil
+end
+
+local function invalidateInvulnerability(player)
+	invulnerabilityTokens[player] = (invulnerabilityTokens[player] or 0) + 1
 end
 
 local function finiteComponent(value)
@@ -72,6 +77,8 @@ function DodgeService.TryDodge(player, direction)
 	player:SetAttribute("DodgeInvulnerable", true)
 	player:SetAttribute("DodgeMessage", "Dodge!")
 
+	invalidateInvulnerability(player)
+	local token = invulnerabilityTokens[player]
 	clearForceField(character)
 	local forceField = Instance.new("ForceField")
 	forceField.Name = "CrystalBoundDodgeForceField"
@@ -81,7 +88,7 @@ function DodgeService.TryDodge(player, direction)
 	root.AssemblyLinearVelocity = Vector3.new(flat.X * BOOST, root.AssemblyLinearVelocity.Y, flat.Z * BOOST)
 
 	task.delay(INVULNERABILITY, function()
-		if player.Parent then
+		if player.Parent and invulnerabilityTokens[player] == token then
 			player:SetAttribute("DodgeInvulnerable", false)
 			if player.Character == character then clearForceField(character) end
 		end
@@ -123,6 +130,7 @@ end
 
 function DodgeService.CleanupPlayer(player)
 	disconnectPlayer(player)
+	invalidateInvulnerability(player)
 	cooldowns[player] = nil
 	if player.Character then clearForceField(player.Character) end
 	if player.Parent then
@@ -132,6 +140,7 @@ function DodgeService.CleanupPlayer(player)
 end
 
 local function resetForRespawn(player)
+	invalidateInvulnerability(player)
 	cooldowns[player] = 0
 	if player.Parent then
 		player:SetAttribute("DodgeInvulnerable", false)
