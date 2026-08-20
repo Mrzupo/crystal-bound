@@ -22,8 +22,10 @@ jobs:
               raise SystemExit("default.project.json must load PlayerLifecycle.server.lua")
           if "Players.PlayerRemoving:Connect" not in lifecycle:
               raise SystemExit("PlayerLifecycle must bind PlayerRemoving")
-          if "PlayerService.Remove(player)" not in lifecycle:
-              raise SystemExit("PlayerLifecycle must delegate final persistence to PlayerService.Remove")
+          if "local ok = PlayerService.Remove(player)" not in lifecycle:
+              raise SystemExit("PlayerLifecycle must unconditionally delegate final persistence to PlayerService.Remove")
+          if "GetProfile(player)" in lifecycle:
+              raise SystemExit("PlayerLifecycle must not gate Remove() behind GetProfile(); shutdown hides gameplay profiles intentionally")
           if "function PlayerService.Remove(player)" not in service:
               raise SystemExit("PlayerService.Remove must remain the canonical remove owner")
-          print("Player lifecycle entrypoint contract validated.")
+          print("Player lifecycle entrypoint, shutdown-safe unconditional remove delegation and Rojo wiring validated.")
