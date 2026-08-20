@@ -26,7 +26,7 @@ jobs:
           if "local function damagePlayer(player, humanoid, amount, attacker, damageType, range)" not in npc:
               problems.append("NPC damage helper must carry attacker, damage type and range")
           for snippet in [
-              'damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage, model, "Physical", config.AttackRange)',
+              'damagePlayer(targetPlayer, targetHumanoid, attackDamage, model, "Physical", attackRange)',
               'damagePlayer(player, targetHumanoid',
               'StatusEffectService.ApplyBurn(targetHumanoid, special.BurnDamage, special.BurnTicks, special.BurnInterval, model, range)',
               'StatusEffectService.ApplySlow(targetHumanoid, special.SlowMultiplier, special.SlowDuration)',
@@ -42,14 +42,17 @@ jobs:
           for marker in [
               'local function getNPCRoot()',
               'instance:IsDescendantOf(npcFolder)',
+              'targetModel:IsDescendantOf(Workspace)',
               'targetModel:IsDescendantOf(npcFolder)',
               'targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil',
+              'if target:IsA("Player") then',
+              'targetModel = target.Character',
           ]:
               if marker not in damage:
-                  problems.append(f"central DamageService NPC boundary missing: {marker}")
+                  problems.append(f"central DamageService target/attacker boundary missing: {marker}")
 
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("PvE attacker context validated against config-driven and NPC-tree-constrained runtime paths.")
+          print("PvE attacker context and validated Player/NPC target paths are covered by the central DamageService boundary.")
