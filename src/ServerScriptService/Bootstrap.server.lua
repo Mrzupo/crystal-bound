@@ -75,9 +75,19 @@ ensureRemote("RemoteFunction", "GetPlayerData")
 ensureRemote("RemoteFunction", "GetQuestData")
 local remotes = ReplicatedStorage.Remotes
 
+local function getCanonicalInteractableNPC(npcName)
+	if npcName ~= "CrystalKeeper" and npcName ~= "MaterialTrader" then return nil end
+	local folder = Workspace:FindFirstChild("NPCs")
+	local npc = folder and folder:FindFirstChild(npcName)
+	if not folder or not npc or not npc:IsA("Model") or npc.Parent ~= folder then return nil end
+	if npc:GetAttribute("Interactable") ~= true then return nil end
+	return npc
+end
+
 local function isNearNPC(player, npcName, range)
-	local character = player.Character; local root = character and character:FindFirstChild("HumanoidRootPart")
-	local folder = Workspace:FindFirstChild("NPCs"); local npc = folder and folder:FindFirstChild(npcName)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local npc = getCanonicalInteractableNPC(npcName)
 	local npcRoot = npc and (npc.PrimaryPart or npc:FindFirstChild("Torso"))
 	local safeRange = finiteNumber(range, NPC_INTERACTION_RANGE)
 	return root and npcRoot and (root.Position - npcRoot.Position).Magnitude <= math.clamp(safeRange, 4, 50)
