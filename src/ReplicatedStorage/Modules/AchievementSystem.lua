@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
+local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 
 local AchievementSystem = {}
 
@@ -109,10 +110,18 @@ function AchievementSystem.Check(profile)
 		LEVEL_20 = finiteNumber(profile.Level, 0) >= 20,
 	}
 	local unlocked = {}
+	local projectedMoney = math.clamp(math.floor(finiteNumber(profile.Money, 0)), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
 	for _, id in ipairs(ORDER) do
 		if checks[id] then
-			local definition = AchievementSystem.Unlock(profile, id)
-			if definition then table.insert(unlocked, definition) end
+			local definition = Definitions[id]
+			local reward = math.clamp(math.floor(finiteNumber(definition and definition.RewardMoney, 0)), 0, EconomyConfig.MaxMoney)
+			if definition and projectedMoney + reward <= EconomyConfig.MaxMoney then
+				local unlockedDefinition = AchievementSystem.Unlock(profile, id)
+				if unlockedDefinition then
+					projectedMoney += reward
+					table.insert(unlocked, unlockedDefinition)
+				end
+			end
 		end
 	end
 	return unlocked
