@@ -38,8 +38,8 @@ local function normalizeList(value, validator)
 	return result
 end
 
-local function isCrystalId(value)
-	return type(value) == "string" and CrystalSystemExists(value)
+local function CrystalSystemExists(value)
+	return type(value) == "string" and type(CrystalConfig.Definitions[value]) == "table"
 end
 
 function PlayerData.new()
@@ -64,6 +64,7 @@ function PlayerData.new()
 		SessionLockedAt = 0,
 		SessionLock = nil,
 	}
+
 end
 
 function PlayerData.Reconcile(input)
@@ -117,7 +118,11 @@ function PlayerData.Reconcile(input)
 		return type(value) == "string" and WorldConfig.Islands[value] ~= nil
 	end
 	local function isBountyEnemy(value)
-		return type(value) == "string" and type(value) == "string"
+		if type(value) ~= "string" or type(DailyBountyConfig.Goals) ~= "table" then return false end
+		for _, definition in ipairs(DailyBountyConfig.Goals) do
+			if type(definition) == "table" and definition.EnemyType == value then return true end
+		end
+		return false
 	end
 
 	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
@@ -150,6 +155,11 @@ function PlayerData.Reconcile(input)
 	data.DailyBounty.Progress = clampInt(data.DailyBounty.Progress, 0, data.DailyBounty.Goal, 0)
 	data.DailyBounty.RewardMoney = clampInt(data.DailyBounty.RewardMoney, 0, EconomyConfig.MaxMoney, defaults.DailyBounty.RewardMoney)
 	data.DailyBounty.Claimed = data.DailyBounty.Claimed == true
+	if not isBountyEnemy(data.DailyBounty.EnemyType) then
+		data.DailyBounty.EnemyType = type(DailyBountyConfig.Goals) == "table" and DailyBountyConfig.Goals[1] and DailyBountyConfig.Goals[1].EnemyType or nil
+		data.DailyBounty.Progress = 0
+		data.DailyBounty.Claimed = false
+	end
 
 	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
 	data.SessionLockedAt = clampInt(data.SessionLockedAt, 0, 4102444800, 0)
