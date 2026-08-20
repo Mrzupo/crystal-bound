@@ -46,7 +46,7 @@ local function isValidAttacker(instance)
 		local npcFolder = getNPCRoot()
 		return npcFolder ~= nil
 			and instance.Parent == npcFolder
-			and instance:GetAttribute("Enemy") == true
+			and (instance:GetAttribute("Enemy") == true or instance:GetAttribute("BossId") ~= nil)
 			and humanoid ~= nil
 			and humanoid.Health > 0
 	end
@@ -125,7 +125,7 @@ function DamageService.GetLastAttacker(targetModel)
 	elseif record.Kind == "Model" then
 		local model = record.Instance
 		local npcFolder = getNPCRoot()
-		if model and model.Parent == npcFolder and model:GetAttribute("Enemy") == true then
+		if model and model.Parent == npcFolder and (model:GetAttribute("Enemy") == true or model:GetAttribute("BossId") ~= nil) then
 			return model
 		end
 	end
