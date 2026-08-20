@@ -30,9 +30,18 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
-local function createArena()
-	if arena:FindFirstChild("Floor") then return end
-	local floor = Instance.new("Part")
+local function ensureFloor()
+	local floor = arena:FindFirstChild("Floor")
+	if floor and floor:IsA("BasePart") then
+		floor.Size = Vector3.new(54, 1, 54)
+		floor.Position = center
+		floor.Anchored = true
+		floor.Material = Enum.Material.Slate
+		floor.Color = Color3.fromRGB(45, 35, 65)
+		return floor
+	end
+	if floor then floor:Destroy() end
+	floor = Instance.new("Part")
 	floor.Name = "Floor"
 	floor.Size = Vector3.new(54, 1, 54)
 	floor.Position = center
@@ -40,8 +49,24 @@ local function createArena()
 	floor.Material = Enum.Material.Slate
 	floor.Color = Color3.fromRGB(45, 35, 65)
 	floor.Parent = arena
+	return floor
+end
 
-	local ring = Instance.new("Part")
+local function ensureRing()
+	local ring = arena:FindFirstChild("Ring")
+	if ring and ring:IsA("BasePart") then
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Size = Vector3.new(1, 50, 50)
+		ring.CFrame = CFrame.new(center + Vector3.new(0, 0.7, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		ring.Anchored = true
+		ring.CanCollide = false
+		ring.Material = Enum.Material.Neon
+		ring.Color = Color3.fromRGB(150, 90, 230)
+		ring.Transparency = 0.45
+		return ring
+	end
+	if ring then ring:Destroy() end
+	ring = Instance.new("Part")
 	ring.Name = "Ring"
 	ring.Shape = Enum.PartType.Cylinder
 	ring.Size = Vector3.new(1, 50, 50)
@@ -52,16 +77,37 @@ local function createArena()
 	ring.Color = Color3.fromRGB(150, 90, 230)
 	ring.Transparency = 0.45
 	ring.Parent = arena
+	return ring
+end
 
-	for index, position in ipairs(pillarPositions) do
-		local pillar = Instance.new("Part")
-		pillar.Name = "Pylon" .. index
+local function ensurePylon(index, position)
+	local name = "Pylon" .. index
+	local pillar = arena:FindFirstChild(name)
+	if pillar and pillar:IsA("BasePart") then
 		pillar.Size = Vector3.new(3, 8, 3)
 		pillar.Position = position
 		pillar.Anchored = true
 		pillar.Material = Enum.Material.Neon
 		pillar.Color = Color3.fromRGB(135, 95, 220)
-		pillar.Parent = arena
+		return pillar
+	end
+	if pillar then pillar:Destroy() end
+	pillar = Instance.new("Part")
+	pillar.Name = name
+	pillar.Size = Vector3.new(3, 8, 3)
+	pillar.Position = position
+	pillar.Anchored = true
+	pillar.Material = Enum.Material.Neon
+	pillar.Color = Color3.fromRGB(135, 95, 220)
+	pillar.Parent = arena
+	return pillar
+end
+
+local function createArena()
+	ensureFloor()
+	ensureRing()
+	for index, position in ipairs(pillarPositions) do
+		ensurePylon(index, position)
 	end
 end
 
