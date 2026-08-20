@@ -198,13 +198,6 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 			and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0
 			and moneyReward <= EconomyConfig.MaxMoney
 			and dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil
-		if player and profile and validRewardConfig then
-			local currentMoney = math.clamp(finiteNumber(profile.Money, 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
-			if currentMoney + moneyReward > EconomyConfig.MaxMoney then
-				player:SetAttribute("BossMessage", "Spend some Money before claiming the Guardian reward.")
-				validRewardConfig = false
-			end
-		end
 
 		if validRewardConfig then
 			model:SetAttribute("Rewarded", true)
@@ -212,16 +205,20 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 
 		if player and profile and validRewardConfig then
 			XPService.AddXP(profile, xpReward)
-			EconomyService.AddMoney(profile, moneyReward)
+			local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)
 			local coreAdded = InventoryService.AddItem(profile, dropId, 1)
 			if not profile.Stats then profile.Stats = {} end
 			profile.Stats.BossesDefeated = (finiteNumber(profile.Stats.BossesDefeated, 0) or 0) + 1
 			QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
 			PlayerService.Sync(player)
 			if coreAdded > 0 then
-				player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core earned.")
+				player:SetAttribute("BossMessage", earnedMoney < moneyReward
+					and string.format("Crystal Guardian defeated! +%d Money (wallet cap) and Guardian Core earned.", earnedMoney)
+					or "Crystal Guardian defeated! Guardian Core earned.")
 			else
-				player:SetAttribute("BossMessage", "Crystal Guardian defeated! Guardian Core stack is full.")
+				player:SetAttribute("BossMessage", earnedMoney < moneyReward
+					and string.format("Crystal Guardian defeated! +%d Money (wallet cap). Guardian Core stack is full.", earnedMoney)
+					or "Crystal Guardian defeated! Guardian Core stack is full.")
 			end
 			local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
 		end
