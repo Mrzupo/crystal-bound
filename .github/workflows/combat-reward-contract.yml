@@ -2,7 +2,7 @@ name: Combat Reward Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/ability-quest-revision-sync-v2"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/ability-quest-revision-sync-clean"]
   pull_request:
 
 jobs:
