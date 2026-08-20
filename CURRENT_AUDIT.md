@@ -3,11 +3,15 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1223 commits ahead, 29 commits behind** `main`.
+Current compare: **1229 commits ahead, 29 commits behind** `main`.
 `main` remains untouched at verified commit `b4877299d51a083f1bf5adfdf1fc152c6a5c1d17`.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
+- A dedicated `PlayerLifecycle.server.lua` is now loaded by Rojo and owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
+- `PlayerService.Load()` uses a per-UserId load-generation token and shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
+- Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
+- `PlayerService.RefreshSession()` serializes session-heartbeat refresh with Save/Remove through the shared operation lock.
 - `DamageService` is the sole direct `Humanoid:TakeDamage()` owner; damage types, attackers, targets, ranges and amounts are server-validated.
 - Environmental damage is strictly `Attacker == nil`; attacker-attributed PvE damage uses canonical attacker validation.
 - NPC attackers must be live, parented, `Enemy == true` models inside `Workspace.NPCs`; Player-vs-Player damage is rejected.
@@ -18,10 +22,11 @@ Current compare: **1223 commits ahead, 29 commits behind** `main`.
 - Client authority contracts reject direct client Health/MaxHealth/WalkSpeed/CFrame/PivotTo/AssemblyLinearVelocity mutations.
 - PC/mobile clients request actions only; gameplay damage, cooldowns, ownership and rewards remain server-side.
 - Crystal ownership is canonicalized by `CrystalSystem`; `GetEquipped()` requires actual ownership and `CrystalService` returns filtered/deduplicated owned-crystal snapshots.
+- Crystal Equipped, Owned and Mastery mutation ownership has explicit regression contracts; repair/reconcile writes are the only documented exceptions.
 - `PlayerData.Reconcile()` normalizes persisted numeric values, Crystal ownership/equip/mastery, inventory, quests, islands, bounty and SessionLock data.
-- Crystal Equipped, Owned and Mastery write ownership is protected by dedicated contracts; repair/reconcile writes are explicit exceptions.
+- CrystalMastery rejects malformed IDs, bounds XP/costs/bonuses and never falls back to EMBER for invalid mutation IDs.
 - Crystal ability services independently revalidate equipped/owned Crystal context, target type, range and numeric bounds.
-- Economy, Inventory, XP, Quest, Achievement, Stats, Daily Bounty and Crystal progression mutations have explicit server ownership contracts.
+- Economy, Inventory, XP, Quest, Achievement, persistent combat Stats, Daily Bounty and Crystal progression mutations have explicit server ownership contracts.
 - Shop and Crafting require positive integers, canonical IDs, bounded totals and rollback-safe mutations.
 - Crafting additionally requires `recipe.Output == outputId` to prevent corrupted recipe identity drift.
 - Consumable use validates canonical config ItemId, possession, live/not-full Humanoid state and bounded heal amount before consuming inventory.
@@ -38,12 +43,8 @@ Current compare: **1223 commits ahead, 29 commits behind** `main`.
 - Server and client NPC/menu bridges enforce single-open menu state; Quest/Shop/Inventory/Crafting/Achievement/NPCDialog menus clear their `Open*` attribute on local close/toggle transitions.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
 - `GetPlayerData` has an explicit public-data exposure contract excluding SessionLock/SessionId/operation internals.
-- `InventoryService.GetInventory()` returns a detached normalized snapshot.
-- Legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
+- `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
 - `SafeProfileStore` protects current-server SessionLock ownership for Load/Save/Refresh/Release and reconciles data at the persistence boundary.
-- `PlayerService.RefreshSession()` serializes heartbeat refresh with Save/Remove through the common operation lock.
-- `PlayerService.Load()` now has a per-UserId load-generation guard to prevent stale loads/rejoin races from mutating a newer session.
-- Server shutdown now blocks new profile loads, tracks pending loads, waits for both load-drain and profile-removal completion, and retains a bounded shutdown timeout.
 - `WorldDecor` is idempotent via readiness markers and bounded waits; `WorldTheme` deduplicates portal bindings and cleans player state.
 - AI pathfinding uses finite-validated destinations, quantized cache keys, weak Model keys and bounded recomputation.
 
