@@ -71,8 +71,8 @@ jobs:
 
           respawns = [float(value) for value in re.findall(r"Respawn = ([0-9.]+)", text)]
           for respawn in respawns:
-              if respawn < 1.5:
-                  raise SystemExit("Enemy Respawn must be at least 1.5 seconds to remain compatible with NPC cleanup")
+              if respawn < 2:
+                  raise SystemExit("Enemy Respawn must be at least 2 seconds so NPC corpse cleanup always finishes first")
               if respawn > 600:
                   raise SystemExit("Enemy Respawn exceeds the 10-minute design bound")
 
@@ -105,4 +105,4 @@ jobs:
               if offset < 0 or offset > 100:
                   raise SystemExit("Enemy TeleportOffset is outside 0..100")
 
-          print("EnemyConfig combat bounds, aggro bounds, centralized Respawn normalization, detached deep-copy lookup, strict lookup, lifecycle, special movement and canonical loot validated.")
+          print("EnemyConfig combat bounds, aggro bounds, 2s Respawn normalization, detached deep-copy lookup, strict lookup, lifecycle, special movement and canonical loot validated.")
