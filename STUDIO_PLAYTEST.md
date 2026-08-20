@@ -49,7 +49,6 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm dead enemies stop AI/status callbacks before respawn.
 - Confirm each enemy respawns exactly once and no duplicate named instances appear.
 - Trigger a controlled server shutdown while an enemy is inside its delayed respawn window; expected: shutdown does not create a replacement NPC.
-- During an active Burn effect, trigger controlled server shutdown; expected: no additional Burn tick executes after shutdown begins.
 
 ## 6. Guardian
 - Bring Guardian below 50% HP.
@@ -130,7 +129,6 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm no Daily Bounty or Achievement reward can be granted twice.
 - Confirm no duplicate NPC/Boss instances appear after respawn.
 - Confirm NPC/Guardian delayed respawn callbacks do not create new instances after shutdown begins.
-- Confirm delayed Burn/Slow callbacks do not continue gameplay mutation after shutdown begins.
 - Confirm delayed Guardian telegraph impacts do not damage Players after shutdown begins.
 - Confirm no malformed Crystal UnlockLevel can be floored into an unintended lower gate.
 - Confirm malformed CrystalMastery mutation IDs cannot modify EMBER mastery.
@@ -140,6 +138,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm WalkSpeed baseline enforcement remains active without a Slow effect.
 - Confirm portal grace is destination-bound and cannot be created during a rejected portal touch/cooldown.
 - Confirm portal cooldown callbacks are generation-safe across respawn/rejoin.
+- Confirm StatusEffect Slow/Burn replacement tokens clear stale callbacks on replacement/cleanup; explicit shutdown cancellation remains an open follow-up until the module dependency is refactored safely.
 - Confirm the official rarity ladder is Common → Divine and Ancient is not a rarity.
 - Confirm `main` remains untouched.
 - Record every runtime failure with exact script name, event/action, reproduction steps and expected vs actual behavior.
