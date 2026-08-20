@@ -18,10 +18,8 @@ local function getSessionToken(player)
 	return token
 end
 
-local function newLoadToken(player)
-	local token = HttpService:GenerateGUID(false)
-	sessionTokens[player] = token
-	return token
+local function newLoadToken()
+	return HttpService:GenerateGUID(false)
 end
 
 local function retry(callback)
@@ -50,7 +48,7 @@ end
 
 function SafeProfileStore.Load(player)
 	local key = tostring(player.UserId)
-	local token = newLoadToken(player)
+	local token = newLoadToken()
 	local claimed = false
 	local invalidStoredValue = false
 	local ok, result = retry(function()
@@ -97,6 +95,7 @@ function SafeProfileStore.Load(player)
 
 	local profile = PlayerData.Reconcile(result)
 	profile.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }
+	sessionTokens[player] = token
 	return profile
 end
 
