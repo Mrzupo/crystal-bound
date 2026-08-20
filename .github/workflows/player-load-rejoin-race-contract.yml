@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate per-UserId load generation, per-load session tokens and shutdown gate
+      - name: Validate per-UserId load generation, duplicate-load rejection, per-load session tokens and shutdown gate
         shell: python
         run: |
           from pathlib import Path
@@ -19,9 +19,11 @@ jobs:
           store = Path("src/ReplicatedStorage/Modules/SafeProfileStore.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           required = (
-              "LoadingByUserId = {}",
-              "ShuttingDown = false",
+              "LoadingByUserId = {},",
+              "ShuttingDown = false,",
               "local loadToken = {}",
+              "if PlayerService.LoadingByUserId[userId] then",
+              'return nil, "Profile load already in progress"',
               "PlayerService.LoadingByUserId[userId] = loadToken",
               "local function isCurrentLoad()",
               "local function releaseLoadedToken()",
@@ -43,7 +45,7 @@ jobs:
           for marker in (
               'local sessionTokens = setmetatable({}, { __mode = "k" })',
               'local function getSessionToken(player)',
-              'local function newLoadToken(player)',
+              'local function newLoadToken()',
               'sessionTokens[player] = token',
               'function SafeProfileStore.Release(player, expectedToken)',
               'local token = expectedToken or getSessionToken(player)',
@@ -59,4 +61,4 @@ jobs:
           if 'Players.PlayerAdded:Connect(function(player)' not in bootstrap:
               raise SystemExit("Bootstrap must keep one canonical PlayerAdded load owner")
 
-          print("Per-UserId generation, per-load session tokens, token-specific superseded release and startup deduplication validated.")
+          print("Per-UserId generation, duplicate-load rejection, per-load session tokens, token-specific superseded release and startup deduplication validated.")
