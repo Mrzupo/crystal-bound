@@ -37,7 +37,7 @@ jobs:
 
           for marker in [
               'local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"',
-              'CrystalAbilityService.Execute(player, profile, crystalId, nil, math.min(1000, safeBaseDamage), safeRange)',
+              'CrystalAbilityService.Execute(player, profile, crystalId, nil, nil, nil)',
               'if not abilityResult.Success then return end',
           ]:
               if marker not in combat:
