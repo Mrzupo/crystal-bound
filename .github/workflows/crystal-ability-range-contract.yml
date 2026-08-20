@@ -24,11 +24,15 @@ jobs:
           configured_range = float(match.group(2))
           if configured_range <= 0 or configured_range > 1000:
               raise SystemExit('Gale ability range must be within 0..1000')
-          if 'GetEnemyModels(centerRoot.Position, safeRange, targetModel)' not in service:
-              raise SystemExit('Gale ability must use the configured safeRange for splash hit detection')
+          for marker in [
+              'GetEnemyModels(targetRoot.Position, safeRange, targetModel)',
+              'local playerToTarget = (targetRoot.Position - playerRoot.Position).Magnitude',
+              'local splashDamageRange = math.min(1000, safeRange + playerToTarget)',
+              'Range = splashDamageRange',
+          ]:
+              if marker not in service:
+                  raise SystemExit('Gale centered splash range contract missing: ' + marker)
           if 'GetEnemyModels(centerRoot.Position, 12, targetModel)' in service:
               raise SystemExit('Gale ability must not hardcode a 12-stud splash radius')
-          if 'local safeRange' not in service:
-              raise SystemExit('Gale ability must derive a safeRange before hit detection')
           print(f'Crystal ability range contract validated: configured Gale range={configured_range}.')
           PY
