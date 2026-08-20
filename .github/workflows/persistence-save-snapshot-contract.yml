@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate callback-time profile snapshot
+      - name: Validate callback-time profile snapshot and retry isolation
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -20,5 +20,16 @@ jobs:
           prefix = save_block.split('local ok, result = retry', 1)[0]
           if 'local payload = PlayerData.Reconcile(clone(profile))' in prefix:
               raise SystemExit('Save contains a stale pre-callback payload snapshot')
-          print('Persistence save snapshot contract validated.')
+          if 'saved = false' not in save_block.split('return store:UpdateAsync', 1)[0]:
+              raise SystemExit('Save retry state must reset saved before every UpdateAsync attempt')
+
+          refresh_block = source.split('function SafeProfileStore.Refresh', 1)[1].split('function SafeProfileStore.Release', 1)[0]
+          if 'refreshed = false' not in refresh_block.split('return store:UpdateAsync', 1)[0]:
+              raise SystemExit('Refresh retry state must reset refreshed before every UpdateAsync attempt')
+
+          release_block = source.split('function SafeProfileStore.Release', 1)[1]
+          if 'released = false' not in release_block.split('return store:UpdateAsync', 1)[0]:
+              raise SystemExit('Release retry state must reset released before every UpdateAsync attempt')
+
+          print('Persistence snapshot and retry-state isolation validated.')
           PY
