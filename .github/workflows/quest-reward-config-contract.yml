@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate quest rewards before state commit
+      - name: Validate quest rewards before state commit and cap Money at the economy owner
         shell: python
         run: |
           from pathlib import Path
@@ -26,16 +26,22 @@ jobs:
               'local rewardXP = finiteNonNegativeInteger(definition.XP)',
               'local rewardMoney = finiteNonNegativeInteger(definition.Money)',
               'if rewardXP == nil or rewardMoney == nil then',
-              'local currentMoney = math.clamp(finiteNonNegativeInteger(profile.Money) or 0, EconomyConfig.MinMoney, EconomyConfig.MaxMoney)',
-              'if currentMoney + rewardMoney > EconomyConfig.MaxMoney then',
               'if not QuestSystem.Complete(profile, questId) then return false end',
+              'XPService.AddXP(profile, rewardXP)',
+              'local _, earnedMoney = EconomyService.AddMoney(profile, rewardMoney)',
+              'if earnedMoney < rewardMoney then',
           ):
               if marker not in service:
                   raise SystemExit(f"Quest reward validation marker missing: {marker}")
-          if service.index('local rewardXP = finiteNonNegativeInteger(definition.XP)') > service.index('if not QuestSystem.Complete(profile, questId) then return false end'):
+
+          reward_validation = service.index('local rewardXP = finiteNonNegativeInteger(definition.XP)')
+          completion = service.index('if not QuestSystem.Complete(profile, questId) then return false end')
+          if reward_validation > completion:
               raise SystemExit("Quest reward config must be validated before completion is committed")
-          if service.index('if currentMoney + rewardMoney > EconomyConfig.MaxMoney then') > service.index('if not QuestSystem.Complete(profile, questId) then return false end'):
-              raise SystemExit("Quest Money capacity must be validated before completion is committed")
+
+          economy_call = service.index('local _, earnedMoney = EconomyService.AddMoney(profile, rewardMoney)')
+          if completion > economy_call:
+              raise SystemExit("Quest completion must precede the deterministic EconomyService payout, with EconomyService owning the Money cap")
 
           max_money_match = re.search(r"MaxMoney\s*=\s*(\d+)", economy)
           max_xp_match = re.search(r"MaxExperience\s*=\s*(\d+)", xp)
@@ -50,4 +56,4 @@ jobs:
               if int(reward_money) > max_money:
                   raise SystemExit(f"Quest reward Money exceeds EconomyConfig.MaxMoney: {quest_id}")
 
-          print("Quest reward numeric validation, payout-capacity gate and progression-cap cross-check passed.")
+          print("Quest reward numeric validation, completion ordering and EconomyService-owned Money cap passed.")
