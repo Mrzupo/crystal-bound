@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1332 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1343 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 - Current compared main base: `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Current state
@@ -34,9 +34,11 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Redundant `PlayerLoadCatchup.server.lua` was removed to avoid concurrent startup Load owners; the project no longer maps or references it.
 - Bootstrap load failure handling checks `player.Parent` before calling `Kick()`.
 - SafeProfileStore now stores a unique token per Roblox `Player` object in `SessionLock`; Save/Refresh/Release require both `JobId` and `Token`, preventing a stale session in the same server from touching a new rejoin session.
-- `PlayerService.Sync()` increments a transient per-player profile revision; Save/Remove perform up to three settle passes if the profile changes while DataStore I/O yields, reducing progress loss from gameplay mutations during autosave/final-save windows.
+- `PlayerService.Sync()` increments a transient per-player profile revision; Save/Remove perform up to three settle passes if the profile changes while DataStore I/O yields, reducing progress loss during autosave/final-save windows.
+- `PlayerService` marks a player `Closing` before final removal work. External `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players so late callbacks cannot mutate a profile after the final save snapshot begins.
+- The final save path intentionally calls `PlayerService.Sync(player, true)` so final Achievement/Daily-Bounty reconciliation still runs even while the external Closing guard is active.
 - PlayerService runtime Player-keyed maps are weak-keyed and stale CharacterAdded callbacks are rejected before/after Humanoid acquisition.
-- Quest starts now call `PlayerService.Sync()` so active-quest mutations participate in save revision settling.
+- Quest starts call `PlayerService.Sync()` so active-quest mutations participate in save revision settling.
 - Enemy defeat rewards no longer reject the entire XP/Loot reward when the Money wallet is full; EconomyService alone caps Money.
 - Guardian rewards use the same wallet-cap-safe semantics and never set `Rewarded` when no valid loaded player profile exists.
 - Daily Bounty checks wallet capacity before payout and marks `Claimed` only after the complete reward is actually granted; failed payout restores progress to goal-1.
@@ -51,6 +53,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Missing Humanoid/RootPart resets movement position state so stale `sampleDt` cannot inflate teleport tolerance.
 - Dodge invulnerability end tasks use per-player tokens, preventing stale delayed callbacks from cancelling a newer dodge after re-dodge or respawn.
 - CharacterAdded health binding checks the exact Character instance before/after yielding for the Humanoid, preventing stale-respawn bindings.
+- `CombatPresentation.client.lua` additionally uses a Character-generation token for local HealthChanged camera reactions, preventing stale client-only callbacks after respawn.
 - Guardian telegraph impacts are bound to the original Character instance, preventing an old windup from damaging a freshly respawned Character.
 - AI pathfinding revalidates the NPC after yielded `ComputeAsync()` work before publishing the result.
 - Menu/dialog contracts explicitly treat `INVENTORY` as the combined `OpenCrystalMenu` inventory+crystals menu alias.
@@ -69,19 +72,18 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 ## Open decisions / limitations
 - No actual Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
-- Latest commit workflow-run/Combined Status queries provide no verified CI run/status; do not call CI green without actual evidence.
+- Latest Combined Status/workflow-run queries provide no verified CI run/status; do not call CI green without actual evidence.
 - Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
-- `CombatPresentation.client.lua` still has a client-only stale-Humanoid presentation edge case around its `WaitForChild("Humanoid", 5)` CharacterAdded handler; server gameplay authority is unaffected.
+- `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as acquisition activities; decide the final model before building acquisition content.
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
 
 ## Next steps
-1. Continue concrete static audits where risk remains.
-2. Harden/verify the remaining client-only stale-Humanoid presentation edge case.
-3. Move toward Roblox Studio multiplayer validation.
-4. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first.
-5. Keep gameplay authority in server systems; animation/VFX never decide damage, timing or rewards.
+1. Continue concrete static audits and eliminate newly introduced authority/config drift.
+2. Move toward Roblox Studio multiplayer validation.
+3. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat the asset contract for TIDE/GALE.
+4. Keep gameplay authority in server systems; animation/VFX never decide damage, timing or rewards.
 
 ## Do not do
 - Do not merge, reset or force-update `main` from this workstream.
