@@ -40,8 +40,12 @@ jobs:
               problems.append("Bootstrap must not mutate mastery level directly")
           if "CrystalAbilityService" not in rojo:
               problems.append("CrystalAbilityService is missing from default.project.json")
-          if "if crystalId == \"TIDE\"" in combat or "elseif crystalId == \"GALE\"" in combat:
-              problems.append("Crystal-specific special branches must live in CrystalAbilityService")
+          if 'CrystalConfig.Abilities.TIDE' in combat or 'CrystalConfig.Abilities.GALE' in combat or 'CrystalConfig.Abilities.EMBER' in combat:
+              problems.append("Crystal-specific ability implementation/config must not live in CombatService")
+          if 'local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"' not in combat:
+              problems.append("CombatService must route targetless TIDE Ability requests explicitly")
+          if 'CrystalAbilityService.Execute(player, profile, crystalId, nil' not in combat:
+              problems.append("CombatService must delegate targetless TIDE Ability execution to CrystalAbilityService")
           if "PlayerService.Heal(player, healAmount)" not in ability_text:
               problems.append("TIDE healing must use the canonical PlayerService.Heal path")
           if re.search(r'\.(?:Health|MaxHealth)\s*=', ability_text):
@@ -52,4 +56,4 @@ jobs:
                   print(f" - {problem}")
               raise SystemExit(1)
 
-          print("Crystal ability/mastery service boundary validated, including canonical Tide healing.")
+          print("Crystal ability/mastery service boundary validated, including targetless TIDE routing and canonical Tide healing.")
