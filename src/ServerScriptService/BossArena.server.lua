@@ -118,7 +118,7 @@ end
 createArena()
 
 task.spawn(function()
-	local interval = math.max(0.1, finiteNumber(config.Interval, 0.75))
+	local interval = math.clamp(finiteNumber(config.Interval, 0.75), 0.1, 10)
 	while arena.Parent do
 		local guardian = NPCs:FindFirstChild("CrystalGuardian")
 		local humanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
