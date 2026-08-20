@@ -119,8 +119,12 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 	if not parent or not parent.Parent or typeof(position) ~= "Vector3" then return nil end
 	local bossName = uniqueName or "CrystalGuardian"
 	local existing = parent:FindFirstChild(bossName)
-	if existing and existing:IsA("Model") and existing:GetAttribute("BossId") == "CrystalGuardian" then
-		return existing
+	if existing then
+		if existing:IsA("Model") and existing:GetAttribute("BossId") == "CrystalGuardian" then
+			return existing
+		end
+		-- Reserved boss identity: remove a corrupt/non-boss object instead of spawning a name collision.
+		existing:Destroy()
 	end
 
 	local config = BossConfig.CrystalGuardian
