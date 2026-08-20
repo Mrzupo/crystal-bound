@@ -13,6 +13,7 @@ local CombatModifierService = require(script.Parent.CombatModifierService)
 local CrystalAbilityService = require(script.Parent.CrystalAbilityService)
 local DailyBountyService = require(script.Parent.DailyBountyService)
 local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
+local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 
 local CombatService = {}
 local cooldowns = setmetatable({}, { __mode = "k" })
@@ -116,6 +117,12 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	local xpGain = validNonNegativeInteger(enemyConfig.XP)
 	local moneyGain = validNonNegativeInteger(enemyConfig.Money)
 	if xpGain == nil or moneyGain == nil then return end
+
+	local currentMoney = math.clamp(finiteNumber(profile.Money) or 0, EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
+	if currentMoney + moneyGain > EconomyConfig.MaxMoney then
+		player:SetAttribute("LootMessage", "Spend some Money before claiming enemy rewards.")
+		return
+	end
 
 	targetModel:SetAttribute("DeathRewarded", true)
 	local _, _, levelsGained = XPService.AddXP(profile, xpGain)
