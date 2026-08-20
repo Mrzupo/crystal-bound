@@ -58,6 +58,7 @@ function ShopService.Buy(profile, itemId, amount, InventoryService, EconomyServi
 	if not EconomyService.RemoveMoney(profile, total) then return false, "Unable to charge purchase." end
 	local added = InventoryService.AddItem(profile, itemId, amount)
 	if added ~= amount then
+		if added > 0 then InventoryService.RemoveItem(profile, itemId, added) end
 		EconomyService.AddMoney(profile, total)
 		return false, "Purchase could not be added to inventory."
 	end
