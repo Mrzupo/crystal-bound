@@ -15,36 +15,44 @@ jobs:
           from pathlib import Path
           text = Path('src/ReplicatedStorage/Modules/PlayerData.lua').read_text(encoding='utf-8')
           required = [
-              'data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel',
-              'data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney',
-              'data.CrystalMastery = normalizedMastery',
-              'data.Inventory = normalizeInventory(data.Inventory)',
+              'data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)',
+              'data.Experience = capExperienceBelowNextLevel(data.Level, data.Experience, XPConfig.MaxLevel, XPConfig.MaxExperience, XPConfig.GetRequiredXP)',
+              'data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)',
+              'data.Inventory = inventory',
               'data.ActiveQuests = filteredActive',
-              'data.UnlockedIslands = normalizeList(data.UnlockedIslands',
-              'data.SessionLock = { JobId = jobId, Timestamp = sessionTimestamp }',
+              'data.CompletedQuests = normalizedCompleted',
+              'data.UnlockedIslands = normalizeList(data.UnlockedIslands, isIslandId)',
+              'data.CrystalMastery = normalizedMastery',
+              'data.Titles = canonicalTitles',
+              'data.SessionLock = jobId ~= "" and token ~= "" and sessionTimestamp > 0',
               'data.Version = defaults.Version',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing persistence reconcile contract: ' + ', '.join(missing))
 
+          bounty_required = [
+              'data.DailyBounty.Goal = clampInt(bountyDefinition.Goal, 1, 100, 1)',
+              'data.DailyBounty.Progress = math.clamp(data.DailyBounty.Progress, 0, data.DailyBounty.Goal)',
+              'if data.DailyBounty.Claimed and data.DailyBounty.Progress < data.DailyBounty.Goal then',
+              'data.DailyBounty.Claimed = false',
+              'data.DailyBounty.RewardMoney = clampInt(bountyDefinition.RewardMoney, 0, EconomyConfig.MaxMoney, 0)',
+          ]
+          missing = [marker for marker in bounty_required if marker not in text]
+          if missing:
+              raise SystemExit('missing Daily Bounty reconcile invariant: ' + ', '.join(missing))
+
           crystal_required = [
-              'local function hasCompleteCrystalConfig(value)',
-              'if not isFiniteNumber(required) or required < 1 or required % 1 ~= 0 then return false end',
-              'type(CrystalConfig.Definitions[value]) == "table"',
-              'type(CrystalConfig.BasicAttack[value]) == "table"',
-              'type(CrystalConfig.Abilities[value]) == "table"',
-              'type(CrystalConfig.Passives[value]) == "table"',
-              'data.Crystals.Owned = normalizeList(data.Crystals.Owned, hasCompleteCrystalConfig)',
-              'if not hasCompleteCrystalConfig(data.Crystals.Equipped)',
-              'for crystalId in pairs(CrystalConfig.UnlockLevels) do',
-              'if hasCompleteCrystalConfig(crystalId) then',
-              'normalizedMastery[crystalId] = mastery',
+              'local function CrystalSystemExists(value)',
+              'local owned = normalizeList(crystals.Owned, CrystalSystemExists)',
+              'if not table.find(owned, "EMBER") and CrystalSystem.Exists("EMBER") then',
+              'CrystalSystemExists(crystals.Equipped) and table.find(owned, crystals.Equipped)',
+              'if CrystalSystemExists(crystalId) and table.find(owned, crystalId) then',
           ]
           missing = [marker for marker in crystal_required if marker not in text]
           if missing:
-              raise SystemExit('missing persisted complete Crystal normalization contract: ' + ', '.join(missing))
-          print('Persistence reconcile and complete Crystal normalization contracts validated.')
+              raise SystemExit('missing persisted Crystal ownership normalization contract: ' + ', '.join(missing))
+          print('Persistence reconcile, Daily Bounty consistency and Crystal ownership normalization validated.')
           PY
 
       - name: Validate session heartbeat lock-loss handling
@@ -56,7 +64,7 @@ jobs:
               'local HEARTBEAT_INTERVAL = 45',
               'local MAX_CONSECUTIVE_FAILURES = 2',
               'failures = setmetatable({}, { __mode = "k" })',
-              'local ok, reason = SafeProfileStore.Refresh(player)',
+              'local ok = PlayerService.RefreshSession(player)',
               'failures[player] = (failures[player] or 0) + 1',
               'if failures[player] >= MAX_CONSECUTIVE_FAILURES then',
               'player:Kick("Crystal Bound lost the save-session lock.',
