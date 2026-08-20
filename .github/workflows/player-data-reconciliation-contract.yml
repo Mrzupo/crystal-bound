@@ -26,6 +26,12 @@ jobs:
               'data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)',
               'data.QuestProgress = normalizedProgress',
               'data.UnlockedIslands = normalizeList(data.UnlockedIslands, isIslandId)',
+              'local stats = type(data.Stats) == "table" and data.Stats or {}',
+              'Damage = clampInt(stats.Damage, 0, 1000, defaults.Stats.Damage)',
+              'EnemiesDefeated = clampInt(stats.EnemiesDefeated, 0, 1000000000, defaults.Stats.EnemiesDefeated)',
+              'BossesDefeated = clampInt(stats.BossesDefeated, 0, 1000000000, defaults.Stats.BossesDefeated)',
+              'AncientGolemsDefeated = clampInt(stats.AncientGolemsDefeated, 0, 1000000000, defaults.Stats.AncientGolemsDefeated)',
+              'CrystalBatsDefeated = clampInt(stats.CrystalBatsDefeated, 0, 1000000000, defaults.Stats.CrystalBatsDefeated)',
               'local function isBountyEnemy(value)',
               'for _, definition in ipairs(DailyBountyConfig.Goals) do',
               'data.DailyBounty.Claimed = data.DailyBounty.Claimed == true',
@@ -46,4 +52,4 @@ jobs:
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated.')
+          print('Persisted player-data reconciliation contract validated, including stats and bounty bounds.')
