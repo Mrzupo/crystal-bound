@@ -21,7 +21,7 @@ jobs:
           text = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
 
           required = [
-              "local active = setmetatable({}, { __weak = true })",
+              "local active = setmetatable({}, { __mode = \"k\" })",
               "local function stateFor(humanoid)",
               "local state = stateFor(humanoid)",
               "local token = {}",
