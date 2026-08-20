@@ -2,7 +2,7 @@ name: Crystal Upgrade Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/crystal-mastery-config-identity"]
   pull_request:
 
 jobs:
@@ -64,6 +64,7 @@ jobs:
               "function CrystalMastery.AddXP",
               "function CrystalMastery.GetUpgradeCost",
               "function CrystalMastery.Upgrade",
+              "InventoryConfig.GetItemConfig(itemId)",
               "boundedPositiveConfig(Config.DamagePerLevel, 0, 1)",
               "boundedPositiveConfig(Config.AbilityDamagePerLevel, 0, 1)",
               "boundedPositiveConfig(Config.HealthPerLevel, 0, 100)",
@@ -73,4 +74,4 @@ jobs:
           if missing:
               raise SystemExit("CrystalMastery strict ID/ownership/bonus boundary missing: " + ", ".join(missing))
 
-          print("Crystal upgrade config, bonus bounds, material ownership and strict invalid-ID/ownership semantics validated.")
+          print("Crystal upgrade config, registered cost IDs, bonus bounds, material ownership and strict invalid-ID/ownership semantics validated.")
