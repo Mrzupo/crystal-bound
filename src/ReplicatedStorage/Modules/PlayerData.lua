@@ -5,6 +5,7 @@ local XPConfig = require(ReplicatedStorage.Config.XPConfig)
 local WorldConfig = require(ReplicatedStorage.Config.WorldConfig)
 local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
+local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local DailyBountyConfig = require(ReplicatedStorage.Config.DailyBountyConfig)
 local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
@@ -41,6 +42,12 @@ end
 
 local function CrystalSystemExists(value)
 	return type(value) == "string" and type(CrystalConfig.Definitions[value]) == "table"
+end
+
+local function capExperienceBelowNextLevel(level, experience, maxLevel, maxExperience, requiredXP)
+	if level >= maxLevel then return 0 end
+	local required = requiredXP(level)
+	return math.clamp(experience, 0, math.max(0, required - 1))
 end
 
 local function firstDailyBounty()
@@ -87,6 +94,7 @@ function PlayerData.Reconcile(input)
 
 	data.Level = clampInt(data.Level, 1, XPConfig.MaxLevel, defaults.Level)
 	data.Experience = clampInt(data.Experience, 0, XPConfig.MaxExperience, defaults.Experience)
+	data.Experience = capExperienceBelowNextLevel(data.Level, data.Experience, XPConfig.MaxLevel, XPConfig.MaxExperience, XPConfig.GetRequiredXP)
 	data.Money = clampInt(data.Money, EconomyConfig.MinMoney, EconomyConfig.MaxMoney, defaults.Money)
 
 	local inventory = {}
@@ -114,11 +122,11 @@ function PlayerData.Reconcile(input)
 	for crystalId, state in pairs(mastery) do
 		if CrystalSystemExists(crystalId) and table.find(owned, crystalId) then
 			local value = type(state) == "table" and state or {}
-			local maxLevel = tonumber(CrystalUpgradeConfig.MaxLevel) or 10
-			normalizedMastery[crystalId] = {
-				Level = clampInt(value.Level, 1, maxLevel, 1),
-				XP = clampInt(value.XP, 0, XPConfig.MaxExperience, 0),
-			}
+			local maxLevel = math.max(1, math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel) or 10))
+			local level = clampInt(value.Level, 1, maxLevel, 1)
+			local xp = clampInt(value.XP, 0, math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000)), 0)
+			xp = capExperienceBelowNextLevel(level, xp, maxLevel, math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000)), CrystalMastery.GetRequiredXP)
+			normalizedMastery[crystalId] = { Level = level, XP = xp }
 		end
 	end
 	if not normalizedMastery.EMBER then normalizedMastery.EMBER = { Level = 1, XP = 0 } end
