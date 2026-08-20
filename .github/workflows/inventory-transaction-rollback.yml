@@ -1,0 +1,35 @@
+name: Inventory Transaction Rollback Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate rollback of partial inventory insertion
+        shell: python
+        run: |
+          from pathlib import Path
+
+          shop = Path("src/ServerScriptService/Services/ShopService.lua").read_text(encoding="utf-8")
+          crafting = Path("src/ServerScriptService/Services/CraftingService.lua").read_text(encoding="utf-8")
+
+          if "local added = InventoryService.AddItem(profile, itemId, amount)" not in shop:
+              raise SystemExit("Shop purchase must capture the actual inventory amount inserted")
+          if "InventoryService.RemoveItem(profile, itemId, added)" not in shop:
+              raise SystemExit("Shop purchase must remove a partial inventory insertion before refunding Money")
+          if "EconomyService.AddMoney(profile, total)" not in shop:
+              raise SystemExit("Shop purchase must refund Money after failed inventory insertion")
+
+          if "local added = InventoryService.AddItem(profile, recipe.Output, outputAmount)" not in crafting:
+              raise SystemExit("Crafting must capture the actual output amount inserted")
+          if "InventoryService.RemoveItem(profile, recipe.Output, added)" not in crafting:
+              raise SystemExit("Crafting must remove a partial output insertion before rolling back inputs")
+          if "for itemId, consumedAmount in pairs(consumed) do InventoryService.AddItem(profile, itemId, consumedAmount) end" not in crafting:
+              raise SystemExit("Crafting must restore every consumed input after output insertion failure")
+
+          print("Shop and Crafting partial-insertion rollback validated.")
