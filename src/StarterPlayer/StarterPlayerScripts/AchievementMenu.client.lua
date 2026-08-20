@@ -16,12 +16,18 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
+local function closeMenu()
+	open = false
+	if panel then panel.Visible = false end
+	player:SetAttribute("OpenAchievementMenu", nil)
+end
+
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
 	gui = playerGui:FindFirstChild("AchievementMenu")
 	if gui then panel = gui.Panel; return end
 	gui = Instance.new("ScreenGui")
-gui.Name = "AchievementMenu"
+	gui.Name = "AchievementMenu"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.Parent = playerGui
@@ -52,7 +58,7 @@ gui.Name = "AchievementMenu"
 	close.Font = Enum.Font.GothamBold
 	close.TextSize = 18
 	close.Parent = panel
-	close.Activated:Connect(function() open = false; panel.Visible = false end)
+	close.Activated:Connect(closeMenu)
 
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "List"
@@ -113,6 +119,6 @@ player:GetAttributeChangedSignal("OpenAchievementMenu"):Connect(openMenu)
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
 	if input.KeyCode == Enum.KeyCode.L then
-		if open then open = false; panel.Visible = false else openMenu() end
+		if open then closeMenu() else openMenu() end
 	end
 end)
