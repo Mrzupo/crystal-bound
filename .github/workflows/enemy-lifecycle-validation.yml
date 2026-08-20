@@ -9,13 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate enemy death cleanup, attacker liveness and AI startup idempotency
+      - name: Validate enemy death cleanup, attacker liveness and AI shutdown idempotency
         run: |
           python - <<'PY'
           from pathlib import Path
           npc = Path('src/ServerScriptService/Services/NPCService.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
           required = [
+              'local PlayerService = require(script.Parent.PlayerService)',
               'humanoid.Died:Connect(function()',
               'AIPathService.Clear(model)',
               'StatusEffectService.Clear(humanoid)',
@@ -27,6 +28,7 @@ jobs:
               'if attackerHumanoid and attackerHumanoid.Health <= 0 then return false end',
               'if model:GetAttribute("AIStarted") == true then return false end',
               'model:SetAttribute("AIStarted", true)',
+              'while model.Parent and humanoid.Health > 0 and not PlayerService.ShuttingDown do',
               'NPCService.StartEnemyAI(model)',
           ]
           missing = [marker for marker in required if marker not in npc]
@@ -41,5 +43,5 @@ jobs:
           missing = [marker for marker in bootstrap_required if marker not in bootstrap]
           if missing:
               raise SystemExit('missing Bootstrap enemy-respawn shutdown guard: ' + ', '.join(missing))
-          print('Enemy lifecycle cleanup, attacker liveness, single-start AI and shutdown-safe respawn contract validated.')
+          print('Enemy lifecycle cleanup, attacker liveness, single-start AI, shutdown-safe AI loop and shutdown-safe respawn contract validated.')
           PY
