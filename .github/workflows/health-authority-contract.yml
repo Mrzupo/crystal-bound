@@ -51,4 +51,10 @@ jobs:
           if health_write.search(ability):
               raise SystemExit('CrystalAbilityService must not directly write Humanoid Health/MaxHealth')
 
+          consumable = Path('src/ServerScriptService/UseItemRemote.server.lua').read_text(encoding='utf-8')
+          if 'PlayerService.Heal(player, healAmount)' not in consumable:
+              raise SystemExit('Consumable healing must route through PlayerService.Heal')
+          if health_write.search(consumable):
+              raise SystemExit('UseItemRemote must not directly write Humanoid Health/MaxHealth')
+
           print('Health authority validated: PlayerService owns player health changes; NPCService/BossService only initialize NPC health.')
