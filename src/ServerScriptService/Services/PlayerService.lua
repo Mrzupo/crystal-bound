@@ -6,6 +6,7 @@ local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
 local DailyBountyService = require(script.Parent.DailyBountyService)
 local EconomyService = require(script.Parent.EconomyService)
+local StatusEffectService = require(script.Parent.StatusEffectService)
 local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 
 local PlayerService = {
@@ -309,10 +310,9 @@ function PlayerService.Sync(player, internal)
 	if humanoid then
 		ensureAnimator(character)
 		local baseWalkSpeed = BASE_WALK_SPEED + walkSpeedBonus
-		local slowMultiplier = tonumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"))
-		if type(slowMultiplier) == "number" and slowMultiplier == slowMultiplier and slowMultiplier ~= math.huge and slowMultiplier ~= -math.huge then
-			slowMultiplier = math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
-			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * slowMultiplier)
+		local slowMultiplier = StatusEffectService.GetSlowMultiplier(humanoid)
+		if slowMultiplier then
+			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
 		else
 			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed)
 		end
