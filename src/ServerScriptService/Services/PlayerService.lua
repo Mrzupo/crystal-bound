@@ -343,7 +343,7 @@ function PlayerService.Sync(player, internal)
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do player:SetAttribute("Owns_" .. id, table.find(owned, id) ~= nil) end
 
-	if not PlayerService.ShuttingDown then
+	if not PlayerService.ShuttingDown and player:GetAttribute("ProfileLoaded") == true then
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
@@ -439,6 +439,7 @@ function PlayerService.Remove(player)
 
 	PlayerService.Closing[player] = true
 	PlayerService.RemovalResults[player] = nil
+	if player.Parent then player:SetAttribute("ProfileLoaded", false) end
 	if not acquireOperation(player) then
 		PlayerService.RemovalResults[player] = false
 		PlayerService.Closing[player] = nil
