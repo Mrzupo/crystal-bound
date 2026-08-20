@@ -21,6 +21,14 @@ local function clearMenuState()
 	end
 end
 
+local function clearOtherMenuState()
+	for _, attribute in ipairs(MENU_ATTRIBUTES) do
+		if attribute ~= "OpenNPCDialog" then
+			player:SetAttribute(attribute, nil)
+		end
+	end
+end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "NPCDialogMenu"
 gui.ResetOnSpawn = false
@@ -125,7 +133,7 @@ openDialog = function(npcId, character, generation)
 		scheduleDialogRetry(npcId, character, generation)
 		return
 	end
-	clearMenuState()
+	clearOtherMenuState()
 	currentLines = type(data.Lines) == "table" and data.Lines or {}
 	currentIndex = 1
 	title.Text = data.Name or npcId
