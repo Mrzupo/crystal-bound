@@ -15,6 +15,7 @@ jobs:
           from pathlib import Path
           world = Path('src/ReplicatedStorage/Config/WorldConfig.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
           world_markers = [
               'local worldIslands = WorldConfig.Islands',
               'local starterConfig, tideConfig, windConfig, ancientConfig = worldIslands.STARTER, worldIslands.TIDE, worldIslands.WIND, worldIslands.ANCIENT',
@@ -35,4 +36,19 @@ jobs:
                   raise SystemExit(f'{portal} must use canonical WorldConfig level {level_expr}')
           if 'tostring(requiredLevel or 1)' not in bootstrap:
               raise SystemExit('Portal UI must derive the displayed gate from the server-side requiredLevel argument')
-          print('World/portal canonical level contract validated.')
+
+          destinations = {
+              'TidePortal': 'Vector3.new(120,4,0)',
+              'StarterPortal': 'Vector3.new(48,4,0)',
+              'WindPortal': 'Vector3.new(280,4,0)',
+              'TideReturnPortal': 'Vector3.new(210,4,0)',
+              'AncientPortal': 'Vector3.new(440,4,0)',
+              'WindReturnPortal': 'Vector3.new(380,4,0)',
+          }
+          for portal, destination in destinations.items():
+              if destination not in bootstrap:
+                  raise SystemExit(f'{portal} Bootstrap destination drift: missing {destination}')
+              if destination not in theme:
+                  raise SystemExit(f'{portal} WorldTheme destination drift: missing {destination}')
+
+          print('World/portal canonical level and destination consistency contract validated.')
