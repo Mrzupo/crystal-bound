@@ -202,7 +202,14 @@ local function spawnSimpleNPC(npcs,name,position,objectText,actionText,callback)
 end
 local function spawnQuestGiver(npcs) spawnSimpleNPC(npcs,"CrystalKeeper",Vector3.new(12,3,-2),"Crystal Keeper","Talk",function() end) end
 local function spawnTrader(npcs) spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end) end
-local function spawnEnemy(npcs,typeId,position,uniqueName) if npcs:FindFirstChild(uniqueName) then return end; NPCService.CreateEnemy(typeId,position,npcs,function(_,config) task.delay(config.Respawn,function() if npcs.Parent then spawnEnemy(npcs,typeId,position,uniqueName) end end,uniqueName) end,uniqueName) end
+local function spawnEnemy(npcs,typeId,position,uniqueName)
+	if PlayerService.ShuttingDown or npcs:FindFirstChild(uniqueName) then return end
+	NPCService.CreateEnemy(typeId,position,npcs,function(_,config)
+		task.delay(config.Respawn,function()
+			if not PlayerService.ShuttingDown and npcs.Parent then spawnEnemy(npcs,typeId,position,uniqueName) end
+		end,uniqueName)
+	end,uniqueName)
+end
 
 local npcs,islands,spawnFolder=ensureWorldFolders()
 local worldIslands = WorldConfig.Islands
