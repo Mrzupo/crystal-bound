@@ -50,6 +50,7 @@ function QuestService.Start(player, profile, questId)
 	end
 	local started = QuestSystem.Start(profile, questId)
 	if started then
+		PlayerService.Sync(player)
 		sync(player, profile)
 		local definition = QuestSystem.GetDefinition(questId)
 		if definition then player:SetAttribute("QuestMessage", "Started: " .. definition.Name) end
