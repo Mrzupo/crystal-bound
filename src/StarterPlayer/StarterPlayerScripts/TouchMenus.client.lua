@@ -10,7 +10,18 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 
+local MENU_ATTRIBUTES = {
+	"OpenQuestMenu",
+	"OpenShopMenu",
+	"OpenCrystalMenu",
+	"OpenCraftingMenu",
+	"OpenAchievementMenu",
+}
+
 local function openByAttribute(attributeName)
+	for _, attribute in ipairs(MENU_ATTRIBUTES) do
+		player:SetAttribute(attribute, nil)
+	end
 	player:SetAttribute(attributeName, os.clock())
 end
 
