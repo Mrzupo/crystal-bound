@@ -1,0 +1,38 @@
+name: Crystal Config Completeness
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical Crystal source completeness
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          text = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
+
+          def keys(block_name):
+              match = re.search(rf'{block_name}\s*=\s*\{{(.*?)\n\t\}},', text, re.S)
+              if not match:
+                  raise SystemExit(f"CrystalConfig missing block: {block_name}")
+              return set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*\{{', match.group(1), re.M))
+
+          sources = {
+              "Definitions": keys("Definitions"),
+              "UnlockLevels": set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*\d+,?$', re.search(r'UnlockLevels\s*=\s*\{(.*?)\n\t\},', text, re.S).group(1), re.M)),
+              "BasicAttack": keys("BasicAttack"),
+              "Abilities": keys("Abilities"),
+              "Passives": keys("Passives"),
+          }
+          expected = sources["Definitions"]
+          for name, values in sources.items():
+              if values != expected:
+                  raise SystemExit(f"CrystalConfig source drift for {name}: expected {sorted(expected)}, found {sorted(values)}")
+          print("CrystalConfig canonical source completeness validated.")
