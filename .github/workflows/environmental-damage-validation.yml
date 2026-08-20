@@ -14,10 +14,13 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           damage = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
+          validators = Path('src/ReplicatedStorage/Modules/Combat/DamageValidators.lua').read_text(encoding='utf-8')
           status = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
           arena = Path('src/ServerScriptService/BossArena.server.lua').read_text(encoding='utf-8')
           if 'if request.DamageType == DamageTypes.Environmental then' not in damage or 'return request.Attacker == nil' not in damage:
               raise SystemExit('DamageService missing strict attacker-less Environmental gate')
+          if 'request.DamageType == DamageTypes.Environmental and request.Attacker ~= nil' not in validators:
+              raise SystemExit('DamageValidators missing strict Environmental attacker boundary')
           if 'DamageType = DamageTypes.Environmental' not in status:
               raise SystemExit('StatusEffectService environmental damage path missing explicit type')
           required_arena = (
