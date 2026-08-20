@@ -1,0 +1,42 @@
+name: Player Data Exposure Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate public player-data surface
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          block = text.split("remotes.GetPlayerData.OnServerInvoke", 1)[1].split("remotes.GetQuestData.OnServerInvoke", 1)[0]
+          required = [
+              "Level = profile.Level",
+              "Experience = profile.Experience",
+              "Money = profile.Money",
+              "Crystals = profile.Crystals",
+              "CrystalMastery = profile.CrystalMastery",
+              "Inventory = profile.Inventory",
+              "Achievements = profile.Achievements",
+              "Titles = profile.Titles",
+          ]
+          forbidden = [
+              "SessionLock",
+              "SessionId",
+              "SessionLockedAt",
+              "Operations",
+          ]
+          missing = [marker for marker in required if marker not in block]
+          leaked = [marker for marker in forbidden if marker in block]
+          if missing:
+              raise SystemExit("GetPlayerData is missing expected public fields: " + ", ".join(missing))
+          if leaked:
+              raise SystemExit("GetPlayerData exposes internal state: " + ", ".join(leaked))
+          print("Player data exposure contract validated.")
