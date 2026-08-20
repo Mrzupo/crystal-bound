@@ -60,7 +60,7 @@ local function clearPortalState(player)
 end
 
 local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
-	if not player.Parent or player.Character ~= character then return end
+	if not player.Parent or PlayerService.ShuttingDown or player.Character ~= character then return end
 	local profile = PlayerService.GetProfile(player)
 	if not profile or profile.Level < requiredLevel then return end
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -86,7 +86,7 @@ local function bindPortal(portal)
 	portalConnections[portal] = portal.Touched:Connect(function(hit)
 		local character = hit and hit:FindFirstAncestorOfClass("Model")
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player or player.Character ~= character or portalCooldowns[player] then return end
+		if not player or PlayerService.ShuttingDown or player.Character ~= character or portalCooldowns[player] then return end
 		local profile = PlayerService.GetProfile(player)
 		if not profile or profile.Level < target.RequiredLevel then return end
 		local root = character:FindFirstChild("HumanoidRootPart")
@@ -158,9 +158,10 @@ local function bindPlayer(player)
 	clearPortalState(player)
 	rememberPosition(player)
 	playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+		if PlayerService.ShuttingDown then return end
 		clearPortalState(player)
 		task.defer(function()
-			if player.Parent and player.Character == character then rememberPosition(player) end
+			if player.Parent and not PlayerService.ShuttingDown and player.Character == character then rememberPosition(player) end
 		end)
 	end)
 end
@@ -169,7 +170,7 @@ for _, player in ipairs(Players:GetPlayers()) do bindPlayer(player) end
 Players.PlayerAdded:Connect(bindPlayer)
 
 task.spawn(function()
-	while islands.Parent do
+	while islands.Parent and not PlayerService.ShuttingDown do
 		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			local root = getRoot(player)
@@ -178,7 +179,7 @@ task.spawn(function()
 		for player, candidate in pairs(portalCandidates) do
 			if now > candidate.ExpiresAt then
 				portalCandidates[player] = nil
-			elseif player.Parent and player.Character == candidate.Character then
+			elseif player.Parent and not PlayerService.ShuttingDown and player.Character == candidate.Character then
 				tryArmArrival(player, candidate.Character, candidate.Destination, candidate.BeforePosition, candidate.RequiredLevel)
 			end
 		end
