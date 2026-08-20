@@ -235,6 +235,9 @@ function PlayerData.Reconcile(input)
 	end
 	data.DailyBounty.Goal = clampInt(bountyDefinition.Goal, 1, 100, 1)
 	data.DailyBounty.Progress = math.clamp(data.DailyBounty.Progress, 0, data.DailyBounty.Goal)
+	if data.DailyBounty.Claimed and data.DailyBounty.Progress < data.DailyBounty.Goal then
+		data.DailyBounty.Claimed = false
+	end
 	data.DailyBounty.RewardMoney = clampInt(bountyDefinition.RewardMoney, 0, EconomyConfig.MaxMoney, 0)
 
 	data.SessionId = type(data.SessionId) == "string" and data.SessionId or ""
