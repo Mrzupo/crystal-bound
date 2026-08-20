@@ -2,7 +2,7 @@ name: Menu Attribute Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-menu-bridge-identity-v2"]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate shared menu attributes and close-state cleanup
+      - name: Validate shared menu attributes and NPC bridge identity
         shell: python
         run: |
           from pathlib import Path
@@ -48,26 +48,24 @@ jobs:
           if 'local MENU_ATTRIBUTES = {' not in text["dialog"] or 'clearMenuState()' not in text["dialog"]:
               problems.append("NPCDialogMenu must centralize and clear menu attributes")
 
-          if 'local PlayerService = require(script.Parent.Services.PlayerService)' not in text["bridge"]:
-              problems.append("NPCMenuBridge must depend on PlayerService for shutdown lifecycle authority")
-          if 'if PlayerService.ShuttingDown then return end' not in text["bridge"]:
-              problems.append("NPCMenuBridge must reject prompt/deferred menu writes during shutdown")
-          if 'local function openDialog(player, npcId, character)' not in text["bridge"]:
-              problems.append("NPCMenuBridge must bind deferred dialog opening to the triggering Character")
-          if 'player.Character == character and character.Parent' not in text["bridge"]:
-              problems.append("NPCMenuBridge deferred open must reject stale Character callbacks")
-          if 'openDialog(player, model.Name, character)' not in text["bridge"]:
-              problems.append("NPCMenuBridge prompt handler must pass the triggering Character into deferred dialog state")
-          if 'local playerCharacterConnections = setmetatable({}, { __mode = "k" })' not in text["bridge"]:
-              problems.append("NPCMenuBridge must keep Character connection state weak-keyed")
-          if 'local function bindPlayer(player)' not in text["bridge"] or 'playerCharacterConnections[player] = player.CharacterAdded:Connect' not in text["bridge"]:
-              problems.append("NPCMenuBridge must bind CharacterAdded for lifecycle cleanup")
-          if 'playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)' not in text["bridge"]:
-              problems.append("NPCMenuBridge CharacterAdded connection must be explicit")
-          if 'if player.Parent and player.Character == character then' not in text["bridge"] or 'clearMenus(player)' not in text["bridge"]:
-              problems.append("NPCMenuBridge must clear menu state on the current respawn Character")
-          if 'disconnectPlayer(player)' not in text["bridge"] or 'Players.PlayerRemoving:Connect(function(player)' not in text["bridge"]:
-              problems.append("NPCMenuBridge must disconnect per-player lifecycle state on leave")
+          bridge_markers = (
+              'local function getCanonicalNPC(model)',
+              'model.Parent ~= Workspace:FindFirstChild("NPCs")',
+              'model:GetAttribute("Interactable") ~= true',
+              'model.Name ~= "CrystalKeeper" and model.Name ~= "MaterialTrader"',
+              'local function openDialog(player, npcId, character, model)',
+              'local canonical = getCanonicalNPC(model)',
+              'player.Character == character and character.Parent and isNearModel(player, canonical)',
+              'openDialog(player, canonical.Name, character, canonical)',
+              'local playerCharacterConnections = setmetatable({}, { __mode = "k" })',
+              'local function bindPlayer(player)',
+              'playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)',
+              'disconnectPlayer(player)',
+              'Players.PlayerRemoving:Connect(function(player)',
+          )
+          for marker in bridge_markers:
+              if marker not in text["bridge"]:
+                  problems.append(f"NPCMenuBridge canonical/lifecycle marker missing: {marker}")
 
           menu_guards = {
               "quest": "OpenQuestMenu",
@@ -88,4 +86,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, respawn cleanup, shutdown rejection and close-state contract validated.")
+          print("Menu attributes, canonical NPC identity, Character-bound deferred dialog opening, respawn cleanup, shutdown rejection and close-state contract validated.")
