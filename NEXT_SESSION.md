@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1401 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1404 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 - Current compared main base: `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Current state
@@ -42,7 +42,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Quest completion validates objective/reward data before committing state but no longer blocks valid quest completion on a full Money wallet; XP remains fully awarded and EconomyService caps Money.
 - Achievement unlocks are one-shot/idempotent and no longer blocked by wallet capacity; EconomyService caps the Money reward.
 - Daily Bounty still requires full wallet capacity before payout because its claim is tied to a specific daily reward transaction and it rolls progress back on payout failure.
-- Enemy and Guardian rewards preserve XP/Loot when Money is capped.
+- Enemy and Guardian rewards preserve XP/Loot when Money is capped; Guardian additionally preflights the combined Boss + active Guardian Trial Money cap.
 - Shop purchase and inventory selling remain rollback-safe around Money and stack capacity.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences; `PositionCheckInterval` is currently 0.15 s.
