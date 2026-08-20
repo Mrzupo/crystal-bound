@@ -42,5 +42,7 @@ jobs:
 
           if 'DefaultMaxStackSize = 99' not in text:
               raise SystemExit('InventoryConfig must define a positive DefaultMaxStackSize')
+          if 'return math.clamp(math.floor(raw or InventoryConfig.DefaultMaxStackSize), 1, 1000)' not in text:
+              raise SystemExit('InventoryConfig.GetMaxStackSize must runtime-bound stack size to 1..1000')
 
           print('Inventory item IDs, rarities, stack bounds and sell-price semantics validated.')
