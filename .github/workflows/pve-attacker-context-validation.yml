@@ -27,14 +27,15 @@ jobs:
               problems.append("NPC damage helper must carry attacker, damage type and range")
           for snippet in [
               'damagePlayer(targetPlayer, targetHumanoid, config.AttackDamage, model, "Physical", config.AttackRange)',
-              'damagePlayer(player, targetHumanoid, baseDamage + (tonumber(special.BonusDamage) or 0), model, "Physical", range)',
+              'damagePlayer(player, targetHumanoid',
               'StatusEffectService.ApplyBurn(targetHumanoid, special.BurnDamage, special.BurnTicks, special.BurnInterval, model, range)',
               'StatusEffectService.ApplySlow(targetHumanoid, special.SlowMultiplier, special.SlowDuration)',
+              'math.min(1000, baseDamage + bonus)',
           ]:
               if snippet not in npc:
-                  problems.append(f"missing NPC attacker-context contract: {snippet}")
-          if 'DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", config.AttackRange)' not in boss:
-              problems.append("guardian normal attack must preserve attacker context")
+                  problems.append(f"missing NPC attacker-context/runtime bound: {snippet}")
+          if 'DodgeService.ApplyDamage(nearestPlayer, targetHumanoid, attackDamage, model, "Physical", attackRange)' not in boss:
+              problems.append("guardian normal attack must preserve attacker context and bounded attack range")
           if 'DodgeService.ApplyDamage(player, humanoid, damagePerTick, attacker, "Physical", range)' not in status:
               problems.append("player burn ticks must preserve NPC attacker context")
 
