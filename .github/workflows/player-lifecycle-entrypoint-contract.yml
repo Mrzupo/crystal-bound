@@ -1,0 +1,29 @@
+name: Player Lifecycle Entrypoint Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical PlayerRemoving owner and Rojo wiring
+        shell: python
+        run: |
+          from pathlib import Path
+          project = Path("default.project.json").read_text(encoding="utf-8")
+          lifecycle = Path("src/ServerScriptService/PlayerLifecycle.server.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+
+          if '"PlayerLifecycle": {"$path": "src/ServerScriptService/PlayerLifecycle.server.lua"}' not in project:
+              raise SystemExit("default.project.json must load PlayerLifecycle.server.lua")
+          if "Players.PlayerRemoving:Connect" not in lifecycle:
+              raise SystemExit("PlayerLifecycle must bind PlayerRemoving")
+          if "PlayerService.Remove(player)" not in lifecycle:
+              raise SystemExit("PlayerLifecycle must delegate final persistence to PlayerService.Remove")
+          if "function PlayerService.Remove(player)" not in service:
+              raise SystemExit("PlayerService.Remove must remain the canonical remove owner")
+          print("Player lifecycle entrypoint contract validated.")
