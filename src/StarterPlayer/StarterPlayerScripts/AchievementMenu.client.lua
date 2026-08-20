@@ -11,6 +11,8 @@ local gui
 local panel
 local refreshGeneration = 0
 local refreshInFlight = false
+local ACHIEVEMENT_RETRY_DELAY = 0.25
+local refresh
 
 local function finiteNumber(value, fallback)
 	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then return fallback end
@@ -81,7 +83,15 @@ local function ensureGui()
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8) end)
 end
 
-local function refresh()
+local function scheduleAchievementRetry(staleGeneration)
+	task.delay(ACHIEVEMENT_RETRY_DELAY, function()
+		if open and staleGeneration == refreshGeneration then
+			refresh()
+		end
+	end)
+end
+
+refresh = function()
 	ensureGui()
 	if refreshInFlight then return end
 	refreshInFlight = true
@@ -95,7 +105,10 @@ local function refresh()
 		return
 	end
 	refreshInFlight = false
-	if not ok or type(data) ~= "table" then return end
+	if not ok or type(data) ~= "table" then
+		scheduleAchievementRetry(generation)
+		return
+	end
 	for _, child in ipairs(panel.List:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
 	local unlocked = {}
 	local achievements = type(data.Achievements) == "table" and data.Achievements or {}
