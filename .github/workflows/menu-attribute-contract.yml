@@ -54,6 +54,16 @@ jobs:
               problems.append("NPCMenuBridge deferred open must reject stale Character callbacks")
           if 'openDialog(player, model.Name, character)' not in text["bridge"]:
               problems.append("NPCMenuBridge prompt handler must pass the triggering Character into deferred dialog state")
+          if 'local playerCharacterConnections = setmetatable({}, { __mode = "k" })' not in text["bridge"]:
+              problems.append("NPCMenuBridge must keep Character connection state weak-keyed")
+          if 'local function bindPlayer(player)' not in text["bridge"] or 'playerCharacterConnections[player] = player.CharacterAdded:Connect' not in text["bridge"]:
+              problems.append("NPCMenuBridge must bind CharacterAdded for lifecycle cleanup")
+          if 'playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)' not in text["bridge"]:
+              problems.append("NPCMenuBridge CharacterAdded connection must be explicit")
+          if 'if player.Parent and player.Character == character then' not in text["bridge"] or 'clearMenus(player)' not in text["bridge"]:
+              problems.append("NPCMenuBridge must clear menu state on the current respawn Character")
+          if 'disconnectPlayer(player)' not in text["bridge"] or 'Players.PlayerRemoving:Connect(function(player)' not in text["bridge"]:
+              problems.append("NPCMenuBridge must disconnect per-player lifecycle state on leave")
 
           menu_guards = {
               "quest": "OpenQuestMenu",
@@ -74,4 +84,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, respawn cleanup and close-state contract validated.")
