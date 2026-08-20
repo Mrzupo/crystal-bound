@@ -3,7 +3,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
 
-local NPC_INTERACTION_RANGE = math.max(1, tonumber(InteractionConfig.NPCInteractionRange) or 14)
+local NPC_INTERACTION_RANGE = math.clamp(tonumber(InteractionConfig.NPCInteractionRange) or 14, 4, 50)
 local MENU_ATTRIBUTES = {
 	"OpenQuestMenu",
 	"OpenShopMenu",
