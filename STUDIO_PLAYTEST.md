@@ -77,6 +77,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Expected: removal reports failure and the persistent session lock is retained.
 - During autosave, trigger a server-authorized gameplay mutation; expected: the settled save path does not report success until the changed profile state is persisted.
 - Persist a controlled `DailyBounty` record with `Claimed=true` and `Progress<Goal`; expected: `PlayerData.Reconcile()` restores `Claimed=false` before gameplay can observe the profile.
+- Inject a controlled `PlayerData.Reconcile()` failure after a successful DataStore lock claim; expected: `SafeProfileStore.Load()` releases the exact claimed SessionLock before returning the load failure.
 
 ## 8. Transactions / Consumables
 - Buy Health Potions with enough Money; confirm Money decreases exactly once and inventory increases exactly once.
@@ -114,6 +115,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Teleport through a portal, respawn before the original 1-second cooldown expires, then touch a portal again on the new Character; expected: the old delayed cooldown callback must not clear the new Character's cooldown early.
 - Perform a Dodge and verify its server velocity remains subject to the normal position authority.
 - Trigger controlled server shutdown while the player is near a portal; expected: WorldTheme stops monitoring portal candidates and no new portal movement grace is armed.
+- Trigger controlled server shutdown while a player repeatedly sends `DodgeRequest`; expected: no new Dodge boost, ForceField or invulnerability window is created after shutdown begins.
 
 ## 11. Asset pass
 - Insert the authored animation objects under the six configured names.
