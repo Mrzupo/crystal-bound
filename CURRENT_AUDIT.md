@@ -3,13 +3,13 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1290 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1293 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
 - Dedicated `PlayerLifecycle.server.lua` owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
-- `PlayerLoadCatchup.server.lua` covers players entering during Bootstrap world initialization with a bounded 30-second scan, while refusing to become a second `PlayerAdded` owner or racing an active `PlayerService.Load()`.
+- `PlayerLoadCatchup.server.lua` covers players entering during Bootstrap world initialization with a bounded 30-second scan, while refusing to become a second `PlayerAdded` owner, skipping active loads and known failed loads.
 - `PlayerService.Load()` uses a per-UserId load-generation token and shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
 - `PlayerService` CharacterAdded callbacks re-check the exact Character instance before binding Humanoid/health state, preventing stale-respawn callback races.
 - Shutdown blocks new loads, drains pending profile loads, saves/releases loaded profiles through `PlayerService.Remove()`, and has a bounded timeout.
@@ -42,7 +42,7 @@ Current compare: **1290 commits ahead, 30 commits behind** `main` (verified with
 - Enemy defeat rewards use canonical `EnemyConfig`; full Money wallets no longer block XP/Loot rewards.
 - Economy item selling now checks wallet capacity before consuming inventory and restores both Money and inventory on any unexpected partial payout, closing the full-wallet sale replay exploit.
 - Guardian rewards use canonical config, keep XP/Drop when the wallet is full, and only set `Rewarded` when a valid player profile exists.
-- Guardian creation is idempotent and now destroys a corrupt/non-boss object occupying the reserved `CrystalGuardian` name before spawning the canonical boss, preventing duplicate-name identity collisions.
+- Guardian creation is idempotent and destroys a corrupt/non-boss object occupying the reserved `CrystalGuardian` name before spawning the canonical boss, preventing duplicate-name identity collisions.
 - Guardian telegraph impacts are bound to the original Character instance, preventing an old windup from damaging a freshly respawned Character.
 - Guardian phase values and telegraph lifecycle are contract-protected.
 - NPC AI is server-only, bounded by aggro/attack/special ranges, uses weak-key path caches and clears path/status state on death.
