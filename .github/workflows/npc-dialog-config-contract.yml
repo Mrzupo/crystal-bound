@@ -46,12 +46,14 @@ jobs:
               'local function isCanonicalNPC(model, npcId)',
               'model.Parent == folder',
               'model:GetAttribute("Interactable") == true',
-              'model.Name == "CrystalKeeper" or model.Name == "MaterialTrader"',
+              'if model.Name ~= "CrystalKeeper" and model.Name ~= "MaterialTrader" then return end',
+              'if not isCanonicalNPC(model, model.Name) then return end',
+              'prompt:SetAttribute("CrystalBoundMenuBound", true)',
               'isNearModel(player, model)',
               'player:SetAttribute("OpenNPCDialog", npcId)',
           ):
               if marker not in bridge:
-                  raise SystemExit(f"NPC menu bridge authority marker missing: {marker}")
+                  raise SystemExit(f"NPC menu bridge authority/lifecycle marker missing: {marker}")
 
           if 'optionId == "CRYSTAL" or optionId == "INVENTORY"' not in menu:
               raise SystemExit('NPCDialogMenu must keep INVENTORY mapped to the combined crystal/inventory menu')
@@ -60,4 +62,4 @@ jobs:
           if 'Inventory & Crystals' not in inventory:
               raise SystemExit('InventoryMenu must remain the combined Inventory & Crystals presentation')
 
-          print("NPC dialog configuration, option ownership, canonical NPC identity, interaction-distance guards and combined inventory/crystal alias validated.")
+          print("NPC dialog configuration, canonical NPC identity, prompt lifecycle ordering, interaction-distance guards and combined inventory/crystal alias validated.")
