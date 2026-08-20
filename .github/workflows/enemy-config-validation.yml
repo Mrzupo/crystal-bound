@@ -2,7 +2,7 @@ name: Enemy Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/enemy-config-negative-number-v2"]
   pull_request:
 
 jobs:
@@ -69,40 +69,40 @@ jobs:
               if f'{drop} = ' not in inventory:
                   raise SystemExit(f"Enemy drop is not registered in InventoryConfig: {enemy_id} -> {drop}")
 
-          respawns = [float(value) for value in re.findall(r"Respawn = ([0-9.]+)", text)]
+          respawns = [float(value) for value in re.findall(r"Respawn = (-?[0-9]+(?:\.[0-9]+)?)", text)]
           for respawn in respawns:
               if respawn < 1.5:
                   raise SystemExit("Enemy Respawn must be at least 1.5 seconds to remain compatible with NPC cleanup")
               if respawn > 600:
                   raise SystemExit("Enemy Respawn exceeds the 10-minute design bound")
 
-          numeric_fields = re.findall(r"AttackRange = ([0-9.]+).*?AttackDamage = ([0-9.]+).*?AttackCooldown = ([0-9.]+)", text)
+          numeric_fields = re.findall(r"AttackRange = (-?[0-9]+(?:\.[0-9]+)?).*?AttackDamage = (-?[0-9]+(?:\.[0-9]+)?).*?AttackCooldown = (-?[0-9]+(?:\.[0-9]+)?)", text)
           for attack_range, damage, cooldown in numeric_fields:
-              if float(attack_range) > 1000:
-                  raise SystemExit("Enemy AttackRange exceeds global 1000-unit cap")
+              if float(attack_range) < 0 or float(attack_range) > 1000:
+                  raise SystemExit("Enemy AttackRange is outside 0..1000")
               if float(damage) < 0 or float(damage) > 1000:
                   raise SystemExit("Enemy AttackDamage is outside 0..1000")
               if float(cooldown) < 0.1 or float(cooldown) > 60:
                   raise SystemExit("Enemy AttackCooldown is outside 0.1..60")
 
-          aggro_ranges = [float(value) for value in re.findall(r"AggroRange = ([0-9.]+)", text)]
+          aggro_ranges = [float(value) for value in re.findall(r"AggroRange = (-?[0-9]+(?:\.[0-9]+)?)", text)]
           for aggro_range in aggro_ranges:
               if aggro_range < 0 or aggro_range > 1000:
                   raise SystemExit("Enemy AggroRange is outside 0..1000")
 
-          special_cooldowns = [float(value) for value in re.findall(r"Special = \{\s*Cooldown = ([0-9.]+)", text)]
+          special_cooldowns = [float(value) for value in re.findall(r"Special = \{\s*Cooldown = (-?[0-9]+(?:\.[0-9]+)?)", text)]
           for cooldown in special_cooldowns:
               if cooldown < 0.1 or cooldown > 60:
                   raise SystemExit("Enemy Special cooldown is outside 0.1..60")
 
-          special_ranges = [float(value) for value in re.findall(r"Special = \{.*?Range = ([0-9.]+)", text, re.S)]
+          special_ranges = [float(value) for value in re.findall(r"Special = \{.*?Range = (-?[0-9]+(?:\.[0-9]+)?)", text, re.S)]
           for special_range in special_ranges:
               if special_range <= 0 or special_range > 1000:
                   raise SystemExit("Enemy Special Range is outside 0..1000")
 
-          teleport_offsets = [float(value) for value in re.findall(r"TeleportOffset = ([0-9.]+)", text)]
+          teleport_offsets = [float(value) for value in re.findall(r"TeleportOffset = (-?[0-9]+(?:\.[0-9]+)?)", text)]
           for offset in teleport_offsets:
               if offset < 0 or offset > 100:
                   raise SystemExit("Enemy TeleportOffset is outside 0..100")
 
-          print("EnemyConfig combat bounds, aggro bounds, centralized Respawn normalization, detached deep-copy lookup, strict lookup, lifecycle, special movement and canonical loot validated.")
+          print("EnemyConfig combat bounds, aggro bounds, centralized Respawn normalization, detached deep-copy lookup, strict lookup, lifecycle, special movement and canonical loot validated including negative-value detection.")
