@@ -1,0 +1,31 @@
+name: Boss Arena Idempotency Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/boss-arena-idempotent-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Guardian arena partial-repair ownership
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/BossArena.server.lua").read_text(encoding="utf-8")
+          required = [
+              "local function ensurePart(name, properties)",
+              "ensurePart(\"Floor\"",
+              "ensurePart(\"Ring\"",
+              "ensurePart(\"Pylon\" .. index",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Guardian arena idempotency markers missing: " + ", ".join(missing))
+          create_block = text[text.index("local function createArena()"):text.index("local function setPhaseHazard", text.index("local function createArena()"))]
+          if "if arena:FindFirstChild(\"Floor\") then return end" in create_block:
+              raise SystemExit("Guardian arena bootstrap must not short-circuit on Floor alone")
+          print("Guardian arena independently repairs Floor, Ring and all canonical Pylons.")
