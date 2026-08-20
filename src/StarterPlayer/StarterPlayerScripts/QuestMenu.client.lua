@@ -12,8 +12,10 @@ local open = false
 local data = nil
 local available = {}
 local loading = false
+local loadQueued = false
 local lastLoad = 0
 local LOAD_INTERVAL = 0.2
+local QUEST_RETRY_DELAY = 0.25
 local loadGeneration = 0
 local loadData
 
@@ -27,6 +29,7 @@ end
 
 local function closeMenu(panel)
 	loadGeneration += 1
+	loadQueued = false
 	open = false
 	panel.Visible = false
 	player:SetAttribute("OpenQuestMenu", nil)
@@ -138,7 +141,9 @@ local function addRow(questId, definition, state, progress)
 		start.Parent = row
 		start.Activated:Connect(function()
 			questRequest:FireServer("Start", questId)
-			task.delay(0.2, function() if open then loadData(true) end end)
+			task.delay(0.2, function()
+				if open then loadData(true) end
+			end)
 		end)
 	end
 end
@@ -159,9 +164,11 @@ local function refresh()
 	for id, definition in pairs(defs) do if completedSet[id] then addRow(id, definition, "completed", definition and definition.Goal or 0) end end
 end
 
-local function scheduleCurrentGenerationReload(staleGeneration)
-	task.defer(function()
-		if open and staleGeneration ~= loadGeneration then
+local function scheduleGenerationReload(staleGeneration, delay)
+	task.delay(delay or QUEST_RETRY_DELAY, function()
+		if open and staleGeneration == loadGeneration then
+			loadData(true)
+		elseif open and staleGeneration ~= loadGeneration then
 			loadData(true)
 		end
 	end)
@@ -169,29 +176,54 @@ end
 
 loadData = function(force)
 	local now = os.clock()
-	if loading then return end
+	if loading then
+		loadQueued = true
+		return
+	end
 	if not force and now - lastLoad < LOAD_INTERVAL then return end
+
 	loading = true
+	loadQueued = false
 	lastLoad = now
 	loadGeneration += 1
 	local generation = loadGeneration
 	local character = player.Character
 	local expectedOpenState = player:GetAttribute("OpenQuestMenu")
+
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
 	if generation ~= loadGeneration or not open or player.Character ~= character or player:GetAttribute("OpenQuestMenu") ~= expectedOpenState then
 		loading = false
-		scheduleCurrentGenerationReload(generation)
+		scheduleGenerationReload(generation)
 		return
 	end
-	if ok and type(response) == "table" then data = response end
+	if not ok or type(response) ~= "table" then
+		loading = false
+		scheduleGenerationReload(generation)
+		return
+	end
+	data = response
+
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
 	if generation ~= loadGeneration or not open or player.Character ~= character or player:GetAttribute("OpenQuestMenu") ~= expectedOpenState then
 		loading = false
-		scheduleCurrentGenerationReload(generation)
+		scheduleGenerationReload(generation)
 		return
 	end
-	if okAvailable and type(responseAvailable) == "table" then available = responseAvailable end
+	if not okAvailable or type(responseAvailable) ~= "table" then
+		loading = false
+		scheduleGenerationReload(generation)
+		return
+	end
+	available = responseAvailable
 	loading = false
+
+	if loadQueued and open then
+		loadQueued = false
+		task.defer(function()
+			if open then loadData(true) end
+		end)
+		return
+	end
 	refresh()
 end
 
@@ -204,6 +236,7 @@ end
 player:GetAttributeChangedSignal("OpenQuestMenu"):Connect(function()
 	if player:GetAttribute("OpenQuestMenu") == nil then
 		loadGeneration += 1
+		loadQueued = false
 		open = false
 		panel.Visible = false
 		return
@@ -213,12 +246,14 @@ end)
 
 player.CharacterAdded:Connect(function()
 	loadGeneration += 1
+	loadQueued = false
 	open = false
 	panel.Visible = false
 	player:SetAttribute("OpenQuestMenu", nil)
 end)
 player.CharacterRemoving:Connect(function()
 	loadGeneration += 1
+	loadQueued = false
 	open = false
 	panel.Visible = false
 	player:SetAttribute("OpenQuestMenu", nil)
