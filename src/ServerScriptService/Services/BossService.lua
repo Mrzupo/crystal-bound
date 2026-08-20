@@ -193,7 +193,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		local creator = DamageService.GetLastAttacker(model)
 		local player = creator and (creator:IsA("Player") and creator or Players:GetPlayerFromCharacter(creator))
 		local PlayerService = require(script.Parent.PlayerService)
-		local profile = player and PlayerService.GetProfile(player) or nil
+		local profile = player and PlayerService.HasLoadedProfile(player) and PlayerService.Profiles[player] or nil
 		local xpReward = finiteNumber(config.XP)
 		local moneyReward = finiteNumber(config.Money)
 		local dropId = type(config.Drop) == "string" and config.Drop or nil
