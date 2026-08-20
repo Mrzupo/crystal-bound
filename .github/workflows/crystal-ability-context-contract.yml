@@ -14,7 +14,12 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          text = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
+
+          service = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
+          combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          pc = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
+          mobile = Path("src/StarterPlayer/StarterPlayerScripts/TouchControls.client.lua").read_text(encoding="utf-8")
+
           required = [
               "local CrystalSystem = require",
               "CrystalSystem.Exists(crystalId)",
@@ -22,8 +27,26 @@ jobs:
               "CrystalSystem.Owns(profile, crystalId)",
               "targetModel:GetAttribute(\"Enemy\") ~= true",
               "(targetRoot.Position - playerRoot.Position).Magnitude > safeRange",
+              "if crystalId == \"TIDE\" then",
+              "local applied = PlayerService.Heal(player, healAmount)",
+              "Success = true",
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in service]
           if missing:
               raise SystemExit("Crystal ability context guard missing: " + ", ".join(missing))
-          print("Crystal ability context contract validated.")
+
+          for marker in [
+              'local isTideSelfAbility = action == "Ability" and crystalId == "TIDE"',
+              'CrystalAbilityService.Execute(player, profile, crystalId, nil, math.min(1000, safeBaseDamage), safeRange)',
+              'if not abilityResult.Success then return end',
+          ]:
+              if marker not in combat:
+                  raise SystemExit("CombatService TIDE self-ability context missing: " + marker)
+
+          for text, name in ((pc, "ClientBootstrap"), (mobile, "TouchControls")):
+              if 'if action == "Ability" and crystalId == "TIDE" then' not in text:
+                  raise SystemExit(f"{name} must allow TIDE Ability without an enemy target")
+              if 'combatRemote:FireServer("Ability", nil)' not in text:
+                  raise SystemExit(f"{name} must send targetless TIDE Ability requests")
+
+          print("Crystal ability ownership/range context and targetless TIDE self-ability contract validated.")
