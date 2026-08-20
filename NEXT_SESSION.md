@@ -21,6 +21,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Shop and Crafting explicitly roll back partial inventory insertion before reversing a failed transaction.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
+- Enemy and Guardian respawns are suppressed once global server shutdown begins.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
 - Daily Bounty canonicalized from config and safe around wallet caps.
 - Daily Bounty reconcile additionally repairs corrupt persisted `Claimed=true` state when `Progress < Goal`.
@@ -31,6 +32,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - One-shot confirmed Crystal VFX bridge.
 - Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence.
 - Portal cooldown expiry is generation-safe across respawn/rejoin.
+- NPC menu state is Character-bound and cleared on respawn/leave.
 
 ## Latest hardening work
 - Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after startup, with per-Player deduplication.
@@ -52,6 +54,8 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Guardian reward ownership is restricted by loaded-player, Closing and shutdown checks while preserving autosave-settle behavior.
 - Shop purchase and inventory selling remain rollback-safe around Money and stack capacity; partial purchase insertion now explicitly rolls back inserted items before the Money refund.
 - Crafting validates recipe/output bounds and now explicitly rolls back partial output insertion before restoring consumed inputs.
+- Enemy delayed respawn callbacks check `PlayerService.ShuttingDown` so shutdown cannot create fresh NPC instances.
+- Guardian creation and AI stop on global shutdown, and the delayed Guardian respawn callback also checks the shutdown state.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - Enemy Mastery XP is derived from canonical Enemy XP with no arbitrary minimum fallback.
 - `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences; `PositionCheckInterval` is currently 0.15 s.
