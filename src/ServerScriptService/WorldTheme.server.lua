@@ -25,9 +25,7 @@ local portalTargets = {
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
-	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then
-		return fallback
-	end
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
 	return number
 end
 
@@ -52,6 +50,13 @@ local function rememberPosition(player)
 	end
 end
 
+local function clearPortalState(player)
+	portalCandidates[player] = nil
+	portalCooldowns[player] = nil
+	player:SetAttribute("PortalMovementGraceUntil", 0)
+	player:SetAttribute("PortalExpectedDestination", nil)
+end
+
 local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
 	if not player.Parent or player.Character ~= character then return end
 	local profile = PlayerService.GetProfile(player)
@@ -60,9 +65,7 @@ local function tryArmArrival(player, character, destination, beforePosition, req
 	if not root then return end
 	local displacement = (root.Position - beforePosition).Magnitude
 	local destinationError = (root.Position - destination).Magnitude
-	if destinationError > portalTolerance or displacement <= math.max(2, portalTolerance * 0.25) then
-		return
-	end
+	if destinationError > portalTolerance or displacement <= math.max(2, portalTolerance * 0.25) then return end
 	player:SetAttribute("PortalExpectedDestination", destination)
 	player:SetAttribute("PortalMovementGraceUntil", os.clock() + portalGrace)
 	portalCandidates[player] = nil
@@ -70,9 +73,7 @@ end
 
 local function disconnectPlayerCharacter(player)
 	local connection = playerCharacterConnections[player]
-	if connection and connection.Connected then
-		connection:Disconnect()
-	end
+	if connection and connection.Connected then connection:Disconnect() end
 	playerCharacterConnections[player] = nil
 end
 
@@ -129,20 +130,17 @@ for islandName, theme in pairs(themes) do
 		warn(("Crystal Bound: world theme island missing after 30s: %s"):format(islandName))
 		continue
 	end
-
 	local ground = island:FindFirstChild("Ground")
 	if not ground or not ground:IsA("BasePart") then
 		warn(("Crystal Bound: world theme ground missing for island: %s"):format(islandName))
 		continue
 	end
-
 	ground.Material = theme.Material
 end
 
 Players.PlayerRemoving:Connect(function(player)
 	disconnectPlayerCharacter(player)
-	portalCandidates[player] = nil
-	portalCooldowns[player] = nil
+	clearPortalState(player)
 	lastPositions[player] = nil
 end)
 
@@ -151,10 +149,12 @@ islands.DescendantAdded:Connect(bindPortal)
 
 local function bindPlayer(player)
 	disconnectPlayerCharacter(player)
+	clearPortalState(player)
 	rememberPosition(player)
-	playerCharacterConnections[player] = player.CharacterAdded:Connect(function()
+	playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+		clearPortalState(player)
 		task.defer(function()
-			if player.Parent then rememberPosition(player) end
+			if player.Parent and player.Character == character then rememberPosition(player) end
 		end)
 	end)
 end
@@ -167,9 +167,7 @@ task.spawn(function()
 		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			local root = getRoot(player)
-			if root then
-				lastPositions[player] = { Character = player.Character, Position = root.Position, Timestamp = now }
-			end
+			if root then lastPositions[player] = { Character = player.Character, Position = root.Position, Timestamp = now } end
 		end
 		for player, candidate in pairs(portalCandidates) do
 			if now > candidate.ExpiresAt then
