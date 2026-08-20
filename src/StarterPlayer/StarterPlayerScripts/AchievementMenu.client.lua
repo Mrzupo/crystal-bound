@@ -12,8 +12,8 @@ local panel
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
-	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
-	return number
+	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then return fallback end
+	return value
 end
 
 local function closeMenu()
@@ -84,7 +84,6 @@ local function refresh()
 	for _, id in ipairs(achievements) do
 		if type(id) == "string" then unlocked[id] = true end
 	end
-
 	for _, definition in ipairs(AchievementSystem.GetOrdered()) do
 		local row = Instance.new("Frame")
 		row.Size = UDim2.fromOffset(560, 64)
@@ -114,7 +113,10 @@ local function openMenu()
 end
 
 ensureGui()
-player:GetAttributeChangedSignal("OpenAchievementMenu"):Connect(openMenu)
+player:GetAttributeChangedSignal("OpenAchievementMenu"):Connect(function()
+	if player:GetAttribute("OpenAchievementMenu") == nil then return end
+	openMenu()
+end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
 	if processed then return end
