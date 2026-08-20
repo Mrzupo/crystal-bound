@@ -15,6 +15,14 @@ local MENU_ATTRIBUTES = {
 }
 local playerCharacterConnections = setmetatable({}, { __mode = "k" })
 
+local function getCanonicalNPC(model)
+	if not model or not model:IsA("Model") then return nil end
+	if model.Parent ~= Workspace:FindFirstChild("NPCs") then return nil end
+	if model:GetAttribute("Interactable") ~= true then return nil end
+	if model.Name ~= "CrystalKeeper" and model.Name ~= "MaterialTrader" then return nil end
+	return model
+end
+
 local function isNearModel(player, model)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -45,12 +53,14 @@ local function bindPlayer(player)
 	end)
 end
 
-local function openDialog(player, npcId, character)
+local function openDialog(player, npcId, character, model)
 	if PlayerService.ShuttingDown then return end
 	clearMenus(player)
 	task.defer(function()
 		if PlayerService.ShuttingDown then return end
-		if player.Parent and player.Character == character and character.Parent then
+		local canonical = getCanonicalNPC(model)
+		if not canonical or canonical.Name ~= npcId then return end
+		if player.Parent and player.Character == character and character.Parent and isNearModel(player, canonical) then
 			player:SetAttribute("OpenNPCDialog", npcId)
 		end
 	end)
@@ -58,14 +68,15 @@ end
 
 local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
-	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
-	if not model then return end
+	if not getCanonicalNPC(model) then return end
+	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	prompt.Triggered:Connect(function(player)
 		if PlayerService.ShuttingDown then return end
 		local character = player.Character
-		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and character and isNearModel(player, model) then
-			openDialog(player, model.Name, character)
+		local canonical = getCanonicalNPC(model)
+		if canonical and character and isNearModel(player, canonical) then
+			openDialog(player, canonical.Name, character, canonical)
 		end
 	end)
 end
