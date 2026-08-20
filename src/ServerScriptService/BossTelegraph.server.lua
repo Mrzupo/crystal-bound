@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DodgeService = require(script.Parent.Services.DodgeService)
 local BossService = require(script.Parent.Services.BossService)
+local PlayerService = require(script.Parent.Services.PlayerService)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local NPCs = Workspace:WaitForChild("NPCs")
 local config = BossConfig.CrystalGuardian.Telegraph
@@ -93,6 +94,7 @@ local function getTarget()
 end
 
 local function cast()
+	if PlayerService.ShuttingDown then return end
 	local player, guardian = getTarget()
 	if not player or not guardian then return end
 	local guardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
@@ -111,7 +113,7 @@ local function cast()
 	local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)
 	createTelegraph(position)
 	task.delay(windup, function()
-		if not guardian.Parent then return end
+		if PlayerService.ShuttingDown or not guardian.Parent then return end
 		local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
 		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then
 			return
@@ -130,7 +132,7 @@ local function cast()
 end
 
 task.spawn(function()
-	while Workspace.Parent do
+	while Workspace.Parent and not PlayerService.ShuttingDown do
 		if os.clock() >= nextCast then
 			local guardian = NPCs:FindFirstChild("CrystalGuardian")
 			local phase = guardian and guardian:GetAttribute("BossPhase") or 1
@@ -143,4 +145,4 @@ task.spawn(function()
 		end
 		task.wait(RUN_INTERVAL)
 	end
-end
+end)
