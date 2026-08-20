@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerService = require(script.Parent.Services.PlayerService)
 
@@ -10,9 +11,12 @@ local failures = setmetatable({}, { __mode = "k" })
 local autosaveFailures = setmetatable({}, { __mode = "k" })
 local shuttingDown = false
 
+ReplicatedStorage:SetAttribute("CrystalBoundShuttingDown", false)
+
 local function shutdownProfiles()
 	shuttingDown = true
 	PlayerService.BeginShutdown()
+	ReplicatedStorage:SetAttribute("CrystalBoundShuttingDown", true)
 	local pending = 0
 	for _, player in ipairs(Players:GetPlayers()) do
 		if PlayerService.HasLoadedProfile(player) then
