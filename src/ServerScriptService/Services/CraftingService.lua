@@ -47,6 +47,9 @@ end
 function CraftingService.Craft(profile, outputId, amount, InventoryService)
 	local recipe = Recipes[outputId]
 	if not recipe then return false, "Recipe not found." end
+	if type(outputId) ~= "string" or type(recipe.Output) ~= "string" or recipe.Output ~= outputId then
+		return false, "Crafting recipe output identity is invalid."
+	end
 	amount = positiveInteger(amount)
 	if not amount then return false, "Craft amount must be a positive integer." end
 	local maxPerCraft = positiveInteger(CraftingConfig.MaxPerCraft) or 1
