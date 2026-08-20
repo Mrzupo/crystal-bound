@@ -17,6 +17,7 @@ jobs:
 
           required = [
               'local function CrystalSystemExists(value)',
+              'return type(value) == "string" and CrystalSystem.Exists(value)',
               'local function capExperienceBelowNextLevel(level, experience, maxLevel, maxExperience, requiredXP)',
               'local function firstDailyBounty()',
               'DailyBounty = firstDailyBounty()',
@@ -42,6 +43,7 @@ jobs:
               'CrystalMastery.GetRequiredXP',
               'data.Achievements = normalizeList(data.Achievements, isAchievementId)',
               'local canonicalTitles = {}',
+              'AchievementSystem.IsValidTitle(definition.Title)',
               'data.Titles = canonicalTitles',
               'local function isBountyEnemy(value)',
               'for _, definition in ipairs(DailyBountyConfig.Goals) do',
@@ -68,4 +70,4 @@ jobs:
           if 'jobId ~= "" and token ~= "" and sessionTimestamp > 0' not in text:
               raise SystemExit('Malformed SessionLock data must be rejected during reconciliation')
 
-          print('Persisted player-data reconciliation contract validated: progression thresholds, stats, achievements, quest prerequisites, daily-bounty repair and session-lock bounds.')
+          print('Persisted player-data reconciliation contract validated: canonical crystal validity, progression thresholds, stats, achievements, quest prerequisites, daily-bounty repair and session-lock bounds.')
