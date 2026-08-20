@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
 local StatusEffectService = require(script.Parent.Services.StatusEffectService)
+local PlayerService = require(script.Parent.Services.PlayerService)
 
 local ENFORCEMENT_INTERVAL = 0.25
 local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
@@ -58,7 +59,7 @@ local function isValidPortalArrival(player, root, now)
 end
 
 local function enforcePosition(player, now)
-	if not player.Parent then return end
+	if not player.Parent or PlayerService.ShuttingDown then return end
 	local humanoid = getHumanoid(player)
 	local root = getRoot(player)
 	if not humanoid or humanoid.Health <= 0 or not root then
@@ -102,7 +103,7 @@ local function enforcePosition(player, now)
 end
 
 local function refresh(player)
-	if not player.Parent then return end
+	if not player.Parent or PlayerService.ShuttingDown then return end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
@@ -139,7 +140,7 @@ local function cleanup(player)
 end
 
 local function watchCharacter(player, character)
-	if player.Character ~= character then return end
+	if PlayerService.ShuttingDown or player.Character ~= character then return end
 	disconnectHumanoid(player)
 	player:SetAttribute("PortalMovementGraceUntil", 0)
 	player:SetAttribute("PortalExpectedDestination", nil)
@@ -182,7 +183,7 @@ Players.PlayerRemoving:Connect(cleanup)
 for _, player in ipairs(Players:GetPlayers()) do bind(player) end
 
 task.spawn(function()
-	while true do
+	while not PlayerService.ShuttingDown do
 		for _, player in ipairs(Players:GetPlayers()) do
 			refresh(player)
 		end
@@ -191,7 +192,7 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-	while true do
+	while not PlayerService.ShuttingDown do
 		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			enforcePosition(player, now)
