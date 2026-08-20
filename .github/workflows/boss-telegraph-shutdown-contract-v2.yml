@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Guardian telegraph shutdown guards
+      - name: Validate Guardian telegraph shutdown and impact guards
         shell: python
         run: |
           from pathlib import Path
@@ -23,8 +23,10 @@ jobs:
               "if PlayerService.ShuttingDown then return nil, nil end",
               "while Workspace.Parent and not PlayerService.ShuttingDown do",
               "if PlayerService.ShuttingDown or not guardian.Parent then return end",
+              "local currentGuardianRoot = guardian:FindFirstChild(\"HumanoidRootPart\") or guardian.PrimaryPart",
+              "local attackerRange = math.clamp((currentRoot.Position - currentGuardianRoot.Position).Magnitude, 0.1, 1000)",
           ]
           missing = [marker for marker in required if marker not in source]
           if missing:
-              raise SystemExit("Boss telegraph shutdown marker missing: " + ", ".join(missing))
-          print("Guardian creation, telegraph creation, target selection, delayed impact and cast loop remain shutdown-guarded.")
+              raise SystemExit("Boss telegraph shutdown/impact marker missing: " + ", ".join(missing))
+          print("Guardian startup, telegraph creation, target selection, delayed impact and impact-time attacker range remain lifecycle-safe.")
