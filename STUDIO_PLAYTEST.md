@@ -48,6 +48,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Defeat each enemy and confirm XP, Money, loot, quest progress and bounty progress are applied once.
 - Confirm dead enemies stop AI/status callbacks before respawn.
 - Confirm each enemy respawns exactly once and no duplicate named instances appear.
+- Trigger a controlled server shutdown while an enemy is inside its delayed respawn window; expected: shutdown does not create a replacement NPC.
 
 ## 6. Guardian
 - Bring Guardian below 50% HP.
@@ -60,6 +61,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Defeat Guardian.
 - Confirm Guardian reward/quest/achievement state is granted once and the boss respawns on schedule.
 - Force a controlled 60-second autosave window and defeat Guardian during that save; expected: Guardian XP/loot/quest/stats still commit and are persisted by the next settled save pass.
+- Trigger a controlled server shutdown while the Guardian is in its delayed respawn window; expected: shutdown does not create a replacement Guardian and Guardian AI stops.
 
 ## 7. Persistence
 - Change level, money, inventory, crystal mastery and quest state.
@@ -124,6 +126,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm no quest reward is granted on an incomplete objective.
 - Confirm no Daily Bounty or Achievement reward can be granted twice.
 - Confirm no duplicate NPC/Boss instances appear after respawn.
+- Confirm NPC/Guardian delayed respawn callbacks do not create new instances after shutdown begins.
 - Confirm no malformed Crystal UnlockLevel can be floored into an unintended lower gate.
 - Confirm malformed CrystalMastery mutation IDs cannot modify EMBER mastery.
 - Confirm NPC menu opening is server-distance validated.
