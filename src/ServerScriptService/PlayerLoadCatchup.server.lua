@@ -8,7 +8,11 @@ local SCAN_INTERVAL = 0.25
 
 local function catchUpPlayers()
 	for _, player in ipairs(Players:GetPlayers()) do
-		if player.Parent and not PlayerService.GetProfile(player) and not PlayerService.LoadingByUserId[player.UserId] then
+		if player.Parent
+			and player:GetAttribute("ProfileLoadFailed") == nil
+			and not PlayerService.GetProfile(player)
+			and not PlayerService.LoadingByUserId[player.UserId]
+		then
 			local profile, reason = PlayerService.Load(player)
 			if not profile and player.Parent then
 				player:Kick(reason or "Unable to load your Crystal Bound profile safely.")
