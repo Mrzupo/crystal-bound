@@ -176,6 +176,9 @@ function PlayerService.Load(player)
 	if PlayerService.ShuttingDown then return nil, "Server is shutting down" end
 	if PlayerService.Profiles[player] then return PlayerService.Profiles[player] end
 	local userId = player.UserId
+	if PlayerService.LoadingByUserId[userId] then
+		return nil, "Profile load already in progress"
+	end
 	local loadToken = {}
 	PlayerService.LoadingByUserId[userId] = loadToken
 	local function isCurrentLoad()
