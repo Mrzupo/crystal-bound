@@ -262,11 +262,18 @@ function PlayerService.Load(player)
 		PlayerService.ProfileRevisions[player] = nil
 		clearCurrentLoad()
 		local released = releaseLoadedToken()
-		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)) )
+		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)))
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
 	end
 
 	clearCurrentLoad()
+	if PlayerService.ShuttingDown or not player.Parent then
+		PlayerService.Profiles[player] = nil
+		PlayerService.ProfileRevisions[player] = nil
+		local released = releaseLoadedToken()
+		warn(("Crystal Bound: shutdown/leave raced post-load initialization for %s; session lock release=%s"):format(player.Name, tostring(released)))
+		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
+	end
 	setupLeaderstats(player, profile)
 	cleanupHumanoidConnections(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
@@ -276,7 +283,7 @@ function PlayerService.Load(player)
 		end)
 	end)
 	PlayerService.Sync(player)
-	if player.Character then
+	if not PlayerService.ShuttingDown and player.Parent and player.Character then
 		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then ensureAnimator(player.Character) end
 		bindHumanoid(player, humanoid)
