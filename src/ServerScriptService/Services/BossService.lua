@@ -193,7 +193,8 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		local xpReward = finiteNumber(config.XP)
 		local moneyReward = finiteNumber(config.Money)
 		local dropId = type(config.Drop) == "string" and config.Drop or nil
-		local validRewardConfig = xpReward ~= nil and xpReward >= 0 and xpReward % 1 == 0
+		local validRewardConfig = player ~= nil and profile ~= nil
+			and xpReward ~= nil and xpReward >= 0 and xpReward % 1 == 0
 			and xpReward <= XPConfig.MaxExperience
 			and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0
 			and moneyReward <= EconomyConfig.MaxMoney
