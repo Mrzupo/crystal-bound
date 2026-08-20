@@ -86,7 +86,7 @@ local function ensureGui()
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 8)
 	layout.Parent = list
-	layout:GetPropertyChangedSignal("AbsoluteContentSize").Connect(function() list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12) end)
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 12) end)
 	return gui
 end
 
