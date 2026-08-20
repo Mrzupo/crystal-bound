@@ -24,12 +24,18 @@ jobs:
           if missing:
               raise SystemExit('missing shop input boundary markers: ' + ', '.join(missing))
           for marker in (
+              'local now = os.clock()',
+              'if now < (NEXT_REQUEST[player] or 0) then return end',
+              'NEXT_REQUEST[player] = now + REQUEST_INTERVAL',
+              'if action ~= "Buy" then return end',
               'local function getCanonicalTrader()',
               'trader.Parent ~= folder',
               'trader:GetAttribute("Interactable") ~= true',
               'local ok, message = ShopService.Buy(profile, itemId, amount, InventoryService, EconomyService)',
           ):
               if marker not in remote:
-                  raise SystemExit('missing ShopRemote canonical trader marker: ' + marker)
-          print('Shop input boundary and canonical trader identity validated.')
+                  raise SystemExit('missing ShopRemote canonical trader/rate-limit marker: ' + marker)
+          if remote.index('NEXT_REQUEST[player] = now + REQUEST_INTERVAL') > remote.index('if action ~= "Buy" then return end'):
+              raise SystemExit('ShopRequest action validation must not precede the per-player rate limit')
+          print('Shop input boundary, pre-validation rate limit and canonical trader identity validated.')
           PY
