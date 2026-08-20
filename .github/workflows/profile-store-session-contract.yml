@@ -13,8 +13,9 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          text = Path('src/ReplicatedStorage/Modules/SafeProfileStore.lua').read_text(encoding='utf-8')
+          import re
 
+          text = Path('src/ReplicatedStorage/Modules/SafeProfileStore.lua').read_text(encoding='utf-8')
           required = [
               'local sameServer = lock and lock.JobId == SESSION_ID',
               'if lock and not sameServer and age < SESSION_TIMEOUT then',
@@ -28,8 +29,18 @@ jobs:
           if missing:
               raise SystemExit('Profile-store session contract missing: ' + ', '.join(missing))
 
-          if 'SESSION_TIMEOUT = 120' not in text:
-              raise SystemExit('Profile session timeout must remain explicit and bounded')
+          timeout_match = re.search(r'SESSION_TIMEOUT\s*=\s*(\d+)', text)
+          if not timeout_match:
+              raise SystemExit('Profile session timeout must remain explicit')
+          timeout = int(timeout_match.group(1))
+          heartbeat_text = Path('src/ServerScriptService/SessionHeartbeat.server.lua').read_text(encoding='utf-8')
+          heartbeat_match = re.search(r'HEARTBEAT_INTERVAL\s*=\s*(\d+)', heartbeat_text)
+          if not heartbeat_match:
+              raise SystemExit('Session heartbeat interval must remain explicit')
+          heartbeat = int(heartbeat_match.group(1))
+          if timeout <= heartbeat * 2:
+              raise SystemExit(f'SESSION_TIMEOUT ({timeout}) must exceed two heartbeat intervals ({heartbeat * 2})')
+
           if 'local profile = PlayerData.Reconcile(result)' not in text or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
               raise SystemExit('Load/Save must reconcile persisted profile data at the storage boundary')
 
