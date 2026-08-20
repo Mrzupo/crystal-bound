@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1274 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1277 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
@@ -15,7 +15,7 @@ Current compare: **1274 commits ahead, 30 commits behind** `main` (verified with
 - `SessionHeartbeat` refreshes the session lock and performs 60-second autosaves through `PlayerService`, with independent failure counters and protective kicks.
 - `SafeProfileStore` snapshots profile state inside `UpdateAsync` callbacks and resets Load/Save/Refresh/Release result flags on every callback invocation and outer retry, preventing stale callback state from leaking across DataStore retries.
 - `DamageService` is the sole direct `Humanoid:TakeDamage()` owner; damage types, attackers, targets, ranges and amounts are server-validated.
-- Environmental damage is strictly `Attacker == nil`; attacker-attributed PvE damage uses canonical attacker validation.
+- Environmental damage is strictly `Attacker == nil` in both the generic validator and final `DamageService` gate.
 - NPC attackers must be live, parented, `Enemy == true` models inside `Workspace.NPCs`; Player-vs-Player damage is rejected.
 - Last-attacker attribution is instance/session-bound, pinned before lethal `TakeDamage()`, restored on zero-applied damage and cleared after successful enemy reward processing.
 - Dodge validates finite directions, bounded ranges and cooldowns; respawn/leave cleanup clears ForceField, invulnerability and state.
@@ -24,6 +24,7 @@ Current compare: **1274 commits ahead, 30 commits behind** `main` (verified with
 - Movement speed refresh and position enforcement now run on separate cadences; `PositionCheckInterval` is honored exactly instead of being masked by the 0.25-second enforcement loop.
 - Missing Humanoid/RootPart resets the movement position snapshot, preventing stale `sampleDt` from inflating teleport tolerance.
 - Portal authority belongs only to `WorldTheme.server.lua`; Bootstrap is definition-only and cannot register a second teleport handler.
+- Portal destination vectors and canonical WorldConfig level gates are protected against Bootstrap/WorldTheme drift by contract.
 - Client authority contracts reject direct client Health/MaxHealth/WalkSpeed/CFrame/PivotTo/AssemblyLinearVelocity mutations.
 - PC/mobile clients request actions only; gameplay damage, cooldowns, ownership and rewards remain server-side.
 - Crystal ownership is canonicalized by `CrystalSystem`; `GetEquipped()` requires actual ownership and `CrystalService` returns filtered/deduplicated owned-crystal snapshots.
@@ -47,7 +48,7 @@ Current compare: **1274 commits ahead, 30 commits behind** `main` (verified with
 - Status effects use Humanoid-keyed token cancellation; Slow/Burn tasks stop on death/destroy or token replacement.
 - NPC dialog requests require canonical NPC identity, server distance and rate-limit checks; config getters return detached copies.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
-- `InventoryRequest` is now request-only; `InventoryChanged` is the server-to-client inventory snapshot event used by `InventoryMenu`.
+- `InventoryRequest` is request-only; `InventoryChanged` is the server-to-client inventory snapshot event used by `InventoryMenu`.
 - `GetPlayerData` has an explicit public-data exposure contract excluding SessionLock/SessionId/operation internals.
 - `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
 - Server and client NPC/menu bridges enforce single-open menu state; local menu close/toggle clears the corresponding `Open*` attribute, and listeners ignore `nil` so clearing one menu cannot open another.
@@ -61,6 +62,7 @@ Current compare: **1274 commits ahead, 30 commits behind** `main` (verified with
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
 - The Bootstrap player-loading path binds `PlayerAdded` after world initialization; no forced rewrite was made because the likely production startup window is small and a safe runtime validation is still required.
+- `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary, but the large Bootstrap blob was intentionally not rewritten blindly during this pass.
 - TIDE/GALE currently unlock through level gates; the long-term design includes Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - White Queen intro/story rules remain unchanged.
 
