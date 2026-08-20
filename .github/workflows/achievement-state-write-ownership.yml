@@ -1,0 +1,36 @@
+name: Achievement State Write Ownership
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Achievement and Title mutation owners
+        shell: python
+        run: |
+          from pathlib import Path
+          root = Path("src")
+          allowed = {
+              "ReplicatedStorage/Modules/AchievementSystem.lua",
+              "ReplicatedStorage/Modules/PlayerData.lua",
+          }
+          tokens = (
+              "profile.Achievements =",
+              "profile.Titles =",
+              "table.insert(profile.Achievements",
+              "table.insert(profile.Titles",
+          )
+          violations = []
+          for path in root.rglob("*.lua"):
+              relative = str(path.relative_to(root))
+              text = path.read_text(encoding="utf-8")
+              if any(token in text for token in tokens) and relative not in allowed:
+                  violations.append(relative)
+          if violations:
+              raise SystemExit("Achievement/Title writes outside canonical owners: " + ", ".join(violations))
+          print("Achievement state write ownership validated.")
