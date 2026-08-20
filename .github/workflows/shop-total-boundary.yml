@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate canonical shop total bound
+      - name: Validate canonical shop total and inventory snapshot bounds
         shell: python
         run: |
           from pathlib import Path
@@ -19,8 +19,10 @@ jobs:
               'local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)',
               'local total = price * amount',
               'finiteNumber(total) == nil or total <= 0 or total > EconomyConfig.MaxMoney',
+              'local inventorySnapshot = InventoryService.GetInventory(profile)',
+              'local current = math.max(0, math.floor(finiteNumber(inventorySnapshot[itemId]) or 0))',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
-              raise SystemExit('shop total boundary missing: ' + ', '.join(missing))
-          print('Shop purchase total boundary validated.')
+              raise SystemExit('shop total/snapshot boundary missing: ' + ', '.join(missing))
+          print('Shop purchase total and canonical inventory snapshot boundaries validated.')
