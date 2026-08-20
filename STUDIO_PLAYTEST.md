@@ -127,6 +127,8 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm no malformed Crystal UnlockLevel can be floored into an unintended lower gate.
 - Confirm malformed CrystalMastery mutation IDs cannot modify EMBER mastery.
 - Confirm NPC menu opening is server-distance validated.
+- Confirm a menu left open before respawn is cleared on the new Character.
+- Confirm a deferred NPC dialog callback from the old Character cannot open on the new Character.
 - Confirm WalkSpeed baseline enforcement remains active without a Slow effect.
 - Confirm portal grace is destination-bound and cannot be created during a rejected portal touch/cooldown.
 - Confirm portal cooldown callbacks are generation-safe across respawn/rejoin.
