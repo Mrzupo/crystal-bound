@@ -15,6 +15,7 @@ jobs:
         run: |
           from pathlib import Path
           text = Path("src/ServerScriptService/SessionHeartbeat.server.lua").read_text(encoding="utf-8")
+          player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
           required = [
               "game:BindToClose(shutdownProfiles)",
               "PlayerService.GetProfile(player)",
@@ -34,4 +35,15 @@ jobs:
                   remove_calls.append(str(path))
           if "src/ServerScriptService/SessionHeartbeat.server.lua" not in remove_calls:
               raise SystemExit("Shutdown handler must invoke the canonical PlayerService.Remove path")
-          print("Session shutdown persistence contract validated.")
+
+          for marker in (
+              "RemovalResults = setmetatable({}, { __mode = \"k\" })",
+              "if PlayerService.Closing[player] then",
+              "while PlayerService.Closing[player] and os.clock() - started < OPERATION_TIMEOUT do",
+              "return PlayerService.RemovalResults[player] == true",
+              "PlayerService.RemovalResults[player] = true",
+              "PlayerService.RemovalResults[player] = false",
+          ):
+              if marker not in player_service:
+                  raise SystemExit("PlayerService missing duplicate-remove shutdown guard: " + marker)
+          print("Session shutdown persistence, duplicate-remove serialization and release ownership validated.")
