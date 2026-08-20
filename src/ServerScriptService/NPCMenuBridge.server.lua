@@ -12,6 +12,7 @@ local MENU_ATTRIBUTES = {
 	"OpenAchievementMenu",
 	"OpenNPCDialog",
 }
+local playerCharacterConnections = setmetatable({}, { __mode = "k" })
 
 local function isNearModel(player, model)
 	local character = player.Character
@@ -24,6 +25,22 @@ local function clearMenus(player)
 	for _, attribute in ipairs(MENU_ATTRIBUTES) do
 		player:SetAttribute(attribute, nil)
 	end
+end
+
+local function disconnectPlayer(player)
+	local connection = playerCharacterConnections[player]
+	if connection and connection.Connected then connection:Disconnect() end
+	playerCharacterConnections[player] = nil
+end
+
+local function bindPlayer(player)
+	disconnectPlayer(player)
+	clearMenus(player)
+	playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+		if player.Parent and player.Character == character then
+			clearMenus(player)
+		end
+	end)
 end
 
 local function openDialog(player, npcId, character)
@@ -52,6 +69,9 @@ local folder = Workspace:WaitForChild("NPCs")
 for _, descendant in ipairs(folder:GetDescendants()) do bindPrompt(descendant) end
 folder.DescendantAdded:Connect(bindPrompt)
 
+for _, player in ipairs(Players:GetPlayers()) do bindPlayer(player) end
+Players.PlayerAdded:Connect(bindPlayer)
 Players.PlayerRemoving:Connect(function(player)
+	disconnectPlayer(player)
 	clearMenus(player)
 end)
