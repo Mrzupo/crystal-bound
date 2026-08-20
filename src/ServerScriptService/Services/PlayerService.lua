@@ -141,12 +141,12 @@ local function cleanupRemovedPlayer(player)
 end
 
 function PlayerService.GetProfile(player)
-	if PlayerService.Closing[player] then return nil end
+	if PlayerService.ShuttingDown or PlayerService.Closing[player] then return nil end
 	return PlayerService.Profiles[player]
 end
 
 function PlayerService.Heal(player, amount)
-	if not player or not player:IsA("Player") or not player.Parent or PlayerService.Closing[player] then return 0 end
+	if not player or not player:IsA("Player") or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] then return 0 end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return 0 end
