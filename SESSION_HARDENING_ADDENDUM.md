@@ -11,6 +11,9 @@ Branch: `agent/complete-crystal-bound-foundation`
 - `SafeProfileStore.Release(player, expectedToken)` supports token-specific release, preventing a stale load from releasing a newer active lock.
 - `PlayerService.Load()` keeps a per-UserId generation guard and releases claimed locks on every superseded/shutdown/player-left exit.
 - `PlayerService.Save()` and `PlayerService.RefreshSession()` re-check `Profiles`/`Closing` after acquiring the serialized operation lock.
+- `PlayerService.saveConsistently()` uses bounded revision-settle passes and reports failure if the profile keeps changing during every pass.
+- Duplicate `PlayerService.Remove()` calls serialize through `Closing`/`RemovalResults`, so `PlayerRemoving` and `BindToClose` cannot misreport an in-flight save as an immediate failure.
+- During global shutdown, `GetProfile()` and `Heal()` reject new gameplay profile access/mutation, while `PlayerLifecycle` still unconditionally delegates `PlayerRemoving` to `PlayerService.Remove()`.
 - Shutdown waits for both loaded-profile removals and pending profile loads, while `BeginShutdown()` makes new loads abort safely.
 
 ## Progression / reconciliation
@@ -20,14 +23,16 @@ Branch: `agent/complete-crystal-bound-foundation`
 - Achievement IDs are canonicalized and Titles are rebuilt from canonical earned achievements.
 - Daily Bounty state is reconstructed from `DailyBountyConfig`; invalid bounty state resets its date so the daily selector is recalculated.
 - Player XP and Crystal Mastery XP are bounded below the next-level threshold for the stored level; max-level states store zero XP.
+- Enemy mastery rewards are derived directly from canonical Enemy XP without an arbitrary minimum fallback.
 
 ## Reward / gameplay hardening
 
-- Guardian Boss money and `GUARDIAN_TRIAL` quest money are preflighted together against the wallet cap before committing either reward.
+- Guardian rewards no longer require a combined Boss+`GUARDIAN_TRIAL` Money preflight; XP, Drop, Boss stats and quest progression remain valid when the wallet is full, while `EconomyService` caps only Money.
 - Portal arrival state is cleared on character replacement so stale grace/cooldown data cannot survive a respawn.
 - Dodge damage requires the passed Humanoid to belong to the player's current character.
-- Slow multiplier state is cleared together with the Slow status token.
+- Slow multiplier state is cleared together with the Slow status token and Slow expiry restores the canonical capped WalkSpeed bonus.
 - Server gameplay contracts reject future use of client-exposed derived attributes as authoritative sources.
+- Player TIDE and Health Potion healing both route through the canonical `PlayerService.Heal()` owner.
 
 ## Verification boundary
 
