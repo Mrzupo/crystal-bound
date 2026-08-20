@@ -187,6 +187,10 @@ function PlayerService.Load(player)
 	end
 
 	local profile, reason = SafeProfileStore.Load(player)
+	local function releaseLoadedToken()
+		local token = profile and type(profile.SessionLock) == "table" and profile.SessionLock.Token or nil
+		return SafeProfileStore.Release(player, token)
+	end
 	if not profile then
 		if isCurrentLoad() then PlayerService.LoadingByUserId[userId] = nil end
 		player:SetAttribute("ProfileLoadFailed", reason or "Unable to load profile")
@@ -195,26 +199,26 @@ function PlayerService.Load(player)
 	end
 
 	if not isCurrentLoad() then
-		local released = SafeProfileStore.Release(player)
+		local released = releaseLoadedToken()
 		warn(("Crystal Bound: superseded profile load ignored for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile load"
 	end
 	if PlayerService.ShuttingDown or not player.Parent then
 		PlayerService.LoadingByUserId[userId] = nil
-		local released = SafeProfileStore.Release(player)
+		local released = releaseLoadedToken()
 		warn(("Crystal Bound: player %s left/shutdown while profile loading; session lock release=%s."):format(player.Name, tostring(released)))
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left before profile load completed"
 	end
 
 	profile = PlayerData.Reconcile(profile)
 	if not isCurrentLoad() then
-		local released = SafeProfileStore.Release(player)
+		local released = releaseLoadedToken()
 		warn(("Crystal Bound: superseded profile initialization ignored for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile initialization"
 	end
 	if PlayerService.ShuttingDown then
 		PlayerService.LoadingByUserId[userId] = nil
-		local released = SafeProfileStore.Release(player)
+		local released = releaseLoadedToken()
 		warn(("Crystal Bound: shutdown interrupted profile initialization for %s; session lock release=%s."):format(player.Name, tostring(released)))
 		return nil, "Server is shutting down"
 	end
@@ -224,7 +228,7 @@ function PlayerService.Load(player)
 	if not isCurrentLoad() then
 		PlayerService.Profiles[player] = nil
 		PlayerService.ProfileRevisions[player] = nil
-		local released = SafeProfileStore.Release(player)
+		local released = releaseLoadedToken()
 		warn(("Crystal Bound: profile initialization was superseded for UserId %d; session lock release=%s."):format(userId, tostring(released)))
 		return nil, "Superseded profile initialization"
 	end
@@ -232,7 +236,7 @@ function PlayerService.Load(player)
 		PlayerService.Profiles[player] = nil
 		PlayerService.ProfileRevisions[player] = nil
 		PlayerService.LoadingByUserId[userId] = nil
-		local released = SafeProfileStore.Release(player)
+		local released = releaseLoadedToken()
 		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)))
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
 	end
