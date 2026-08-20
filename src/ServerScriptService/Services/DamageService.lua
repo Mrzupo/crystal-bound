@@ -73,8 +73,8 @@ end
 function DamageService.ValidateRequest(request)
 	if not Validators.IsValid(request) then return false end
 	if typeof(request.Target) ~= "Instance" then return false end
-	if request.DamageType == DamageTypes.Environmental and request.Attacker == nil then
-		return true
+	if request.DamageType == DamageTypes.Environmental then
+		return request.Attacker == nil
 	end
 	return typeof(request.Attacker) == "Instance" and isValidAttacker(request.Attacker)
 end
@@ -83,8 +83,8 @@ function DamageService.CanDamage(request)
 	if not DamageService.ValidateRequest(request) then return false end
 	if not isValidTarget(request.Target) then return false end
 
-	if request.DamageType == DamageTypes.Environmental and request.Attacker == nil then
-		return true
+	if request.DamageType == DamageTypes.Environmental then
+		return request.Attacker == nil
 	end
 
 	local attackerModel = request.Attacker:IsA("Player") and request.Attacker.Character or request.Attacker
