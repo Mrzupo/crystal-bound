@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1317 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1320 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 - Current compared main base: `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Current state
@@ -41,7 +41,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Inventory selling now checks wallet capacity before consuming inventory and rolls both Money and inventory back on unexpected partial payout, closing the full-wallet sale replay exploit.
 - Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
 - Player Health is centralized through `PlayerService.Heal()`; Tide and Health Potion healing route through it, and Potion consumption rolls back if no healing is applied.
-- Health authority CI now rejects direct Player Health/MaxHealth writes outside PlayerService while allowing NPC/Boss health initialization.
+- Health authority CI rejects direct Player Health/MaxHealth writes outside the canonical owner while allowing NPC/Boss health initialization.
 - `EnemyConfig.Get()` returns a detached recursive config clone and clamps Respawn into the 1.5..600 second runtime range.
 - `StatusSpeedGuardV2` now has separate loops: WalkSpeed refresh at 0.25 s and position enforcement at the configured `MovementConfig.PositionCheckInterval` (currently 0.15 s).
 - Missing Humanoid/RootPart resets movement position state so stale `sampleDt` cannot inflate teleport tolerance.
@@ -69,6 +69,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Latest commit workflow-run/Combined Status queries provide no verified CI run/status; do not call CI green without actual evidence.
 - Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
+- `CombatPresentation.client.lua` still has a client-only stale-Humanoid presentation edge case around its `WaitForChild("Humanoid", 5)` CharacterAdded handler; the server gameplay authority is unaffected and the large client file was intentionally not blindly rewritten during this pass.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as acquisition activities; decide the final model before building acquisition content.
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
 
