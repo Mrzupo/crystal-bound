@@ -20,10 +20,10 @@ jobs:
               "cleanupHumanoidConnections",
               "PlayerService.HumanoidConnections[player] = connections",
               "PlayerService.HumanoidConnections[player] = nil",
+              "player.Character ~= character",
+              "not character.Parent",
           ]
           for marker in required:
               if marker not in text:
                   raise SystemExit(f"PlayerService missing lifecycle marker: {marker}")
-          if "HumanoidConnections = {}" in text and "Weak" not in text:
-              print("Player health connections are explicitly managed by cleanup, not weak-keyed; this is allowed.")
-          print("Player humanoid connection lifecycle validated.")
+          print("Player humanoid connection lifecycle and stale CharacterAdded callback validation passed.")
