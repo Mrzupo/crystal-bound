@@ -6,6 +6,7 @@ local WorldConfig = require(ReplicatedStorage.Config.WorldConfig)
 local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 local DailyBountyConfig = require(ReplicatedStorage.Config.DailyBountyConfig)
+local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
 local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 
 local PlayerData = {}
@@ -145,15 +146,36 @@ function PlayerData.Reconcile(input)
 		end
 		return false
 	end
+	local function isAchievementId(value)
+		return type(value) == "string" and AchievementSystem.Get(value) ~= nil
+	end
 
 	data.ActiveQuests = normalizeList(data.ActiveQuests, isQuestId)
-	data.CompletedQuests = normalizeList(data.CompletedQuests, isQuestId)
-
+	local candidateCompleted = normalizeList(data.CompletedQuests, isQuestId)
+	local normalizedCompleted = {}
 	local completedSet = {}
-	for _, questId in ipairs(data.CompletedQuests) do completedSet[questId] = true end
+	local remaining = true
+	while remaining do
+		remaining = false
+		for _, questId in ipairs(candidateCompleted) do
+			if not completedSet[questId] then
+				local definition = QuestSystem.GetDefinition(questId)
+				if definition and (not definition.Requires or completedSet[definition.Requires]) then
+					completedSet[questId] = true
+					table.insert(normalizedCompleted, questId)
+					remaining = true
+				end
+			end
+		end
+	end
+	data.CompletedQuests = normalizedCompleted
+
 	local filteredActive = {}
 	for _, questId in ipairs(data.ActiveQuests) do
-		if not completedSet[questId] and #filteredActive == 0 then table.insert(filteredActive, questId) end
+		local definition = QuestSystem.GetDefinition(questId)
+		if not completedSet[questId] and #filteredActive == 0 and definition and (not definition.Requires or completedSet[definition.Requires]) then
+			table.insert(filteredActive, questId)
+		end
 	end
 	data.ActiveQuests = filteredActive
 
@@ -169,6 +191,14 @@ function PlayerData.Reconcile(input)
 
 	data.UnlockedIslands = normalizeList(data.UnlockedIslands, isIslandId)
 	if not table.find(data.UnlockedIslands, "STARTER") and WorldConfig.Islands.STARTER then table.insert(data.UnlockedIslands, "STARTER") end
+
+	data.Achievements = normalizeList(data.Achievements, isAchievementId)
+	local canonicalTitles = {}
+	for _, achievementId in ipairs(data.Achievements) do
+		local definition = AchievementSystem.Get(achievementId)
+		if definition and definition.Title and not table.find(canonicalTitles, definition.Title) then table.insert(canonicalTitles, definition.Title) end
+	end
+	data.Titles = canonicalTitles
 
 	data.DailyBounty = type(data.DailyBounty) == "table" and data.DailyBounty or clone(defaults.DailyBounty)
 	data.DailyBounty.Date = type(data.DailyBounty.Date) == "string" and data.DailyBounty.Date or ""
