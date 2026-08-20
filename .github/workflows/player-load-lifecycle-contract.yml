@@ -28,6 +28,10 @@ jobs:
               'local loadSuccess, profile, reason = xpcall(function()',
               'return SafeProfileStore.Load(player)',
               'if not loadSuccess then',
+              'clearCurrentLoad()\n\tif PlayerService.ShuttingDown or not player.Parent then',
+              'local released = releaseLoadedToken()',
+              'setupLeaderstats(player, profile)',
+              'if not PlayerService.ShuttingDown and player.Parent and player.Character then',
           ]
           missing = [marker for marker in required if marker not in player_service]
           if missing:
@@ -40,10 +44,13 @@ jobs:
           second_guard = player_service.index('if PlayerService.ShuttingDown or not player.Parent then', profiles_assignment)
           if second_guard < profiles_assignment:
               raise SystemExit("PlayerService must re-check player.Parent after installing the profile")
+          post_clear_guard = player_service.index('clearCurrentLoad()\n\tif PlayerService.ShuttingDown or not player.Parent then')
+          if post_clear_guard < profiles_assignment:
+              raise SystemExit('PlayerService must guard post-load initialization after clearing the in-flight marker')
 
           profiles_load_block = player_service[player_service.index('function PlayerService.Load'):player_service.index('function PlayerService.Sync')]
-          if profiles_load_block.count('clearCurrentLoad()') < 5:
-              raise SystemExit('Load path must clear the current UserId in-flight marker on normal and exceptional exits')
+          if profiles_load_block.count('clearCurrentLoad()') < 6:
+              raise SystemExit('Load path must clear the current UserId in-flight marker on all normal and exceptional exits')
           if 'local loadSuccess, profile, reason = xpcall(function()' not in profiles_load_block:
               raise SystemExit('SafeProfileStore.Load must be wrapped so unexpected throws cannot strand LoadingByUserId')
           if 'PlayerData.Reconcile(profile)' in profiles_load_block:
@@ -74,4 +81,4 @@ jobs:
           if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
               raise SystemExit("Redundant PlayerLoadCatchup file must remain removed")
 
-          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication, exception-safe in-flight cleanup and single-owner load reconciliation validated.")
+          print("Canonical PlayerAdded ownership, startup drain, per-player deduplication, exception-safe in-flight cleanup, post-load shutdown race protection and single-owner load reconciliation validated.")
