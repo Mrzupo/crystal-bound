@@ -19,8 +19,11 @@ jobs:
               'Closing = setmetatable({}, { __mode = "k" })',
               'function PlayerService.GetProfile(player)',
               'if PlayerService.Closing[player] then return nil end',
+              'function PlayerService.Sync(player, internal)',
+              'if not profile or (PlayerService.Closing[player] and not internal) then return end',
               'local SAVE_SETTLE_ATTEMPTS = 3',
               'local function saveConsistently(player, profile)',
+              'PlayerService.Sync(player, true)',
               'local snapshotRevision = PlayerService.ProfileRevisions[player] or 0',
               'if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then return true end',
               'if PlayerService.Closing[player] then return false end',
@@ -33,5 +36,5 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing PlayerService remove/save boundary markers: ' + ', '.join(missing))
-          print('Player remove closing-state, save-settle and final session release contract validated.')
+          print('Player remove closing-state, internal final-save sync, save-settle and final session release contract validated.')
           PY
