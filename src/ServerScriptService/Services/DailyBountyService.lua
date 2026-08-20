@@ -34,6 +34,18 @@ local function findDefinition(enemyType)
 	return nil
 end
 
+local function snapshot(bounty)
+	if type(bounty) ~= "table" then return {} end
+	return {
+		Date = bounty.Date,
+		EnemyType = bounty.EnemyType,
+		Goal = bounty.Goal,
+		Progress = bounty.Progress,
+		RewardMoney = bounty.RewardMoney,
+		Claimed = bounty.Claimed == true,
+	}
+end
+
 function DailyBountyService.Refresh(profile)
 	profile.DailyBounty = type(profile.DailyBounty) == "table" and profile.DailyBounty or {}
 	local date = utcDate()
@@ -93,7 +105,7 @@ function DailyBountyService.AddProgress(player, profile, enemyType, EconomyServi
 end
 
 function DailyBountyService.Get(profile)
-	return DailyBountyService.Refresh(profile)
+	return snapshot(DailyBountyService.Refresh(profile))
 end
 
 return DailyBountyService
