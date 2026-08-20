@@ -58,6 +58,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm boss bar tracks `CrystalGuardian`.
 - Verify the boss-centered Phase-2 AoE and the separate targeted telegraph are distinct attacks.
 - Keep the Guardian at a distance inside the configured `TargetRange` and stay inside the telegraph circle; expected: the delayed `BossShockwave` still applies when you remain inside the target-centered telegraph, rather than being rejected by the smaller telegraph radius as an attacker range.
+- Verify Guardian damage is accepted through its server-authoritative `BossId` attacker identity; expected: normal Guardian strikes and `BossShockwave` are not rejected as invalid NPC attackers.
 - Wait for telegraph and dodge out of the radius.
 - Expected: no damage and no false impact message after a dodge.
 - Stay in the telegraph and confirm `BossShockwave` damage.
@@ -149,6 +150,7 @@ This is a runtime checklist, not a claim that the project has already been runti
 - Confirm portal cooldown callbacks are generation-safe across respawn/rejoin.
 - Confirm StatusEffect Slow/Burn replacement tokens clear stale callbacks on replacement/cleanup and shutdown.
 - Confirm the global `CrystalBoundShuttingDown` flag is published before final profile removal and is honored by DamageService, DodgeService and StatusEffectService.
+- Confirm PlayerService final save sync does not mutate Character WalkSpeed/MaxHealth/Title once global shutdown has begun.
 - Confirm the official rarity ladder is Common → Divine and Ancient is not a rarity.
 - Confirm `main` remains untouched.
 - Record every runtime failure with exact script name, event/action, reproduction steps and expected vs actual behavior.
