@@ -22,7 +22,7 @@ Base: `main`
 - Last-attacker attribution is instance/session-bound and restored when no damage is actually applied.
 - Dodge uses finite direction validation, server cooldowns, tokenized invulnerability expiry and current-character Humanoid validation.
 - Player Health mutation is centralized in `PlayerService.Heal()`; NPC/Boss services only initialize NPC Humanoid health.
-- `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks, clears state on lifecycle cleanup, rejects new effects during shutdown and stops delayed Burn/Slow work once global shutdown begins.
+- `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks and clears state on lifecycle cleanup. A shutdown-specific cancellation guard is intentionally still pending because `PlayerService` depends on `StatusEffectService`; adding a direct reverse require would create a module-init cycle.
 - `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace; both enforcement loops and deferred Character refreshes stop when global shutdown begins.
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
 - Portal cooldown callbacks are generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
@@ -38,7 +38,7 @@ Base: `main`
 - Guardian creation, AI and delayed respawn stop on global shutdown.
 - Guardian Arena phase-2 hazard damage and its periodic loop stop on global shutdown, and active hazard visuals are disabled when the loop exits.
 - Enemy and Guardian rewards preserve XP/Loot/progression when Money is capped; Money is bounded centrally by EconomyService.
-- Guardian telegraphs are bound to the original Guardian and target Character instances, preventing stale delayed impacts on replacement instances.
+- Guardian telegraphs are bound to the original Guardian and target Character instances; delayed impacts are canceled for dead/replaced instances and now also stop once global shutdown begins.
 - NPC Pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
 - `WorldDecor` and `WorldTheme` use idempotency/lifecycle markers and per-player cleanup state.
 - RemoteFunction ownership is contract-checked to one server handler per named function; important RemoteEvents have explicit direction/rate-limit contracts.
@@ -55,8 +55,8 @@ Base: `main`
 - `.github/workflows/enemy-lifecycle-validation.yml` requires shutdown-safe enemy AI and respawn behavior.
 - `.github/workflows/boss-active-spawn-contract.yml` requires shutdown-safe Guardian creation, AI and respawn behavior.
 - `.github/workflows/movement-authority-contract.yml` requires shutdown-aware WalkSpeed/position loops and Character-bound deferred binds.
-- `.github/workflows/boss-attack-contract.yml` requires shutdown-safe Guardian Arena hazard behavior.
-- `.github/workflows/status-effect-stale-callback-contract.yml` requires shutdown cancellation for Slow/Burn delayed callbacks and new effect rejection.
+- `.github/workflows/boss-attack-contract.yml` requires shutdown-safe Guardian telegraph and Arena hazard behavior.
+- `.github/workflows/status-effect-stale-callback-contract.yml` intentionally remains focused on Humanoid-scoped replacement-token cleanup; no shutdown guard is claimed for StatusEffectService.
 - `STUDIO_PLAYTEST.md`, `TESTING.md`, `TODO.md`, and `NEXT_SESSION.md` are synchronized with the current lifecycle/transaction hardening state.
 
 ## Open / runtime-only limitations
@@ -65,6 +65,7 @@ Base: `main`
 - Latest checked workflow-run queries do not provide a verified green CI run for this hardening work; CI is not claimed green.
 - Movement physics/network ownership thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace and position correction.
 - Ordinary `PlayerService.GetProfile()` callers are conservatively blocked during autosave; selected server reward paths intentionally use an autosave-safe loaded-profile path and rely on revision-settle behavior.
+- StatusEffectService delayed Burn/Slow callbacks still require an explicit shutdown-safe design that avoids the existing PlayerService ↔ StatusEffectService module dependency cycle.
 - Authored Roblox Animation/Sound assets remain pending; current VFX are procedural/placeholder presentation.
 - TIDE/GALE remain level-gated prototype unlocks until the final Crystal acquisition design is decided.
 
@@ -73,9 +74,10 @@ Base: `main`
 2. Autosave mutation/settle and final Release failure behavior.
 3. Combat range, PvP rejection, Dodge and NPC/Boss attacker identity.
 4. Enemy death/respawn, shutdown-respawn suppression and Guardian telegraph replacement races.
-5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, movement/status-effect shutdown and Dodge/network ownership.
+5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, movement shutdown and Dodge/network ownership.
 6. Shop/Crafting/Consumables and transaction rollback.
 7. Guardian Arena hazard shutdown behavior when executable Studio testing is available.
+8. StatusEffect Burn/Slow shutdown cancellation after a safe module-graph refactor is available.
 
 ## Do not do
 - Do not reset, force-push or otherwise rewrite `main` from this workstream.
