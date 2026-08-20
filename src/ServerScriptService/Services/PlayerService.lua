@@ -1,6 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SafeProfileStore = require(ReplicatedStorage.Modules.SafeProfileStore)
-local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
@@ -248,12 +247,6 @@ function PlayerService.Load(player)
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left before profile load completed"
 	end
 
-	if PlayerService.ShuttingDown then
-		clearCurrentLoad()
-		local released = releaseLoadedToken()
-		warn(("Crystal Bound: shutdown interrupted profile initialization for %s; session lock release=%s."):format(player.Name, tostring(released)))
-		return nil, "Server is shutting down"
-	end
 	PlayerService.Profiles[player] = profile
 	PlayerService.ProfileRevisions[player] = 0
 
@@ -269,7 +262,7 @@ function PlayerService.Load(player)
 		PlayerService.ProfileRevisions[player] = nil
 		clearCurrentLoad()
 		local released = releaseLoadedToken()
-		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)))
+		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)) )
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
 	end
 
@@ -338,29 +331,31 @@ function PlayerService.Sync(player, internal)
 	local owned = profile.Crystals and profile.Crystals.Owned or {}
 	for _, id in ipairs({ "EMBER", "TIDE", "GALE" }) do player:SetAttribute("Owns_" .. id, table.find(owned, id) ~= nil) end
 
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		ensureAnimator(character)
-		local baseWalkSpeed = BASE_WALK_SPEED + walkSpeedBonus
-		local slowMultiplier = StatusEffectService.GetSlowMultiplier(humanoid)
-		if slowMultiplier then
-			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
-		else
-			humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed)
+	if not PlayerService.ShuttingDown then
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			ensureAnimator(character)
+			local baseWalkSpeed = BASE_WALK_SPEED + walkSpeedBonus
+			local slowMultiplier = StatusEffectService.GetSlowMultiplier(humanoid)
+			if slowMultiplier then
+				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * math.clamp(slowMultiplier, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
+			else
+				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed)
+			end
+			local maxHealth = 100 + maxHealthBonus
+			local oldMax = math.max(1, humanoid.MaxHealth)
+			local oldHealth = humanoid.Health
+			humanoid.MaxHealth = maxHealth
+			if oldHealth > 0 then
+				if oldMax ~= maxHealth then humanoid.Health = math.clamp((oldHealth / oldMax) * maxHealth, 1, maxHealth)
+				elseif oldHealth > maxHealth then humanoid.Health = maxHealth end
+			end
+			player:SetAttribute("Health", math.max(0, humanoid.Health))
+			player:SetAttribute("MaxHealth", maxHealth)
 		end
-		local maxHealth = 100 + maxHealthBonus
-		local oldMax = math.max(1, humanoid.MaxHealth)
-		local oldHealth = humanoid.Health
-		humanoid.MaxHealth = maxHealth
-		if oldHealth > 0 then
-			if oldMax ~= maxHealth then humanoid.Health = math.clamp((oldHealth / oldMax) * maxHealth, 1, maxHealth)
-			elseif oldHealth > maxHealth then humanoid.Health = maxHealth end
-		end
-		player:SetAttribute("Health", math.max(0, humanoid.Health))
-		player:SetAttribute("MaxHealth", maxHealth)
+		syncTitleTag(character, title)
 	end
-	syncTitleTag(character, title)
 end
 
 local function saveConsistently(player, profile)
@@ -461,7 +456,7 @@ function PlayerService.Remove(player)
 		if result and result.ReleaseFailed then
 			warn(("Crystal Bound: retaining session lock for %s because final session-lock release failed."):format(player.Name))
 		else
-			warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name))
+			warn(("Crystal Bound: retaining session lock for %s because final save failed."):format(player.Name)
 		end
 		cleanupRemovedPlayer(player)
 		return false
