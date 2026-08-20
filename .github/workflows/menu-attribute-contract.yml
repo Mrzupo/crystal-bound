@@ -64,7 +64,10 @@ jobs:
 
           dialog_guards = (
               'local dialogRequestGeneration = 0',
-              'local function invalidateDialogRequest()',
+              'local DIALOG_RETRY_DELAY = 0.25',
+              'local openDialog',
+              'local function scheduleDialogRetry(npcId, character, generation)',
+              'openDialog(npcId, character, generation)',
               'generation ~= dialogRequestGeneration',
               'player.Character ~= character',
               'not character.Parent',
@@ -76,7 +79,7 @@ jobs:
           )
           for marker in dialog_guards:
               if marker not in text["dialog"]:
-                  problems.append(f"NPCDialogMenu stale-response guard missing: {marker}")
+                  problems.append(f"NPCDialogMenu stale-response/retry guard missing: {marker}")
 
           quest_guards = (
               'local loadGeneration = 0',
@@ -88,16 +91,21 @@ jobs:
               'player:GetAttribute("OpenQuestMenu") ~= expectedOpenState',
               'player.CharacterAdded:Connect(function()',
               'player.CharacterRemoving:Connect(function()',
+              'local function scheduleCurrentGenerationReload(staleGeneration)',
+              'if open and staleGeneration ~= loadGeneration then',
               'if not data or type(data) ~= "table" or not open then return end',
           )
           for marker in quest_guards:
               if marker not in text["quest"]:
-                  problems.append(f"QuestMenu stale-response guard missing: {marker}")
+                  problems.append(f"QuestMenu stale-response/retry guard missing: {marker}")
 
           achievement_guards = (
               'local refreshGeneration = 0',
               'local refreshInFlight = false',
+              'local ACHIEVEMENT_RETRY_DELAY = 0.25',
+              'local refresh',
               'local function invalidateRefresh()',
+              'local function scheduleAchievementRetry(staleGeneration)',
               'local generation = refreshGeneration',
               'local character = player.Character',
               'generation ~= refreshGeneration',
@@ -108,7 +116,7 @@ jobs:
           )
           for marker in achievement_guards:
               if marker not in text["achievement"]:
-                  problems.append(f"AchievementMenu stale-response guard missing: {marker}")
+                  problems.append(f"AchievementMenu stale-response/retry guard missing: {marker}")
 
           menu_guards = {
               "shop": "OpenShopMenu",
@@ -128,4 +136,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, stale NPC/Quest/Achievement responses, respawn cleanup and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, stale NPC/Quest/Achievement responses, retry paths, respawn cleanup and close-state contract validated.")
