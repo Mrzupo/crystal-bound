@@ -14,7 +14,7 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
-local COOLDOWN = math.max(0.1, finiteNumber(DodgeConfig.Cooldown, 2.5))
+local COOLDOWN = math.clamp(finiteNumber(DodgeConfig.Cooldown, 2.5), 0.1, 60)
 local INVULNERABILITY = math.clamp(finiteNumber(DodgeConfig.Invulnerability, 0.45), 0.05, 2)
 local BOOST = math.clamp(finiteNumber(DodgeConfig.Boost, 42), 1, 100)
 local MAX_DIRECTION_MAGNITUDE = math.clamp(finiteNumber(DodgeConfig.MaxDirectionMagnitude, 1000), 1, 10000)
