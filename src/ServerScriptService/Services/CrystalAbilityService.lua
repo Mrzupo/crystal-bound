@@ -27,14 +27,15 @@ local function executeTide(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then
-		return { Message = nil, Hits = {} }
+		return { Success = false, Message = nil, Hits = {} }
 	end
 
 	local abilityConfig = CrystalConfig.Abilities.TIDE or {}
 	local healAmount = math.max(0, safePositive(abilityConfig.HealAmount, 0))
 	local applied = PlayerService.Heal(player, healAmount)
-	if applied <= 0 then return { Message = nil, Hits = {} } end
+	if applied <= 0 then return { Success = false, Message = nil, Hits = {} } end
 	return {
+		Success = true,
 		Message = "Tidal Pulse restored health.",
 		Hits = {},
 	}
@@ -44,17 +45,17 @@ local function executeGale(player, targetModel, abilityDamage, abilityRange)
 	local safeDamage = safePositive(abilityDamage, 0)
 	local safeRange = safePositive(abilityRange, 0)
 	if safeDamage <= 0 or safeRange <= 0 then
-		return { Message = nil, Hits = {} }
+		return { Success = false, Message = nil, Hits = {} }
 	end
 
 	local character = player.Character
 	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
 	local targetRoot = targetModel and (targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart)
 	if not playerRoot or not targetRoot then
-		return { Message = nil, Hits = {} }
+		return { Success = false, Message = nil, Hits = {} }
 	end
 	if (targetRoot.Position - playerRoot.Position).Magnitude > safeRange then
-		return { Message = nil, Hits = {} }
+		return { Success = false, Message = nil, Hits = {} }
 	end
 
 	local hits = {}
@@ -78,26 +79,26 @@ local function executeGale(player, targetModel, abilityDamage, abilityRange)
 		end
 	end
 
-	return { Message = nil, Hits = hits }
+	return { Success = #hits > 0, Message = nil, Hits = hits }
 end
 
 function CrystalAbilityService.Execute(player, profile, crystalId, targetModel, abilityDamage, abilityRange)
 	if not validPlayerProfile(player, profile, crystalId) then
-		return { Message = nil, Hits = {} }
+		return { Success = false, Message = nil, Hits = {} }
 	end
 	if crystalId == "TIDE" then
 		return executeTide(player)
 	elseif crystalId == "GALE" then
 		if not targetModel or not targetModel:IsA("Model") then
-			return { Message = nil, Hits = {} }
+			return { Success = false, Message = nil, Hits = {} }
 		end
 		if targetModel:GetAttribute("Enemy") ~= true then
-			return { Message = nil, Hits = {} }
+			return { Success = false, Message = nil, Hits = {} }
 		end
 		return executeGale(player, targetModel, abilityDamage, abilityRange)
 	end
 
-	return { Message = nil, Hits = {} }
+	return { Success = false, Message = nil, Hits = {} }
 end
 
 return CrystalAbilityService
