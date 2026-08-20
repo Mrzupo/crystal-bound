@@ -3,8 +3,8 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1426 commits ahead, 35 commits behind** `main` (verified with GitHub compare).
-`main` remains untouched by this workstream; the current compared base is `0e0bf1d1dd0ce62b08d06414dcc09268155e3550`.
+Current compare: **1443 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+`main` remains untouched by this workstream; the current compared base is `18f0f27fcbcb4fd6384f45ecd1d0632f9edad02d`.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
@@ -64,6 +64,7 @@ Current compare: **1426 commits ahead, 35 commits behind** `main` (verified with
 - `EnemyConfig.Get()` returns detached deep copies, including nested `Special` config, while normalizing Respawn.
 - NPC dialog requests require canonical NPC identity, server distance and rate-limit checks; config getters return detached copies.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
+- `InventoryConfig.GetItemConfig()` now returns a detached item snapshot; item config data is not exposed as a mutable server table through the canonical getter.
 - `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
 - Shop, UseItem, Crafting, Combat and Guardian server→client inventory outputs use detached InventoryService snapshots.
 - `InventoryRequest` is Client→Server only; `InventoryChanged` is Server→Client only.
