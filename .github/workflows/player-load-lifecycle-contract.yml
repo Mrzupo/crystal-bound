@@ -39,6 +39,8 @@ jobs:
               raise SystemExit("Bootstrap must keep the canonical PlayerAdded load owner")
           if 'for _, player in ipairs(Players:GetPlayers()) do' not in bootstrap or 'task.spawn(loadPlayer, player)' not in bootstrap:
               raise SystemExit("Bootstrap must load players already present when the world finishes initializing")
+          if 'if player.Parent then player:Kick(' not in bootstrap:
+              raise SystemExit("Bootstrap must not Kick a player after the player has already left")
           if 'PlayerLoadCatchup' in bootstrap or 'PlayerLoadCatchup' in project:
               raise SystemExit("Redundant PlayerLoadCatchup loader must remain removed")
           if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
