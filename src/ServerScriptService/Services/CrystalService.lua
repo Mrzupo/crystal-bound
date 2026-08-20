@@ -5,7 +5,9 @@ function CrystalService.GetOwnedCrystals(profile)
 	if type(profile) ~= "table" or type(profile.Crystals) ~= "table" or type(profile.Crystals.Owned) ~= "table" then return {} end
 	local result = {}
 	for _, crystalId in ipairs(profile.Crystals.Owned) do
-		table.insert(result, crystalId)
+		if CrystalSystem.Exists(crystalId) and not table.find(result, crystalId) then
+			table.insert(result, crystalId)
+		end
 	end
 	return result
 end
