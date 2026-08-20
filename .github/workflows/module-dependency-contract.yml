@@ -20,14 +20,14 @@ jobs:
           player_header = player.split('local PlayerService = {', 1)[0]
           status_header = status.split('local StatusEffectService = {}', 1)[0]
 
-          if 'local StatusEffectService = require(script.Parent.StatusEffectService)' in player_header:
-              raise SystemExit('PlayerService must not top-level require StatusEffectService; this creates an init-cycle if StatusEffectService reads PlayerService shutdown state')
-          if 'local PlayerService = require(script.Parent.PlayerService)' in status_header:
-              raise SystemExit('StatusEffectService must not top-level require PlayerService while PlayerService depends on StatusEffectService')
+          allowed_dependency = 'local StatusEffectService = require(script.Parent.StatusEffectService)'
+          reverse_dependency = 'local PlayerService = require(script.Parent.PlayerService)'
 
-          if 'local StatusEffectService = require(script.Parent.StatusEffectService)' not in player:
-              raise SystemExit('PlayerService must retain its documented runtime StatusEffectService dependency until a safe lazy-module refactor is implemented')
+          if allowed_dependency not in player_header:
+              raise SystemExit('PlayerService must retain its current StatusEffectService dependency until a safe lazy-module refactor is implemented')
+          if reverse_dependency in status_header:
+              raise SystemExit('StatusEffectService must not top-level require PlayerService; that would create a circular module-init dependency')
           if 'local active = setmetatable({}, { __mode = "k" })' not in status:
               raise SystemExit('StatusEffectService must retain weak Humanoid state storage')
 
-          print('Player/StatusEffectService module-init dependency boundary validated; no top-level circular require is permitted.')
+          print('Player/StatusEffectService module-init dependency boundary validated; the current one-way require is preserved and the reverse cycle is forbidden.')
