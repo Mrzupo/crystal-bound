@@ -48,6 +48,13 @@ jobs:
           levels = [int(value) for value in re.findall(r'Level = (\d+)', world)]
           if len(levels) != 4 or any(level < 1 or level > 1000 for level in levels):
               raise SystemExit('WorldConfig island levels must be within 1..1000')
+          if levels != sorted(levels) or len(set(levels)) != len(levels):
+              raise SystemExit('WorldConfig island levels must be strictly increasing from Starter to Ancient')
+
+          centers = [float(value) for value in re.findall(r'Center = Vector3\.new\(([-0-9.]+),', world)]
+          if len(centers) != 4 or centers != sorted(centers):
+              raise SystemExit('WorldConfig island centers must progress monotonically along the current world axis')
+
           sizes = [tuple(map(float, values)) for values in re.findall(r'Size = Vector3\.new\(([^,]+), ([^,]+), ([^)]+)\)', world)]
           if len(sizes) != 4:
               raise SystemExit('WorldConfig must define exactly four island sizes')
@@ -60,5 +67,5 @@ jobs:
           if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
               raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
 
-          print('World initialization, bounded config, portal authority and per-player portal lifecycle validated.')
+          print('World initialization, monotonic progression, bounded config, portal authority and per-player portal lifecycle validated.')
           PY
