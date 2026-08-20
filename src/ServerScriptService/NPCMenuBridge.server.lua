@@ -9,6 +9,7 @@ local MENU_ATTRIBUTES = {
 	"OpenShopMenu",
 	"OpenCrystalMenu",
 	"OpenCraftingMenu",
+	"OpenAchievementMenu",
 	"OpenNPCDialog",
 }
 
