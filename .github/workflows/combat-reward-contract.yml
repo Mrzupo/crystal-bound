@@ -29,12 +29,14 @@ jobs:
               'targetModel:SetAttribute("DeathRewarded", true)',
               'local _, earnedMoney = EconomyService.AddMoney(profile, moneyGain)',
               'giveLoot(player, profile, targetModel, enemyConfig)',
+              'CrystalMastery.AddXP(profile, crystalId, math.floor(xpGain * 0.5))',
           ):
               if marker not in combat:
                   raise SystemExit(f'CombatService canonical reward marker missing: {marker}')
           forbidden = (
               'action == "Ability" and 40 or 25',
               'action == "Ability" and 20 or 10',
+              'math.max(10, math.floor(xpGain * 0.5))',
               '({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })',
               'currentMoney + moneyGain > EconomyConfig.MaxMoney',
               'Spend some Money before claiming enemy rewards.',
@@ -69,4 +71,4 @@ jobs:
           ):
               if marker not in damage:
                   raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
-          print('Canonical combat reward source, wallet-cap-safe payout, idempotency, attacker-session, lethal-hit ordering and attribution cleanup validated.')
+          print('Canonical combat reward source, wallet-cap-safe payout, idempotency, attacker-session, mastery-XP linkage, lethal-hit ordering and attribution cleanup validated.')
