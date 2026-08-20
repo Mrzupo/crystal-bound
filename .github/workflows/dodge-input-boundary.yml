@@ -16,6 +16,7 @@ jobs:
           from pathlib import Path
 
           service = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
+          remote = Path("src/ServerScriptService/DodgeRemote.server.lua").read_text(encoding="utf-8")
           required = [
               'local function finiteNumber(value, fallback)',
               'local function validDirection(direction)',
@@ -32,4 +33,12 @@ jobs:
           missing = [marker for marker in required if marker not in service]
           if missing:
               raise SystemExit("missing Dodge input/target boundary contract markers: " + ", ".join(missing))
-          print("Dodge server input, target identity and runtime-config boundary contract validated.")
+
+          for marker in [
+              'local PlayerService = require(script.Parent.Services.PlayerService)',
+              'if PlayerService.ShuttingDown or not PlayerService.GetProfile(player) then return end',
+          ]:
+              if marker not in remote:
+                  raise SystemExit("DodgeRemote shutdown/profile gate missing: " + marker)
+
+          print("Dodge server input, target identity, runtime-config and shutdown/profile boundary contract validated.")
