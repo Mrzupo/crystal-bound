@@ -24,10 +24,31 @@ jobs:
               'payload.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }',
               'lock.JobId == SESSION_ID',
               'current.SessionLock = nil',
+              'claimed = false',
+              'invalidStoredValue = false',
+              'saved = false',
+              'refreshed = false',
+              'released = false',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('Profile-store session contract missing: ' + ', '.join(missing))
+
+          callback_checks = {
+              'Load': ('return store:UpdateAsync(key, function(current)', 'claimed = false', 'invalidStoredValue = false'),
+              'Save': ('return store:UpdateAsync(key, function(current)', 'saved = false'),
+              'Refresh': ('return store:UpdateAsync(key, function(current)', 'refreshed = false'),
+              'Release': ('return store:UpdateAsync(key, function(current)', 'released = false'),
+          }
+          for operation, markers in callback_checks.items():
+              start = text.index('function SafeProfileStore.' + operation)
+              end = text.find('function SafeProfileStore.', start + 10)
+              block = text[start:] if end == -1 else text[start:end]
+              callback_at = block.index('return store:UpdateAsync(key, function(current)')
+              callback_tail = block[callback_at:callback_at + 180]
+              for marker in markers[1:]:
+                  if marker not in callback_tail:
+                      raise SystemExit(f'{operation} must reset callback state on every UpdateAsync invocation: {marker}')
 
           timeout_match = re.search(r'SESSION_TIMEOUT\s*=\s*(\d+)', text)
           if not timeout_match:
@@ -44,4 +65,4 @@ jobs:
           if 'local profile = PlayerData.Reconcile(result)' not in text or 'local payload = PlayerData.Reconcile(clone(profile))' not in text:
               raise SystemExit('Load/Save must reconcile persisted profile data at the storage boundary')
 
-          print('Profile-store session-lock contract validated.')
+          print('Profile-store session-lock contract and UpdateAsync callback retry-state isolation validated.')
