@@ -18,12 +18,22 @@ jobs:
           required = [
               'local before = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)',
               'return nextMoney, nextMoney - before',
+              'local beforeMoney = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)',
+              'if beforeMoney + requestedEarned > Config.MaxMoney then',
               'local _, earned = EconomyService.AddMoney(profile, requestedEarned)',
+              'if earned ~= requestedEarned then',
+              'profile.Money = beforeMoney',
+              'InventoryService.AddItem(profile, itemId, amount)',
               'return true, earned',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('missing economy reward accounting contract: ' + ', '.join(missing))
+
+          gate = text.index('if beforeMoney + requestedEarned > Config.MaxMoney then')
+          remove = text.index('if not InventoryService.RemoveItem(profile, itemId, amount) then')
+          if gate > remove:
+              raise SystemExit('wallet-cap gate must execute before inventory mutation')
 
           owners = []
           for path in root.rglob('*.lua'):
@@ -32,5 +42,5 @@ jobs:
                   owners.append(str(path))
           if owners != ['src/ServerScriptService/Services/EconomyService.lua']:
               raise SystemExit(f'profile.Money mutation must remain EconomyService-owned; found {owners}')
-          print('Economy reward accounting and Money ownership contract validated.')
+          print('Economy reward accounting, wallet-cap atomicity, rollback and Money ownership contract validated.')
           PY
