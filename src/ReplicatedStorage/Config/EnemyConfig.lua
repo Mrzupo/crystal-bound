@@ -11,9 +11,20 @@ local EnemyConfig = {
 	}
 }
 
+local function finiteNumber(value, fallback)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
+	return number
+end
+
 function EnemyConfig.Get(typeId)
 	if type(typeId) ~= "string" then return nil end
-	return EnemyConfig.Types[typeId]
+	local source = EnemyConfig.Types[typeId]
+	if type(source) ~= "table" then return nil end
+	local result = {}
+	for key, value in pairs(source) do result[key] = value end
+	result.Respawn = math.clamp(finiteNumber(source.Respawn, 10), 1.5, 600)
+	return result
 end
 
 function EnemyConfig.IsValid(typeId)
