@@ -64,7 +64,6 @@ function PlayerData.new()
 		SessionLockedAt = 0,
 		SessionLock = nil,
 	}
-
 end
 
 function PlayerData.Reconcile(input)
@@ -110,6 +109,15 @@ function PlayerData.Reconcile(input)
 	end
 	if not normalizedMastery.EMBER then normalizedMastery.EMBER = { Level = 1, XP = 0 } end
 	data.CrystalMastery = normalizedMastery
+
+	local stats = type(data.Stats) == "table" and data.Stats or {}
+	data.Stats = {
+		Damage = clampInt(stats.Damage, 0, 1000, defaults.Stats.Damage),
+		EnemiesDefeated = clampInt(stats.EnemiesDefeated, 0, 1000000000, defaults.Stats.EnemiesDefeated),
+		BossesDefeated = clampInt(stats.BossesDefeated, 0, 1000000000, defaults.Stats.BossesDefeated),
+		AncientGolemsDefeated = clampInt(stats.AncientGolemsDefeated, 0, 1000000000, defaults.Stats.AncientGolemsDefeated),
+		CrystalBatsDefeated = clampInt(stats.CrystalBatsDefeated, 0, 1000000000, defaults.Stats.CrystalBatsDefeated),
+	}
 
 	local function isQuestId(value)
 		return type(value) == "string" and QuestSystem.GetDefinition(value) ~= nil
