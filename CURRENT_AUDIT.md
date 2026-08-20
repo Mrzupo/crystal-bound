@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1317 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1320 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
@@ -66,9 +66,10 @@ Current compare: **1317 commits ahead, 30 commits behind** `main` (verified with
 ## Open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
-- The latest Combined Status query returned no status objects and the latest commit-specific workflow-run query returned no runs; CI is therefore not called green.
+- The latest Combined Status query returned no status objects; CI is therefore not called green.
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
+- `CombatPresentation.client.lua` still has a client-only stale-Humanoid presentation edge case around its `WaitForChild("Humanoid", 5)` CharacterAdded handler; the server gameplay authority is unaffected, and the file was intentionally not blindly rewritten during this pass.
 - `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently unlock through level gates; the long-term design includes Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - White Queen intro/story rules remain unchanged.
