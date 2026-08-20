@@ -229,7 +229,7 @@ function PlayerService.Load(player)
 		PlayerService.ProfileRevisions[player] = nil
 		PlayerService.LoadingByUserId[userId] = nil
 		local released = SafeProfileStore.Release(player)
-		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s."):format(player.Name, tostring(released)))
+		warn(("Crystal Bound: player %s left/shutdown during profile initialization; session lock release=%s"):format(player.Name, tostring(released)))
 		return nil, PlayerService.ShuttingDown and "Server is shutting down" or "Player left during profile initialization"
 	end
 
@@ -257,9 +257,9 @@ function PlayerService.Load(player)
 	return profile
 end
 
-function PlayerService.Sync(player)
+function PlayerService.Sync(player, internal)
 	local profile = PlayerService.Profiles[player]
-	if not profile or PlayerService.Closing[player] then return end
+	if not profile or (PlayerService.Closing[player] and not internal) then return end
 	PlayerService.ProfileRevisions[player] = (PlayerService.ProfileRevisions[player] or 0) + 1
 	local newlyUnlocked = AchievementSystem.Check(profile)
 	for _, definition in ipairs(newlyUnlocked) do
@@ -335,7 +335,7 @@ local function saveConsistently(player, profile)
 	local saved = false
 	for attempt = 1, SAVE_SETTLE_ATTEMPTS do
 		if PlayerService.Profiles[player] ~= profile then return false end
-		PlayerService.Sync(player)
+		PlayerService.Sync(player, true)
 		local snapshotRevision = PlayerService.ProfileRevisions[player] or 0
 		saved = SafeProfileStore.Save(player, profile) == true
 		if not saved then return false end
