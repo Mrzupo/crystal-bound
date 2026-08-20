@@ -101,7 +101,9 @@ refresh = function()
 	local expectedOpenState = player:GetAttribute("OpenAchievementMenu")
 	local ok, data = pcall(function() return getPlayerData:InvokeServer() end)
 	if generation ~= refreshGeneration or not open or player.Character ~= character or player:GetAttribute("OpenAchievementMenu") ~= expectedOpenState then
-		refreshInFlight = false
+		if generation == refreshGeneration then
+			refreshInFlight = false
+		end
 		return
 	end
 	refreshInFlight = false
