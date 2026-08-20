@@ -23,7 +23,6 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
 - Enemy and Guardian respawns are suppressed once global server shutdown begins.
 - Guardian Arena hazard damage and its periodic loop stop on global shutdown.
-- Status-effect application and delayed Burn/Slow callbacks stop on global shutdown.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
 - Daily Bounty canonicalized from config and safe around wallet caps.
 - Daily Bounty reconcile additionally repairs corrupt persisted `Claimed=true` state when `Progress < Goal`.
@@ -60,15 +59,15 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy AI loops stop on global shutdown.
 - Guardian creation and AI stop on global shutdown, and the delayed Guardian respawn callback also checks the shutdown state.
 - Guardian Arena hazard loop stops and disables active hazard visuals on global shutdown.
-- `StatusEffectService` now rejects new effects during shutdown and aborts delayed Burn/Slow callbacks at their next lifecycle boundary.
 - `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
 - Enemy Mastery XP is derived from canonical Enemy XP with no arbitrary minimum fallback.
 - `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences and rejects stale Character deferred binds.
+- `StatusEffectService` retains Humanoid-scoped replacement-token cleanup for Slow/Burn; a shutdown-specific cancellation guard remains intentionally pending because a direct PlayerService dependency would create a module-init cycle.
 - `StatusEffectService` restores Slow expiry speed with the same canonical `MaxWalkSpeedBonus` cap used by PlayerService/MovementConfig.
 - Missing Humanoid/RootPart resets movement position state; portal grace is Character-bound and clears through centralized `WorldTheme` state cleanup on respawn/leave.
 - Dodge invulnerability end tasks use per-player tokens and `ApplyDamage()` requires the current Player Character Humanoid.
 - CharacterAdded health binding checks exact Character identity before/after Humanoid acquisition.
-- Guardian telegraph windups are bound to the original Guardian and original target Character instances.
+- Guardian telegraph windups are bound to the original Guardian and original target Character instances and abort on shutdown.
 - AI pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
 - `PlayerData.Reconcile()` uses canonical `CrystalSystem.Exists()` validity, finite/integer progression thresholds, canonical Achievement title validation, quest prerequisite repair, daily-bounty definition repair and persistent-stat bounds.
 - `CrystalMastery` mutation/read paths require actual Crystal ownership instead of relying only on Remote-layer checks.
@@ -93,10 +92,11 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - No actual Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
 - Current GitHub workflow-run queries provide no verified run for the latest hardening commits; CI must not be called green.
-- Movement/physics thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling, movement/status-effect shutdown and Roblox network-ownership interactions.
+- Movement/physics thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling, movement shutdown and Roblox network-ownership interactions.
 - The generalized `PlayerService.Saving` gameplay-read gate remains intentionally conservative. Ordinary `GetProfile()` callers are blocked during autosave; selected server reward paths have explicit autosave-safe access and are covered by settle/revision behavior.
 - `GetPlayerData`/`GetQuestData` return detached server-serialized subsets; no server-side table reference crosses the network boundary.
-- Authored Roblox Animation/Sound assets are still pending; current VFX remain procedural/placeholder-level.
+- A future status-effect shutdown cancellation fix should first remove the PlayerService ↔ StatusEffectService module-init cycle safely; do not add a reverse top-level require.
+- Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - Story remains fixed: White Queen, first loss, unknown world, Ancient Crystal lore, multiple future worlds and delayed second-world reveal.
 
