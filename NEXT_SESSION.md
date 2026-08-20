@@ -17,6 +17,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - TIDE/GALE level gates enforced inside `CrystalSystem.Unlock()` as well as request-layer checks.
 - Central QuestSystem / QuestService completion and rewards.
 - SafeProfileStore session lock with active per-player tokens, callback-local retry-state isolation, callback-time save snapshots and profile-revision save settling.
+- SafeProfileStore releases the exact claimed SessionLock if post-claim `PlayerData.Reconcile()` fails.
 - Canonical Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
 - Shop and Crafting explicitly roll back partial inventory insertion before reversing a failed transaction.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
@@ -34,12 +35,14 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence; movement enforcement stops during shutdown.
 - Portal cooldown expiry is generation-safe across respawn/rejoin; WorldTheme portal state monitoring also stops during shutdown.
 - NPC menu state is Character-bound and cleared on respawn/leave.
+- Mutating Dodge requests are rejected during shutdown or when the player profile is unavailable.
 
 ## Latest hardening work
 - Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after startup, with per-Player deduplication.
 - Redundant `PlayerLoadCatchup.server.lua` was removed from the repository and Rojo tree to avoid two concurrent startup load owners.
 - `PlayerService.Load()` uses a per-UserId in-flight guard: a second concurrent load for the same UserId is rejected until the current load finishes. Do not describe this as a superseding-load implementation; the current runtime intentionally blocks the second load rather than taking over its lock.
 - Every aborted successful load path releases the exact SessionLock token it acquired before returning.
+- `SafeProfileStore.Load()` now catches reconciliation errors after a successful lock claim and releases the exact claimed token before failing the load.
 - Bootstrap checks `player.Parent` before `Kick()` on load failure.
 - `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
 - `PlayerService.GetProfile()` also rejects ordinary gameplay access during `Saving` and global shutdown; final removal uses explicit internal save access.
@@ -59,13 +62,12 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Enemy AI loops stop on global shutdown.
 - Guardian creation and AI stop on global shutdown, and the delayed Guardian respawn callback also checks the shutdown state.
 - Guardian Arena hazard loop stops and disables active hazard visuals on global shutdown.
-- `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
-- Enemy Mastery XP is derived from canonical Enemy XP with no arbitrary minimum fallback.
-- `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences and rejects stale Character deferred binds.
 - `StatusEffectService` retains Humanoid-scoped replacement-token cleanup for Slow/Burn; a shutdown-specific cancellation guard remains intentionally pending because a direct PlayerService dependency would create a module-init cycle.
+- `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences and rejects stale Character deferred binds.
 - `StatusEffectService` restores Slow expiry speed with the same canonical `MaxWalkSpeedBonus` cap used by PlayerService/MovementConfig.
 - Missing Humanoid/RootPart resets movement position state; portal grace is Character-bound and clears through centralized `WorldTheme` state cleanup on respawn/leave.
 - Dodge invulnerability end tasks use per-player tokens and `ApplyDamage()` requires the current Player Character Humanoid.
+- `DodgeRemote.server.lua` now blocks mutating dodge requests during shutdown or when `GetProfile()` is unavailable.
 - CharacterAdded health binding checks exact Character identity before/after Humanoid acquisition.
 - Guardian telegraph windups are bound to the original Guardian and original target Character instances and abort on shutdown.
 - AI pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
@@ -94,7 +96,6 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Current GitHub workflow-run queries provide no verified run for the latest hardening commits; CI must not be called green.
 - Movement/physics thresholds still require real Roblox multiplayer validation, especially Dodge velocity, portal grace, portal cooldown generation handling, movement shutdown and Roblox network-ownership interactions.
 - The generalized `PlayerService.Saving` gameplay-read gate remains intentionally conservative. Ordinary `GetProfile()` callers are blocked during autosave; selected server reward paths have explicit autosave-safe access and are covered by settle/revision behavior.
-- `GetPlayerData`/`GetQuestData` return detached server-serialized subsets; no server-side table reference crosses the network boundary.
 - A future status-effect shutdown cancellation fix should first remove the PlayerService ↔ StatusEffectService module-init cycle safely; do not add a reverse top-level require.
 - Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
