@@ -23,6 +23,7 @@ jobs:
               'state.Burn ~= token',
               'function StatusEffectService.Clear(humanoid)',
               'state.Slow = nil',
+              'state.SlowMultiplier = nil',
               'state.Burn = nil',
               'active[humanoid] = nil',
               'if humanoid.Parent and humanoid.Health > 0 and state.Slow == token then',
