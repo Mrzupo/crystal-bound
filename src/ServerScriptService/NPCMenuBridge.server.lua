@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
+local PlayerService = require(script.Parent.Services.PlayerService)
 
 local NPC_INTERACTION_RANGE = math.clamp(tonumber(InteractionConfig.NPCInteractionRange) or 14, 4, 50)
 local MENU_ATTRIBUTES = {
@@ -37,6 +38,7 @@ local function bindPlayer(player)
 	disconnectPlayer(player)
 	clearMenus(player)
 	playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+		if PlayerService.ShuttingDown then return end
 		if player.Parent and player.Character == character then
 			clearMenus(player)
 		end
@@ -44,8 +46,10 @@ local function bindPlayer(player)
 end
 
 local function openDialog(player, npcId, character)
+	if PlayerService.ShuttingDown then return end
 	clearMenus(player)
 	task.defer(function()
+		if PlayerService.ShuttingDown then return end
 		if player.Parent and player.Character == character and character.Parent then
 			player:SetAttribute("OpenNPCDialog", npcId)
 		end
@@ -58,6 +62,7 @@ local function bindPrompt(prompt)
 	local model = prompt:FindFirstAncestorOfClass("Model")
 	if not model then return end
 	prompt.Triggered:Connect(function(player)
+		if PlayerService.ShuttingDown then return end
 		local character = player.Character
 		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and character and isNearModel(player, model) then
 			openDialog(player, model.Name, character)
