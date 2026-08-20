@@ -6,6 +6,7 @@ local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 local XPConfig = require(ReplicatedStorage.Config.XPConfig)
 local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
+local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local InventoryService = require(script.Parent.InventoryService)
 local EconomyService = require(script.Parent.EconomyService)
 local XPService = require(script.Parent.XPService)
@@ -197,12 +198,24 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		local xpReward = finiteNumber(config.XP)
 		local moneyReward = finiteNumber(config.Money)
 		local dropId = type(config.Drop) == "string" and config.Drop or nil
+		local questDefinition = QuestSystem.GetDefinition("GUARDIAN_TRIAL")
+		local questActive = profile ~= nil and QuestSystem.IsActive(profile, "GUARDIAN_TRIAL")
+		local questXP = questDefinition and finiteNumber(questDefinition.XP) or 0
+		local questMoney = questDefinition and finiteNumber(questDefinition.Money) or 0
+		local currentMoney = profile and math.clamp(finiteNumber(profile.Money, 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney) or 0
+		local validQuestReward = (not questActive) or (
+			questDefinition ~= nil
+			and questXP >= 0 and questXP % 1 == 0 and questXP <= XPConfig.MaxExperience
+			and questMoney >= 0 and questMoney % 1 == 0 and questMoney <= EconomyConfig.MaxMoney
+			and currentMoney + math.max(0, moneyReward or 0) + questMoney <= EconomyConfig.MaxMoney
+		)
 		local validRewardConfig = player ~= nil and profile ~= nil
 			and xpReward ~= nil and xpReward >= 0 and xpReward % 1 == 0
 			and xpReward <= XPConfig.MaxExperience
 			and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0
 			and moneyReward <= EconomyConfig.MaxMoney
 			and dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil
+			and validQuestReward
 
 		if validRewardConfig then
 			model:SetAttribute("Rewarded", true)
