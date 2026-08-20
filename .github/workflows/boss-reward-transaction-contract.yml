@@ -27,24 +27,28 @@ jobs:
               'xpReward <= XPConfig.MaxExperience',
               'moneyReward <= EconomyConfig.MaxMoney',
               'InventoryConfig.GetItemConfig(dropId) ~= nil',
-              'local currentMoney = math.clamp(finiteNumber(profile.Money, 0), EconomyConfig.MinMoney, EconomyConfig.MaxMoney)',
-              'if currentMoney + moneyReward > EconomyConfig.MaxMoney then',
               'model:SetAttribute("Rewarded", true)',
               'XPService.AddXP(profile, xpReward)',
-              'EconomyService.AddMoney(profile, moneyReward)',
+              'local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)',
               'InventoryService.AddItem(profile, dropId, 1)',
+              'earnedMoney < moneyReward',
               'DamageService.ClearTarget(model)',
               'BossService.CreateGuardian(position, parent, bossName)',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('Guardian reward lifecycle markers missing: ' + ', '.join(missing))
-          if text.index('if currentMoney + moneyReward > EconomyConfig.MaxMoney then') > text.index('model:SetAttribute("Rewarded", true)'):
-              raise SystemExit('Guardian reward capacity must be checked before Rewarded is set')
-          forbidden = ['profile.Money =', 'profile.Inventory[dropId] =']
+          if text.index('model:SetAttribute("Rewarded", true)') > text.index('XPService.AddXP(profile, xpReward)'):
+              raise SystemExit('Guardian idempotency must be committed before reward mutation to block double processing')
+          forbidden = [
+              'profile.Money =',
+              'profile.Inventory[dropId] =',
+              'currentMoney + moneyReward > EconomyConfig.MaxMoney',
+              'Spend some Money before claiming the Guardian reward.',
+          ]
           for marker in forbidden:
               if marker in text:
-                  raise SystemExit('Guardian rewards must not bypass canonical mutation owners: ' + marker)
+                  raise SystemExit('Guardian reward path still contains obsolete bypass/loss behavior: ' + marker)
 
           drop_match = re.search(r'Drop\s*=\s*"([A-Za-z0-9_]+)"', boss)
           if not drop_match:
@@ -63,4 +67,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, payout-capacity gate, lifecycle cleanup, cap validation, canonical mutation ownership and drop registration validated.')
+          print('Guardian reward idempotency, canonical mutation ownership, wallet-cap-safe payout, lifecycle cleanup, cap validation and drop registration validated.')
