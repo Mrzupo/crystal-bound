@@ -3,7 +3,7 @@ local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 local XPConfig = require(ReplicatedStorage.Config.XPConfig)
 local WorldConfig = require(ReplicatedStorage.Config.WorldConfig)
-local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
 local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 local CrystalMastery = require(ReplicatedStorage.Modules.CrystalMastery)
 local DailyBountyConfig = require(ReplicatedStorage.Config.DailyBountyConfig)
@@ -41,7 +41,7 @@ local function normalizeList(value, validator)
 end
 
 local function CrystalSystemExists(value)
-	return type(value) == "string" and type(CrystalConfig.Definitions[value]) == "table"
+	return type(value) == "string" and CrystalSystem.Exists(value)
 end
 
 local function capExperienceBelowNextLevel(level, experience, maxLevel, maxExperience, requiredXP)
@@ -111,7 +111,7 @@ function PlayerData.Reconcile(input)
 
 	local crystals = type(data.Crystals) == "table" and data.Crystals or clone(defaults.Crystals)
 	local owned = normalizeList(crystals.Owned, CrystalSystemExists)
-	if not table.find(owned, "EMBER") then table.insert(owned, 1, "EMBER") end
+	if not table.find(owned, "EMBER") and CrystalSystem.Exists("EMBER") then table.insert(owned, 1, "EMBER") end
 	data.Crystals = {
 		Owned = owned,
 		Equipped = CrystalSystemExists(crystals.Equipped) and table.find(owned, crystals.Equipped) and crystals.Equipped or "EMBER",
@@ -130,7 +130,7 @@ function PlayerData.Reconcile(input)
 			normalizedMastery[crystalId] = { Level = level, XP = xp }
 		end
 	end
-	if not normalizedMastery.EMBER then normalizedMastery.EMBER = { Level = 1, XP = 0 } end
+	if not normalizedMastery.EMBER and table.find(owned, "EMBER") then normalizedMastery.EMBER = { Level = 1, XP = 0 } end
 	data.CrystalMastery = normalizedMastery
 
 	local stats = type(data.Stats) == "table" and data.Stats or {}
