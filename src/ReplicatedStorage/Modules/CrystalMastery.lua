@@ -42,7 +42,7 @@ local function boundedPositiveConfig(value, fallback, maximum)
 end
 
 local function ensure(profile, crystalId)
-	if not type(profile) == "table" or not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end
+	if type(profile) ~= "table" or not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end
 	profile.CrystalMastery = type(profile.CrystalMastery) == "table" and profile.CrystalMastery or {}
 	local mastery = profile.CrystalMastery[crystalId]
 	if type(mastery) ~= "table" then
