@@ -1,0 +1,37 @@
+name: Crystal Equipped Write Ownership
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Equipped mutation owners
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path("src")
+          pattern = re.compile(r'profile\.Crystals\.Equipped\s*=')
+          allowed = {
+              "ReplicatedStorage/Modules/CrystalSystem.lua",
+              "ReplicatedStorage/Modules/PlayerData.lua",
+              "ServerScriptService/Services/PlayerService.lua",
+          }
+          violations = []
+          for path in root.rglob("*.lua"):
+              relative = str(path.relative_to(root))
+              text = path.read_text(encoding="utf-8")
+              if pattern.search(text) and relative not in allowed:
+                  violations.append(relative)
+          if violations:
+              raise SystemExit("Equipped Crystal writes outside canonical owners: " + ", ".join(violations))
+          for required in allowed:
+              if not (root / required).is_file():
+                  raise SystemExit(f"Missing canonical Equipped owner: {required}")
+          print("Equipped Crystal write ownership validated.")
