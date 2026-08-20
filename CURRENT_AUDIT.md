@@ -3,7 +3,7 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1287 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1290 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
@@ -42,11 +42,12 @@ Current compare: **1287 commits ahead, 30 commits behind** `main` (verified with
 - Enemy defeat rewards use canonical `EnemyConfig`; full Money wallets no longer block XP/Loot rewards.
 - Economy item selling now checks wallet capacity before consuming inventory and restores both Money and inventory on any unexpected partial payout, closing the full-wallet sale replay exploit.
 - Guardian rewards use canonical config, keep XP/Drop when the wallet is full, and only set `Rewarded` when a valid player profile exists.
+- Guardian creation is idempotent and now destroys a corrupt/non-boss object occupying the reserved `CrystalGuardian` name before spawning the canonical boss, preventing duplicate-name identity collisions.
 - Guardian telegraph impacts are bound to the original Character instance, preventing an old windup from damaging a freshly respawned Character.
-- Guardian creation is idempotent and active from the loaded BossTelegraph path; phase values and telegraph lifecycle are contract-protected.
+- Guardian phase values and telegraph lifecycle are contract-protected.
 - NPC AI is server-only, bounded by aggro/attack/special ranges, uses weak-key path caches and clears path/status state on death.
 - AI pathfinding validates that the NPC is still live after the yielded `ComputeAsync()` call, preventing stale path results from being applied after death/destroy.
-- `EnemyConfig.Get()` now returns a detached deep copy, including nested `Special` config, while centrally normalizing Respawn.
+- `EnemyConfig.Get()` returns a detached deep copy, including nested `Special` config, while centrally normalizing Respawn.
 - Status effects use Humanoid-keyed token cancellation; Slow/Burn tasks stop on death/destroy or token replacement.
 - NPC dialog requests require canonical NPC identity, server distance and rate-limit checks; config getters return detached copies.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
@@ -60,7 +61,7 @@ Current compare: **1287 commits ahead, 30 commits behind** `main` (verified with
 ## Open decisions / limitations
 - No real Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
-- The latest Combined Status query returns no status objects and the latest commit-specific workflow-run query returned no runs; CI is therefore not called green.
+- The latest Combined Status query returned no status objects and the latest commit-specific workflow-run query returned no runs; CI is therefore not called green.
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
 - `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets; no server-side table reference crosses the network boundary, but the large Bootstrap blob was intentionally not rewritten blindly during this pass.
