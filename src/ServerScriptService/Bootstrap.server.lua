@@ -100,8 +100,8 @@ remotes.InventoryRequest.OnServerEvent:Connect(function(player, action, itemId, 
 	if action == "Sell" and type(itemId) == "string" then
 		if not isNearNPC(player, "MaterialTrader") then player:SetAttribute("ShopMessage", "You need to be near the Material Trader."); return end
 		local ok, earned = EconomyService.SellItem(profile, itemId, amount or 1, InventoryService)
-		if ok then PlayerService.Sync(player); remotes.MoneyChanged:FireClient(player, profile.Money); remotes.InventoryChanged:FireClient(player, profile.Inventory); player:SetAttribute("ShopMessage", string.format("Sold %s for %d Money", itemId, earned)) else player:SetAttribute("ShopMessage", "You do not have that item.") end
-	else remotes.InventoryChanged:FireClient(player, profile.Inventory) end
+		if ok then PlayerService.Sync(player); remotes.MoneyChanged:FireClient(player, profile.Money); remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)); player:SetAttribute("ShopMessage", string.format("Sold %s for %d Money", itemId, earned)) else player:SetAttribute("ShopMessage", "You do not have that item.") end
+	else remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)) end
 end)
 
 remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
@@ -144,7 +144,7 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 		for itemId, amount in pairs(removed) do InventoryService.AddItem(profile, itemId, amount) end
 		return
 	end
-	PlayerService.Sync(player); remotes.InventoryChanged:FireClient(player, profile.Inventory); remotes.CrystalMasteryChanged:FireClient(player, crystalId, newLevel, 0); player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, newLevel))
+	PlayerService.Sync(player); remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)); remotes.CrystalMasteryChanged:FireClient(player, crystalId, newLevel, 0); player:SetAttribute("CrystalMessage", string.format("%s mastery upgraded to Lv. %d", crystalId, newLevel))
 end)
 
 remotes.GetPlayerData.OnServerInvoke = function(player)
@@ -214,11 +214,16 @@ local function syncAllPlayerData()
 	end
 end
 
-Players.PlayerAdded:Connect(function(player)
+local function loadPlayer(player)
 	local profile, reason = PlayerService.Load(player)
 	if not profile then
 		player:Kick(reason or "Unable to load your Crystal Bound profile safely.")
 		return
 	end
 	PlayerService.Sync(player)
-end)
+end
+
+Players.PlayerAdded:Connect(loadPlayer)
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(loadPlayer, player)
+end
