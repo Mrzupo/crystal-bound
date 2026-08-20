@@ -26,19 +26,22 @@ jobs:
               'local xpGain = validNonNegativeInteger(enemyConfig.XP)',
               'local moneyGain = validNonNegativeInteger(enemyConfig.Money)',
               'local itemId = enemyConfig and enemyConfig.Drop',
-              'local currentMoney = math.clamp(finiteNumber(profile.Money) or 0, EconomyConfig.MinMoney, EconomyConfig.MaxMoney)',
-              'if currentMoney + moneyGain > EconomyConfig.MaxMoney then',
+              'targetModel:SetAttribute("DeathRewarded", true)',
+              'local _, earnedMoney = EconomyService.AddMoney(profile, moneyGain)',
+              'giveLoot(player, profile, targetModel, enemyConfig)',
           ):
               if marker not in combat:
-                  raise SystemExit(f'CombatService must use canonical EnemyConfig reward marker: {marker}')
+                  raise SystemExit(f'CombatService canonical reward marker missing: {marker}')
           forbidden = (
               'action == "Ability" and 40 or 25',
               'action == "Ability" and 20 or 10',
               '({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })',
+              'currentMoney + moneyGain > EconomyConfig.MaxMoney',
+              'Spend some Money before claiming enemy rewards.',
           )
           for marker in forbidden:
               if marker in combat:
-                  raise SystemExit(f'Implicit fallback reward still present: {marker}')
+                  raise SystemExit(f'Obsolete or implicit reward path still present: {marker}')
 
           for marker in (
               'targetModel:GetAttribute("DeathRewarded") == true',
@@ -49,8 +52,11 @@ jobs:
               if marker not in combat:
                   raise SystemExit(f'Combat reward idempotency/cleanup marker missing: {marker}')
 
-          if combat.index('if currentMoney + moneyGain > EconomyConfig.MaxMoney then') > combat.index('targetModel:SetAttribute("DeathRewarded", true)'):
-              raise SystemExit('Enemy reward capacity must be checked before DeathRewarded is set')
+          if combat.index('targetModel:SetAttribute("DeathRewarded", true)') > combat.index('XPService.AddXP(profile, xpGain)'):
+              raise SystemExit('DeathRewarded must be committed before reward mutations to prevent double payout')
+
+          if combat.index('local _, earnedMoney = EconomyService.AddMoney(profile, moneyGain)') > combat.index('giveLoot(player, profile, targetModel, enemyConfig)'):
+              raise SystemExit('Economy mutation must occur before loot/message completion in the reward transaction')
 
           for marker in (
               'lastAttackers[targetModel] = { Kind = "Player", Instance = attacker, UserId = attacker.UserId }',
@@ -63,4 +69,4 @@ jobs:
           ):
               if marker not in damage:
                   raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
-          print('Canonical combat reward source, payout-capacity gate, idempotency, attacker-session, lethal-hit ordering and attribution cleanup validated.')
+          print('Canonical combat reward source, wallet-cap-safe payout, idempotency, attacker-session, lethal-hit ordering and attribution cleanup validated.')
