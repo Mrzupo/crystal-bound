@@ -2,7 +2,7 @@ name: Menu Attribute Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-dialog-client-stale-response"]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate shared menu attributes and close-state cleanup
+      - name: Validate shared menu attributes, Character-bound opens and stale dialog-response rejection
         shell: python
         run: |
           from pathlib import Path
@@ -65,6 +65,23 @@ jobs:
           if 'disconnectPlayer(player)' not in text["bridge"] or 'Players.PlayerRemoving:Connect(function(player)' not in text["bridge"]:
               problems.append("NPCMenuBridge must disconnect per-player lifecycle state on leave")
 
+          dialog_guards = [
+              'local dialogRequestGeneration = 0',
+              'local function invalidateDialogRequest()',
+              'generation ~= dialogRequestGeneration',
+              'player.Character ~= character',
+              'not character.Parent',
+              'player:GetAttribute("OpenNPCDialog") ~= npcId',
+              'player.CharacterAdded:Connect(function()',
+              'player.CharacterRemoving:Connect(function()',
+              'local generation = dialogRequestGeneration',
+          ]
+          for marker in dialog_guards:
+              if marker not in text["dialog"]:
+                  problems.append(f"NPCDialogMenu stale-response guard missing: {marker}")
+          if 'dialogRequestGeneration += 1' not in text["dialog"]:
+              problems.append("NPCDialogMenu must invalidate a pending request when OpenNPCDialog changes")
+
           menu_guards = {
               "quest": "OpenQuestMenu",
               "shop": "OpenShopMenu",
@@ -84,4 +101,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, respawn cleanup and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, stale dialog-response, respawn cleanup and close-state contract validated.")
