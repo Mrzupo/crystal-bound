@@ -6,6 +6,7 @@ local EnemyConfig = require(game.ReplicatedStorage.Config.EnemyConfig)
 local AIPathService = require(script.Parent.AIPathService)
 local StatusEffectService = require(script.Parent.StatusEffectService)
 local DodgeService = require(script.Parent.DodgeService)
+local PlayerService = require(script.Parent.PlayerService)
 
 local NPCService = {}
 
@@ -251,7 +252,7 @@ function NPCService.StartEnemyAI(model)
 		local specialConfig = type(config.Special) == "table" and config.Special or {}
 		local specialCooldown = math.clamp(finiteNumber(specialConfig.Cooldown, 6), 0.25, 60)
 		local specialRange = math.clamp(finiteNumber(specialConfig.Range, 0), 0, 1000)
-		while model.Parent and humanoid.Health > 0 do
+		while model.Parent and humanoid.Health > 0 and not PlayerService.ShuttingDown do
 			local character, distance = getNearestPlayer(root.Position, aggroRange)
 			if character then
 				local targetRoot = character:FindFirstChild("HumanoidRootPart")
