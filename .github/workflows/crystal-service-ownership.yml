@@ -18,6 +18,10 @@ jobs:
           service = Path("src/ServerScriptService/Services/CrystalService.lua").read_text(encoding="utf-8")
           if "table.insert(result, crystalId)" not in service:
               raise SystemExit("CrystalService.GetOwnedCrystals must return a copy of the owned-crystal list")
+          if "CrystalSystem.Exists(crystalId)" not in service:
+              raise SystemExit("CrystalService.GetOwnedCrystals must filter invalid Crystal IDs through CrystalSystem")
+          if "not table.find(result, crystalId)" not in service:
+              raise SystemExit("CrystalService.GetOwnedCrystals must deduplicate its snapshot")
           if "return profile.Crystals.Owned" in service:
               raise SystemExit("CrystalService must not expose the internal owned-crystal table")
           print("CrystalService ownership boundary validated.")
