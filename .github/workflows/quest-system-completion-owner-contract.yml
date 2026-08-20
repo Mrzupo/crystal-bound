@@ -1,0 +1,46 @@
+name: Quest System Completion Owner Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate QuestService as canonical server completion owner
+        shell: python
+        run: |
+          from pathlib import Path
+
+          quest_service = Path('src/ServerScriptService/Services/QuestService.lua').read_text(encoding='utf-8')
+          required = [
+              'local SERVER_TRIGGERED_SINGLE_STEP = {',
+              'FIRST_FIGHT = true,',
+              'GUARDIAN_TRIAL = true,',
+              'local progress = QuestSystem.GetProgress(profile, questId)',
+              'local reachedGoal = progress >= (definition.Goal or 0)',
+              'if not reachedGoal and not SERVER_TRIGGERED_SINGLE_STEP[questId] then',
+              'if currentMoney + rewardMoney > EconomyConfig.MaxMoney then',
+              'if not QuestSystem.Complete(profile, questId) then return false end',
+              'XPService.AddXP(profile, rewardXP)',
+              'EconomyService.AddMoney(profile, rewardMoney)',
+          ]
+          for marker in required:
+              if marker not in quest_service:
+                  raise SystemExit('QuestService completion boundary missing: ' + marker)
+
+          offenders = []
+          root = Path('src/ServerScriptService')
+          for path in root.rglob('*.lua'):
+              text = path.read_text(encoding='utf-8')
+              if path.as_posix().endswith('Services/QuestService.lua'):
+                  continue
+              if 'QuestSystem.Complete(' in text:
+                  offenders.append(str(path))
+          if offenders:
+              raise SystemExit('Server scripts must route quest completion through QuestService: ' + ', '.join(offenders))
+
+          print('QuestService completion ownership, goal validation, single-step exception and reward-cap contract validated.')
