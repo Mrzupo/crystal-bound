@@ -73,12 +73,18 @@ function EconomyService.SellItem(profile, itemId, amount, InventoryService)
 		return false, 0
 	end
 
+	local beforeMoney = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
+	if beforeMoney + requestedEarned > Config.MaxMoney then
+		return false, 0
+	end
+
 	if not InventoryService.RemoveItem(profile, itemId, amount) then
 		return false, 0
 	end
 
 	local _, earned = EconomyService.AddMoney(profile, requestedEarned)
-	if earned < requestedEarned then
+	if earned ~= requestedEarned then
+		profile.Money = beforeMoney
 		InventoryService.AddItem(profile, itemId, amount)
 		return false, 0
 	end
