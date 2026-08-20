@@ -109,6 +109,8 @@ jobs:
               'local generation = refreshGeneration',
               'local character = player.Character',
               'generation ~= refreshGeneration',
+              'if generation == refreshGeneration then',
+              'refreshInFlight = false',
               'player.Character ~= character',
               'player:GetAttribute("OpenAchievementMenu") ~= expectedOpenState',
               'player.CharacterAdded:Connect(function()',
