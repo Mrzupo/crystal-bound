@@ -3,6 +3,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DodgeService = require(script.Parent.Services.DodgeService)
+local PlayerService = require(script.Parent.Services.PlayerService)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 
 local NPCs = Workspace:WaitForChild("NPCs")
@@ -99,7 +100,7 @@ local function setPhaseHazard(enabled)
 end
 
 local function applyHazardDamage()
-	if not phaseActive then return end
+	if not phaseActive or PlayerService.ShuttingDown then return end
 	local halfExtent = math.clamp(finiteNumber(config.HalfExtent, 23), 0, 1000)
 	local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -119,7 +120,7 @@ createArena()
 
 task.spawn(function()
 	local interval = math.clamp(finiteNumber(config.Interval, 0.75), 0.1, 10)
-	while arena.Parent do
+	while arena.Parent and not PlayerService.ShuttingDown do
 		local guardian = NPCs:FindFirstChild("CrystalGuardian")
 		local humanoid = guardian and guardian:FindFirstChildOfClass("Humanoid")
 		local phase = guardian and guardian:GetAttribute("BossPhase") or 1
@@ -127,4 +128,5 @@ task.spawn(function()
 		applyHazardDamage()
 		task.wait(interval)
 	end
+	setPhaseHazard(false)
 end)
