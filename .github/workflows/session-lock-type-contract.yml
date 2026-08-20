@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate malformed SessionLock values fail closed
+      - name: Validate malformed SessionLock values and load failures fail closed
         shell: python
         run: |
           from pathlib import Path
@@ -27,10 +27,14 @@ jobs:
               "local age = validLockTimestamp and math.max(0, timestamp() - lockTimestamp) or 0",
               "if malformedSessionLock then",
               "return nil, \"Invalid SessionLock data\"",
+              "local reconcileOk, profileOrError = xpcall(function()",
+              "return PlayerData.Reconcile(result)",
+              "local released = SafeProfileStore.Release(player, token)",
+              "return nil, \"Profile reconciliation failed\"",
           ]
           missing = [marker for marker in required if marker not in source]
           if missing:
-              raise SystemExit("SessionLock fail-closed contract missing: " + ", ".join(missing))
+              raise SystemExit("SessionLock safety contract missing: " + ", ".join(missing))
           if "or math.huge" in source:
               raise SystemExit("Malformed SessionLock timestamps must not fail open to stale/expired")
-          print("Malformed SessionLock types and timestamps fail closed and cannot trigger unsafe takeover.")
+          print("Malformed SessionLocks and post-claim reconciliation failures fail closed without leaking a claimed lock.")
