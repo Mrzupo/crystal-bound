@@ -25,12 +25,16 @@ jobs:
               raise SystemExit("PlayerService must own autosave operations")
           if "function saveConsistently(player, profile)" not in player_service:
               raise SystemExit("PlayerService must expose the revision-settled save path")
-          if "local revisionBefore = PlayerService.ProfileRevisions[player] or 0" not in player_service:
+          if "local snapshotRevision = PlayerService.ProfileRevisions[player] or 0" not in player_service:
               raise SystemExit("PlayerService.saveConsistently must snapshot the profile revision before persistence")
-          if "if PlayerService.ProfileRevisions[player] ~= revisionBefore then" not in player_service:
-              raise SystemExit("PlayerService.saveConsistently must detect mutations during persistence")
+          if "if (PlayerService.ProfileRevisions[player] or 0) == snapshotRevision then return true end" not in player_service:
+              raise SystemExit("PlayerService.saveConsistently must accept only an unchanged revision")
+          if "warn((\"Crystal Bound: profile changed during all %d save-settle passes for %s; retry required.\")" not in player_service:
+              raise SystemExit("PlayerService.saveConsistently must report an unsettled final save rather than success")
+          if "return false" not in player_service[player_service.index("warn((\"Crystal Bound: profile changed during all %d save-settle passes")"):]:
+              raise SystemExit("PlayerService.saveConsistently must fail after exhausting settle attempts")
           if "SAVE_SETTLE_ATTEMPTS =" not in player_service:
               raise SystemExit("PlayerService.saveConsistently must retain a bounded settle-attempt budget")
           if "if not acquireOperation(player) then return false end" not in player_service:
               raise SystemExit("PlayerService.Save must serialize autosave with other profile operations")
-          print("Session autosave ownership and revision-settled save contract validated.")
+          print("Session autosave ownership, revision-settle detection and final failure semantics validated.")
