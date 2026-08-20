@@ -33,14 +33,16 @@ end
 
 local function ensurePart(name, properties)
 	local existing = arena:FindFirstChild(name)
-	if existing and existing:IsA("Part") then return existing end
-	if existing then existing:Destroy() end
-	local part = Instance.new("Part")
-	part.Name = name
+	local part = existing
+	if not part or not part:IsA("Part") then
+		if existing then existing:Destroy() end
+		part = Instance.new("Part")
+		part.Name = name
+		part.Parent = arena
+	end
 	for property, value in pairs(properties) do
 		part[property] = value
 	end
-	part.Parent = arena
 	return part
 end
 
