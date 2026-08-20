@@ -90,10 +90,21 @@ function SafeProfileStore.Load(player)
 		return nil, "Profile is already open on another server"
 	end
 	if type(result) ~= "table" then
+		local released = SafeProfileStore.Release(player, token)
+		warn(("Crystal Bound: claimed profile for %s returned a non-table result; session lock release=%s"):format(player.Name, tostring(released)))
 		return nil, "Invalid DataStore result"
 	end
 
-	local profile = PlayerData.Reconcile(result)
+	local reconcileOk, profileOrError = xpcall(function()
+		return PlayerData.Reconcile(result)
+	end, debug.traceback)
+	if not reconcileOk or type(profileOrError) ~= "table" then
+		local released = SafeProfileStore.Release(player, token)
+		warn(("Crystal Bound: profile reconciliation failed for %s; session lock release=%s; error=%s"):format(player.Name, tostring(released), tostring(profileOrError)))
+		return nil, "Profile reconciliation failed"
+	end
+
+	local profile = profileOrError
 	profile.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }
 	sessionTokens[player] = token
 	return profile
