@@ -272,6 +272,7 @@ Erwartung:
 - Claim genau einmal.
 - MaxMoney-Clamp verwendet den tatsächlichen Delta-Wert.
 - manipuliertes RewardMoney aus Save wird nicht vertrauenswürdig übernommen.
+- kontrolliert korrumpiertes `Claimed=true` bei `Progress<Goal` wird beim Reconcile auf `Claimed=false` normalisiert.
 
 ## 14. Economy / Inventory / Crafting
 
@@ -282,7 +283,7 @@ Erwartung:
 - volle Stacks.
 - MaxPerPurchase.
 - ungültige Amounts.
-- Rollback bei failed insertion.
+- Rollback bei failed insertion inklusive Rücknahme einer eventuell teilweisen Inventory-Insertion.
 
 ### Selling
 
@@ -299,7 +300,7 @@ Erwartung:
 - fehlende Inputs.
 - voller Output-Stack.
 - ungültiges Rezept.
-- Rollback bei fehlender Output-Insertion.
+- Rollback bei fehlender Output-Insertion inklusive Entfernen einer eventuell teilweisen Output-Insertion.
 
 ### Health Potion
 
@@ -320,6 +321,7 @@ Erwartung:
 - INVENTORY öffnet das kombinierte Inventory/Crystal-Menü.
 - CRAFT öffnet CraftingMenu.
 - Dialog schließt beim Übergang ins Zielmenü.
+- Trigger Dialog auf altem Character und respawne vor dem deferred Menu-Open; erwartet: der alte Callback darf kein Menü für den neuen Character öffnen.
 
 ## 16. PC / Mobile
 
