@@ -31,8 +31,13 @@ jobs:
               raise SystemExit("PlayerService.saveConsistently must accept only an unchanged revision")
           if "warn((\"Crystal Bound: profile changed during all %d save-settle passes for %s; retry required.\")" not in player_service:
               raise SystemExit("PlayerService.saveConsistently must report an unsettled final save rather than success")
-          if "return false" not in player_service[player_service.index("warn((\"Crystal Bound: profile changed during all %d save-settle passes")"):]:
+
+          settle_start = player_service.index("local function saveConsistently(player, profile)")
+          settle_end = player_service.index("function PlayerService.RefreshSession", settle_start)
+          settle_block = player_service[settle_start:settle_end]
+          if "return false" not in settle_block:
               raise SystemExit("PlayerService.saveConsistently must fail after exhausting settle attempts")
+
           if "SAVE_SETTLE_ATTEMPTS =" not in player_service:
               raise SystemExit("PlayerService.saveConsistently must retain a bounded settle-attempt budget")
           if "if not acquireOperation(player) then return false end" not in player_service:
