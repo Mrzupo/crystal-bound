@@ -15,10 +15,19 @@ local MENU_ATTRIBUTES = {
 }
 local playerCharacterConnections = setmetatable({}, { __mode = "k" })
 
+local function isCanonicalInteractableModel(model)
+	return model
+		and model:IsA("Model")
+		and (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader")
+		and model:GetAttribute("Interactable") == true
+		and model:IsDescendantOf(Workspace.NPCs)
+end
+
 local function isNearModel(player, model)
+	if not isCanonicalInteractableModel(model) then return false end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local targetRoot = model and (model.PrimaryPart or model:FindFirstChild("Torso"))
+	local targetRoot = model.PrimaryPart or model:FindFirstChild("Torso")
 	return root and targetRoot and (root.Position - targetRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
@@ -45,12 +54,12 @@ local function bindPlayer(player)
 	end)
 end
 
-local function openDialog(player, npcId, character)
+local function openDialog(player, npcId, model, character)
 	if PlayerService.ShuttingDown then return end
 	clearMenus(player)
 	task.defer(function()
 		if PlayerService.ShuttingDown then return end
-		if player.Parent and player.Character == character and character.Parent then
+		if player.Parent and player.Character == character and character.Parent and isNearModel(player, model) then
 			player:SetAttribute("OpenNPCDialog", npcId)
 		end
 	end)
@@ -60,12 +69,12 @@ local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
 	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
-	if not model then return end
+	if not isCanonicalInteractableModel(model) then return end
 	prompt.Triggered:Connect(function(player)
 		if PlayerService.ShuttingDown then return end
 		local character = player.Character
-		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and character and isNearModel(player, model) then
-			openDialog(player, model.Name, character)
+		if character and isNearModel(player, model) then
+			openDialog(player, model.Name, model, character)
 		end
 	end)
 end
