@@ -31,38 +31,52 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
-local function createArena()
-	if arena:FindFirstChild("Floor") then return end
-	local floor = Instance.new("Part")
-	floor.Name = "Floor"
-	floor.Size = Vector3.new(54, 1, 54)
-	floor.Position = center
-	floor.Anchored = true
-	floor.Material = Enum.Material.Slate
-	floor.Color = Color3.fromRGB(45, 35, 65)
-	floor.Parent = arena
+local function ensurePart(name, properties)
+	local existing = arena:FindFirstChild(name)
+	local part = existing
+	if existing and not existing:IsA("Part") then
+		existing:Destroy()
+		part = nil
+	end
+	if not part then
+		part = Instance.new("Part")
+		part.Name = name
+		part.Parent = arena
+	end
+	for property, value in pairs(properties) do
+		part[property] = value
+	end
+	return part
+end
 
-	local ring = Instance.new("Part")
-	ring.Name = "Ring"
-	ring.Shape = Enum.PartType.Cylinder
-	ring.Size = Vector3.new(1, 50, 50)
-	ring.CFrame = CFrame.new(center + Vector3.new(0, 0.7, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	ring.Anchored = true
-	ring.CanCollide = false
-	ring.Material = Enum.Material.Neon
-	ring.Color = Color3.fromRGB(150, 90, 230)
-	ring.Transparency = 0.45
-	ring.Parent = arena
+local function createArena()
+	ensurePart("Floor", {
+		Size = Vector3.new(54, 1, 54),
+		Position = center,
+		Anchored = true,
+		Material = Enum.Material.Slate,
+		Color = Color3.fromRGB(45, 35, 65),
+	})
+
+	ensurePart("Ring", {
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(1, 50, 50),
+		CFrame = CFrame.new(center + Vector3.new(0, 0.7, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Anchored = true,
+		CanCollide = false,
+		Material = Enum.Material.Neon,
+		Color = Color3.fromRGB(150, 90, 230),
+		Transparency = 0.45,
+	})
 
 	for index, position in ipairs(pillarPositions) do
-		local pillar = Instance.new("Part")
-		pillar.Name = "Pylon" .. index
-		pillar.Size = Vector3.new(3, 8, 3)
-		pillar.Position = position
-		pillar.Anchored = true
-		pillar.Material = Enum.Material.Neon
-		pillar.Color = Color3.fromRGB(135, 95, 220)
-		pillar.Parent = arena
+		ensurePart("Pylon" .. index, {
+			Size = Vector3.new(3, 8, 3),
+			Position = position,
+			Anchored = true,
+			Material = Enum.Material.Neon,
+			Color = Color3.fromRGB(135, 95, 220),
+		})
 	end
 end
 
