@@ -1,0 +1,40 @@
+name: Damage Final Application Order
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/damage-final-amount-contract"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate damage is applied only after final server-side bounds
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/DamageService.lua').read_text(encoding='utf-8')
+
+          required = [
+              'if not DamageService.CanDamage(request) then',
+              'local amount = math.clamp(finiteNumber(request.Amount) or 0, 0, 1000)',
+              'if amount <= 0 then',
+              'humanoid:TakeDamage(amount)',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('damage final-application guard missing: ' + ', '.join(missing))
+
+          can_damage = text.index('if not DamageService.CanDamage(request) then')
+          final_amount = text.index('local amount = math.clamp(finiteNumber(request.Amount) or 0, 0, 1000)', can_damage)
+          invalid_amount = text.index('if amount <= 0 then', final_amount)
+          take_damage = text.index('humanoid:TakeDamage(amount)', invalid_amount)
+
+          if not (can_damage < final_amount < invalid_amount < take_damage):
+              raise SystemExit('DamageService applies damage before the final validation/bounds sequence')
+
+          if text.find(':TakeDamage(', 0, final_amount) != -1:
+              raise SystemExit('DamageService contains a direct damage application before final amount validation')
+
+          print('Damage application ordering and final server-side amount bounds validated.')
