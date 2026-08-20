@@ -3,7 +3,6 @@ local QuestSystem = require(ReplicatedStorage.Modules.QuestSystem)
 local XPService = require(script.Parent.XPService)
 local EconomyService = require(script.Parent.EconomyService)
 local PlayerService = require(script.Parent.PlayerService)
-local EconomyConfig = require(ReplicatedStorage.Config.EconomyConfig)
 
 local QuestService = {}
 
@@ -78,20 +77,18 @@ function QuestService.Complete(player, profile, questId, message)
 		return false
 	end
 
-	local currentMoney = math.clamp(finiteNonNegativeInteger(profile.Money) or 0, EconomyConfig.MinMoney, EconomyConfig.MaxMoney)
-	if currentMoney + rewardMoney > EconomyConfig.MaxMoney then
-		if player then player:SetAttribute("QuestMessage", "Spend some Money before claiming this quest reward.") end
-		return false
-	end
-
 	if not QuestSystem.Complete(profile, questId) then return false end
 
 	XPService.AddXP(profile, rewardXP)
-	EconomyService.AddMoney(profile, rewardMoney)
+	local _, earnedMoney = EconomyService.AddMoney(profile, rewardMoney)
 	PlayerService.Sync(player)
 	sync(player, profile)
 	if player then
-		player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!"))
+		if earnedMoney < rewardMoney then
+			player:SetAttribute("QuestMessage", string.format("%s (Money capped at wallet limit; +%d Money)", message or (definition.Name .. " complete!"), earnedMoney))
+		else
+			player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!"))
+		end
 	end
 	QuestService.TryStartNext(player, profile)
 	return true
