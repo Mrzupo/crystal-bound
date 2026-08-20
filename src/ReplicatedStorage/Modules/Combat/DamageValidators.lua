@@ -19,6 +19,7 @@ end
 function Validators.IsValid(request)
 	if type(request) ~= "table" or request.Target == nil then return false end
 	if request.Attacker == nil and request.DamageType ~= DamageTypes.Environmental then return false end
+	if request.DamageType == DamageTypes.Environmental and request.Attacker ~= nil then return false end
 	return isFiniteNumber(request.Amount)
 		and request.Amount > 0
 		and request.Amount <= MAX_DAMAGE
