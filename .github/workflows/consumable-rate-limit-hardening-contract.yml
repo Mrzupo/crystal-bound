@@ -1,0 +1,33 @@
+name: Consumable Rate Limit Hardening Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate rate-limit ordering for consumable remote
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/UseItemRemote.server.lua").read_text(encoding="utf-8")
+          markers = [
+              'local now = os.clock()',
+              'if now < (NEXT_USE[player] or 0) then return end',
+              'NEXT_USE[player] = now + USE_INTERVAL',
+              'local potion = ConsumableConfig.HealthPotion',
+              'local profile = PlayerService.GetProfile(player)',
+          ]
+          for marker in markers:
+              if marker not in text:
+                  raise SystemExit(f"missing consumable remote marker: {marker}")
+
+          if text.index('NEXT_USE[player] = now + USE_INTERVAL') > text.index('local potion = ConsumableConfig.HealthPotion'):
+              raise SystemExit("consumable validation must not precede the per-player rate limit")
+
+          print("Consumable remote rate-limit ordering validated.")
