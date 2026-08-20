@@ -1,0 +1,40 @@
+name: NPC Dialog Canonical Identity V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical NPC dialog authority and deferred lifecycle recheck
+        shell: python
+        run: |
+          from pathlib import Path
+
+          remote = Path("src/ServerScriptService/NPCDialogRemote.server.lua").read_text(encoding="utf-8")
+          bridge = Path("src/ServerScriptService/NPCMenuBridge.server.lua").read_text(encoding="utf-8")
+
+          for marker in (
+              'if npcId ~= "CrystalKeeper" and npcId ~= "MaterialTrader" then return false end',
+              'npc.Parent ~= folder',
+              'npc:GetAttribute("Interactable") ~= true',
+              'if not config or not isNearCanonicalNPC(player, npcId) then return nil end',
+          ):
+              if marker not in remote:
+                  raise SystemExit(f"NPCDialogRemote marker missing: {marker}")
+
+          for marker in (
+              'local function isCanonicalInteractableModel(model)',
+              'model:GetAttribute("Interactable") == true',
+              'model:IsDescendantOf(Workspace.NPCs)',
+              'if player.Parent and player.Character == character and character.Parent and isNearModel(player, model) then',
+              'if not isCanonicalInteractableModel(model) then return end',
+          ):
+              if marker not in bridge:
+                  raise SystemExit(f"NPCMenuBridge marker missing: {marker}")
+
+          print("NPC dialog canonical identity and deferred lifecycle recheck validated.")
