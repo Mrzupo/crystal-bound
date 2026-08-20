@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local inventoryRequest = remotes:WaitForChild("InventoryRequest")
+local inventoryChanged = remotes:WaitForChild("InventoryChanged")
 local crystalChanged = remotes:WaitForChild("CrystalChanged")
 local crystalUpgradeRequest = remotes:WaitForChild("CrystalUpgradeRequest")
 local useItemRequest = remotes:WaitForChild("UseItemRequest")
@@ -23,10 +24,12 @@ local function getCrystalName(crystalId)
 	local definition = crystalConfig.Definitions and crystalConfig.Definitions[crystalId]
 	return definition and definition.Name or crystalId
 end
+
 local function getItemRarity(itemId)
 	local item = inventoryConfig.GetItemConfig(itemId)
 	return item and item.Rarity or "Common"
 end
+
 local function ensureGui()
 	local playerGui = player:WaitForChild("PlayerGui")
 	local gui = playerGui:FindFirstChild("CrystalMenu")
@@ -46,6 +49,7 @@ local function ensureGui()
 end
 
 local gui=ensureGui(); local panel=gui.Panel
+
 local function formatCost(crystalId)
 	local level=player:GetAttribute("CrystalMasteryLevel") or 1
 	if level>=upgradeConfig.MaxLevel then return "MAX" end
@@ -53,6 +57,7 @@ local function formatCost(crystalId)
 	for itemId,amount in pairs(base) do table.insert(parts,string.format("%d %s",amount*level,itemId)) end
 	table.sort(parts); return table.concat(parts,", ")
 end
+
 local function refresh()
 	local crystal=player:GetAttribute("EquippedCrystal") or "EMBER"; local level=player:GetAttribute("CrystalMasteryLevel") or 1; local xp=player:GetAttribute("CrystalMasteryXP") or 0
 	panel.Info.Text=string.format("Equipped: %s   |   Mastery: Lv. %d   |   Mastery XP: %d   |   Upgrade: %s",getCrystalName(crystal),level,xp,formatCost(crystal))
@@ -60,7 +65,8 @@ local function refresh()
 	local parts={}; for itemId,amount in pairs(inventory) do if tonumber(amount) and amount>0 then table.insert(parts,string.format("%s [%s]: %d",itemId,getItemRarity(itemId),amount)) end end; table.sort(parts); panel.Loot.Text=#parts>0 and ("Loot / Items\n"..table.concat(parts,"   |   ")) or "Loot / Items\nNo items collected."
 	local potionAmount=tonumber(inventory.HealthPotion) or 0; panel.Potion.Text=string.format("Use Health Potion (P)  •  Owned: %d",potionAmount); panel.Potion.Active=potionAmount>0; panel.Potion.TextTransparency=potionAmount>0 and 0 or 0.5
 end
-inventoryRequest.OnClientEvent:Connect(function(data) if type(data)=="table" then inventory=data; refresh() end end)
+
+inventoryChanged.OnClientEvent:Connect(function(data) if type(data)=="table" then inventory=data; refresh() end end)
 for _,attribute in ipairs({"EquippedCrystal","CrystalMasteryLevel","CrystalMasteryXP","Level","Owns_EMBER","Owns_TIDE","Owns_GALE"}) do player:GetAttributeChangedSignal(attribute):Connect(refresh) end
 player:GetAttributeChangedSignal("OpenCrystalMenu"):Connect(function() if player:GetAttribute("OpenCrystalMenu") == nil then return end; open=true; panel.Visible=true; inventoryRequest:FireServer(); refresh() end)
 local function openMenu() open=true; panel.Visible=true; inventoryRequest:FireServer(); refresh() end
