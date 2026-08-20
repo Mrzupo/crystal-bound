@@ -47,6 +47,8 @@ jobs:
               problems.append("TouchMenus must centralize and clear menu attributes")
           if 'local MENU_ATTRIBUTES = {' not in text["dialog"] or 'clearMenuState()' not in text["dialog"]:
               problems.append("NPCDialogMenu must centralize and clear menu attributes")
+          if 'local function clearOtherMenuState()' not in text["dialog"] or 'clearOtherMenuState()' not in text["dialog"]:
+              problems.append("NPCDialogMenu must preserve OpenNPCDialog while clearing other menu state after a successful response")
 
           bridge_markers = (
               'local function openDialog(player, npcId, character)',
@@ -100,4 +102,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, stale dialog response/retry, respawn cleanup and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, stale dialog response/retry, preserved dialog state, respawn cleanup and close-state contract validated.")
