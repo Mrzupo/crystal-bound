@@ -43,7 +43,9 @@ jobs:
               "return PlayerService.RemovalResults[player] == true",
               "PlayerService.RemovalResults[player] = true",
               "PlayerService.RemovalResults[player] = false",
+              "function PlayerService.GetProfile(player)\n\tif PlayerService.ShuttingDown or PlayerService.Closing[player] then return nil end",
+              "function PlayerService.Heal(player, amount)\n\tif not player or not player:IsA(\"Player\") or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] then return 0 end",
           ):
               if marker not in player_service:
-                  raise SystemExit("PlayerService missing duplicate-remove shutdown guard: " + marker)
-          print("Session shutdown persistence, duplicate-remove serialization and release ownership validated.")
+                  raise SystemExit("PlayerService missing shutdown guard: " + marker)
+          print("Session shutdown persistence, duplicate-remove serialization and global gameplay shutdown guard validated.")
