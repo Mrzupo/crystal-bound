@@ -30,6 +30,8 @@ jobs:
               'positionState[player] = {',
               'player:SetAttribute("PortalMovementGraceUntil", 0)',
               'player:SetAttribute("PortalExpectedDestination", nil)',
+              'if not humanoid or humanoid.Health <= 0 or not root then',
+              'resetPositionState(player)',
               'refresh(player)',
           ]
           missing = [token for token in required if token not in text]
@@ -37,5 +39,5 @@ jobs:
               raise SystemExit('StatusSpeedGuardV2 contract missing: ' + ', '.join(missing))
           if 'and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil' in text:
               raise SystemExit('StatusSpeedGuardV2 must enforce baseline speed even without a slow effect')
-          print('Status speed guard lifecycle, baseline enforcement, movement correction and respawn cleanup validated.')
+          print('Status speed guard lifecycle, baseline enforcement, missing-root snapshot reset, movement correction and respawn cleanup validated.')
           PY
