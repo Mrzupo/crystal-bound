@@ -37,6 +37,10 @@ jobs:
                   problems.append(f"NPCDialogMenu missing {attribute}")
               if attribute == "OpenNPCDialog" and attribute not in text["bridge"]:
                   problems.append("NPCMenuBridge missing OpenNPCDialog")
+          if 'local MENU_ATTRIBUTES = {' not in text["bridge"]:
+              problems.append("NPCMenuBridge must centralize menu attributes")
+          if 'clearMenus(player)' not in text["bridge"]:
+              problems.append("NPCMenuBridge must clear existing menu state before opening a dialog")
           if problems:
               for problem in problems:
                   print(f" - {problem}")
