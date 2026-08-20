@@ -20,6 +20,7 @@ jobs:
           npc = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
           boss = Path("src/ServerScriptService/Services/BossService.lua").read_text(encoding="utf-8")
           status = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
+          player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
           damage = Path("src/ServerScriptService/Services/DamageService.lua").read_text(encoding="utf-8")
 
           problems = []
@@ -41,6 +42,11 @@ jobs:
 
           for marker in [
               'local function getNPCRoot()',
+              'local function isProfileLoaded(player)',
+              'return isProfileLoaded(instance) and instance.Parent ~= nil and humanoid ~= nil and humanoid.Health > 0',
+              'if not isProfileLoaded(target) then return false end',
+              'if owner then return isProfileLoaded(owner) end',
+              'if player and isProfileLoaded(player) and player.Parent and Players:GetPlayerByUserId(record.UserId) == player then',
               'instance.Parent == npcFolder',
               '(instance:GetAttribute("Enemy") == true or instance:GetAttribute("BossId") ~= nil)',
               'targetModel:IsDescendantOf(Workspace)',
@@ -53,8 +59,16 @@ jobs:
               if marker not in damage:
                   problems.append(f"central DamageService target/attacker boundary missing: {marker}")
 
+          for marker in [
+              'player:SetAttribute("ProfileLoaded", false)',
+              'player:SetAttribute("ProfileLoaded", true)',
+              'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent then',
+          ]:
+              if marker not in player_service:
+                  problems.append(f"PlayerService loaded-state lifecycle marker missing: {marker}")
+
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("PvE attacker context, boss attacker identity and exact Workspace.NPCs model identity are covered by the central DamageService boundary.")
+          print("PvE attacker context, boss attacker identity, loaded-player gating and exact Workspace.NPCs model identity are covered by the central DamageService boundary.")
