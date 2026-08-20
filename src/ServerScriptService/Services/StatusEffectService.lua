@@ -18,6 +18,7 @@ end
 
 local BASE_WALK_SPEED = math.max(1, finiteNumber(MovementConfig.BaseWalkSpeed, 16))
 local MIN_WALK_SPEED = math.max(1, finiteNumber(MovementConfig.MinWalkSpeed, 6))
+local MAX_WALK_SPEED_BONUS = math.clamp(finiteNumber(MovementConfig.MaxWalkSpeedBonus, 20), 0, 100)
 local MIN_SLOW_MULTIPLIER = math.clamp(finiteNumber(MovementConfig.MinSlowMultiplier, 0.2), 0.01, 1)
 local MAX_SLOW_MULTIPLIER = math.clamp(finiteNumber(MovementConfig.MaxSlowMultiplier, 1), MIN_SLOW_MULTIPLIER, 10)
 
@@ -30,7 +31,8 @@ local function getCurrentBaseWalkSpeed(humanoid, fallback)
 	local character = humanoid and humanoid.Parent
 	local player = character and Players:GetPlayerFromCharacter(character)
 	if player then
-		return BASE_WALK_SPEED + math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0))
+		local bonus = math.clamp(math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0)), 0, MAX_WALK_SPEED_BONUS)
+		return BASE_WALK_SPEED + bonus
 	end
 	return fallback or humanoid.WalkSpeed
 end
