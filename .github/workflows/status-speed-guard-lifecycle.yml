@@ -9,11 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate connection cleanup, baseline and movement enforcement
+      - name: Validate connection cleanup, server-owned slow state and movement enforcement
         run: |
           python - <<'PY'
           from pathlib import Path
-          text = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
+          guard = Path('src/ServerScriptService/StatusSpeedGuardV2.server.lua').read_text(encoding='utf-8')
+          effects = Path('src/ServerScriptService/Services/StatusEffectService.lua').read_text(encoding='utf-8')
           required = [
               'local connections = setmetatable({}, { __mode = "k" })',
               'local humanoidConnections = setmetatable({}, { __mode = "k" })',
@@ -33,11 +34,24 @@ jobs:
               'if not humanoid or humanoid.Health <= 0 or not root then',
               'resetPositionState(player)',
               'refresh(player)',
+              'local StatusEffectService = require(script.Parent.Services.StatusEffectService)',
+              'local slow = StatusEffectService.GetSlowMultiplier(humanoid)',
           ]
-          missing = [token for token in required if token not in text]
+          missing = [token for token in required if token not in guard]
           if missing:
               raise SystemExit('StatusSpeedGuardV2 contract missing: ' + ', '.join(missing))
-          if 'and humanoid:GetAttribute("CrystalBoundSlowMultiplier") ~= nil' in text:
-              raise SystemExit('StatusSpeedGuardV2 must enforce baseline speed even without a slow effect')
-          print('Status speed guard lifecycle, baseline enforcement, missing-root snapshot reset, movement correction and respawn cleanup validated.')
+          if 'humanoid:GetAttribute("CrystalBoundSlowMultiplier")' in guard:
+              raise SystemExit('StatusSpeedGuardV2 must not trust Humanoid slow attributes for gameplay authority')
+
+          effect_markers = [
+              'function StatusEffectService.GetSlowMultiplier(humanoid)',
+              'local slow = state and state.SlowMultiplier',
+              'state.SlowMultiplier = multiplier',
+              'state.SlowMultiplier = nil',
+          ]
+          missing_effects = [token for token in effect_markers if token not in effects]
+          if missing_effects:
+              raise SystemExit('StatusEffectService server-owned slow state contract missing: ' + ', '.join(missing_effects))
+
+          print('Status speed guard lifecycle and server-owned slow authority validated.')
           PY
