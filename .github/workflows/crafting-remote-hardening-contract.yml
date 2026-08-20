@@ -1,0 +1,35 @@
+name: Crafting Remote Hardening Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate pre-validation rate limit and canonical trader identity
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/CraftingRemote.server.lua").read_text(encoding="utf-8")
+          markers = [
+              'local now = os.clock()',
+              'if now < (NEXT_REQUEST[player] or 0) then return end',
+              'NEXT_REQUEST[player] = now + REQUEST_INTERVAL',
+              'if action ~= "Craft" then return end',
+              'local function getCanonicalTrader()',
+              'trader.Parent ~= folder',
+              'trader:GetAttribute("Interactable") ~= true',
+          ]
+          for marker in markers:
+              if marker not in text:
+                  raise SystemExit(f"missing crafting authority marker: {marker}")
+
+          if text.index('NEXT_REQUEST[player] = now + REQUEST_INTERVAL') > text.index('if action ~= "Craft" then return end'):
+              raise SystemExit("CraftingRequest action validation must not precede the per-player rate limit")
+
+          print("Crafting remote rate limit and canonical trader identity validated.")
