@@ -19,14 +19,20 @@ local function keyFor(goal)
 	return string.format("%d:%d:%d", math.floor(goal.X / 4), math.floor(goal.Y / 4), math.floor(goal.Z / 4))
 end
 
+local function isLiveModel(model)
+	if not model or not model.Parent or not model.PrimaryPart then return false end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	return humanoid ~= nil and humanoid.Health > 0
+end
+
 local function applyWaypointAction(model, waypoint)
-	if not model or not waypoint or waypoint.Action ~= Enum.PathWaypointAction.Jump then return end
+	if not isLiveModel(model) or not waypoint or waypoint.Action ~= Enum.PathWaypointAction.Jump then return end
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	if humanoid then humanoid.Jump = true end
 end
 
 function AIPathService.GetNextDirection(model, destination)
-	if not model or not model.PrimaryPart or not isFiniteVector3(destination) then return nil end
+	if not isLiveModel(model) or not isFiniteVector3(destination) then return nil end
 	local root = model.PrimaryPart
 	local rootPosition = root.Position
 	if not isFiniteVector3(rootPosition) then return nil end
@@ -42,7 +48,7 @@ function AIPathService.GetNextDirection(model, destination)
 		end
 		if waypoint then
 			applyWaypointAction(model, waypoint)
-			return waypoint.Position - rootPosition
+			return isLiveModel(model) and (waypoint.Position - rootPosition) or nil
 		end
 	end
 	if cacheEntry and cacheEntry.key == key and (now - (cacheEntry.computedAt or 0)) < RECOMPUTE_INTERVAL then
@@ -58,12 +64,20 @@ function AIPathService.GetNextDirection(model, destination)
 	local ok = pcall(function()
 		path:ComputeAsync(rootPosition, destination)
 	end)
+	if not isLiveModel(model) then
+		cache[model] = nil
+		return nil
+	end
 	if not ok or path.Status ~= Enum.PathStatus.Success then
 		cache[model] = { key = key, waypoints = {}, waypointIndex = nil, computedAt = now }
 		return nil
 	end
 
 	local waypoints = path:GetWaypoints()
+	if not isLiveModel(model) then
+		cache[model] = nil
+		return nil
+	end
 	if #waypoints < 2 then
 		cache[model] = { key = key, waypoints = {}, waypointIndex = nil, computedAt = now }
 		return nil
@@ -71,7 +85,7 @@ function AIPathService.GetNextDirection(model, destination)
 	cache[model] = { key = key, waypoints = waypoints, waypointIndex = 2, computedAt = now }
 	local waypoint = waypoints[2]
 	applyWaypointAction(model, waypoint)
-	return waypoint.Position - rootPosition
+	return isLiveModel(model) and (waypoint.Position - rootPosition) or nil
 end
 
 function AIPathService.Clear(model)
