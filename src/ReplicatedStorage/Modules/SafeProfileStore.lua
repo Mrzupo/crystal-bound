@@ -7,6 +7,16 @@ local store = DataStoreService:GetDataStore("CrystalBound_PlayerData_v2")
 local RETRIES = 3
 local SESSION_TIMEOUT = 120
 local SESSION_ID = game.JobId ~= "" and game.JobId or HttpService:GenerateGUID(false)
+local sessionTokens = setmetatable({}, { __mode = "k" })
+
+local function getSessionToken(player)
+	local token = sessionTokens[player]
+	if not token then
+		token = HttpService:GenerateGUID(false)
+		sessionTokens[player] = token
+	end
+	return token
+end
 
 local function retry(callback)
 	local lastError
@@ -34,6 +44,7 @@ end
 
 function SafeProfileStore.Load(player)
 	local key = tostring(player.UserId)
+	local token = getSessionToken(player)
 	local claimed = false
 	local invalidStoredValue = false
 	local ok, result = retry(function()
@@ -51,13 +62,13 @@ function SafeProfileStore.Load(player)
 			local lock = type(data.SessionLock) == "table" and data.SessionLock or nil
 			local lockTimestamp = lock and tonumber(lock.Timestamp) or nil
 			local age = lockTimestamp and math.max(0, timestamp() - lockTimestamp) or math.huge
-			local sameServer = lock and lock.JobId == SESSION_ID
+			local sameSession = lock and lock.JobId == SESSION_ID and lock.Token == token
 
-			if lock and not sameServer and age < SESSION_TIMEOUT then
+			if lock and not sameSession and age < SESSION_TIMEOUT then
 				return current
 			end
 
-			data.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }
+			data.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }
 			claimed = true
 			return data
 		end)
@@ -79,7 +90,7 @@ function SafeProfileStore.Load(player)
 	end
 
 	local profile = PlayerData.Reconcile(result)
-	profile.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }
+	profile.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }
 	return profile
 end
 
@@ -89,6 +100,7 @@ function SafeProfileStore.Save(player, profile)
 	end
 
 	local key = tostring(player.UserId)
+	local token = getSessionToken(player)
 	local saved = false
 	local ok, result = retry(function()
 		saved = false
@@ -98,11 +110,11 @@ function SafeProfileStore.Save(player, profile)
 				return current
 			end
 			local lock = current.SessionLock
-			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID then
+			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID or lock.Token ~= token then
 				return current
 			end
 			local payload = PlayerData.Reconcile(clone(profile))
-			payload.SessionLock = { JobId = SESSION_ID, Timestamp = timestamp() }
+			payload.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }
 			saved = true
 			return payload
 		end)
@@ -113,7 +125,7 @@ function SafeProfileStore.Save(player, profile)
 		return false, result
 	end
 	if not saved then
-		warn(("Crystal Bound: save refused for %s because the profile lock is not owned by this server"):format(player.Name))
+		warn(("Crystal Bound: save refused for %s because the profile lock is not owned by this session"):format(player.Name))
 		return false, "Profile lock lost"
 	end
 	return true, result
@@ -121,6 +133,7 @@ end
 
 function SafeProfileStore.Refresh(player)
 	local key = tostring(player.UserId)
+	local token = getSessionToken(player)
 	local refreshed = false
 	local ok, result = retry(function()
 		refreshed = false
@@ -128,7 +141,7 @@ function SafeProfileStore.Refresh(player)
 			refreshed = false
 			if type(current) ~= "table" then return current end
 			local lock = current.SessionLock
-			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID then
+			if type(lock) ~= "table" or lock.JobId ~= SESSION_ID or lock.Token ~= token then
 				return current
 			end
 			lock.Timestamp = timestamp()
@@ -146,6 +159,7 @@ end
 
 function SafeProfileStore.Release(player)
 	local key = tostring(player.UserId)
+	local token = getSessionToken(player)
 	local released = false
 	local ok, result = retry(function()
 		released = false
@@ -153,7 +167,7 @@ function SafeProfileStore.Release(player)
 			released = false
 			if type(current) ~= "table" then return current end
 			local lock = current.SessionLock
-			if type(lock) == "table" and lock.JobId == SESSION_ID then
+			if type(lock) == "table" and lock.JobId == SESSION_ID and lock.Token == token then
 				current.SessionLock = nil
 				released = true
 			end
