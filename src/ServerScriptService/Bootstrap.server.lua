@@ -230,12 +230,27 @@ end
 local function loadPlayer(player)
 	if loadingPlayers[player] then return false end
 	loadingPlayers[player] = true
-	local profile, reason = PlayerService.Load(player)
+	local success, profile, reason = xpcall(function()
+		return PlayerService.Load(player)
+	end, debug.traceback)
+	loadingPlayers[player] = nil
+	if not success then
+		warn(("Crystal Bound: profile load crashed for %s: %s"):format(player.Name, tostring(profile)))
+		if player.Parent then player:Kick("Unable to load your Crystal Bound profile safely.") end
+		return false
+	end
 	if not profile then
 		if player.Parent then player:Kick(reason or "Unable to load your Crystal Bound profile safely.") end
 		return false
 	end
-	PlayerService.Sync(player)
+	local syncSuccess, syncError = xpcall(function()
+		PlayerService.Sync(player)
+	end, debug.traceback)
+	if not syncSuccess then
+		warn(("Crystal Bound: initial profile sync failed for %s: %s"):format(player.Name, tostring(syncError)))
+		if player.Parent then player:Kick("Unable to initialize your Crystal Bound profile safely.") end
+		return false
+	end
 	return true
 end
 
