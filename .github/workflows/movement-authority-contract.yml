@@ -21,6 +21,7 @@ jobs:
           portal_authority = Path("src/ServerScriptService/WorldTheme.server.lua").read_text(encoding="utf-8")
           dodge_service = Path("src/ServerScriptService/Services/DodgeService.lua").read_text(encoding="utf-8")
           required = [
+              'local PlayerService = require(script.Parent.Services.PlayerService)',
               'local expected = math.max(MIN_WALK_SPEED, base)',
               'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
               'humanoid.WalkSpeed = expected',
@@ -33,8 +34,10 @@ jobs:
               'isValidPortalArrival(player, root, now)',
               'player:SetAttribute("PortalMovementGraceUntil", 0)',
               'player:SetAttribute("PortalExpectedDestination", nil)',
+              'while not PlayerService.ShuttingDown do',
               'task.wait(ENFORCEMENT_INTERVAL)',
               'task.wait(POSITION_CHECK_INTERVAL)',
+              'if PlayerService.ShuttingDown or player.Character ~= character then return end',
           ]
           missing = [marker for marker in required if marker not in server_guard]
           if missing:
@@ -63,4 +66,4 @@ jobs:
           if client_writers:
               raise SystemExit('Client scripts must not directly write Humanoid.WalkSpeed: ' + ', '.join(client_writers))
 
-          print('Movement authority contract validated.')
+          print('Movement authority and shutdown lifecycle contract validated.')
