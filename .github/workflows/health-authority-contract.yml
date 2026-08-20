@@ -1,0 +1,55 @@
+name: Health Authority Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate-health-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server Humanoid health ownership
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          health_write = re.compile(r'\.(?:Health|MaxHealth)\s*=')
+          root = Path("src")
+          client_writers = []
+          server_writers = []
+          for path in (root / "StarterPlayer").rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if health_write.search(text):
+                  client_writers.append(str(path))
+          for path in (root / "ServerScriptService").rglob("*.lua"):
+              text = path.read_text(encoding="utf-8")
+              if health_write.search(text):
+                  server_writers.append(str(path.relative_to(root)))
+
+          if client_writers:
+              raise SystemExit('Client scripts must not directly write Humanoid Health/MaxHealth: ' + ', '.join(client_writers))
+
+          allowed_owners = {
+              "ServerScriptService/Services/PlayerService.lua",
+              "ServerScriptService/Services/NPCService.lua",
+              "ServerScriptService/Services/BossService.lua",
+          }
+          unexpected = [path for path in server_writers if path not in allowed_owners]
+          if unexpected:
+              raise SystemExit('Direct server Health/MaxHealth writes escaped canonical owners: ' + ', '.join(unexpected))
+
+          player_service = (root / "ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          ability = (root / "ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
+          item_remote = (root / "ServerScriptService/UseItemRemote.server.lua").read_text(encoding="utf-8")
+          if "function PlayerService.Heal(player, amount)" not in player_service:
+              raise SystemExit("PlayerService must expose the canonical server heal path")
+          if "humanoid.MaxHealth =" not in player_service or "humanoid.Health =" not in player_service:
+              raise SystemExit("PlayerService must remain a canonical Player Health/MaxHealth writer")
+          if "PlayerService.Heal(player, healAmount)" not in ability:
+              raise SystemExit("Tide healing must route through PlayerService.Heal")
+          if "PlayerService.Heal(player, healAmount)" not in item_remote:
+              raise SystemExit("Health Potion healing must route through PlayerService.Heal")
+          print('Health authority contract validated: PlayerService owns Player health mutations; NPCService/BossService own NPC spawn initialization.')
