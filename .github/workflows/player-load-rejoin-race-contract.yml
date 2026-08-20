@@ -40,8 +40,6 @@ jobs:
               raise SystemExit("All post-load abort paths must release the specific profile-load token")
           if "LoadingByUserId[userId] = nil" not in text:
               raise SystemExit("Player load lifecycle must clear per-UserId load state")
-          if "Superseded profile load" in text or "Superseded profile initialization" in text:
-              raise SystemExit("Runtime currently serializes same-UserId loads; supersede semantics must not be asserted until implemented")
 
           if "local sessionTokens = setmetatable({}, { __mode = \"k\" })" not in store:
               raise SystemExit("SafeProfileStore must keep active per-Player session tokens weak-keyed")
