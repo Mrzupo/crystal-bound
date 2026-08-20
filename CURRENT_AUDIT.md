@@ -26,13 +26,15 @@ Base: `main`
 - `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace.
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
 - Portal cooldown callbacks are now generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
-- `NPCMenuBridge` deferred dialog opening is now Character-bound, preventing a prompt callback queued on an old Character from opening a stale menu after respawn.
+- `NPCMenuBridge` deferred dialog opening is Character-bound, and open menu attributes are cleared again on CharacterAdded so stale UI state cannot survive a respawn.
 - Crystal ownership/equip/unlock and Crystal Mastery read/write paths require canonical Crystal validity and actual ownership.
 - Inventory snapshots are detached and pure; Shop/Crafting/UseItem paths validate inputs before mutation and roll back partial transaction failures.
 - Shop and Crafting now explicitly remove any partial inventory insertion before refunding/reversing a failed transaction, matching the inventory rollback contract.
 - Quest completion requires the objective for multi-step quests and is idempotent through QuestSystem state checks.
 - Daily Bounty state and reward values are reconstructed from canonical config; payout only claims after a full reward transaction succeeds.
 - Persisted Daily Bounty state now also enforces the invariant `Claimed => Progress >= Goal`; corrupt `Claimed=true` / incomplete-goal state is normalized back to unclaimed during `PlayerData.Reconcile()`.
+- Enemy respawn callbacks now check `PlayerService.ShuttingDown` so delayed death callbacks cannot create new NPCs after shutdown begins.
+- Guardian creation, AI and delayed respawn are now shutdown-aware and cannot create or keep attacking a Guardian after `BeginShutdown()`.
 - Enemy and Guardian rewards preserve XP/Loot/progression when Money is capped; Money is bounded centrally by EconomyService.
 - Guardian telegraphs are bound to the original Guardian and target Character instances, preventing stale delayed impacts on replacement instances.
 - NPC Pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
@@ -48,9 +50,11 @@ Base: `main`
 - `.github/workflows/player-remove-release-contract.yml` now matches the current combined Shutdown/Closing/Saving guard in `GetProfile()`.
 - `.github/workflows/inventory-transaction-rollback.yml` is now satisfied by explicit partial-insertion rollback in Shop and Crafting.
 - `.github/workflows/world-init-validation.yml` now guards tokenized portal cooldown expiry across respawn/rejoin.
-- `.github/workflows/menu-attribute-contract.yml` now guards Character-bound deferred NPC dialog opening.
-- `STUDIO_PLAYTEST.md` contains explicit portal cooldown stale-callback and Daily Bounty reconciliation regression scenarios.
-- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback and Character-lifecycle semantics.
+- `.github/workflows/menu-attribute-contract.yml` now guards Character-bound deferred NPC dialog opening and respawn menu cleanup.
+- `.github/workflows/enemy-lifecycle-validation.yml` now requires the Bootstrap shutdown gate on delayed enemy respawns.
+- `.github/workflows/boss-active-spawn-contract.yml` now requires shutdown-safe Guardian creation, AI and respawn behavior.
+- `STUDIO_PLAYTEST.md` contains explicit portal cooldown stale-callback, NPC menu Character-lifecycle and Daily Bounty reconciliation regression scenarios.
+- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback, Character-lifecycle and shutdown-respawn semantics.
 
 ## Open / runtime-only limitations
 - No real Roblox Studio runtime playtest has been executed from this environment.
@@ -65,7 +69,7 @@ Base: `main`
 1. Boot/profile loading and Player leave during load.
 2. Autosave mutation/settle and final Release failure behavior.
 3. Combat range, PvP rejection, Dodge and NPC/Boss attacker identity.
-4. Enemy death/respawn and Guardian telegraph replacement races.
+4. Enemy death/respawn, shutdown-respawn suppression and Guardian telegraph replacement races.
 5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, and Dodge/network ownership.
 6. Shop/Crafting/Consumables and transaction rollback.
 
