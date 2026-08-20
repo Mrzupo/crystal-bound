@@ -1,0 +1,31 @@
+name: Status Slow Authority Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate server-only slow multiplier ownership
+        shell: python
+        run: |
+          from pathlib import Path
+
+          status_effect = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
+          player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          speed_guard = Path("src/ServerScriptService/StatusSpeedGuardV2.server.lua").read_text(encoding="utf-8")
+
+          for text, label in ((status_effect, "StatusEffectService"), (player_service, "PlayerService"), (speed_guard, "StatusSpeedGuardV2")):
+              if label != "StatusEffectService" and 'GetSlowMultiplier(' not in text:
+                  raise SystemExit(f"{label} must consume the server-owned slow multiplier")
+          if 'humanoid:GetAttribute("CrystalBoundSlowMultiplier")' in player_service:
+              raise SystemExit("PlayerService must not treat Humanoid CrystalBoundSlowMultiplier as gameplay authority")
+          if 'humanoid:GetAttribute("CrystalBoundSlowMultiplier")' in speed_guard:
+              raise SystemExit("StatusSpeedGuardV2 must not treat Humanoid CrystalBoundSlowMultiplier as gameplay authority")
+          if 'function StatusEffectService.GetSlowMultiplier(humanoid)' not in status_effect:
+              raise SystemExit("StatusEffectService must expose the canonical server-owned slow multiplier")
+          print("Server slow-multiplier authority contract validated.")
