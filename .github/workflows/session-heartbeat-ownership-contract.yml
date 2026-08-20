@@ -21,10 +21,18 @@ jobs:
               raise SystemExit("SessionHeartbeat must route refresh through PlayerService.RefreshSession")
           if "SafeProfileStore.Refresh" in heartbeat:
               raise SystemExit("SessionHeartbeat must not call SafeProfileStore.Refresh directly")
+          if "PlayerService.BeginShutdown()" not in heartbeat:
+              raise SystemExit("SessionHeartbeat shutdown must tell PlayerService to stop new loads")
+          if "PlayerService.GetPendingLoadCount()" not in heartbeat:
+              raise SystemExit("SessionHeartbeat shutdown must drain pending profile loads")
           if "function PlayerService.RefreshSession(player)" not in player_service:
               raise SystemExit("PlayerService must own session refresh operations")
           if "if not acquireOperation(player) then return false end" not in player_service:
               raise SystemExit("RefreshSession must acquire the PlayerService operation lock")
           if "SafeProfileStore.Refresh(player)" not in player_service:
               raise SystemExit("RefreshSession must delegate to SafeProfileStore.Refresh")
-          print("Session heartbeat ownership contract validated.")
+          if "function PlayerService.BeginShutdown()" not in player_service:
+              raise SystemExit("PlayerService must expose a shutdown gate")
+          if "function PlayerService.GetPendingLoadCount()" not in player_service:
+              raise SystemExit("PlayerService must expose pending-load accounting")
+          print("Session heartbeat and shutdown ownership contract validated.")
