@@ -3,14 +3,14 @@
 Date: 2026-08-20
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1375 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+Current compare: **1401 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 `main` remains untouched by this workstream; the current compared base is `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
 - `Bootstrap.server.lua` is the single canonical profile-load owner: one `loadPlayer()` path serves `PlayerAdded` and already-present players after startup, with per-Player deduplication.
 - No separate `PlayerLoadCatchup.server.lua` exists or is loaded; startup catch-up is intentionally owned by Bootstrap.
-- `PlayerService.Load()` uses a per-UserId load-generation token and shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
+- `PlayerService.Load()` uses a per-UserId load-generation token, explicitly rejects a second concurrent load for the same UserId, and has a shutdown gate so stale/rejoined loads cannot mutate or release a newer session.
 - Superseded successful profile loads explicitly release their own session lock before returning, preventing abandoned same-server locks.
 - `PlayerService` re-checks Player/Profile closing state after waiting on the operation lock before Refresh/Save, preventing heartbeat/autosave access after `Remove()` begins.
 - Dedicated `PlayerLifecycle.server.lua` owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
@@ -28,15 +28,15 @@ Current compare: **1375 commits ahead, 30 commits behind** `main` (verified with
 - `StatusEffectService.Clear()` clears the server-owned SlowMultiplier and all delayed Slow/Burn state; token cancellation remains Humanoid-keyed.
 - Portal authority belongs only to `WorldTheme.server.lua`; Bootstrap is definition-only and cannot register a second teleport handler.
 - Portal destination vectors and canonical WorldConfig level gates are protected against Bootstrap/WorldTheme drift by contract.
-- Bootstrap portal creation now self-heals invalid non-Part reserved portal identities instead of silently skipping them.
 - Client authority contracts reject direct client Health/MaxHealth/WalkSpeed/CFrame/PivotTo/AssemblyLinearVelocity mutations.
 - PC/mobile clients request actions only; gameplay damage, cooldowns, ownership and rewards remain server-side.
+- Player Health mutation is centralized in `PlayerService.Heal()` for player healing; NPCService/BossService retain only spawn-time NPC health initialization.
+- `CrystalAbilityService` TIDE healing and `UseItemRemote` Health Potion healing both route through `PlayerService.Heal()` with actual-applied rollback handling for potion consumption.
 - Crystal ownership is canonicalized by `CrystalSystem`; `GetEquipped()` requires actual ownership and `CrystalService` returns filtered/deduplicated owned-crystal snapshots.
 - Crystal Equipped, Owned and Mastery mutation ownership has explicit regression contracts; repair/reconcile writes are the only documented exceptions.
 - `PlayerData.Reconcile()` normalizes Level/XP/Money, Inventory, Crystal ownership/mastery, persistent combat Stats, Quest prerequisites/progress, Achievement/Title state, Daily Bounty definitions and SessionLock data.
 - Persisted player XP and CrystalMastery XP are capped below their current level's next threshold; MaxLevel/mastery-cap state forces XP to zero.
 - Invalid persisted Achievement IDs are dropped; Titles are reconstructed only from valid persisted Achievements.
-- Persisted CompletedQuests are canonicalized against their `Requires` chain; ActiveQuests require valid prerequisites and cannot duplicate completed state.
 - Persisted DailyBounty EnemyType/Goal/Reward are reconstructed from `DailyBountyConfig`; new profiles receive a concrete valid first-bounty default.
 - CrystalMastery rejects malformed IDs, bounds XP/costs/bonuses and never falls back to EMBER for invalid mutation IDs.
 - Crystal ability services independently revalidate equipped/owned Crystal context, target type, range and numeric bounds.
@@ -44,22 +44,23 @@ Current compare: **1375 commits ahead, 30 commits behind** `main` (verified with
 - Shop and Crafting require positive integers, canonical IDs, bounded totals and rollback-safe mutations.
 - Crafting output multiplication is validated before inventory-space error formatting or material mutation.
 - Shop buying, item use, crafting, enemy rewards and Guardian rewards use canonical detached inventory snapshots rather than exposing live profile tables to clients.
-- `GetPlayerData` and `GetQuestData` return detached deep-copy snapshots and explicitly exclude persistence internals.
-- Quest completion validates reward data and Money capacity before persistent completion state is committed.
+- `GetPlayerData` and `GetQuestData` return detached profile subsets and exclude persistence internals.
+- Quest completion validates reward data before state commit; a full Money wallet no longer blocks valid quest completion. XP remains fully awarded and `EconomyService` alone caps the Money portion.
 - Daily Bounty validates Money capacity before payout, only marks `Claimed` after a full reward is actually granted, and rolls progress back safely on failed payout.
 - Enemy defeat rewards use canonical `EnemyConfig`; full Money wallets no longer block XP/Loot rewards.
+- Achievement unlocks are one-shot/idempotent and no longer gated by wallet capacity; `EconomyService` alone caps the Money reward.
 - Economy item selling checks wallet capacity before consuming inventory and restores both Money and inventory on unexpected partial payout.
-- Guardian rewards preflight **Boss + active Guardian Trial quest Money together**, preventing the Boss reward itself from filling the wallet and silently losing the quest reward.
-- Guardian rewards use canonical config, `InventoryService`, bounded XP/Money, registered Drop IDs and idempotent `Rewarded` state.
+- Guardian rewards use canonical config, bounded XP/Money, registered Drop IDs and idempotent `Rewarded` state; full Money does not block XP/Drop.
 - Guardian creation is idempotent and destroys a corrupt/non-boss object occupying the reserved `CrystalGuardian` name before spawning the canonical boss.
 - Guardian telegraph impacts are bound to the original Guardian and original Character instances, preventing stale windups from damaging respawned Players or replacement Guardians.
 - NPC AI is server-only, bounded by aggro/attack/special ranges, uses weak-key path caches and clears path/status state on death.
-- AI pathfinding validates that NPCs are still live after yielded `ComputeAsync()` calls.
-- `EnemyConfig.Get()` returns detached deep copies, including nested `Special` config.
+- AI pathfinding validates that NPCs are still live after yielded `ComputeAsync()` calls before publishing results.
+- `EnemyConfig.Get()` returns detached deep copies, including nested `Special` config, while normalizing Respawn.
 - NPC dialog requests require canonical NPC identity, server distance and rate-limit checks; config getters return detached copies.
 - RemoteEvents/RemoteFunctions are type-validated and have dedicated single-owner/rate-limit contracts.
 - `InventoryService.GetInventory()` returns a detached normalized snapshot; legacy `InventorySystem` is blocked from becoming a ServerScriptService authority bypass.
 - Shop, UseItem, Crafting, Combat and Guardian server→client inventory outputs use detached InventoryService snapshots.
+- `InventoryRequest` is Client→Server only; `InventoryChanged` is Server→Client only.
 - Server and client NPC/menu bridges enforce single-open menu state; local menu close/toggle clears `Open*` attributes and listeners ignore `nil`.
 - `WorldDecor` is idempotent via readiness markers and bounded waits; `WorldTheme` deduplicates portal bindings and cleans player state.
 - AI pathfinding uses finite-validated destinations, quantized cache keys, weak Model keys and bounded recomputation.
