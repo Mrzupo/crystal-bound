@@ -22,17 +22,18 @@ Base: `main`
 - Last-attacker attribution is instance/session-bound and restored when no damage is actually applied.
 - Dodge uses finite direction validation, server cooldowns, tokenized invulnerability expiry and current-character Humanoid validation.
 - Player Health mutation is centralized in `PlayerService.Heal()`; NPC/Boss services only initialize NPC Humanoid health.
-- `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks and clears state on lifecycle cleanup.
+- `StatusEffectService` uses Humanoid-scoped replacement tokens for Slow/Burn delayed callbacks, clears state on lifecycle cleanup, rejects new effects during shutdown and stops delayed Burn/Slow work once global shutdown begins.
 - `StatusSpeedGuardV2` derives WalkSpeed server-side and enforces bounded position authority with Character-bound portal grace; both enforcement loops and deferred Character refreshes stop when global shutdown begins.
 - Portal authority is owned by `WorldTheme.server.lua`; Bootstrap defines portal geometry but does not register teleport authority.
-- Portal cooldown callbacks are now generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
+- Portal cooldown callbacks are generation-safe: a delayed callback can clear only the cooldown generation that created it, so an old pre-respawn callback cannot clear a new Character's cooldown.
+- `WorldTheme` portal-touch/deferred arrival logic and its periodic state monitor stop during global shutdown.
 - `NPCMenuBridge` deferred dialog opening is Character-bound, and open menu attributes are cleared again on CharacterAdded so stale UI state cannot survive a respawn.
 - Crystal ownership/equip/unlock and Crystal Mastery read/write paths require canonical Crystal validity and actual ownership.
 - Inventory snapshots are detached and pure; Shop/Crafting/UseItem paths validate inputs before mutation and roll back partial transaction failures.
-- Shop and Crafting now explicitly remove any partial inventory insertion before refunding/reversing a failed transaction, matching the inventory rollback contract.
+- Shop and Crafting explicitly remove any partial inventory insertion before refunding/reversing a failed transaction, matching the inventory rollback contract.
 - Quest completion requires the objective for multi-step quests and is idempotent through QuestSystem state checks.
 - Daily Bounty state and reward values are reconstructed from canonical config; payout only claims after a full reward transaction succeeds.
-- Persisted Daily Bounty state now also enforces the invariant `Claimed => Progress >= Goal`; corrupt `Claimed=true` / incomplete-goal state is normalized back to unclaimed during `PlayerData.Reconcile()`.
+- Persisted Daily Bounty state enforces `Claimed => Progress >= Goal`; corrupt `Claimed=true` / incomplete-goal state is normalized back to unclaimed during `PlayerData.Reconcile()`.
 - Enemy AI loops stop on global shutdown; delayed enemy respawn callbacks cannot create new NPCs after shutdown begins.
 - Guardian creation, AI and delayed respawn stop on global shutdown.
 - Guardian Arena phase-2 hazard damage and its periodic loop stop on global shutdown, and active hazard visuals are disabled when the loop exits.
@@ -43,21 +44,20 @@ Base: `main`
 - RemoteFunction ownership is contract-checked to one server handler per named function; important RemoteEvents have explicit direction/rate-limit contracts.
 
 ## Contract changes in this hardening pass
-- `.github/workflows/pve-attacker-context-validation.yml` now checks exact `Workspace.NPCs` parent identity instead of the weaker descendant-only assumption.
-- `.github/workflows/player-load-rejoin-race-contract.yml` now matches the actual runtime: duplicate same-UserId loads are rejected while the first load is in flight, rather than claiming superseded loads.
-- `.github/workflows/quest-chain-config-validation.yml` now enforces the linear, single-root, acyclic quest dependency graph required by `QuestSystem.GetChainOrder()`.
-- `.github/workflows/persistence-reconcile-contract.yml` now matches the actual `PlayerData.Reconcile()` implementation and explicitly guards the Daily Bounty `Claimed => Progress >= Goal` invariant.
-- `.github/workflows/player-data-reconciliation-contract.yml` also enforces the same Daily Bounty impossible-state invariant.
-- `.github/workflows/player-remove-release-contract.yml` now matches the current combined Shutdown/Closing/Saving guard in `GetProfile()`.
-- `.github/workflows/inventory-transaction-rollback.yml` is now satisfied by explicit partial-insertion rollback in Shop and Crafting.
-- `.github/workflows/world-init-validation.yml` now guards tokenized portal cooldown expiry across respawn/rejoin.
-- `.github/workflows/menu-attribute-contract.yml` now guards Character-bound deferred NPC dialog opening and respawn menu cleanup.
-- `.github/workflows/enemy-lifecycle-validation.yml` now requires shutdown-safe enemy AI and respawn behavior.
-- `.github/workflows/boss-active-spawn-contract.yml` now requires shutdown-safe Guardian creation, AI and respawn behavior.
-- `.github/workflows/movement-authority-contract.yml` now requires shutdown-aware WalkSpeed/position loops and Character-bound deferred binds.
-- `.github/workflows/boss-attack-contract.yml` now requires shutdown-safe Guardian Arena hazard behavior.
-- `STUDIO_PLAYTEST.md` contains explicit portal cooldown stale-callback, NPC menu Character-lifecycle, Daily Bounty reconciliation and shutdown-respawn regression scenarios.
-- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency, Daily Bounty, transaction-rollback, Character-lifecycle, movement and shutdown-respawn semantics.
+- `.github/workflows/pve-attacker-context-validation.yml` checks exact `Workspace.NPCs` parent identity instead of the weaker descendant-only assumption.
+- `.github/workflows/player-load-rejoin-race-contract.yml` matches runtime duplicate-load rejection rather than claiming superseded loads.
+- `.github/workflows/quest-chain-config-validation.yml` enforces the linear, single-root, acyclic quest dependency graph required by `QuestSystem.GetChainOrder()`.
+- `.github/workflows/persistence-reconcile-contract.yml` and `player-data-reconciliation-contract.yml` guard the Daily Bounty impossible-state invariant.
+- `.github/workflows/player-remove-release-contract.yml` matches the combined Shutdown/Closing/Saving guard in `GetProfile()`.
+- `.github/workflows/inventory-transaction-rollback.yml` is satisfied by explicit partial-insertion rollback in Shop and Crafting.
+- `.github/workflows/world-init-validation.yml` guards tokenized portal cooldown expiry and WorldTheme shutdown lifecycle.
+- `.github/workflows/menu-attribute-contract.yml` guards Character-bound deferred NPC dialog opening and respawn menu cleanup.
+- `.github/workflows/enemy-lifecycle-validation.yml` requires shutdown-safe enemy AI and respawn behavior.
+- `.github/workflows/boss-active-spawn-contract.yml` requires shutdown-safe Guardian creation, AI and respawn behavior.
+- `.github/workflows/movement-authority-contract.yml` requires shutdown-aware WalkSpeed/position loops and Character-bound deferred binds.
+- `.github/workflows/boss-attack-contract.yml` requires shutdown-safe Guardian Arena hazard behavior.
+- `.github/workflows/status-effect-stale-callback-contract.yml` requires shutdown cancellation for Slow/Burn delayed callbacks and new effect rejection.
+- `STUDIO_PLAYTEST.md`, `TESTING.md`, `TODO.md`, and `NEXT_SESSION.md` are synchronized with the current lifecycle/transaction hardening state.
 
 ## Open / runtime-only limitations
 - No real Roblox Studio runtime playtest has been executed from this environment.
@@ -73,7 +73,7 @@ Base: `main`
 2. Autosave mutation/settle and final Release failure behavior.
 3. Combat range, PvP rejection, Dodge and NPC/Boss attacker identity.
 4. Enemy death/respawn, shutdown-respawn suppression and Guardian telegraph replacement races.
-5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, movement shutdown and Dodge/network ownership.
+5. Portal movement authority, stale cooldown callbacks across respawn, NPC menu Character lifecycle, movement/status-effect shutdown and Dodge/network ownership.
 6. Shop/Crafting/Consumables and transaction rollback.
 7. Guardian Arena hazard shutdown behavior when executable Studio testing is available.
 
