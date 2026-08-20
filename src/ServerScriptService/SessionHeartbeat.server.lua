@@ -15,7 +15,7 @@ local function shutdownProfiles()
 	PlayerService.BeginShutdown()
 	local pending = 0
 	for _, player in ipairs(Players:GetPlayers()) do
-		if PlayerService.GetProfile(player) then
+		if PlayerService.HasLoadedProfile(player) then
 			pending += 1
 			task.spawn(function()
 				local ok = PlayerService.Remove(player)
