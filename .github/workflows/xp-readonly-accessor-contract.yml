@@ -1,0 +1,34 @@
+name: XP Readonly Accessor Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure XP read APIs do not mutate profile state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
+          for name in ("GetLevel", "GetXP"):
+              start = text.index(f"function XPService.{name}")
+              if name == "GetLevel":
+                  end = text.index("function XPService.GetXP", start)
+              else:
+                  end = text.index("function XPService.GetRequiredXP", start)
+              block = text[start:end]
+              if "profile.Level =" in block or "profile.Experience =" in block:
+                  raise SystemExit(f"{name} must not mutate persistent profile state")
+
+          if "function XPService.AddXP" not in text:
+              raise SystemExit("XPService.AddXP disappeared")
+          if "profile.Level =" not in text or "profile.Experience =" not in text:
+              raise SystemExit("XPService.AddXP lost its mutation owner")
+
+          print("XP read accessors are side-effect free; AddXP remains the mutation owner.")
