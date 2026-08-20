@@ -150,7 +150,8 @@ function CombatService.HandleRequest(player, action, target)
 	if not profile or not profile.Crystals then return end
 	if typeof(target) ~= "Instance" or target == player or isPlayerTarget(target) then return end
 
-	local crystalId = profile.Crystals.Equipped
+	local crystalId = CrystalSystem.GetEquipped(profile)
+	if not crystalId then return end
 	local config = action == "Ability" and CrystalSystem.GetAbility(crystalId) or CrystalSystem.GetBasicAttack(crystalId)
 	if not config then return end
 
