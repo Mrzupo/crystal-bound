@@ -1,16 +1,16 @@
 # Crystal Bound — Current Audit
 
-Date: 2026-08-20
+Date: 2026-08-21
 Branch: `agent/complete-crystal-bound-foundation`
 Base: `main`
-Current compare: **1464 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
-`main` remains untouched by this workstream; the current compared base is `18f0f27fcbcb4fd6384f45ecd1d0632f1d0632f9edad02d`.
+Current compare: **1489 commits ahead, 38 commits behind** `main` (verified with GitHub compare).
+`main` remains untouched by this workstream; current compare is from the latest branch state.
 
 ## Verified
 - Active Rojo tree is `default.project.json`; legacy root SaveSystem/Crystal registry/legacy StatusSpeedGuard paths are not loaded.
 - `Bootstrap.server.lua` is the single canonical profile-load owner: one `loadPlayer()` path serves `PlayerAdded` and already-present players after startup, with per-Player deduplication.
 - No separate `PlayerLoadCatchup.server.lua` exists or is loaded; startup catch-up is intentionally owned by Bootstrap.
-- `PlayerService.Load()` uses a per-UserId load-generation token; a newer load supersedes an older load for the same UserId, and every superseded/aborted successful load releases the specific SessionLock token it acquired before returning.
+- `PlayerService.Load()` uses a per-UserId in-process load sentinel: a second load for the same UserId is rejected while the first is running. The runtime does **not** currently implement newer-load-supersedes-older-load semantics; the existing `loadToken` only detects external invalidation of the in-flight owner. Successful loads that are aborted after acquiring a SessionLock release the specific lock token they acquired before returning.
 - `PlayerService` re-checks Player/Profile closing state after waiting on the operation lock before Refresh/Save, preventing heartbeat/autosave access after `Remove()` begins.
 - Dedicated `PlayerLifecycle.server.lua` owns normal `Players.PlayerRemoving` → `PlayerService.Remove()` persistence/release.
 - Shutdown enumerates loaded profiles through `PlayerService.HasLoadedProfile()` before final Save/Release, so the global shutdown guard cannot hide profiles from cleanup.
@@ -21,7 +21,7 @@ Current compare: **1464 commits ahead, 38 commits behind** `main` (verified with
 - `DamageService` is the sole direct `Humanoid:TakeDamage()` owner; damage types, attackers, targets, ranges and amounts are server-validated.
 - Environmental damage is strictly `Attacker == nil` in both the generic validator and final `DamageService` gate.
 - NPC attackers must be live, direct children of `Workspace.NPCs`, and carry `Enemy == true`; Player-vs-Player damage is rejected.
-- NPC damage/target identity is now protected by an exact-parent contract in both runtime and CI: nested/non-canonical models under `Workspace.NPCs` are not treated as valid attacker/target models merely because they are descendants.
+- NPC damage/target identity is protected by an exact-parent contract in both runtime and CI: nested/non-canonical models under `Workspace.NPCs` are not treated as valid attacker/target models merely because they are descendants.
 - Last-attacker attribution is instance/session-bound, pinned before lethal `TakeDamage()`, restored on zero-applied damage and cleared after successful enemy reward processing.
 - Dodge validates finite directions, bounded ranges and cooldowns; `ApplyDamage()` additionally requires the supplied Humanoid to be the current Player Character's Humanoid.
 - Dodge invulnerability end-tasks use per-player tokens, so stale delayed callbacks cannot cancel a later dodge after re-dodge or respawn.
@@ -48,7 +48,7 @@ Current compare: **1464 commits ahead, 38 commits behind** `main` (verified with
 - Crystal ability services independently revalidate equipped/owned Crystal context, target type, range and numeric bounds.
 - Economy, Inventory, XP, Quest, Achievement, persistent combat Stats, Daily Bounty and Crystal progression mutations have explicit server ownership contracts.
 - Shop and Crafting require positive integers, canonical IDs, bounded totals and rollback-safe mutations.
-- Crafting validates output multiplication before inventory-space error formatting or material mutation and now rejects unregistered recipe Input item IDs at runtime.
+- Crafting validates output multiplication before inventory-space error formatting or material mutation and rejects unregistered recipe Input item IDs at runtime.
 - Shop buying, item use, crafting, enemy rewards and Guardian rewards use canonical detached inventory snapshots rather than exposing live profile tables to clients.
 - `GetPlayerData` and `GetQuestData` return detached profile subsets and exclude persistence internals.
 - Quest completion validates reward data before state commit; a full Money wallet no longer blocks valid quest completion. XP remains fully awarded and `EconomyService` alone caps the Money portion.
@@ -82,12 +82,13 @@ Current compare: **1464 commits ahead, 38 commits behind** `main` (verified with
 - Authored Roblox Animation/Sound assets are still absent; current VFX remain procedural/placeholder presentation.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
 - The general `PlayerService.Saving` gate still blocks `GetProfile()` for ordinary gameplay requests during autosave. A broader safe fix would allow gameplay profile reads during Save and settle the save on a complete pre/post-profile snapshot; that generalized write remains intentionally pending because it changes the concurrency model of many gameplay services.
+- Same-UserId load races are currently serialized by the in-process `LoadingByUserId` sentinel rather than by a newer-load-supersedes-older-load algorithm. The existing Studio superseded-load scenario is therefore a future design test, not an already-verified runtime behavior.
 - `GetPlayerData`/`GetQuestData` return Roblox-serialized profile subsets with detached server-side snapshots; no server-side table reference crosses the network boundary.
 - TIDE/GALE currently unlock through level gates; the long-term design includes Mining, Digging, Bosses, Dungeons, World Events and Quests as future Crystal acquisition activities.
 - White Queen intro/story rules remain unchanged.
 
 ## Next technical direction
-1. Keep the generalized autosave gameplay-read gate pending until a safe concurrency-tested implementation is available.
+1. Keep generalized autosave gameplay-read changes and load-supersede concurrency semantics pending until a safe concurrency-tested implementation is available.
 2. Continue concrete static audits and eliminate newly introduced authority/config drift.
 3. Move to Roblox Studio multiplayer validation when executable runtime access is available.
 4. Add authored EMBER Basic + Flame Burst animation/VFX/audio assets first, then repeat asset contracts for TIDE/GALE.
