@@ -182,7 +182,13 @@ function PlayerData.Reconcile(input)
 	local filteredActive = {}
 	for _, questId in ipairs(data.ActiveQuests) do
 		local definition = QuestSystem.GetDefinition(questId)
-		if not completedSet[questId] and #filteredActive == 0 and definition and (not definition.Requires or completedSet[definition.Requires]) then
+		local minimumLevel = definition and math.max(1, math.floor(finiteNumber(definition.MinLevel) or 1)) or math.huge
+		if not completedSet[questId]
+			and #filteredActive == 0
+			and definition
+			and data.Level >= minimumLevel
+			and (not definition.Requires or completedSet[definition.Requires])
+		then
 			table.insert(filteredActive, questId)
 		end
 	end
