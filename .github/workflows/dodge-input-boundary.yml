@@ -29,10 +29,12 @@ jobs:
               'MAX_DIRECTION_MAGNITUDE = math.clamp(finiteNumber(DodgeConfig.MaxDirectionMagnitude, 1000), 1, 10000)',
               'safeRange = math.clamp(safeRange, 0.1, 1000)',
               'if not character or humanoid.Parent ~= character then return false end',
+              'local function isShuttingDown()',
+              'if isShuttingDown() then return false, "Server shutting down" end',
           ]
           missing = [marker for marker in required if marker not in service]
           if missing:
-              raise SystemExit("missing Dodge input/target boundary contract markers: " + ", ".join(missing))
+              raise SystemExit("missing Dodge input/target/shutdown boundary markers: " + ", ".join(missing))
 
           for marker in [
               'local PlayerService = require(script.Parent.Services.PlayerService)',
