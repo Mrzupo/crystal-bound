@@ -38,34 +38,30 @@ jobs:
           for attribute in attributes:
               if attribute not in text["touch"] and attribute != "OpenNPCDialog":
                   problems.append(f"TouchMenus missing {attribute}")
-              if attribute in {"OpenQuestMenu", "OpenShopMenu", "OpenCrystalMenu", "OpenCraftingMenu", "OpenAchievementMenu"} and attribute not in text["dialog"]:
-                  problems.append(f"NPCDialogMenu missing {attribute}")
               if attribute == "OpenNPCDialog" and attribute not in text["bridge"]:
                   problems.append("NPCMenuBridge missing OpenNPCDialog")
 
-          if 'local MENU_ATTRIBUTES = {' not in text["bridge"]:
-              problems.append("NPCMenuBridge must centralize menu attributes")
-          if 'clearMenus(player)' not in text["bridge"]:
-              problems.append("NPCMenuBridge must clear existing menu state before opening a dialog")
-          if 'local MENU_ATTRIBUTES = {' not in text["touch"]:
-              problems.append("TouchMenus must centralize menu attributes")
-          if 'player:SetAttribute(attribute, nil)' not in text["touch"]:
-              problems.append("TouchMenus must clear existing menu state before opening a menu")
-          if 'local MENU_ATTRIBUTES = {' not in text["dialog"]:
-              problems.append("NPCDialogMenu must centralize menu attributes")
-          if 'clearMenuState()' not in text["dialog"]:
-              problems.append("NPCDialogMenu must clear existing menu state before dialog/target transitions")
+          if 'local MENU_ATTRIBUTES = {' not in text["bridge"] or 'clearMenus(player)' not in text["bridge"]:
+              problems.append("NPCMenuBridge must centralize and clear menu attributes")
+          if 'local MENU_ATTRIBUTES = {' not in text["touch"] or 'player:SetAttribute(attribute, nil)' not in text["touch"]:
+              problems.append("TouchMenus must centralize and clear menu attributes")
+          if 'local MENU_ATTRIBUTES = {' not in text["dialog"] or 'clearMenuState()' not in text["dialog"]:
+              problems.append("NPCDialogMenu must centralize and clear menu attributes")
 
-          close_requirements = {
-              "quest": 'player:SetAttribute("OpenQuestMenu", nil)',
-              "shop": 'player:SetAttribute("OpenShopMenu", nil)',
-              "crystal": 'player:SetAttribute("OpenCrystalMenu", nil)',
-              "craft": 'player:SetAttribute("OpenCraftingMenu", nil)',
-              "achievement": 'player:SetAttribute("OpenAchievementMenu", nil)',
+          menu_guards = {
+              "quest": "OpenQuestMenu",
+              "shop": "OpenShopMenu",
+              "crystal": "OpenCrystalMenu",
+              "craft": "OpenCraftingMenu",
+              "achievement": "OpenAchievementMenu",
           }
-          for name, marker in close_requirements.items():
-              if marker not in text[name]:
-                  problems.append(f"{name} menu must clear its Open* attribute on local close")
+          for name, attribute in menu_guards.items():
+              if f'player:GetAttributeChangedSignal("{attribute}")' not in text[name]:
+                  problems.append(f"{name} menu must listen for {attribute}")
+              if f'player:GetAttribute("{attribute}") == nil then return end' not in text[name]:
+                  problems.append(f"{name} menu must not open when {attribute} is cleared")
+              if f'player:SetAttribute("{attribute}", nil)' not in text[name]:
+                  problems.append(f"{name} menu must clear {attribute} on close")
 
           if problems:
               for problem in problems:
