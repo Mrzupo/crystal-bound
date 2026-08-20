@@ -41,9 +41,10 @@ jobs:
 
           for marker in [
               'local function getNPCRoot()',
-              'instance:IsDescendantOf(npcFolder)',
+              'instance.Parent == npcFolder',
               'targetModel:IsDescendantOf(Workspace)',
-              'targetModel:IsDescendantOf(npcFolder)',
+              'targetModel.Parent == npcFolder',
+              'model.Parent == npcFolder',
               'targetModel:GetAttribute("Enemy") == true or targetModel:GetAttribute("BossId") ~= nil',
               'if target:IsA("Player") then',
               'targetModel = target.Character',
@@ -55,4 +56,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("PvE attacker context and validated Player/NPC target paths are covered by the central DamageService boundary.")
+          print("PvE attacker context and exact Workspace.NPCs model identity are covered by the central DamageService boundary.")
