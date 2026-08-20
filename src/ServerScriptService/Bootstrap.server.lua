@@ -184,7 +184,11 @@ local function createIsland(islands, name, center, size)
 end
 local function createSpawn(spawnFolder) if spawnFolder:FindFirstChild("StarterSpawn") then return end; local spawn = Instance.new("SpawnLocation"); spawn.Name="StarterSpawn"; spawn.Size=Vector3.new(8,1,8); spawn.Position=Vector3.new(0,3,8); spawn.Anchored=true; spawn.Neutral=true; spawn.Parent=spawnFolder end
 local function createPortal(island, name, fromPosition, destination, requiredLevel)
-	if island:FindFirstChild(name) then return end
+	local existing = island:FindFirstChild(name)
+	if existing then
+		if existing:IsA("BasePart") then return end
+		existing:Destroy()
+	end
 	local portal=Instance.new("Part"); portal.Name=name; portal.Size=Vector3.new(6,8,2); portal.Position=fromPosition; portal.Anchored=true; portal.Material=Enum.Material.Neon; portal.Parent=island
 	local gui=Instance.new("BillboardGui"); gui.Size=UDim2.fromOffset(260,60); gui.StudsOffset=Vector3.new(0,6,0); gui.AlwaysOnTop=true; gui.Parent=portal
 	local label=Instance.new("TextLabel"); label.Size=UDim2.fromScale(1,1); label.BackgroundTransparency=1; label.Text="Level "..tostring(requiredLevel or 1).." required"; label.Font=Enum.Font.GothamBold; label.TextSize=18; label.Parent=gui
