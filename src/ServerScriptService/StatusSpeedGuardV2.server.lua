@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MovementConfig = require(ReplicatedStorage.Config.MovementConfig)
+local StatusEffectService = require(script.Parent.Services.StatusEffectService)
 
 local ENFORCEMENT_INTERVAL = 0.25
 local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
@@ -109,7 +110,7 @@ local function refresh(player)
 	local speedBonus = math.clamp(math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0)), 0, MAX_WALK_SPEED_BONUS)
 	local base = BASE_WALK_SPEED + speedBonus
 	local expected = math.max(MIN_WALK_SPEED, base)
-	local slow = finiteNumber(humanoid:GetAttribute("CrystalBoundSlowMultiplier"), nil)
+	local slow = StatusEffectService.GetSlowMultiplier(humanoid)
 	if slow and slow > 0 then
 		expected = math.max(MIN_WALK_SPEED, base * math.clamp(slow, MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER))
 	end
