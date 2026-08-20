@@ -21,6 +21,14 @@ local function clearMenuState()
 	end
 end
 
+local function clearOtherMenuState()
+	for _, attribute in ipairs(MENU_ATTRIBUTES) do
+		if attribute ~= "OpenNPCDialog" then
+			player:SetAttribute(attribute, nil)
+		end
+	end
+end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "NPCDialogMenu"
 gui.ResetOnSpawn = false
@@ -74,9 +82,18 @@ options.Parent = panel
 
 local currentLines = {}
 local currentIndex = 1
+local dialogRequestGeneration = 0
+local DIALOG_RETRY_DELAY = 0.25
+local openDialog
 
 local function clearOptions()
 	for _, child in ipairs(options:GetChildren()) do child:Destroy() end
+end
+
+local function invalidateDialogRequest()
+	dialogRequestGeneration += 1
+	panel.Visible = false
+	clearMenuState()
 end
 
 local function showNextLine()
@@ -99,14 +116,24 @@ local function openTargetMenu(optionId)
 	end
 end
 
-local function openDialog(npcId)
+local function scheduleDialogRetry(npcId, character, generation)
+	task.delay(DIALOG_RETRY_DELAY, function()
+		if generation == dialogRequestGeneration and player.Character == character and character.Parent and player:GetAttribute("OpenNPCDialog") == npcId then
+			openDialog(npcId, character, generation)
+		end
+	end)
+end
+
+openDialog = function(npcId, character, generation)
 	local ok, data = pcall(function() return dialogRequest:InvokeServer(npcId) end)
-	if not ok or type(data) ~= "table" then
-		panel.Visible = false
-		clearMenuState()
+	if generation ~= dialogRequestGeneration or player.Character ~= character or not character or not character.Parent or player:GetAttribute("OpenNPCDialog") ~= npcId then
 		return
 	end
-	clearMenuState()
+	if not ok or type(data) ~= "table" then
+		scheduleDialogRetry(npcId, character, generation)
+		return
+	end
+	clearOtherMenuState()
 	currentLines = type(data.Lines) == "table" and data.Lines or {}
 	currentIndex = 1
 	title.Text = data.Name or npcId
@@ -129,8 +156,27 @@ local function openDialog(npcId)
 end
 
 player:GetAttributeChangedSignal("OpenNPCDialog"):Connect(function()
+	dialogRequestGeneration += 1
+	local generation = dialogRequestGeneration
 	local npcId = player:GetAttribute("OpenNPCDialog")
-	if type(npcId) == "string" and npcId ~= "" then openDialog(npcId) end
+	if type(npcId) == "string" and npcId ~= "" then
+		local character = player.Character
+		if character and character.Parent then
+			openDialog(npcId, character, generation)
+		end
+	else
+		panel.Visible = false
+		clearOptions()
+		currentLines = {}
+		currentIndex = 1
+	end
+end)
+
+player.CharacterAdded:Connect(function()
+	invalidateDialogRequest()
+end)
+player.CharacterRemoving:Connect(function()
+	invalidateDialogRequest()
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
