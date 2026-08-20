@@ -1,0 +1,33 @@
+name: Player Stats Write Ownership
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate persistent combat stat mutation owners
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src")
+          allowed = {
+              "ServerScriptService/Services/CombatService.lua",
+              "ServerScriptService/Services/BossService.lua",
+              "ReplicatedStorage/Modules/PlayerData.lua",
+          }
+          token = "profile.Stats."
+          violations = []
+          for path in root.rglob("*.lua"):
+              relative = str(path.relative_to(root))
+              text = path.read_text(encoding="utf-8")
+              if token in text and relative not in allowed:
+                  violations.append(relative)
+          if violations:
+              raise SystemExit("Player Stats writes outside canonical owners: " + ", ".join(violations))
+          print("Player Stats write ownership validated.")
