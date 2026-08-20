@@ -111,6 +111,7 @@ function DailyBountyService.AddProgress(player, profile, enemyType, EconomyServi
 		PlayerService.Sync(player)
 		return true
 	end
+	PlayerService.Sync(player)
 	player:SetAttribute("BountyMessage", string.format("Daily Bounty: %s %d/%d", bounty.EnemyType, bounty.Progress, bounty.Goal))
 	return false
 end
