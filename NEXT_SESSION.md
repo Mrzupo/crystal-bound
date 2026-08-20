@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1301 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1317 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 - Current compared main base: `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Current state
@@ -30,13 +30,19 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Server-enforced WalkSpeed baseline and Slow modifiers, with immediate correction of property changes and separate configurable position-authority cadence.
 
 ## Latest hardening work
+- Bootstrap is now the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after world initialization.
+- Redundant `PlayerLoadCatchup.server.lua` was removed to avoid concurrent startup Load owners; the project no longer maps or references it.
+- Bootstrap load failure handling checks `player.Parent` before calling `Kick()`.
 - Enemy defeat rewards no longer reject the entire XP/Loot reward when the Money wallet is full; EconomyService alone caps Money.
 - Guardian rewards use the same wallet-cap-safe semantics and never set `Rewarded` when no valid loaded player profile exists.
 - Daily Bounty checks wallet capacity before payout and marks `Claimed` only after the complete reward is actually granted; failed payout restores progress to goal-1.
 - Crafting validates multiplied output/input totals before inventory-space formatting or mutation, preventing malformed-config overflow paths.
 - Shop purchases validate multiplication, affordability and stack capacity before mutation and roll back Money if inventory insertion unexpectedly fails.
 - Inventory selling now checks wallet capacity before consuming inventory and rolls both Money and inventory back on unexpected partial payout, closing the full-wallet sale replay exploit.
-- `EnemyConfig.Get()` returns a detached config and clamps Respawn into the 1.5..600 second runtime range used by Bootstrap/NPC lifecycle code.
+- Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
+- Player Health is centralized through `PlayerService.Heal()`; Tide and Health Potion healing route through it, and Potion consumption rolls back if no healing is applied.
+- Health authority CI now rejects direct Player Health/MaxHealth writes outside PlayerService while allowing NPC/Boss health initialization.
+- `EnemyConfig.Get()` returns a detached recursive config clone and clamps Respawn into the 1.5..600 second runtime range.
 - `StatusSpeedGuardV2` now has separate loops: WalkSpeed refresh at 0.25 s and position enforcement at the configured `MovementConfig.PositionCheckInterval` (currently 0.15 s).
 - Missing Humanoid/RootPart resets movement position state so stale `sampleDt` cannot inflate teleport tolerance.
 - Dodge invulnerability end tasks use per-player tokens, preventing stale delayed callbacks from cancelling a newer dodge after re-dodge or respawn.
@@ -44,12 +50,11 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Guardian telegraph impacts are bound to the original Character instance, preventing an old windup from damaging a freshly respawned Character.
 - AI pathfinding revalidates the NPC after yielded `ComputeAsync()` work before publishing the result.
 - `SafeProfileStore` resets Load/Save/Refresh/Release success flags on every `UpdateAsync` callback invocation as well as before outer retries, preventing stale callback state after internal datastore retries.
-- `PlayerLoadCatchup.server.lua` covers players entering during Bootstrap world initialization with a bounded startup scan without becoming a second `PlayerAdded` load owner.
-- Inventory UI uses `InventoryRequest` strictly as Client → Server and `InventoryChanged` strictly as Server → Client.
 - Menu/dialog contracts explicitly treat `INVENTORY` as the combined `OpenCrystalMenu` inventory+crystals menu alias.
 
 ## Security / authority rules
 - `DamageService` is the only direct `Humanoid:TakeDamage()` owner.
+- Player Health changes are owned by PlayerService; NPCService/BossService only initialize NPC health.
 - Known DamageTypes only; positive finite damage and bounded ranges only.
 - PvP damage blocked in current PvE-first combat path.
 - Client cannot authoritatively grant Crystals, items, Money, XP, damage or quest completion.
@@ -61,7 +66,7 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 ## Open decisions / limitations
 - No actual Roblox Studio runtime playtest has been executed here.
 - No Luau interpreter or Rojo CLI runtime validation is available here.
-- Latest Combined Status queries return no status objects; do not call CI green without actual evidence.
+- Latest commit workflow-run/Combined Status queries provide no verified CI run/status; do not call CI green without actual evidence.
 - Authored Roblox Animation/Sound assets are still missing; current VFX remain procedural/placeholder-level.
 - Movement/physics thresholds still require real Roblox Studio multiplayer validation, especially Dodge velocity, portal grace and Roblox network-ownership interactions.
 - TIDE/GALE currently use level-gated prototype unlocks while the long-term design lists Mining, Digging, Bosses, Dungeons, World Events and Quests as acquisition activities; decide the final model before building acquisition content.
