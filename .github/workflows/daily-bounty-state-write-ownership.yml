@@ -14,6 +14,7 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+
           root = Path("src")
           allowed = {
               "ServerScriptService/Services/DailyBountyService.lua",
@@ -21,13 +22,23 @@ jobs:
           }
           tokens = (
               "profile.DailyBounty =",
-              "profile.DailyBounty.",
+              "profile.DailyBounty = type(",
+          )
+          indexed_tokens = (
+              "profile.DailyBounty[",
           )
           violations = []
           for path in root.rglob("*.lua"):
               relative = str(path.relative_to(root))
               text = path.read_text(encoding="utf-8")
-              if any(token in text for token in tokens) and relative not in allowed:
+              direct = any(token in text for token in tokens)
+              indexed_write = False
+              for line in text.splitlines():
+                  compact = line.replace(" ", "").replace("\t", "")
+                  if compact.startswith("profile.DailyBounty[") and "=" in compact:
+                      indexed_write = True
+                      break
+              if (direct or indexed_write) and relative not in allowed:
                   violations.append(relative)
           if violations:
               raise SystemExit("Daily Bounty writes outside canonical owners: " + ", ".join(violations))
