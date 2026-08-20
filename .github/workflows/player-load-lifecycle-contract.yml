@@ -14,24 +14,33 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          catchup = Path("src/ServerScriptService/PlayerLoadCatchup.server.lua").read_text(encoding="utf-8")
+          project = Path("default.project.json").read_text(encoding="utf-8")
           required = [
               'if not player.Parent then',
               'local released = SafeProfileStore.Release(player)',
               'player left while profile loading',
               'player left during profile initialization',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in player_service]
           if missing:
               raise SystemExit("missing PlayerService load lifecycle guard: " + ", ".join(missing))
 
-          profiles_assignment = text.index('PlayerService.Profiles[player] = profile')
-          first_guard = text.index('if not player.Parent then')
+          profiles_assignment = player_service.index('PlayerService.Profiles[player] = profile')
+          first_guard = player_service.index('if not player.Parent then')
           if first_guard > profiles_assignment:
               raise SystemExit("PlayerService must check player.Parent before installing the loaded profile")
 
-          second_guard = text.index('if not player.Parent then', profiles_assignment)
+          second_guard = player_service.index('if not player.Parent then', profiles_assignment)
           if second_guard < profiles_assignment:
               raise SystemExit("PlayerService must re-check player.Parent after installing the profile")
 
-          print("Player load/leave race contract validated.")
+          if 'Players.PlayerAdded' in catchup:
+              raise SystemExit("PlayerLoadCatchup must not become a second PlayerAdded load owner")
+          if 'PlayerService.LoadingByUserId[player.UserId]' not in catchup:
+              raise SystemExit("PlayerLoadCatchup must skip players already being loaded")
+          if 'PlayerLoadCatchup' not in project or 'src/ServerScriptService/PlayerLoadCatchup.server.lua' not in project:
+              raise SystemExit("PlayerLoadCatchup must be active in default.project.json")
+
+          print("Player load/leave and startup catch-up lifecycle contract validated.")
