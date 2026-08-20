@@ -221,7 +221,7 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 					and string.format("Crystal Guardian defeated! +%d Money (wallet cap). Guardian Core stack is full.", earnedMoney)
 					or "Crystal Guardian defeated! Guardian Core stack is full.")
 			end
-			local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, profile.Inventory) end
+			local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)) end
 		end
 
 		DamageService.ClearTarget(model)
