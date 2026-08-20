@@ -1,0 +1,33 @@
+name: Portal Autosave Authority Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/portal-autosave-race-v2"]
+  pull_request:
+
+jobs:
+  validate-portal-autosave-authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate portal grace does not depend on GetProfile during autosave
+        shell: python
+        run: |
+          from pathlib import Path
+
+          world = Path("src/ServerScriptService/WorldTheme.server.lua").read_text(encoding="utf-8")
+          required = [
+              "local function getLoadedProfileForPortal(player)",
+              "PlayerService.ShuttingDown",
+              "PlayerService.Closing[player]",
+              "return PlayerService.Profiles[player]",
+              "getLoadedProfileForPortal(player)",
+              "PortalMovementGraceUntil",
+              "PortalExpectedDestination",
+          ]
+          missing = [marker for marker in required if marker not in world]
+          if missing:
+              raise SystemExit("Portal autosave authority contract missing: " + ", ".join(missing))
+          if "local profile = PlayerService.GetProfile(player)" in world:
+              raise SystemExit("WorldTheme portal authority must not depend on GetProfile() during autosave")
+          print("Portal authorization and grace are independent of PlayerService.GetProfile() autosave gating.")
