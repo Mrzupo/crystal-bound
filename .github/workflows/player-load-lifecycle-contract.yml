@@ -35,7 +35,10 @@ jobs:
               'local released = releaseLoadedToken()',
               'player:SetAttribute("ProfileLoaded", false)',
               'player:SetAttribute("ProfileLoaded", true)',
-              'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent then',
+              'local syncSuccess, syncError = xpcall(function()',
+              'PlayerService.Sync(player)',
+              'if not syncSuccess then',
+              'initial PlayerService.Sync failed for',
               'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent and player.Character then',
               'if player.Parent then player:SetAttribute("ProfileLoaded", false) end',
               'if not PlayerService.ShuttingDown and player:GetAttribute("ProfileLoaded") == true then',
@@ -54,6 +57,14 @@ jobs:
           post_clear_guard = player_service.index('clearCurrentLoad()\n\tif PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then')
           if post_clear_guard < profiles_assignment:
               raise SystemExit('PlayerService must guard post-load initialization after clearing the in-flight marker')
+
+          sync_index = player_service.index('local syncSuccess, syncError = xpcall(function()')
+          profile_loaded_index = player_service.index('player:SetAttribute("ProfileLoaded", true)', sync_index - 500)
+          if profile_loaded_index > sync_index:
+              raise SystemExit('ProfileLoaded must be enabled before initial Sync so derived Character state is applied')
+          sync_failure_index = player_service.index('if not syncSuccess then', sync_index)
+          if player_service.index('local released = releaseLoadedToken()', sync_failure_index) > player_service.index('return nil, "Profile initialization failed"', sync_failure_index):
+              raise SystemExit('Initial Sync failure must release the claimed SessionLock before returning')
 
           profiles_load_block = player_service[player_service.index('function PlayerService.Load'):player_service.index('function PlayerService.Sync')]
           if profiles_load_block.count('clearCurrentLoad()') < 6:
@@ -88,4 +99,4 @@ jobs:
           if Path('src/ServerScriptService/PlayerLoadCatchup.server.lua').exists():
               raise SystemExit("Redundant PlayerLoadCatchup file must remain removed")
 
-          print("Canonical PlayerAdded ownership, startup drain, Closing/shutdown protection, loaded-state invalidation, exception-safe in-flight cleanup, post-load race protection and single-owner load reconciliation validated.")
+          print("Canonical PlayerAdded ownership, startup drain, Closing/shutdown protection, loaded-state invalidation, initial Sync ordering/rollback, exception-safe in-flight cleanup, post-load race protection and single-owner load reconciliation validated.")
