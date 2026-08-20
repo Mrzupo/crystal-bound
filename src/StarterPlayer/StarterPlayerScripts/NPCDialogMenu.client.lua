@@ -76,6 +76,7 @@ local currentLines = {}
 local currentIndex = 1
 local dialogRequestGeneration = 0
 local DIALOG_RETRY_DELAY = 0.25
+local openDialog
 
 local function clearOptions()
 	for _, child in ipairs(options:GetChildren()) do child:Destroy() end
@@ -115,7 +116,7 @@ local function scheduleDialogRetry(npcId, character, generation)
 	end)
 end
 
-local function openDialog(npcId, character, generation)
+openDialog = function(npcId, character, generation)
 	local ok, data = pcall(function() return dialogRequest:InvokeServer(npcId) end)
 	if generation ~= dialogRequestGeneration or player.Character ~= character or not character or not character.Parent or player:GetAttribute("OpenNPCDialog") ~= npcId then
 		return
