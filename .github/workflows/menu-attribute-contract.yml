@@ -88,11 +88,13 @@ jobs:
               'player:GetAttribute("OpenQuestMenu") ~= expectedOpenState',
               'player.CharacterAdded:Connect(function()',
               'player.CharacterRemoving:Connect(function()',
+              'local function scheduleCurrentGenerationReload(staleGeneration)',
+              'if open and staleGeneration ~= loadGeneration then',
               'if not data or type(data) ~= "table" or not open then return end',
           )
           for marker in quest_guards:
               if marker not in text["quest"]:
-                  problems.append(f"QuestMenu stale-response guard missing: {marker}")
+                  problems.append(f"QuestMenu stale-response/retry guard missing: {marker}")
 
           menu_guards = {
               "shop": "OpenShopMenu",
@@ -112,4 +114,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, stale NPC/Quest response, respawn cleanup and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, stale NPC/Quest response, Quest retry, respawn cleanup and close-state contract validated.")
