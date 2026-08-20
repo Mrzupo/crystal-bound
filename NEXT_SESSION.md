@@ -3,7 +3,7 @@
 ## Branch
 - Branch: `agent/complete-crystal-bound-foundation`
 - Base: `main`
-- Current compare: **1345 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
+- Current compare: **1401 commits ahead, 30 commits behind** `main` (verified with GitHub compare).
 - Current compared main base: `4b72e6213dd764d1ab30eb8f425f9c107369642e`.
 
 ## Current state
@@ -16,47 +16,43 @@ Authoritative design context remains intact: PvE-first open-world action RPG; Wh
 - Canonical `CrystalConfig` + `CrystalSystem` + `CrystalMastery`.
 - TIDE/GALE level gates enforced inside `CrystalSystem.Unlock()` as well as request-layer checks.
 - Central QuestSystem / QuestService completion and rewards.
-- SafeProfileStore session lock, per-player same-server SessionLock token, refresh heartbeat, autosave, callback-local retry state isolation, callback-time save snapshots and profile-revision save settling.
-- Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
+- SafeProfileStore session lock with per-player token, per-load token generation, callback-local retry state isolation, save snapshots and profile-revision settle passes.
+- Canonical Economy, Inventory, Shop, Crafting and Consumables with validation, rate limits and rollback.
 - Crystal Mastery upgrade transactions verify each material removal and roll back partial consumption or failed upgrades.
 - Enemy AI, Pathfinding, status effects and lifecycle cleanup.
 - Guardian phase system, arena hazard and exact-instance-bound telegraphs.
-- Daily Bounty canonicalized from config even for existing same-day profiles and safe around wallet caps.
-- Achievement Titles derived from earned Achievement IDs.
+- Daily Bounty canonicalized from config and safe around wallet caps.
+- Achievement Titles derived from earned Achievement IDs; Achievement unlocks are idempotent and not blocked by wallet capacity.
 - PC/Mobile controls and UI.
 - Server-confirmed CombatFeedback presentation.
 - Server-owned character Animator for client animation playback.
 - One-shot confirmed Crystal VFX bridge.
-- Server-enforced WalkSpeed baseline and Slow modifiers, with immediate correction of property changes and separate configurable position-authority cadence.
+- Server-enforced WalkSpeed baseline and Slow modifiers, with separate configurable position-authority cadence.
 
 ## Latest hardening work
-- Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after world initialization.
-- Redundant `PlayerLoadCatchup.server.lua` was removed to avoid concurrent startup Load owners; the project no longer maps or references it.
-- Bootstrap load failure handling checks `player.Parent` before calling `Kick()`.
-- SafeProfileStore now stores a unique token per Roblox `Player` object in `SessionLock`; Save/Refresh/Release require both `JobId` and `Token`, preventing a stale session in the same server from touching a new rejoin session.
-- `PlayerService.Sync()` increments a transient per-player profile revision; Save/Remove perform up to three settle passes if the profile changes while DataStore I/O yields, reducing progress loss during autosave/final-save windows.
-- `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players so late callbacks cannot mutate a profile after final-save ownership begins.
-- The final save path intentionally calls `PlayerService.Sync(player, true)` so final Achievement/Daily-Bounty reconciliation still runs while the external Closing guard remains active.
-- PlayerService runtime Player-keyed maps are weak-keyed and stale CharacterAdded callbacks are rejected before/after Humanoid acquisition.
-- Quest starts call `PlayerService.Sync()` so active-quest mutations participate in save revision settling.
-- Enemy defeat rewards no longer reject the entire XP/Loot reward when the Money wallet is full; EconomyService alone caps Money.
-- Guardian rewards use the same wallet-cap-safe semantics and never set `Rewarded` when no valid loaded player profile exists.
-- Daily Bounty checks wallet capacity before payout and marks `Claimed` only after the complete reward is actually granted; failed payout restores progress to goal-1.
-- Crafting validates multiplied output/input totals before inventory-space formatting or mutation, preventing malformed-config overflow paths.
-- Shop purchases validate multiplication, affordability and stack capacity before mutation and roll back Money if inventory insertion unexpectedly fails.
-- Inventory selling now checks wallet capacity before consuming inventory and rolls both Money and inventory back on unexpected partial payout, closing the full-wallet sale replay exploit.
+- Bootstrap is the single startup profile-load owner: canonical `PlayerAdded` handler plus explicit loading of players already present after world initialization, with per-Player deduplication.
+- Redundant `PlayerLoadCatchup.server.lua` was removed from the repository and Rojo tree to avoid two concurrent startup load owners.
+- `PlayerService.Load()` rejects a second simultaneous load for the same UserId before replacing `LoadingByUserId[userId]`.
+- Bootstrap checks `player.Parent` before `Kick()` on load failure.
+- Superseded successful profile loads release the exact per-load session token before returning.
+- `PlayerService` marks a player `Closing` before final removal work; external `GetProfile`/Sync/Save/Refresh/Heal paths reject closing players.
+- `PlayerService.Heal()` is the canonical player Health mutation owner; Tide and Health Potion use it.
+- `UseItemRemote` rolls the potion back if no health can actually be applied.
+- Health Authority CI allows direct Player Health writes only in PlayerService and NPC/Boss spawn-time health initialization.
+- Quest completion validates objective/reward data before committing state but no longer blocks valid quest completion on a full Money wallet; XP remains fully awarded and EconomyService caps Money.
+- Achievement unlocks are one-shot/idempotent and no longer blocked by wallet capacity; EconomyService caps the Money reward.
+- Daily Bounty still requires full wallet capacity before payout because its claim is tied to a specific daily reward transaction and it rolls progress back on payout failure.
+- Enemy and Guardian rewards preserve XP/Loot when Money is capped.
+- Shop purchase and inventory selling remain rollback-safe around Money and stack capacity.
+- `EnemyConfig.Get()` returns a detached recursive config clone and centrally normalizes Respawn.
+- `StatusSpeedGuardV2` runs separate speed and position-enforcement cadences; `PositionCheckInterval` is currently 0.15 s.
+- Missing Humanoid/RootPart resets movement position state; portal grace remains Character-bound.
+- Dodge invulnerability end tasks use per-player tokens.
+- CharacterAdded health binding checks exact Character identity before/after Humanoid acquisition.
+- Guardian telegraph windups are bound to the original Guardian and original target Character instances.
+- AI pathfinding revalidates NPC liveness after yielded `ComputeAsync()` work.
 - Inventory UI and server responses use detached `InventoryService.GetInventory()` snapshots; `InventoryRequest` is Client → Server and `InventoryChanged` is Server → Client.
-- Player Health is centralized through `PlayerService.Heal()`; Tide and Health Potion healing route through it, and Potion consumption rolls back if no healing is applied.
-- Health authority CI rejects direct Player Health/MaxHealth writes outside the canonical owner while allowing NPC/Boss health initialization.
-- `EnemyConfig.Get()` returns a detached recursive config clone and clamps Respawn into the 1.5..600 second runtime range.
-- `StatusSpeedGuardV2` now has separate loops: WalkSpeed refresh at 0.25 s and position enforcement at the configured `MovementConfig.PositionCheckInterval` (currently 0.15 s).
-- Missing Humanoid/RootPart resets movement position state so stale `sampleDt` cannot inflate teleport tolerance.
-- Dodge invulnerability end tasks use per-player tokens, preventing stale delayed callbacks from cancelling a newer dodge after re-dodge or respawn.
-- CharacterAdded health binding checks the exact Character instance before/after yielding for the Humanoid, preventing stale-respawn bindings.
-- `CombatPresentation.client.lua` additionally uses a Character-generation token for local HealthChanged camera reactions, preventing stale client-only callbacks after respawn.
-- Guardian telegraph impacts are bound to the original Character instance, preventing an old windup from damaging a freshly respawned Character.
-- AI pathfinding revalidates the NPC after yielded `ComputeAsync()` work before publishing the result.
-- Menu/dialog contracts explicitly treat `INVENTORY` as the combined `OpenCrystalMenu` inventory+crystals menu alias.
+- NPC dialog/config snapshots are detached and server-distance gated.
 
 ## Security / authority rules
 - `DamageService` is the only direct `Humanoid:TakeDamage()` owner.
