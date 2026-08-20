@@ -25,6 +25,14 @@ local function finiteNumber(value, fallback)
 	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
 	return number
 end
+local function deepCopy(value)
+	if type(value) ~= "table" then return value end
+	local result = {}
+	for key, child in pairs(value) do
+		result[key] = deepCopy(child)
+	end
+	return result
+end
 local NPC_INTERACTION_RANGE = math.clamp(finiteNumber(InteractionConfig.NPCInteractionRange, 14), 4, 50)
 local QUEST_REQUEST_INTERVAL = 0.15
 local INVENTORY_REQUEST_INTERVAL = 0.1
@@ -153,7 +161,7 @@ remotes.GetPlayerData.OnServerInvoke = function(player)
 	nextPlayerDataRequest[player] = now + PLAYER_DATA_REQUEST_INTERVAL
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return nil end
-	return { Level = profile.Level, Experience = profile.Experience, Money = profile.Money, Crystals = profile.Crystals, CrystalMastery = profile.CrystalMastery, Inventory = profile.Inventory, Achievements = profile.Achievements, Titles = profile.Titles }
+	return deepCopy({ Level = profile.Level, Experience = profile.Experience, Money = profile.Money, Crystals = profile.Crystals, CrystalMastery = profile.CrystalMastery, Inventory = profile.Inventory, Achievements = profile.Achievements, Titles = profile.Titles })
 end
 
 remotes.GetQuestData.OnServerInvoke = function(player)
@@ -161,8 +169,8 @@ remotes.GetQuestData.OnServerInvoke = function(player)
 	if now < (nextQuestDataRequest[player] or 0) then return nil end
 	nextQuestDataRequest[player] = now + QUEST_DATA_REQUEST_INTERVAL
 	local profile = PlayerService.GetProfile(player)
-	if not profile then return { Active = {}, Completed = {}, Progress = {}, Definitions = QuestSystem.GetDefinitions() } end
-	return { Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Progress = profile.QuestProgress, Definitions = QuestSystem.GetDefinitions() }
+	if not profile then return { Active = {}, Completed = {}, Progress = {}, Definitions = deepCopy(QuestSystem.GetDefinitions()) } end
+	return deepCopy({ Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Progress = profile.QuestProgress, Definitions = QuestSystem.GetDefinitions() })
 end
 
 local function ensureWorldFolders() for _, name in ipairs({ "NPCs", "Islands", "Spawn" }) do local folder = Workspace:FindFirstChild(name); if not folder then folder = Instance.new("Folder"); folder.Name = name; folder.Parent = Workspace end end; return Workspace.NPCs, Workspace.Islands, Workspace.Spawn end
@@ -173,7 +181,7 @@ local function createIsland(islands, name, center, size)
 	local title = Instance.new("BillboardGui"); title.Name = "IslandTitle"; title.Size = UDim2.fromOffset(240, 60); title.StudsOffset = Vector3.new(0, 12, 0); title.AlwaysOnTop = true; title.Parent = ground
 	local text = Instance.new("TextLabel"); text.Size = UDim2.fromScale(1, 1); text.BackgroundTransparency = 1; text.Text = name:gsub("Island", " Island"); text.Font = Enum.Font.GothamBold; text.TextSize = 26; text.Parent = title; return island
 end
-local function createSpawn(spawnFolder) if spawnFolder:FindFirstChild("StarterSpawn") then return end; local spawn = Instance.new("SpawnLocation"); spawn.Name = "StarterSpawn"; spawn.Size = Vector3.new(8,1,8); spawn.Position = Vector3.new(0,3,8); spawn.Anchored = true; spawn.Neutral = true; spawn.Parent = spawnFolder end
+local function createSpawn(spawnFolder) if spawnFolder:FindFirstChild("StarterSpawn") then return end; local spawn = Instance.new("SpawnLocation"); spawn.Name="StarterSpawn"; spawn.Size=Vector3.new(8,1,8); spawn.Position=Vector3.new(0,3,8); spawn.Anchored=true; spawn.Neutral=true; spawn.Parent=spawnFolder end
 local function createPortal(island, name, fromPosition, destination, requiredLevel)
 	if island:FindFirstChild(name) then return end
 	local portal=Instance.new("Part"); portal.Name=name; portal.Size=Vector3.new(6,8,2); portal.Position=fromPosition; portal.Anchored=true; portal.Material=Enum.Material.Neon; portal.Parent=island
@@ -214,16 +222,11 @@ local function syncAllPlayerData()
 	end
 end
 
-local function loadPlayer(player)
+Players.PlayerAdded:Connect(function(player)
 	local profile, reason = PlayerService.Load(player)
 	if not profile then
-		if player.Parent then player:Kick(reason or "Unable to load your Crystal Bound profile safely.") end
+		player:Kick(reason or "Unable to load your Crystal Bound profile safely.")
 		return
 	end
 	PlayerService.Sync(player)
-end
-
-Players.PlayerAdded:Connect(loadPlayer)
-for _, player in ipairs(Players:GetPlayers()) do
-	task.spawn(loadPlayer, player)
-end
+end)
