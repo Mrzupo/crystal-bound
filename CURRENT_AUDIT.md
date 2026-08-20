@@ -38,7 +38,8 @@ Base: `main`
 ## Contract changes in this hardening pass
 - `.github/workflows/pve-attacker-context-validation.yml` now checks exact `Workspace.NPCs` parent identity instead of the weaker descendant-only assumption.
 - `.github/workflows/player-load-rejoin-race-contract.yml` now matches the actual runtime: duplicate same-UserId loads are rejected while the first load is in flight, rather than claiming superseded loads.
-- `NEXT_SESSION.md` is synchronized to the same load-concurrency semantics.
+- `.github/workflows/quest-chain-config-validation.yml` now enforces the linear, single-root, acyclic quest dependency graph required by `QuestSystem.GetChainOrder()`.
+- `NEXT_SESSION.md` and this audit are synchronized to the same load-concurrency semantics.
 
 ## Open / runtime-only limitations
 - No real Roblox Studio runtime playtest has been executed from this environment.
