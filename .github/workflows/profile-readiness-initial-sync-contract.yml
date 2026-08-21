@@ -1,0 +1,55 @@
+name: Profile Readiness Initial Sync Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate ProfileLoaded only after successful authoritative sync
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          character_start = text.index("local function bindCharacterWhenReady")
+          character_end = text.index("local function acquireOperation", character_start)
+          character = text[character_start:character_end]
+          for marker in (
+              "PlayerService.Sync(player, false, true)",
+              "player.Character ~= character",
+              "PlayerService.Closing[player]",
+              "PlayerService.Profiles[player] == nil",
+              "player:SetAttribute(\"ProfileLoaded\", true)",
+          ):
+              if marker not in character:
+                  raise SystemExit("Character readiness marker missing: " + marker)
+          sync_pos = character.index("PlayerService.Sync(player, false, true)")
+          ready_pos = character.index("player:SetAttribute(\"ProfileLoaded\", true)")
+          if ready_pos < sync_pos:
+              raise SystemExit("Character ProfileLoaded=true must occur after successful Sync")
+
+          load_start = text.index("function PlayerService.Load(player)")
+          load_end = text.index("function PlayerService.Sync(player, internal, initializing)", load_start)
+          load = text[load_start:load_end]
+          for marker in (
+              "local initialCharacter = player.Character",
+              "PlayerService.Sync(player, false, true)",
+              "PlayerService.Profiles[player] ~= profile",
+              "player.Character == initialCharacter",
+          ):
+              if marker not in load:
+                  raise SystemExit("Initial-load readiness marker missing: " + marker)
+          sync_pos = load.index("PlayerService.Sync(player, false, true)")
+          ready_pos = load.index("player:SetAttribute(\"ProfileLoaded\", true)")
+          if ready_pos < sync_pos:
+              raise SystemExit("Initial-load ProfileLoaded=true must occur after successful Sync")
+
+          if "(player:GetAttribute(\"ProfileLoaded\") == true or initializing == true)" not in text:
+              raise SystemExit("PlayerService.Sync must support controlled initialization without falsely advertising readiness")
+
+          print("Initial and Character-bound ProfileLoaded readiness is committed only after successful authoritative Sync.")
