@@ -361,7 +361,7 @@ end
 
 Players.PlayerAdded:Connect(function(player)
 	task.spawn(loadPlayer, player)
-end
+end)
 for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(loadPlayer, player)
 end
