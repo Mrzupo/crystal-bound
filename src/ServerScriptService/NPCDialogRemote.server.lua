@@ -31,7 +31,8 @@ local function isNearNPC(player, npcId)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local folder = workspace:FindFirstChild("NPCs")
 	local npc = folder and folder:FindFirstChild(npcId)
-	local npcRoot = npc and (npc.PrimaryPart or npc:FindFirstChild("Torso"))
+	if not folder or not npc or not npc:IsA("Model") or npc.Parent ~= folder or npc:GetAttribute("Interactable") ~= true then return false end
+	local npcRoot = npc.PrimaryPart or npc:FindFirstChild("Torso")
 	return root and npcRoot and (root.Position - npcRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
