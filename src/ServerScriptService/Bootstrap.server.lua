@@ -120,6 +120,7 @@ remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)
 	if now < (nextCrystalRequest[player] or 0) then return end
 	nextCrystalRequest[player] = now + CRYSTAL_REQUEST_INTERVAL
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
+	if player:GetAttribute("ProfileLoaded") ~= true then return end
 	local profile = PlayerService.GetProfile(player); if not profile then return end
 	local requiredLevel = (CrystalConfig.UnlockLevels and CrystalConfig.UnlockLevels[crystalId]) or math.huge
 	if profile.Level < requiredLevel then player:SetAttribute("CrystalMessage", string.format("%s unlocks at level %d", crystalId, requiredLevel)); return end
@@ -163,6 +164,7 @@ remotes.GetPlayerData.OnServerInvoke = function(player)
 	local now = os.clock()
 	if now < (nextPlayerDataRequest[player] or 0) then return nil end
 	nextPlayerDataRequest[player] = now + PLAYER_DATA_REQUEST_INTERVAL
+	if player:GetAttribute("ProfileLoaded") ~= true then return nil end
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return nil end
 	return deepCopy({ Level = profile.Level, Experience = profile.Experience, Money = profile.Money, Crystals = profile.Crystals, CrystalMastery = profile.CrystalMastery, Inventory = profile.Inventory, Achievements = profile.Achievements, Titles = profile.Titles })
@@ -172,8 +174,9 @@ remotes.GetQuestData.OnServerInvoke = function(player)
 	local now = os.clock()
 	if now < (nextQuestDataRequest[player] or 0) then return nil end
 	nextQuestDataRequest[player] = now + QUEST_DATA_REQUEST_INTERVAL
+	if player:GetAttribute("ProfileLoaded") ~= true then return nil end
 	local profile = PlayerService.GetProfile(player)
-	if not profile then return { Active = {}, Completed = {}, Progress = {}, Definitions = deepCopy(QuestSystem.GetDefinitions()) } end
+	if not profile then return nil end
 	return deepCopy({ Active = profile.ActiveQuests, Completed = profile.CompletedQuests, Progress = profile.QuestProgress, Definitions = QuestSystem.GetDefinitions() })
 end
 
@@ -349,14 +352,6 @@ local function loadPlayer(player)
 	end
 	if not profile then
 		if player.Parent then player:Kick(reason or "Unable to load your Crystal Bound profile safely.") end
-		return false
-	end
-	local syncSuccess, syncError = xpcall(function()
-		PlayerService.Sync(player)
-	end, debug.traceback)
-	if not syncSuccess then
-		warn(("Crystal Bound: initial profile sync failed for %s: %s"):format(player.Name, tostring(syncError)))
-		if player.Parent then player:Kick("Unable to initialize your Crystal Bound profile safely.") end
 		return false
 	end
 	return true

@@ -1,0 +1,38 @@
+name: Bootstrap Profile Readiness Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Bootstrap remote readiness and single initial Sync owner
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          for marker in (
+              'remotes.CrystalChanged.OnServerEvent:Connect(function(player, crystalId)',
+              'if player:GetAttribute("ProfileLoaded") ~= true then return end',
+              'remotes.GetPlayerData.OnServerInvoke = function(player)',
+              'remotes.GetQuestData.OnServerInvoke = function(player)',
+              'if not profile then return nil end',
+              'return PlayerService.Load(player)',
+          ):
+              if marker not in text:
+                  raise SystemExit("Bootstrap readiness marker missing: " + marker)
+
+          load_start = text.index("local function loadPlayer(player)")
+          load_end = text.index("Players.PlayerAdded:Connect", load_start)
+          load_block = text[load_start:load_end]
+          if "PlayerService.Sync(player)" in load_block:
+              raise SystemExit("Bootstrap loadPlayer must not perform a second initial PlayerService.Sync")
+          if "return true" not in load_block:
+              raise SystemExit("Bootstrap loadPlayer must return success after PlayerService.Load owns initial Sync")
+
+          print("Bootstrap mutation/read remotes are readiness-gated and PlayerService owns the single initial Sync.")
