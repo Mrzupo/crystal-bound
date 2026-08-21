@@ -73,4 +73,3 @@ jobs:
           if missing:
               raise SystemExit('missing session heartbeat lock-loss contract: ' + ', '.join(missing))
           print('Session heartbeat lock-loss handling validated.')
-          PY
