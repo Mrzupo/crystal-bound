@@ -37,9 +37,6 @@ jobs:
               "local loadSuccess, profile, reason = xpcall(function()",
               "return SafeProfileStore.Load(player)",
               "if not loadSuccess then",
-              "local reconcileSuccess, reconciledProfile = xpcall(function()",
-              "return PlayerData.Reconcile(profile)",
-              "if not reconcileSuccess or type(reconciledProfile) ~= \"table\" then",
           )
           missing = [marker for marker in required if marker not in text]
           if missing:
@@ -66,6 +63,15 @@ jobs:
               if marker not in store:
                   raise SystemExit("SafeProfileStore session-token guard missing: " + marker)
 
+          for marker in (
+              'local reconcileOk, profileOrError = xpcall(function()',
+              'return PlayerData.Reconcile(result)',
+              'if not reconcileOk or type(profileOrError) ~= "table" then',
+              'local released = SafeProfileStore.Release(player, token)',
+          ):
+              if marker not in store:
+                  raise SystemExit("SafeProfileStore load/reconcile ownership marker missing: " + marker)
+
           if 'local loadingPlayers = setmetatable({}, { __mode = "k" })' not in bootstrap:
               raise SystemExit("Bootstrap must maintain per-Player startup-load deduplication state")
           if 'if loadingPlayers[player] then return false end' not in bootstrap:
@@ -76,4 +82,4 @@ jobs:
           if "Profile load already in progress" not in text:
               raise SystemExit("A second concurrent load for the same UserId must be explicitly rejected, not superseded")
 
-          print("Per-UserId in-flight load rejection, exception-safe cleanup, exact load-token release, session-token isolation and startup deduplication validated.")
+          print("Per-UserId in-flight load rejection, exception-safe cleanup, exact load-token release, session-token isolation, load-side reconciliation and startup deduplication validated.")
