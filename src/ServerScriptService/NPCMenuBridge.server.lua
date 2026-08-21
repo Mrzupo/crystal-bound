@@ -40,16 +40,17 @@ local function bindPlayer(player)
 	playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)
 		if PlayerService.ShuttingDown then return end
 		if player.Parent and player.Character == character then
+			player:SetAttribute("ProfileLoaded", false)
 			clearMenus(player)
 		end
 	end)
 end
 
 local function openDialog(player, npcId, character)
-	if PlayerService.ShuttingDown then return end
+	if PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 	clearMenus(player)
 	task.defer(function()
-		if PlayerService.ShuttingDown then return end
+		if PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 		if player.Parent and player.Character == character and character.Parent then
 			player:SetAttribute("OpenNPCDialog", npcId)
 		end
@@ -62,7 +63,7 @@ local function bindPrompt(prompt)
 	local model = prompt:FindFirstAncestorOfClass("Model")
 	if not model then return end
 	prompt.Triggered:Connect(function(player)
-		if PlayerService.ShuttingDown then return end
+		if PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 		local character = player.Character
 		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and character and isNearModel(player, model) then
 			openDialog(player, model.Name, character)
