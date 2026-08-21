@@ -50,9 +50,18 @@ jobs:
               if marker not in movement_config:
                   raise SystemExit(f'MovementConfig missing {marker}')
 
-          for marker in ('portalTargets =', 'PortalExpectedDestination', 'PortalMovementGraceUntil', 'PlayerService.GetProfile(player)'):
+          portal_required = (
+              'portalTargets =',
+              'PortalExpectedDestination',
+              'PortalMovementGraceUntil',
+              'local function getLoadedProfileForPortal(player)',
+              'PlayerService.Profiles[player]'
+          )
+          for marker in portal_required:
               if marker not in portal_authority:
                   raise SystemExit(f'Portal movement authority missing {marker}')
+          if 'PlayerService.GetProfile(player)' in portal_authority:
+              raise SystemExit('Portal movement authority must not use GetProfile during autosave')
 
           if 'ServerMovementGraceUntil' in server_guard or 'ServerMovementGraceUntil' in dodge_service:
               raise SystemExit('Generic server movement grace must not be restored; only destination-bound portal grace is allowed')
@@ -66,4 +75,4 @@ jobs:
           if client_writers:
               raise SystemExit('Client scripts must not directly write Humanoid.WalkSpeed: ' + ', '.join(client_writers))
 
-          print('Movement authority and shutdown lifecycle contract validated.')
+          print('Movement authority, autosave-safe portal authority, and shutdown lifecycle contract validated.')
