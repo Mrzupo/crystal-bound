@@ -22,9 +22,12 @@ jobs:
               'local existing = parent:FindFirstChild(uniqueName)',
               'existing:GetAttribute("Enemy") == true',
               'local existingHumanoid = existing:FindFirstChildOfClass("Humanoid")',
-              'if existingHumanoid and existingHumanoid.Health > 0 then return existing end',
+              'if existingHumanoid and existingHumanoid.Health > 0 then',
+              'if existing:GetAttribute("EnemyType") ~= typeId then',
+              'existing:Destroy()',
+              'if existing:GetAttribute("AIStarted") ~= true then NPCService.StartEnemyAI(existing) end',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('NPC readiness/idempotency markers missing: ' + ', '.join(missing))
-          print('NPC loaded-player target selection and unique-name spawn idempotency validated.')
+          print('NPC loaded-player target selection, malformed unique-name repair and AI rebind validated.')

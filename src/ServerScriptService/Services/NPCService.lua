@@ -309,9 +309,16 @@ function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 		if existing then
 			if existing:IsA("Model") and existing:GetAttribute("Enemy") == true then
 				local existingHumanoid = existing:FindFirstChildOfClass("Humanoid")
-				if existingHumanoid and existingHumanoid.Health > 0 then return existing end
+				if existingHumanoid and existingHumanoid.Health > 0 then
+					if existing:GetAttribute("EnemyType") ~= typeId then
+						existing:Destroy()
+					else
+						if existing:GetAttribute("AIStarted") ~= true then NPCService.StartEnemyAI(existing) end
+						return existing
+					end
+				end
 			end
-			return nil
+			existing:Destroy()
 		end
 	end
 	local health = math.clamp(finiteNumber(config.Health, 100), 1, 1000000)
