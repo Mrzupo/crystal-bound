@@ -1,0 +1,31 @@
+name: Combat Autosave Sync
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/combat-autosave-sync-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate ability quest progress participates in ProfileRevisions during autosave
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          for marker in (
+              "local function getLoadedCombatProfile(player)",
+              "return PlayerService.Profiles[player]",
+              "local complete, progress, goal = QuestSystem.Advance(profile, \"CRYSTAL_POWER\", 1)",
+              "if complete then",
+              "PlayerService.Sync(player)",
+          ):
+              if marker not in text:
+                  raise SystemExit("Combat autosave sync marker missing: " + marker)
+          fire_start = text.index("local function fireProgress")
+          fire_end = text.index("local function completeQuest", fire_start)
+          if "PlayerService.GetProfile(player)" in text[fire_start:fire_end]:
+              raise SystemExit("Combat progress publication must not depend on GetProfile during autosave")
+          print("Combat Ability quest progress retains ProfileRevision/Sync participation while autosave is active.")
