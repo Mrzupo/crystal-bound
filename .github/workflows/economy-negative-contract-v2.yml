@@ -1,0 +1,32 @@
+name: Economy Negative Contract V2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/economy-negative-contract-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate signed EconomyConfig bounds
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
+          match = re.search(
+              r"StartingMoney\s*=\s*(-?[0-9]+).*?MinMoney\s*=\s*(-?[0-9]+).*?MaxMoney\s*=\s*(-?[0-9]+)",
+              economy,
+              re.S,
+          )
+          if not match:
+              raise SystemExit("EconomyConfig must define signed numeric money bounds")
+          starting, minimum, maximum = map(int, match.groups())
+          if minimum < 0 or maximum < minimum:
+              raise SystemExit("EconomyConfig money bounds are invalid")
+          if not minimum <= starting <= maximum:
+              raise SystemExit("EconomyConfig.StartingMoney must be within MinMoney..MaxMoney")
+          print("EconomyConfig signed-number coverage rejects negative and inverted money bounds.")
