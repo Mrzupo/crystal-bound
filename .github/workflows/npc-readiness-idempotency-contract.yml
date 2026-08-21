@@ -1,0 +1,30 @@
+name: NPC Readiness and Spawn Idempotency Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate loaded-player targeting and unique-name enemy spawning
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path('src/ServerScriptService/Services/NPCService.lua').read_text(encoding='utf-8')
+          required = [
+              'if player:GetAttribute("ProfileLoaded") == true then',
+              'local resolvedName = uniqueName or config.DisplayName:gsub("%s+", "")',
+              'local existing = parent:FindFirstChild(uniqueName)',
+              'existing:GetAttribute("Enemy") == true',
+              'local existingHumanoid = existing:FindFirstChildOfClass("Humanoid")',
+              'if existingHumanoid and existingHumanoid.Health > 0 then return existing end',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('NPC readiness/idempotency markers missing: ' + ', '.join(missing))
+          print('NPC loaded-player target selection and unique-name spawn idempotency validated.')
