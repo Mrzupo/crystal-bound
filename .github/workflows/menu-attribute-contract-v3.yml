@@ -1,0 +1,72 @@
+name: Menu Attribute Contract V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/quest-menu-stale-response-v3"]
+  pull_request:
+
+jobs:
+  validate-menu-attributes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared menu attributes and stale Quest response cleanup
+        shell: python
+        run: |
+          from pathlib import Path
+          root = Path("src")
+          files = {
+              "dialog": root / "StarterPlayer/StarterPlayerScripts/NPCDialogMenu.client.lua",
+              "touch": root / "StarterPlayer/StarterPlayerScripts/TouchMenus.client.lua",
+              "bridge": root / "ServerScriptService/NPCMenuBridge.server.lua",
+              "quest": root / "StarterPlayer/StarterPlayerScripts/QuestMenu.client.lua",
+              "shop": root / "StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua",
+              "crystal": root / "StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua",
+              "craft": root / "StarterPlayer/StarterPlayerScripts/CraftingMenu.client.lua",
+              "achievement": root / "StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua",
+          }
+          text = {key: path.read_text(encoding="utf-8") for key, path in files.items()}
+          attributes = ["OpenQuestMenu", "OpenShopMenu", "OpenCrystalMenu", "OpenCraftingMenu", "OpenAchievementMenu", "OpenNPCDialog"]
+          problems = []
+          for attribute in attributes:
+              if attribute not in text["touch"] and attribute != "OpenNPCDialog":
+                  problems.append(f"TouchMenus missing {attribute}")
+              if attribute == "OpenNPCDialog" and attribute not in text["bridge"]:
+                  problems.append("NPCMenuBridge missing OpenNPCDialog")
+
+          if 'local MENU_ATTRIBUTES = {' not in text["bridge"] or 'clearMenus(player)' not in text["bridge"]:
+              problems.append("NPCMenuBridge must centralize and clear menu attributes")
+          if 'local MENU_ATTRIBUTES = {' not in text["touch"] or 'player:SetAttribute(attribute, nil)' not in text["touch"]:
+              problems.append("TouchMenus must centralize and clear menu attributes")
+          if 'local MENU_ATTRIBUTES = {' not in text["dialog"] or 'clearMenuState()' not in text["dialog"]:
+              problems.append("NPCDialogMenu must centralize and clear menu attributes")
+
+          quest_guards = (
+              'local loadGeneration = 0',
+              'local loadQueued = false',
+              'local QUEST_RETRY_DELAY = 0.25',
+              'loadGeneration += 1',
+              'local generation = loadGeneration',
+              'local character = player.Character',
+              'generation ~= loadGeneration',
+              'player.Character ~= character',
+              'player:GetAttribute("OpenQuestMenu") ~= expectedOpenState',
+              'player.CharacterAdded:Connect(function()',
+              'player.CharacterRemoving:Connect(function()',
+              'local function scheduleGenerationReload(staleGeneration, delay)',
+              'if loading then',
+              'loadQueued = true',
+              'if loadQueued and open then',
+              'if not ok or type(response) ~= "table" then',
+              'if not okAvailable or type(responseAvailable) ~= "table" then',
+              'if not data or type(data) ~= "table" or not open then return end',
+          )
+          for marker in quest_guards:
+              if marker not in text["quest"]:
+                  problems.append(f"QuestMenu stale-response/retry guard missing: {marker}")
+
+          if problems:
+              for problem in problems:
+                  print(f" - {problem}")
+              raise SystemExit(1)
+          print("Menu lifecycle, Character-bound deferred-open, stale Quest responses, retry, respawn cleanup, shutdown rejection and close-state contract validated.")
