@@ -2,7 +2,7 @@ name: Boss Reward Transaction Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/fix-guardian-optional-drop-reward"]
   pull_request:
 
 jobs:
@@ -23,13 +23,15 @@ jobs:
           xp = Path('src/ReplicatedStorage/Config/XPConfig.lua').read_text(encoding='utf-8')
           required = [
               'if model:GetAttribute("Rewarded") then return end',
-              'local validRewardConfig =',
+              'local validBaseRewardConfig =',
               'xpReward <= XPConfig.MaxExperience',
               'moneyReward <= EconomyConfig.MaxMoney',
-              'InventoryConfig.GetItemConfig(dropId) ~= nil',
+              'local dropConfig = dropId and InventoryConfig.GetItemConfig(dropId) or nil',
               'model:SetAttribute("Rewarded", true)',
               'XPService.AddXP(profile, xpReward)',
               'local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)',
+              'local coreAdded = 0',
+              'if dropConfig then',
               'InventoryService.AddItem(profile, dropId, 1)',
               'QuestService.Complete(player, profile, "GUARDIAN_TRIAL"',
               'earnedMoney < moneyReward',
@@ -43,8 +45,16 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('Guardian reward lifecycle markers missing: ' + ', '.join(missing))
+
+          reward_block_start = text.index('local xpReward = finiteNumber(config.XP)')
+          reward_block_end = text.index('if validBaseRewardConfig then', reward_block_start)
+          base_block = text[reward_block_start:reward_block_end]
+          if 'InventoryConfig.GetItemConfig(dropId)' in base_block:
+              raise SystemExit('Optional Guardian Drop must not gate the base XP/Money reward validation')
+
           if text.index('model:SetAttribute("Rewarded", true)') > text.index('XPService.AddXP(profile, xpReward)'):
               raise SystemExit('Guardian idempotency must be committed before reward mutation to block double processing')
+
           forbidden = [
               'profile.Money =',
               'profile.Inventory[dropId] =',
@@ -64,11 +74,10 @@ jobs:
                   raise SystemExit(f'Loaded-profile table access must remain restricted to canonical PlayerService/BossService owners: {path}')
 
           drop_match = re.search(r'Drop\s*=\s*"([A-Za-z0-9_]+)"', boss)
-          if not drop_match:
-              raise SystemExit('Guardian reward Drop is missing from BossConfig')
-          drop_id = drop_match.group(1)
-          if f'{drop_id} = ' not in inventory:
-              raise SystemExit(f'Guardian reward Drop is not registered in InventoryConfig: {drop_id}')
+          if drop_match:
+              drop_id = drop_match.group(1)
+              if f'{drop_id} = ' not in inventory:
+                  raise SystemExit(f'Guardian reward Drop is configured but not registered in InventoryConfig: {drop_id}')
 
           max_money_match = re.search(r'MaxMoney\s*=\s*(\d+)', economy)
           max_xp_match = re.search(r'MaxExperience\s*=\s*(\d+)', xp)
@@ -80,4 +89,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, leave/shutdown safety, lifecycle cleanup, cap validation and drop registration validated.')
+          print('Guardian reward idempotency, wallet-cap-safe quest completion, optional-drop isolation, canonical mutation ownership, autosave-safe loaded-profile reward access, leave/shutdown safety, lifecycle cleanup and cap validation validated.')
