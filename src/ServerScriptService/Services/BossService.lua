@@ -207,34 +207,37 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 			and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0
 			and moneyReward <= EconomyConfig.MaxMoney
 
-		if not validProgressionReward then return end
-		model:SetAttribute("Rewarded", true)
-
-		XPService.AddXP(profile, xpReward)
-		local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)
-		local coreAdded = false
-		local validDrop = dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil
-		if validDrop then
-			coreAdded = InventoryService.AddItem(profile, dropId, 1) > 0
+		if validProgressionReward then
+			model:SetAttribute("Rewarded", true)
+			XPService.AddXP(profile, xpReward)
+			local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)
+			local coreAdded = false
+			local validDrop = dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil
+			if validDrop then
+				coreAdded = InventoryService.AddItem(profile, dropId, 1) > 0
+			end
+			if not profile.Stats then profile.Stats = {} end
+			profile.Stats.BossesDefeated = (finiteNumber(profile.Stats.BossesDefeated, 0) or 0) + 1
+			QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
+			PlayerService.Sync(player)
+			if coreAdded then
+				player:SetAttribute("BossMessage", earnedMoney < moneyReward
+					and string.format("Crystal Guardian defeated! +%d Money (wallet cap) and Guardian Core earned.", earnedMoney)
+					or "Crystal Guardian defeated! Guardian Core earned.")
+			elseif validDrop then
+				player:SetAttribute("BossMessage", earnedMoney < moneyReward
+					and string.format("Crystal Guardian defeated! +%d Money (wallet cap). Guardian Core stack is full.", earnedMoney)
+					or "Crystal Guardian defeated! Guardian Core stack is full.")
+			else
+				player:SetAttribute("BossMessage", earnedMoney < moneyReward
+					and string.format("Crystal Guardian defeated! +%d Money (wallet cap).", earnedMoney)
+					or "Crystal Guardian defeated!")
+			end
+			local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+			if remotes and remotes:FindFirstChild("InventoryChanged") then
+				remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile))
+			end
 		end
-		if not profile.Stats then profile.Stats = {} end
-		profile.Stats.BossesDefeated = (finiteNumber(profile.Stats.BossesDefeated, 0) or 0) + 1
-		QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
-		PlayerService.Sync(player)
-		if coreAdded then
-			player:SetAttribute("BossMessage", earnedMoney < moneyReward
-				and string.format("Crystal Guardian defeated! +%d Money (wallet cap) and Guardian Core earned.", earnedMoney)
-				or "Crystal Guardian defeated! Guardian Core earned.")
-		elseif validDrop then
-			player:SetAttribute("BossMessage", earnedMoney < moneyReward
-				and string.format("Crystal Guardian defeated! +%d Money (wallet cap). Guardian Core stack is full.", earnedMoney)
-				or "Crystal Guardian defeated! Guardian Core stack is full.")
-		else
-			player:SetAttribute("BossMessage", earnedMoney < moneyReward
-				and string.format("Crystal Guardian defeated! +%d Money (wallet cap).", earnedMoney)
-				or "Crystal Guardian defeated!")
-		end
-		local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)) end
 
 		DamageService.ClearTarget(model)
 		task.delay(1.5, function()
