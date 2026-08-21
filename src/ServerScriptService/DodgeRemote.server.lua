@@ -19,10 +19,10 @@ local REQUEST_INTERVAL = 0.05
 local nextRequest = setmetatable({}, { __mode = "k" })
 
 remote.OnServerEvent:Connect(function(player, direction)
-	if PlayerService.ShuttingDown or not PlayerService.GetProfile(player) then return end
 	local now = os.clock()
 	if now < (nextRequest[player] or 0) then return end
 	nextRequest[player] = now + REQUEST_INTERVAL
+	if PlayerService.ShuttingDown or not PlayerService.GetProfile(player) then return end
 	DodgeService.TryDodge(player, direction)
 end)
 
