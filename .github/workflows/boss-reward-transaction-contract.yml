@@ -23,14 +23,16 @@ jobs:
           xp = Path('src/ReplicatedStorage/Config/XPConfig.lua').read_text(encoding='utf-8')
           required = [
               'if model:GetAttribute("Rewarded") then return end',
-              'local validRewardConfig =',
+              'local validProgressionReward =',
               'xpReward <= XPConfig.MaxExperience',
               'moneyReward <= EconomyConfig.MaxMoney',
-              'InventoryConfig.GetItemConfig(dropId) ~= nil',
+              'local validDrop = dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil',
+              'if not validProgressionReward then return end',
               'model:SetAttribute("Rewarded", true)',
               'XPService.AddXP(profile, xpReward)',
               'local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)',
-              'InventoryService.AddItem(profile, dropId, 1)',
+              'if validDrop then',
+              'coreAdded = InventoryService.AddItem(profile, dropId, 1) > 0',
               'QuestService.Complete(player, profile, "GUARDIAN_TRIAL"',
               'earnedMoney < moneyReward',
               'DamageService.ClearTarget(model)',
@@ -50,6 +52,7 @@ jobs:
               'profile.Inventory[dropId] =',
               'currentMoney + math.max(0, moneyReward or 0) + questMoney <= EconomyConfig.MaxMoney',
               'Spend some Money before claiming the Guardian reward.',
+              'local validRewardConfig =',
           ]
           for marker in forbidden:
               if marker in text:
@@ -80,4 +83,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, leave/shutdown safety, lifecycle cleanup, cap validation and drop registration validated.')
+          print('Guardian primary-reward idempotency, optional-drop isolation, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, leave/shutdown safety, lifecycle cleanup and cap validation validated.')
