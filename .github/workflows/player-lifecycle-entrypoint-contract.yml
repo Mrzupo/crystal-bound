@@ -31,6 +31,15 @@ jobs:
               raise SystemExit("PlayerService.Remove must remain the canonical remove owner")
 
           for marker in (
+              'local cleanupUnloadedPlayer(player)',
+              'PlayerService.CharacterConnections[player] = nil',
+              'PlayerService.HumanoidConnections[player] = nil',
+              'if PlayerService.Profiles[player] == nil then',
+          ):
+              if marker not in lifecycle:
+                  raise SystemExit("PlayerLifecycle unloaded-profile cleanup guard missing: " + marker)
+
+          for marker in (
               'local loadingPlayers = setmetatable({}, { __mode = "k" })',
               'if loadingPlayers[player] then return false end',
               'loadingPlayers[player] = true',
@@ -44,4 +53,4 @@ jobs:
               raise SystemExit("Bootstrap must have exactly one canonical PlayerAdded owner")
           if bootstrap.count('for _, player in ipairs(Players:GetPlayers()) do') < 1:
               raise SystemExit("Bootstrap must also process already-present players")
-          print("Player lifecycle entrypoint, shutdown-safe remove delegation, single PlayerAdded owner and Bootstrap load-guard cleanup validated.")
+          print("Player lifecycle entrypoint, unloaded-profile cleanup, shutdown-safe remove delegation, single PlayerAdded owner and Bootstrap load-guard cleanup validated.")
