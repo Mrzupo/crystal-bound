@@ -119,18 +119,22 @@ function PlayerData.Reconcile(input)
 
 	local mastery = type(data.CrystalMastery) == "table" and data.CrystalMastery or {}
 	local normalizedMastery = {}
+	local maxMasteryLevel = math.max(1, math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel) or 10))
+	local maxMasteryXP = math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000))
 	for crystalId, state in pairs(mastery) do
 		if CrystalSystemExists(crystalId) and table.find(owned, crystalId) then
 			local value = type(state) == "table" and state or {}
-			local maxLevel = math.max(1, math.floor(finiteNumber(CrystalUpgradeConfig.MaxLevel) or 10))
-			local maxExperience = math.max(0, math.floor(finiteNumber(CrystalUpgradeConfig.MaxExperience) or 100000000))
-			local xp = clampInt(value.XP, 0, maxExperience, 0)
-			local level = clampInt(value.Level, 1, maxLevel, 1)
-			xp = capExperienceBelowNextLevel(level, xp, maxLevel, maxExperience, CrystalMastery.GetRequiredXP)
+			local xp = clampInt(value.XP, 0, maxMasteryXP, 0)
+			local level = clampInt(value.Level, 1, maxMasteryLevel, 1)
+			xp = capExperienceBelowNextLevel(level, xp, maxMasteryLevel, maxMasteryXP, CrystalMastery.GetRequiredXP)
 			normalizedMastery[crystalId] = { Level = level, XP = xp }
 		end
 	end
-	if not normalizedMastery.EMBER and table.find(owned, "EMBER") then normalizedMastery.EMBER = { Level = 1, XP = 0 } end
+	for _, crystalId in ipairs(owned) do
+		if not normalizedMastery[crystalId] then
+			normalizedMastery[crystalId] = { Level = 1, XP = 0 }
+		end
+	end
 	data.CrystalMastery = normalizedMastery
 
 	local stats = type(data.Stats) == "table" and data.Stats or {}
