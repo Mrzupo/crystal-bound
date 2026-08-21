@@ -37,16 +37,13 @@ function EconomyService.RemoveMoney(profile, amount)
 end
 
 function EconomyService.GetMoney(profile)
-	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
-	profile.Money = current
-	return current
+	return math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 end
 
 function EconomyService.CanAfford(profile, amount)
 	amount = nonNegativeInteger(amount)
 	if amount == nil then return false end
 	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
-	profile.Money = current
 	return current >= amount
 end
 
@@ -64,7 +61,6 @@ function EconomyService.SellItem(profile, itemId, amount, InventoryService)
 		return false, 0
 	end
 
-	-- Reject values that could overflow the requested reward before touching inventory.
 	if amount > Config.MaxMoney / price then
 		return false, 0
 	end
