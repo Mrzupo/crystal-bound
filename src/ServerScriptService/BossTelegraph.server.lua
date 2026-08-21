@@ -79,14 +79,16 @@ local function getTarget()
 	local targetRange = getTelegraphTargetRange()
 	local nearestPlayer, nearestDistance
 	for _, player in ipairs(Players:GetPlayers()) do
-		local character = player.Character
-		local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
-		local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
-		if targetHumanoid and targetHumanoid.Health > 0 and targetRoot then
-			local distance = (targetRoot.Position - root.Position).Magnitude
-			if distance <= targetRange and (not nearestDistance or distance < nearestDistance) then
-				nearestPlayer = player
-				nearestDistance = distance
+		if player:GetAttribute("ProfileLoaded") == true then
+			local character = player.Character
+			local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
+			if targetHumanoid and targetHumanoid.Health > 0 and targetRoot then
+				local distance = (targetRoot.Position - root.Position).Magnitude
+				if distance <= targetRange and (not nearestDistance or distance < nearestDistance) then
+					nearestPlayer = player
+					nearestDistance = distance
+				end
 			end
 		end
 	end
@@ -104,7 +106,7 @@ local function cast()
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not humanoid or humanoid.Health <= 0 or not root then return end
+	if player:GetAttribute("ProfileLoaded") ~= true or not humanoid or humanoid.Health <= 0 or not root then return end
 	local targetCharacter = character
 
 	local position = root.Position
@@ -118,7 +120,7 @@ local function cast()
 		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then
 			return
 		end
-		if not player.Parent or player.Character ~= targetCharacter or not targetCharacter.Parent then return end
+		if not player.Parent or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= targetCharacter or not targetCharacter.Parent then return end
 		local currentCharacter = player.Character
 		local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
 		local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
