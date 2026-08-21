@@ -9,12 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce integer crafting request validation and overflow-safe output ordering
+      - name: Enforce integer crafting request validation, profile readiness and overflow-safe output ordering
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          text = Path('src/ServerScriptService/Services/CraftingService.lua').read_text(encoding='utf-8')
+          service = Path('src/ServerScriptService/Services/CraftingService.lua').read_text(encoding='utf-8')
+          remote = Path('src/ServerScriptService/CraftingRemote.server.lua').read_text(encoding='utf-8')
           required = [
               'number == nil or number % 1 ~= 0',
               'Craft amount must be a positive integer.',
@@ -22,10 +23,12 @@ jobs:
               'if not outputAmount then',
               'if outputAmount > availableOutputSpace then',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in service]
           if missing:
               raise SystemExit('missing crafting input/overflow boundary markers: ' + ', '.join(missing))
-          if text.index('local outputAmount = safeProduct(recipeAmount, amount)') > text.index('if outputAmount > availableOutputSpace then'):
+          if service.index('local outputAmount = safeProduct(recipeAmount, amount)') > service.index('if outputAmount > availableOutputSpace then'):
               raise SystemExit('Crafting must calculate the safe product before inventory-space comparison')
-          print('Crafting input and overflow boundary validated.')
+          if 'if player:GetAttribute("ProfileLoaded") ~= true then return end' not in remote:
+              raise SystemExit('CraftingRemote must reject mutation requests before the player Character/profile is ready')
+          print('Crafting input, profile-readiness and overflow boundary validated.')
           PY
