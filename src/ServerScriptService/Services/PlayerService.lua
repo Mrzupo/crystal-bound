@@ -309,6 +309,7 @@ function PlayerService.Load(player)
 		PlayerService.Profiles[player] = nil
 		PlayerService.ProfileRevisions[player] = nil
 		local released = releaseLoadedToken()
+		cleanupRemovedPlayer(player)
 		warn(("Crystal Bound: initial PlayerService.Sync failed for %s; session lock release=%s; error=%s"):format(player.Name, tostring(released), tostring(syncError)))
 		return nil, "Profile initialization failed"
 	end
