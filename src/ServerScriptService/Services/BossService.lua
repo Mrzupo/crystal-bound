@@ -36,11 +36,13 @@ local function shockwave(center, radius, damage, ignoreModel)
 	radius = math.clamp(finiteNumber(radius, 0), 0, 1000)
 	damage = math.clamp(finiteNumber(damage, 0), 0, 1000)
 	for _, player in ipairs(Players:GetPlayers()) do
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
-			DodgeService.ApplyDamage(player, humanoid, damage, ignoreModel, "BossShockwave", radius)
+		if player:GetAttribute("ProfileLoaded") == true then
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if humanoid and humanoid.Health > 0 and root and (root.Position - center).Magnitude <= radius then
+				DodgeService.ApplyDamage(player, humanoid, damage, ignoreModel, "BossShockwave", radius)
+			end
 		end
 	end
 
@@ -150,12 +152,14 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		while model.Parent and humanoid.Health > 0 and not PlayerService.ShuttingDown do
 			local nearestPlayer, nearestDistance = nil, aggroRange
 			for _, player in ipairs(Players:GetPlayers()) do
-				local character = player.Character
-				local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
-				local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
-				if targetHumanoid and targetHumanoid.Health > 0 and targetRoot then
-					local distance = (targetRoot.Position - root.Position).Magnitude
-					if distance < nearestDistance then nearestPlayer, nearestDistance = player, distance end
+				if player:GetAttribute("ProfileLoaded") == true then
+					local character = player.Character
+					local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+					local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
+					if targetHumanoid and targetHumanoid.Health > 0 and targetRoot then
+						local distance = (targetRoot.Position - root.Position).Magnitude
+						if distance < nearestDistance then nearestPlayer, nearestDistance = player, distance end
+					end
 				end
 			end
 			if nearestPlayer then
