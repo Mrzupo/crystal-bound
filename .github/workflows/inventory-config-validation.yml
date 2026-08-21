@@ -14,6 +14,7 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import math
           import re
 
           text = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
@@ -24,24 +25,34 @@ jobs:
                   raise SystemExit('Missing official rarity: ' + rarity)
 
           entries = re.findall(
-              r'([A-Za-z0-9_]+)\s*=\s*\{\s*Id\s*=\s*"([^"]+)".*?Rarity\s*=\s*"([^"]+)"\s*,\s*MaxStackSize\s*=\s*([0-9]+)\s*,\s*SellPrice\s*=\s*([0-9]+)',
+              r'([A-Za-z0-9_]+)\s*=\s*\{\s*Id\s*=\s*"([^"]+)".*?Rarity\s*=\s*"([^"]+)"\s*,\s*MaxStackSize\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*,\s*SellPrice\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)',
               text,
               re.S,
           )
           if len(entries) < 6:
               raise SystemExit('InventoryConfig must expose all configured item records')
-          for key, item_id, rarity, stack, sell_price in entries:
+          for key, item_id, rarity, stack_raw, sell_raw in entries:
               if key != item_id:
                   raise SystemExit(f'Inventory item key/Id mismatch: {key} -> {item_id}')
               if rarity not in {'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Divine'}:
                   raise SystemExit(f'Unknown Inventory rarity: {rarity}')
-              if not 1 <= int(stack) <= 1000:
+              try:
+                  stack = float(stack_raw)
+                  sell_price = float(sell_raw)
+              except ValueError:
+                  raise SystemExit(f'Inventory numeric config is invalid: {key}')
+              if not math.isfinite(stack) or stack < 1 or stack > 1000 or stack % 1 != 0:
                   raise SystemExit(f'Inventory MaxStackSize out of bounds: {key}')
-              if int(sell_price) < 0:
-                  raise SystemExit(f'Inventory SellPrice cannot be negative: {key}')
+              if not math.isfinite(sell_price) or sell_price < 0 or sell_price > 1_000_000_000 or sell_price % 1 != 0:
+                  raise SystemExit(f'Inventory SellPrice out of bounds: {key}')
 
-          if 'DefaultMaxStackSize = 99' not in text:
-              raise SystemExit('InventoryConfig must define a positive DefaultMaxStackSize')
+          default_match = re.search(r'DefaultMaxStackSize\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)', text)
+          if not default_match:
+              raise SystemExit('InventoryConfig must define DefaultMaxStackSize')
+          default_stack = float(default_match.group(1))
+          if not math.isfinite(default_stack) or default_stack < 1 or default_stack > 1000 or default_stack % 1 != 0:
+              raise SystemExit('InventoryConfig DefaultMaxStackSize must be a finite integer within 1..1000')
+
           if 'return math.clamp(math.floor(raw or InventoryConfig.DefaultMaxStackSize), 1, 1000)' not in text:
               raise SystemExit('InventoryConfig.GetMaxStackSize must runtime-bound stack size to 1..1000')
 
