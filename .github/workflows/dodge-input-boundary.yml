@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate server-side dodge input boundary
+      - name: Validate server-side dodge input boundary and lifecycle cleanup
         shell: python
         run: |
           from pathlib import Path
@@ -36,10 +36,15 @@ jobs:
               'if readyCharacters[player] ~= character then return false, "Character not ready" end',
               'player:GetAttributeChangedSignal("ProfileLoaded")',
               'readyCharacters[player] = player.Character',
+              'local connections = {}',
+              'connections[#connections + 1] = player.CharacterAdded:Connect',
+              'connections[#connections + 1] = player:GetAttributeChangedSignal("ProfileLoaded"):Connect',
+              'for _, connection in ipairs(connections) do',
+              'DodgeService.CleanupPlayer(player)',
           ]
           missing = [marker for marker in required if marker not in service]
           if missing:
-              raise SystemExit("missing Dodge input/target/shutdown/profile/character-readiness markers: " + ", ".join(missing))
+              raise SystemExit("missing Dodge input/target/shutdown/profile/character/lifecycle markers: " + ", ".join(missing))
 
           for marker in [
               'local PlayerService = require(script.Parent.Services.PlayerService)',
@@ -48,4 +53,4 @@ jobs:
               if marker not in remote:
                   raise SystemExit("DodgeRemote shutdown/profile gate missing: " + marker)
 
-          print("Dodge server input, target identity, runtime-config, loaded-profile, character-readiness and shutdown/profile boundary contract validated.")
+          print("Dodge server input, target identity, runtime-config, loaded-profile, character-readiness and connection-cleanup boundary contract validated.")
