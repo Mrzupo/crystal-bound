@@ -1,0 +1,26 @@
+name: Player Data Mastery Reconcile
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/reconcile-owned-crystal-mastery-v5"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate mastery defaults for every owned crystal
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
+          if "for _, crystalId in ipairs(owned) do" not in text:
+              raise SystemExit("PlayerData.Reconcile must iterate every owned crystal")
+          if "if not normalizedMastery[crystalId] then" not in text:
+              raise SystemExit("PlayerData.Reconcile must initialize missing owned-crystal mastery")
+          if "normalizedMastery[crystalId] = { Level = 1, XP = 0 }" not in text:
+              raise SystemExit("Missing owned-crystal mastery must normalize to Level 1 / XP 0")
+          if "CrystalSystemExists(crystalId) and table.find(owned, crystalId)" not in text:
+              raise SystemExit("Persisted mastery entries must remain restricted to canonical owned crystals")
+          print("PlayerData guarantees normalized mastery state for every owned crystal.")
