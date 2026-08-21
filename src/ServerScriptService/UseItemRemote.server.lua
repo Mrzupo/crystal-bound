@@ -26,6 +26,10 @@ local function finiteNumber(value, fallback)
 end
 
 remote.OnServerEvent:Connect(function(player, itemId)
+	local now = os.clock()
+	if now < (NEXT_USE[player] or 0) then return end
+	NEXT_USE[player] = now + USE_INTERVAL
+
 	local potion = ConsumableConfig.HealthPotion
 	if type(potion) ~= "table" or type(potion.ItemId) ~= "string" then return end
 	if type(itemId) ~= "string" or itemId ~= potion.ItemId then return end
@@ -36,9 +40,6 @@ remote.OnServerEvent:Connect(function(player, itemId)
 		return
 	end
 	healAmount = math.clamp(healAmount, 0.1, 1000)
-	local now = os.clock()
-	if now < (NEXT_USE[player] or 0) then return end
-	NEXT_USE[player] = now + USE_INTERVAL
 
 	local profile = PlayerService.GetProfile(player)
 	if not profile or not InventoryService.HasItem(profile, itemId, 1) then

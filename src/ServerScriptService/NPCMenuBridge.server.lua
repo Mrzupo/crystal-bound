@@ -14,11 +14,26 @@ local MENU_ATTRIBUTES = {
 	"OpenNPCDialog",
 }
 local playerCharacterConnections = setmetatable({}, { __mode = "k" })
+local NPC_IDS = {
+	CrystalKeeper = true,
+	MaterialTrader = true,
+}
+
+local function isCanonicalNPC(model)
+	local folder = Workspace:FindFirstChild("NPCs")
+	return folder ~= nil
+		and model ~= nil
+		and model:IsA("Model")
+		and model.Parent == folder
+		and NPC_IDS[model.Name] == true
+		and model:GetAttribute("Interactable") == true
+end
 
 local function isNearModel(player, model)
+	if not isCanonicalNPC(model) then return false end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local targetRoot = model and (model.PrimaryPart or model:FindFirstChild("Torso"))
+	local targetRoot = model.PrimaryPart or model:FindFirstChild("Torso")
 	return root and targetRoot and (root.Position - targetRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
@@ -60,12 +75,11 @@ local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
 	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
-	if not model then return end
+	if not isCanonicalNPC(model) then return end
 	prompt.Triggered:Connect(function(player)
 		if PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
-		local character = player.Character
-		if (model.Name == "CrystalKeeper" or model.Name == "MaterialTrader") and character and isNearModel(player, model) then
-			openDialog(player, model.Name, character)
+		if isNearModel(player, model) then
+			openDialog(player, model.Name, player.Character)
 		end
 	end)
 end
