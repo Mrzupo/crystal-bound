@@ -59,7 +59,7 @@ local function isValidPortalArrival(player, root, now)
 end
 
 local function enforcePosition(player, now)
-	if not player.Parent or PlayerService.ShuttingDown then return end
+	if not player.Parent or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 	local humanoid = getHumanoid(player)
 	local root = getRoot(player)
 	if not humanoid or humanoid.Health <= 0 or not root then
@@ -103,7 +103,7 @@ local function enforcePosition(player, now)
 end
 
 local function refresh(player)
-	if not player.Parent or PlayerService.ShuttingDown then return end
+	if not player.Parent or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 then return end
@@ -150,7 +150,9 @@ local function watchCharacter(player, character)
 	humanoidConnections[player] = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 		refresh(player)
 	end)
-	refresh(player)
+	if player:GetAttribute("ProfileLoaded") == true then
+		refresh(player)
+	end
 end
 
 local function bind(player)
@@ -165,6 +167,7 @@ local function bind(player)
 	table.insert(playerConnections, player:GetAttributeChangedSignal("WalkSpeedBonus"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("EquippedCrystal"):Connect(deferredRefresh))
 	table.insert(playerConnections, player:GetAttributeChangedSignal("CrystalMasteryLevel"):Connect(deferredRefresh))
+	table.insert(playerConnections, player:GetAttributeChangedSignal("ProfileLoaded"):Connect(deferredRefresh))
 	table.insert(playerConnections, player.CharacterAdded:Connect(function(character)
 		task.defer(function()
 			watchCharacter(player, character)
