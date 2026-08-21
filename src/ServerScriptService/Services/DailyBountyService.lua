@@ -126,7 +126,32 @@ function DailyBountyService.AddProgress(player, profile, enemyType, EconomyServi
 end
 
 function DailyBountyService.Get(profile)
-	return snapshot(DailyBountyService.Refresh(profile))
+	local date = utcDate()
+	local stored = type(profile) == "table" and type(profile.DailyBounty) == "table" and profile.DailyBounty or nil
+	local definition = stored and stored.Date == date and findDefinition(stored.EnemyType) or nil
+	if not definition then
+		local index = indexForDate(date)
+		definition = index and GOALS[index]
+		if not definition then return {} end
+		return snapshot({
+			Date = date,
+			EnemyType = definition.EnemyType,
+			Goal = math.clamp(math.floor(finiteNumber(definition.Goal, 1)), 1, 100),
+			Progress = 0,
+			RewardMoney = math.clamp(math.floor(finiteNumber(definition.RewardMoney, 0)), 0, EconomyConfig.MaxMoney),
+			Claimed = false,
+		})
+	end
+
+	local goal = math.clamp(math.floor(finiteNumber(definition.Goal, 1)), 1, 100)
+	return snapshot({
+		Date = date,
+		EnemyType = definition.EnemyType,
+		Goal = goal,
+		Progress = math.clamp(math.floor(finiteNumber(stored.Progress, 0)), 0, goal),
+		RewardMoney = math.clamp(math.floor(finiteNumber(definition.RewardMoney, 0)), 0, EconomyConfig.MaxMoney),
+		Claimed = stored.Claimed == true,
+	})
 end
 
 return DailyBountyService
