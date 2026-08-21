@@ -1,0 +1,33 @@
+name: Current Player Removal Timeout Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate dedicated removal contention window on current PlayerService
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          for marker in (
+              "local OPERATION_TIMEOUT = 10",
+              "local REMOVAL_OPERATION_TIMEOUT = 20",
+              "local function acquireOperation(player, timeout)",
+              "local limit = timeout or OPERATION_TIMEOUT",
+              "acquireOperation(player, REMOVAL_OPERATION_TIMEOUT)",
+              "os.clock() - started < REMOVAL_OPERATION_TIMEOUT",
+              "local initialCharacter = player.Character",
+              "PlayerService.Sync(player, false, true)",
+              "player:SetAttribute(\"ProfileLoaded\", true)",
+          ):
+              if marker not in text:
+                  raise SystemExit("PlayerService removal/readiness marker missing: " + marker)
+          if "acquireOperation(player) then" not in text:
+              raise SystemExit("Normal operations must retain their default contention timeout")
+          print("Current PlayerService preserves 10s normal contention, 20s removal contention and post-Sync ProfileLoaded readiness.")
