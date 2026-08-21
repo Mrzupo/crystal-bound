@@ -308,7 +308,7 @@ end
 local function spawnQuestGiver(npcs) spawnSimpleNPC(npcs,"CrystalKeeper",Vector3.new(12,3,-2),"Crystal Keeper","Talk",function() end) end
 local function spawnTrader(npcs) spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end) end
 local function spawnEnemy(npcs,typeId,position,uniqueName)
-	if PlayerService.ShuttingDown or npcs:FindFirstChild(uniqueName) then return end
+	if PlayerService.ShuttingDown then return end
 	local config = EnemyConfig.Get(typeId)
 	local respawn = math.max(1.5, finiteNumber(config and config.Respawn, 10))
 	NPCService.CreateEnemy(typeId,position,npcs,function()

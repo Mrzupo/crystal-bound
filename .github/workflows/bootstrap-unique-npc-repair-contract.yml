@@ -1,0 +1,29 @@
+name: Bootstrap Unique NPC Repair Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Bootstrap delegates existing Unique NPCs to NPCService repair logic
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          start = text.index("local function spawnEnemy")
+          end = text.index("local npcs,islands,spawnFolder", start)
+          block = text[start:end]
+          if 'if PlayerService.ShuttingDown then return end' not in block:
+              raise SystemExit("spawnEnemy must only short-circuit on shutdown")
+          if 'npcs:FindFirstChild(uniqueName)' in block:
+              raise SystemExit("spawnEnemy must not bypass NPCService unique-instance repair")
+          if 'NPCService.CreateEnemy(typeId,position,npcs' not in block:
+              raise SystemExit("spawnEnemy must delegate unique NPC creation/repair to NPCService")
+          if 'EnemyConfig.Get(typeId)' not in block or 'config.Respawn' not in block:
+              raise SystemExit("spawnEnemy must use canonical EnemyConfig respawn timing")
+          print("Bootstrap delegates unique NPC repair and canonical respawn timing to the proper owners.")
