@@ -26,7 +26,7 @@ jobs:
                   raise SystemExit(f'missing Guardian config marker: {marker}')
 
           numeric_fields = re.findall(
-              r'\b(Health|XP|Money|AttackCooldown|AttackRange|AttackDamage|AbilityCooldown|AbilityRadius|AbilityDamage|Respawn|Windup|Radius|Damage|TargetRange|Cooldown|HealthThreshold|AttackDamageMultiplier|AbilityRangeMultiplier|Interval|HalfExtent)\s*=\s*([0-9]+(?:\.[0-9]+)?)',
+              r'\b(Health|XP|Money|AttackCooldown|AttackRange|AttackDamage|AbilityCooldown|AbilityRadius|AbilityDamage|Respawn|Windup|Radius|Damage|TargetRange|Cooldown|HealthThreshold|AttackDamageMultiplier|AbilityRangeMultiplier|Interval|HalfExtent)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)',
               config,
           )
           for field, raw in numeric_fields:
@@ -37,13 +37,13 @@ jobs:
                   raise SystemExit(f'Guardian config {field} exceeds 1000-unit bound: {value}')
               if field in {'AttackDamage', 'AbilityDamage', 'Damage'} and value > 1000:
                   raise SystemExit(f'Guardian damage field exceeds 1000: {value}')
-          phase_threshold = re.search(r'HealthThreshold\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
+          phase_threshold = re.search(r'HealthThreshold\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)', config)
           if not phase_threshold or not 0 < float(phase_threshold.group(1)) < 1:
               raise SystemExit('Guardian Phase2.HealthThreshold must be within 0..1')
-          multiplier = re.search(r'AbilityRangeMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
+          multiplier = re.search(r'AbilityRangeMultiplier\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)', config)
           if not multiplier or not 0 < float(multiplier.group(1)) <= 10:
               raise SystemExit('Guardian Phase2.AbilityRangeMultiplier must be within 0..10')
-          damage_multiplier = re.search(r'AttackDamageMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
+          damage_multiplier = re.search(r'AttackDamageMultiplier\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)', config)
           if not damage_multiplier or not 0 < float(damage_multiplier.group(1)) <= 10:
               raise SystemExit('Guardian Phase2.AttackDamageMultiplier must be within 0..10')
 
