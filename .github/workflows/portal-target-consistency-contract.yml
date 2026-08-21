@@ -20,12 +20,12 @@ jobs:
           theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
 
           expected = {
-              'TidePortal': 'Vector3.new(120,4,0)',
-              'StarterPortal': 'Vector3.new(48,4,0)',
-              'WindPortal': 'Vector3.new(280,4,0)',
-              'TideReturnPortal': 'Vector3.new(210,4,0)',
-              'AncientPortal': 'Vector3.new(440,4,0)',
-              'WindReturnPortal': 'Vector3.new(380,4,0)',
+              'TidePortal': 'Vector3.new(120, 4, 0)',
+              'StarterPortal': 'Vector3.new(48, 4, 0)',
+              'WindPortal': 'Vector3.new(280, 4, 0)',
+              'TideReturnPortal': 'Vector3.new(210, 4, 0)',
+              'AncientPortal': 'Vector3.new(440, 4, 0)',
+              'WindReturnPortal': 'Vector3.new(380, 4, 0)',
           }
 
           for name, destination in expected.items():
