@@ -9,10 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate world initialization and portal lifecycle contracts
+      - name: Validate world initialization, decor idempotency and portal lifecycle contracts
         run: |
           python - <<'PY'
           from pathlib import Path
+          import math
           import re
           decor = Path('src/ServerScriptService/WorldDecor.server.lua').read_text(encoding='utf-8')
           theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
@@ -22,9 +23,15 @@ jobs:
           for marker in ['StarterDecorReady', 'TideDecorReady', 'WindDecorReady', 'DecorReady']:
               if marker not in decor:
                   raise SystemExit(f'missing world decor idempotency marker: {marker}')
-          for marker in ['WorldConfig.Islands.STARTER', 'WorldConfig.Islands.TIDE', 'WorldConfig.Islands.WIND', 'WorldConfig.Islands.ANCIENT']:
+          for marker in ['CrystalBoundDecor', 'local function clearDecor(island, markerName, legacyNames)', 'local function hasCount(island, name, expected)']:
               if marker not in decor:
-                  raise SystemExit(f'WorldDecor must consume canonical world center: {marker}')
+                  raise SystemExit(f'WorldDecor partial-repair marker missing: {marker}')
+          for marker in ['"TreeTrunk", "TreeCanopy", "Rock", "TrainingCamp"', '"Rock", "AncientCrystal"', '"AncientPillar", "PillarCap", "AncientCrystal"', '"WindRock", "AncientCrystal"']:
+              if marker not in decor:
+                  raise SystemExit(f'WorldDecor legacy migration marker missing: {marker}')
+          for marker in ['hasCount(starter, "TreeTrunk", 4)', 'hasCount(tide, "AncientCrystal", 9)', 'hasCount(ancient, "AncientPillar", 4)', 'hasCount(wind, "WindRock", 3)']:
+              if marker not in decor:
+                  raise SystemExit(f'WorldDecor structural readiness marker missing: {marker}')
           for island in ['StarterIsland', 'TideIsland', 'WindIsland', 'AncientRuins']:
               if island not in theme:
                   raise SystemExit(f'missing world theme: {island}')
@@ -52,32 +59,43 @@ jobs:
               'if not player or PlayerService.ShuttingDown or readyCharacters[player] ~= character or player.Character ~= character or portalCooldowns[player] then return end',
               'if not player.Parent or PlayerService.ShuttingDown or readyCharacters[player] ~= character or player.Character ~= character then return end',
               'if player.Parent and not PlayerService.ShuttingDown and readyCharacters[player] == candidate.Character and player.Character == candidate.Character then',
+              'local function getLoadedProfileForPortal(player)',
           ]
           for marker in required_tracking:
               if marker not in theme:
                   raise SystemExit(f'WorldTheme lifecycle/tracking marker missing: {marker}')
 
-          levels = [int(value) for value in re.findall(r'Level = (\d+)', world)]
-          if len(levels) != 4 or any(level < 1 or level > 1000 for level in levels):
-              raise SystemExit('WorldConfig island levels must be within 1..1000')
+          level_matches = re.findall(r'\bLevel\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)', world)
+          if len(level_matches) != 4:
+              raise SystemExit(f'WorldConfig must define exactly four numeric island levels; found {len(level_matches)}')
+          levels = [float(value) for value in level_matches]
+          if any(not math.isfinite(level) or level < 1 or level > 1000 or level % 1 != 0 for level in levels):
+              raise SystemExit('WorldConfig island levels must be finite integers within 1..1000')
           if levels != sorted(levels) or len(set(levels)) != len(levels):
               raise SystemExit('WorldConfig island levels must be strictly increasing from Starter to Ancient')
 
-          centers = [float(value) for value in re.findall(r'Center = Vector3\.new\(([-0-9.]+),', world)]
-          if len(centers) != 4 or centers != sorted(centers):
-              raise SystemExit('WorldConfig island centers must progress monotonically along the current world axis')
+          centers = [float(value) for value in re.findall(r'Center\s*=\s*Vector3\.new\(\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*,', world)]
+          if len(centers) != 4 or any(not math.isfinite(value) for value in centers) or centers != sorted(centers):
+              raise SystemExit('WorldConfig island centers must be finite and progress monotonically along the current world axis')
 
-          sizes = [tuple(map(float, values)) for values in re.findall(r'Size = Vector3\.new\(([^,]+), ([^,]+), ([^)]+)\)', world)]
-          if len(sizes) != 4:
+          size_matches = re.findall(r'Size\s*=\s*Vector3\.new\(\s*([^,]+),\s*([^,]+),\s*([^\)]+)\)', world)
+          if len(size_matches) != 4:
               raise SystemExit('WorldConfig must define exactly four island sizes')
-          for size in sizes:
-              if any(value <= 0 or value > 2000 for value in size):
-                  raise SystemExit('WorldConfig island sizes must be positive and <= 2000 units')
+          for raw_size in size_matches:
+              values = []
+              for raw in raw_size:
+                  try:
+                      value = float(raw.strip())
+                  except ValueError:
+                      raise SystemExit(f'WorldConfig island size is not numeric: {raw!r}')
+                  if not math.isfinite(value) or value <= 0 or value > 2000:
+                      raise SystemExit('WorldConfig island sizes must be finite, positive and <= 2000 units')
+                  values.append(value)
 
           if 'createPortal(' not in bootstrap:
               raise SystemExit('Bootstrap must create canonical portal definitions')
           if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
               raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
 
-          print('World initialization, monotonic progression, bounded config, portal authority, character-bound readiness token, tokenized portal lifecycle and shutdown lifecycle validated.')
+          print('World initialization, partial-repair decor idempotency, legacy decor migration, monotonic progression, bounded config, autosave-safe portal authority, character-bound readiness token, tokenized portal lifecycle and shutdown lifecycle validated.')
           PY
