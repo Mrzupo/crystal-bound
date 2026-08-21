@@ -1,0 +1,34 @@
+name: NPC Dialog Stale Response Contract V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-dialog-stale-response-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Character-bound dialog response lifecycle
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/StarterPlayer/StarterPlayerScripts/NPCDialogMenu.client.lua").read_text(encoding="utf-8")
+          required = [
+              "local dialogRequestGeneration = 0",
+              "local DIALOG_RETRY_DELAY = 0.25",
+              "local function invalidateDialogRequest()",
+              "local function scheduleDialogRetry(npcId, character, generation)",
+              "generation ~= dialogRequestGeneration",
+              "player.Character ~= character",
+              "player:GetAttribute(\"OpenNPCDialog\") ~= npcId",
+              "player.CharacterAdded:Connect(function()",
+              "player.CharacterRemoving:Connect(function()",
+              "clearOtherMenuState()",
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise SystemExit(f"NPCDialogMenu stale-response marker missing: {marker}")
+          print("NPC dialog responses are bound to request generation, Character and active dialog identity.")
