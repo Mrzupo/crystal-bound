@@ -76,10 +76,12 @@ jobs:
               'local attackerRange = math.clamp((currentRoot.Position - guardianRoot.Position).Magnitude, 0.1, 1000)',
               'Range = attackerRange',
               'while Workspace.Parent and not PlayerService.ShuttingDown do',
+              'player:GetAttribute("ProfileLoaded") == true',
+              'player:GetAttribute("ProfileLoaded") ~= true',
           ]
           for marker in lifecycle:
               if marker not in telegraph:
-                  raise SystemExit(f'Guardian telegraph lifecycle/range binding missing: {marker}')
+                  raise SystemExit(f'Guardian telegraph lifecycle/range/readiness binding missing: {marker}')
 
           reward = [
               'if model:GetAttribute("Rewarded") then return end',
@@ -99,7 +101,7 @@ jobs:
               if forbidden in service:
                   raise SystemExit(f'Guardian rewards must not bypass canonical mutation owners: {forbidden}')
 
-          if 'local PlayerService = require(script.Parent.PlayerService)' not in arena:
+          if 'local PlayerService = require(script.Parent.Services.PlayerService)' not in arena:
               raise SystemExit('BossArena must depend on PlayerService for lifecycle shutdown authority')
           if 'BossConfig.CrystalGuardian.ArenaHazard' not in arena:
               raise SystemExit('BossArena must consume Guardian ArenaHazard config')
@@ -111,5 +113,5 @@ jobs:
               if marker not in arena:
                   raise SystemExit(f'BossArena shutdown lifecycle marker missing: {marker}')
 
-          print('Guardian phase-2, reward, character-bound telegraph lifecycle, semantic bounds, shutdown-safe telegraph range and arena hazard validated.')
+          print('Guardian phase-2, reward, character-bound telegraph lifecycle, readiness, semantic bounds, shutdown-safe telegraph range and arena hazard validated.')
           PY
