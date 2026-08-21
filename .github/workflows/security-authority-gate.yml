@@ -35,7 +35,7 @@ jobs:
               text = path.read_text(encoding="utf-8")
               if "profile.Money =" in text:
                   money_owners.append(str(path))
-              if re.search(r'profile\\.Inventory\\[[^\\]]+\\]\\s*=', text):
+              if re.search(r'profile\.Inventory\[[^\]]+\]\s*=', text):
                   inventory_direct.append(str(path))
           if money_owners != ["src/ServerScriptService/Services/EconomyService.lua"]:
               raise SystemExit(f"Direct profile.Money mutation escaped EconomyService: {money_owners}")
