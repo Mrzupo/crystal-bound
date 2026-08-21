@@ -57,6 +57,11 @@ jobs:
           for marker in ['local abilityRadius =', 'phase2.AbilityRangeMultiplier', 'shockwave(root.Position, abilityRadius']:
               if marker not in service:
                   raise SystemExit(f'Guardian phase-2 ability path missing: {marker}')
+          for marker in ['profile loaded targeting filter', 'player:GetAttribute("ProfileLoaded") == true']:
+              if marker == 'profile loaded targeting filter':
+                  continue
+              if marker not in service:
+                  raise SystemExit('Guardian AI must only target loaded player Characters')
 
           for marker in ['config.Windup', 'config.Cooldown', 'config.Radius', 'config.Damage', 'config.TargetRange', 'BossShockwave']:
               if marker not in telegraph:
@@ -71,7 +76,7 @@ jobs:
               'if PlayerService.ShuttingDown or not guardian.Parent then return end',
               'local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")',
               'if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0',
-              'if not player.Parent or player.Character ~= targetCharacter or not targetCharacter.Parent then return end',
+              'if not player.Parent or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= targetCharacter or not targetCharacter.Parent then return end',
               'local currentCharacter = player.Character',
               'local attackerRange = math.clamp((currentRoot.Position - guardianRoot.Position).Magnitude, 0.1, 1000)',
               'Range = attackerRange',
@@ -113,5 +118,5 @@ jobs:
               if marker not in arena:
                   raise SystemExit(f'BossArena shutdown lifecycle marker missing: {marker}')
 
-          print('Guardian phase-2, reward, character-bound telegraph lifecycle, readiness, semantic bounds, shutdown-safe telegraph range and arena hazard validated.')
+          print('Guardian phase-2, reward, AI/telegraph ProfileLoaded targeting, character-bound telegraph lifecycle, semantic bounds, shutdown-safe telegraph range and arena hazard validated.')
           PY
