@@ -201,21 +201,24 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 		local xpReward = finiteNumber(config.XP)
 		local moneyReward = finiteNumber(config.Money)
 		local dropId = type(config.Drop) == "string" and config.Drop or nil
-		local validRewardConfig = player ~= nil and profile ~= nil
+		local dropConfig = dropId and InventoryConfig.GetItemConfig(dropId) or nil
+		local validBaseRewardConfig = player ~= nil and profile ~= nil
 			and xpReward ~= nil and xpReward >= 0 and xpReward % 1 == 0
 			and xpReward <= XPConfig.MaxExperience
 			and moneyReward ~= nil and moneyReward >= 0 and moneyReward % 1 == 0
 			and moneyReward <= EconomyConfig.MaxMoney
-			and dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil
 
-		if validRewardConfig then
+		if validBaseRewardConfig then
 			model:SetAttribute("Rewarded", true)
 		end
 
-		if player and profile and validRewardConfig then
+		if player and profile and validBaseRewardConfig then
 			XPService.AddXP(profile, xpReward)
 			local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)
-			local coreAdded = InventoryService.AddItem(profile, dropId, 1)
+			local coreAdded = 0
+			if dropConfig then
+				coreAdded = InventoryService.AddItem(profile, dropId, 1)
+			end
 			if not profile.Stats then profile.Stats = {} end
 			profile.Stats.BossesDefeated = (finiteNumber(profile.Stats.BossesDefeated, 0) or 0) + 1
 			QuestService.Complete(player, profile, "GUARDIAN_TRIAL", "Guardian of the Crystals complete!")
@@ -225,9 +228,12 @@ function BossService.CreateGuardian(position, parent, uniqueName)
 					and string.format("Crystal Guardian defeated! +%d Money (wallet cap) and Guardian Core earned.", earnedMoney)
 					or "Crystal Guardian defeated! Guardian Core earned.")
 			else
+				local dropMessage = dropConfig
+					and "Guardian Core stack is full."
+					or "Guardian Core reward is unavailable."
 				player:SetAttribute("BossMessage", earnedMoney < moneyReward
-					and string.format("Crystal Guardian defeated! +%d Money (wallet cap). Guardian Core stack is full.", earnedMoney)
-					or "Crystal Guardian defeated! Guardian Core stack is full.")
+					and string.format("Crystal Guardian defeated! +%d Money (wallet cap). %s", earnedMoney, dropMessage)
+					or "Crystal Guardian defeated! " .. dropMessage)
 			end
 			local remotes = ReplicatedStorage:FindFirstChild("Remotes"); if remotes and remotes:FindFirstChild("InventoryChanged") then remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)) end
 		end
