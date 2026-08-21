@@ -46,6 +46,12 @@ local function timestamp()
 	return os.time()
 end
 
+local function finiteTimestamp(value)
+	local number = tonumber(value)
+	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return nil end
+	return number
+end
+
 function SafeProfileStore.Load(player)
 	local key = tostring(player.UserId)
 	local token = newLoadToken()
@@ -63,13 +69,32 @@ function SafeProfileStore.Load(player)
 			end
 
 			local data = type(current) == "table" and current or PlayerData.new()
-			local lock = type(data.SessionLock) == "table" and data.SessionLock or nil
-			local lockTimestamp = lock and tonumber(lock.Timestamp) or nil
-			local age = lockTimestamp and math.max(0, timestamp() - lockTimestamp) or math.huge
-			local sameSession = lock and lock.JobId == SESSION_ID and lock.Token == token
-
-			if lock and not sameSession and age < SESSION_TIMEOUT then
+			local lock = data.SessionLock
+			if lock ~= nil and type(lock) ~= "table" then
+				invalidStoredValue = true
 				return current
+			end
+
+			if lock then
+				local lockTimestamp = finiteTimestamp(lock.Timestamp)
+				local validJobId = type(lock.JobId) == "string" and lock.JobId ~= ""
+				local validToken = type(lock.Token) == "string" and lock.Token ~= ""
+				if not validJobId or not validToken or lockTimestamp == nil or lockTimestamp <= 0 then
+					invalidStoredValue = true
+					return current
+				end
+
+				local now = timestamp()
+				if lockTimestamp > now + SESSION_TIMEOUT then
+					invalidStoredValue = true
+					return current
+				end
+
+				local age = math.max(0, now - lockTimestamp)
+				local sameSession = lock.JobId == SESSION_ID and lock.Token == token
+				if not sameSession and age < SESSION_TIMEOUT then
+					return current
+				end
 			end
 
 			data.SessionLock = { JobId = SESSION_ID, Token = token, Timestamp = timestamp() }
