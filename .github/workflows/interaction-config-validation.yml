@@ -14,7 +14,9 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import math
           import re
+
           config = Path("src/ReplicatedStorage/Config/InteractionConfig.lua").read_text(encoding="utf-8")
           for path in [
               "src/ServerScriptService/Bootstrap.server.lua",
@@ -29,12 +31,13 @@ jobs:
           bridge = Path("src/ServerScriptService/NPCMenuBridge.server.lua").read_text(encoding="utf-8")
           if "isNearModel" not in bridge or "and isNearModel(player, model)" not in bridge:
               raise SystemExit("NPCMenuBridge must validate prompt interaction distance server-side")
-          match = re.search(r"NPCInteractionRange\s*=\s*([0-9.]+)", config)
+
+          match = re.search(r"NPCInteractionRange\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", config)
           if not match:
               raise SystemExit("InteractionConfig must define NPC interaction range")
           interaction_range = float(match.group(1))
-          if not 4 <= interaction_range <= 50:
-              raise SystemExit("NPCInteractionRange must remain within the 4..50 server-authority bound")
+          if not math.isfinite(interaction_range) or interaction_range < 4 or interaction_range > 50:
+              raise SystemExit("NPCInteractionRange must be finite and remain within the 4..50 server-authority bound")
 
       - name: Validate NPC dialog options map to real menu attributes
         shell: python
