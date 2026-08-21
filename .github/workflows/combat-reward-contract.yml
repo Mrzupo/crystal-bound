@@ -2,7 +2,7 @@ name: Combat Reward Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/combat-reward-and-ability-sync-v3"]
   pull_request:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate canonical enemy reward source, idempotency and attacker identity
+      - name: Validate canonical enemy reward source, autosave-safe sync, ability quest sync, idempotency and attacker identity
         shell: python
         run: |
           from pathlib import Path
@@ -30,20 +30,36 @@ jobs:
               'local _, earnedMoney = EconomyService.AddMoney(profile, moneyGain)',
               'giveLoot(player, profile, targetModel, enemyConfig)',
               'CrystalMastery.AddXP(profile, crystalId, math.floor(xpGain * 0.5))',
+              'local questChanged, questCompleted = advanceAbilityQuest(player, profile)',
           ):
               if marker not in combat:
-                  raise SystemExit(f'CombatService canonical reward marker missing: {marker}')
-          forbidden = (
-              'action == "Ability" and 40 or 25',
-              'action == "Ability" and 20 or 10',
-              'math.max(10, math.floor(xpGain * 0.5))',
-              '({ EMBER = "EmberShard", TIDE = "TidePearl", GALE = "GaleFeather" })',
-              'currentMoney + moneyGain > EconomyConfig.MaxMoney',
-              'Spend some Money before claiming enemy rewards.',
-          )
-          for marker in forbidden:
-              if marker in combat:
-                  raise SystemExit(f'Obsolete or implicit reward path still present: {marker}')
+                  raise SystemExit(f'CombatService canonical reward/quest marker missing: {marker}')
+
+          fire_start = combat.index('local function fireProgress')
+          fire_end = combat.index('local function completeQuest', fire_start)
+          fire_block = combat[fire_start:fire_end]
+          for marker in (
+              'PlayerService.Closing[player]',
+              'local profile = PlayerService.Profiles[player]',
+              'PlayerService.Sync(player, true)',
+          ):
+              if marker not in fire_block:
+                  raise SystemExit(f'Combat reward autosave-safe sync marker missing: {marker}')
+          if 'PlayerService.GetProfile(player)' in fire_block:
+              raise SystemExit('Combat reward sync must not rely on GetProfile while autosave is active')
+
+          tide_start = combat.index('if isTideSelfAbility then')
+          tide_end = combat.index('if typeof(target) ~= "Instance"', tide_start)
+          tide_block = combat[tide_start:tide_end]
+          if 'local questChanged, questCompleted = advanceAbilityQuest(player, profile)' not in tide_block:
+              raise SystemExit('TIDE self-ability must advance CRYSTAL_POWER through the canonical helper')
+          if 'if questChanged and not questCompleted then PlayerService.Sync(player) end' not in tide_block:
+              raise SystemExit('Incomplete TIDE ability quest progress must synchronize ProfileRevisions')
+
+          ability_start = combat.index('if action == "Ability" then', tide_end)
+          ability_block = combat[ability_start:]
+          if 'local questChanged, questCompleted = advanceAbilityQuest(player, profile)' not in ability_block:
+              raise SystemExit('Targeted Ability path must advance CRYSTAL_POWER through the canonical helper')
 
           for marker in (
               'targetModel:GetAttribute("DeathRewarded") == true',
@@ -71,4 +87,4 @@ jobs:
           ):
               if marker not in damage:
                   raise SystemExit(f'DamageService reward attribution guard missing: {marker}')
-          print('Canonical combat reward source, wallet-cap-safe payout, idempotency, attacker-session, mastery-XP linkage, lethal-hit ordering and attribution cleanup validated.')
+          print('Canonical combat reward source, autosave-safe reward synchronization, ability quest revision synchronization, wallet-cap-safe payout, idempotency, attacker-session, mastery-XP linkage, lethal-hit ordering and attribution cleanup validated.')
