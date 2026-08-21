@@ -56,20 +56,13 @@ function XPService.AddXP(profile, amount)
 end
 
 function XPService.GetLevel(profile)
-	local level = normalizedLevel(profile)
-	profile.Level = level
-	if level >= XPConfig.MaxLevel then profile.Experience = 0 end
-	return level
+	return normalizedLevel(profile)
 end
 
 function XPService.GetXP(profile)
-	local xp = normalizedXP(profile)
-	profile.Experience = xp
-	if normalizedLevel(profile) >= XPConfig.MaxLevel then
-		profile.Experience = 0
-		return 0
-	end
-	return xp
+	local level = normalizedLevel(profile)
+	if level >= XPConfig.MaxLevel then return 0 end
+	return normalizedXP(profile)
 end
 
 function XPService.GetRequiredXP(profile)
