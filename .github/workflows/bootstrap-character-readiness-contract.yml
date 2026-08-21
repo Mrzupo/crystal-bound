@@ -1,0 +1,30 @@
+name: Bootstrap Character Readiness Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate character-bound Bootstrap mutations
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          required = [
+              'if action == "Start" and player:GetAttribute("ProfileLoaded") ~= true then return end',
+              'if action == "Sell" and type(itemId) == "string" then',
+              'if player:GetAttribute("ProfileLoaded") ~= true then return end',
+              'remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)',
+              'if player:GetAttribute("ProfileLoaded") ~= true then return end',
+              'if not isNearNPC(player, "CrystalKeeper") then',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('Bootstrap character-readiness markers missing: ' + ', '.join(missing))
+          print('Bootstrap character-bound quest, sell and crystal-upgrade readiness gates validated.')
