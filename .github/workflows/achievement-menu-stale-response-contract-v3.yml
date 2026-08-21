@@ -1,0 +1,34 @@
+name: Achievement Menu Stale Response Contract V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/achievement-menu-stale-response-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Character-bound achievement refresh lifecycle
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/StarterPlayer/StarterPlayerScripts/AchievementMenu.client.lua").read_text(encoding="utf-8")
+          required = [
+              "local refreshGeneration = 0",
+              "local refreshInFlight = false",
+              "local ACHIEVEMENT_RETRY_DELAY = 0.25",
+              "local function invalidateRefresh()",
+              "local function scheduleAchievementRetry(staleGeneration)",
+              "generation ~= refreshGeneration",
+              "player.Character ~= character",
+              "player:GetAttribute(\"OpenAchievementMenu\") ~= expectedOpenState",
+              "player.CharacterAdded:Connect(function()",
+              "player.CharacterRemoving:Connect(function()",
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise SystemExit(f"AchievementMenu stale-response marker missing: {marker}")
+          print("Achievement responses are bound to refresh generation, Character and active menu identity.")
