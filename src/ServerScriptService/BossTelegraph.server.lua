@@ -14,10 +14,12 @@ local config = BossConfig.CrystalGuardian.Telegraph
 local RUN_INTERVAL = 0.25
 local nextCast = 0
 
-local existingGuardian = NPCs:FindFirstChild("CrystalGuardian")
-if not (existingGuardian and existingGuardian:IsA("Model") and existingGuardian:GetAttribute("BossId") == "CrystalGuardian") then
-	if existingGuardian then existingGuardian:Destroy() end
-	BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
+if not PlayerService.ShuttingDown then
+	local existingGuardian = NPCs:FindFirstChild("CrystalGuardian")
+	if not (existingGuardian and existingGuardian:IsA("Model") and existingGuardian:GetAttribute("BossId") == "CrystalGuardian") then
+		if existingGuardian then existingGuardian:Destroy() end
+		BossService.CreateGuardian(BossConfig.CrystalGuardian.ArenaCenter, NPCs, "CrystalGuardian")
+	end
 end
 
 local function finiteNumber(value, fallback)
@@ -79,7 +81,7 @@ local function getTarget()
 	local targetRange = getTelegraphTargetRange()
 	local nearestPlayer, nearestDistance
 	for _, player in ipairs(Players:GetPlayers()) do
-		if player:GetAttribute("ProfileLoaded") == true then
+		if player:GetAttribute("ProfileLoaded") == true and not PlayerService.Closing[player] then
 			local character = player.Character
 			local targetHumanoid = character and character:FindFirstChildOfClass("Humanoid")
 			local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
@@ -106,7 +108,7 @@ local function cast()
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if player:GetAttribute("ProfileLoaded") ~= true or not humanoid or humanoid.Health <= 0 or not root then return end
+	if player:GetAttribute("ProfileLoaded") ~= true or PlayerService.Closing[player] or not humanoid or humanoid.Health <= 0 or not root then return end
 	local targetCharacter = character
 
 	local position = root.Position
@@ -116,16 +118,19 @@ local function cast()
 	createTelegraph(position)
 	task.delay(windup, function()
 		if PlayerService.ShuttingDown or not guardian.Parent then return end
+		local currentGuardian = NPCs:FindFirstChild("CrystalGuardian")
+		if currentGuardian ~= guardian then return end
 		local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")
-		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 then
+		local currentGuardianRoot = guardian:FindFirstChild("HumanoidRootPart") or guardian.PrimaryPart
+		if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0 or (guardian:GetAttribute("BossPhase") or 1) < 2 or not currentGuardianRoot then
 			return
 		end
-		if not player.Parent or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= targetCharacter or not targetCharacter.Parent then return end
+		if not player.Parent or player:GetAttribute("ProfileLoaded") ~= true or PlayerService.Closing[player] or player.Character ~= targetCharacter or not targetCharacter.Parent then return end
 		local currentCharacter = player.Character
 		local currentHumanoid = currentCharacter and currentCharacter:FindFirstChildOfClass("Humanoid")
 		local currentRoot = currentCharacter and currentCharacter:FindFirstChild("HumanoidRootPart")
 		if currentHumanoid and currentRoot and currentHumanoid.Health > 0 and (currentRoot.Position - position).Magnitude <= radius then
-			local attackerRange = math.clamp((currentRoot.Position - guardianRoot.Position).Magnitude, 0.1, 1000)
+			local attackerRange = math.clamp((currentRoot.Position - currentGuardianRoot.Position).Magnitude, 0.1, 1000)
 			local applied = DodgeService.ApplyDamage(player, currentHumanoid, damage, guardian, "BossShockwave", attackerRange)
 			if applied then
 				player:SetAttribute("BossMessage", "Guardian Impact!")
