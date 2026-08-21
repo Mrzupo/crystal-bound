@@ -9,18 +9,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Enforce integer purchase request validation
+      - name: Enforce integer purchase request validation and loaded-profile boundary
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          text = Path('src/ServerScriptService/Services/ShopService.lua').read_text(encoding='utf-8')
+          service = Path('src/ServerScriptService/Services/ShopService.lua').read_text(encoding='utf-8')
+          remote = Path('src/ServerScriptService/ShopRemote.server.lua').read_text(encoding='utf-8')
           required = [
               'number == nil or number % 1 ~= 0',
               'Purchase amount must be a positive integer.',
           ]
-          missing = [marker for marker in required if marker not in text]
+          missing = [marker for marker in required if marker not in service]
           if missing:
               raise SystemExit('missing shop input boundary markers: ' + ', '.join(missing))
-          print('Shop input boundary validated.')
+          if 'if player:GetAttribute("ProfileLoaded") ~= true then return end' not in remote:
+              raise SystemExit('ShopRemote must reject mutation requests before the player Character/profile is ready')
+          print('Shop input and profile-readiness boundary validated.')
           PY
