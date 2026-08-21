@@ -80,8 +80,10 @@ jobs:
               if marker not in npc:
                   raise SystemExit(f"NPCService special runtime clamp/trigger missing: {marker}")
 
-          if "EnemyConfig.Types[enemyType]" not in combat:
-              raise SystemExit("CombatService rewardDefeat must use canonical EnemyConfig")
+          if "EnemyConfig.Get(enemyType)" not in combat:
+              raise SystemExit("CombatService rewardDefeat must consume the normalized EnemyConfig.Get API")
+          if "EnemyConfig.Types[enemyType]" in combat:
+              raise SystemExit("CombatService rewardDefeat must not bypass EnemyConfig.Get with raw config access")
           if "InventoryService.AddItem(profile, itemId, 1)" not in combat:
               raise SystemExit("CombatService enemy loot must use InventoryService")
 
@@ -125,4 +127,4 @@ jobs:
               if offset < 0 or offset > 100:
                   raise SystemExit("Enemy TeleportOffset is outside 0..100")
 
-          print("EnemyConfig centralized runtime bounds, combat bounds, aggro bounds, Respawn normalization, detached deep-copy lookup, lifecycle, special movement and canonical loot validated.")
+          print("EnemyConfig centralized runtime bounds, combat reward consumption, aggro bounds, Respawn normalization, detached lookup, lifecycle and canonical loot validated.")
