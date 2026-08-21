@@ -31,9 +31,18 @@ local function stateFor(humanoid)
 	return active[humanoid]
 end
 
-local function getCurrentBaseWalkSpeed(humanoid, fallback)
+local function getPlayer(humanoid)
 	local character = humanoid and humanoid.Parent
-	local player = character and Players:GetPlayerFromCharacter(character)
+	return character and Players:GetPlayerFromCharacter(character)
+end
+
+local function isPlayerProfileLoaded(humanoid)
+	local player = getPlayer(humanoid)
+	return player == nil or player:GetAttribute("ProfileLoaded") == true
+end
+
+local function getCurrentBaseWalkSpeed(humanoid, fallback)
+	local player = getPlayer(humanoid)
 	if player then
 		local bonus = math.clamp(math.max(0, finiteNumber(player:GetAttribute("WalkSpeedBonus"), 0)), 0, MAX_WALK_SPEED_BONUS)
 		return BASE_WALK_SPEED + bonus
@@ -42,8 +51,7 @@ local function getCurrentBaseWalkSpeed(humanoid, fallback)
 end
 
 local function isPlayerDodging(humanoid)
-	local character = humanoid and humanoid.Parent
-	local player = character and Players:GetPlayerFromCharacter(character)
+	local player = getPlayer(humanoid)
 	return player ~= nil and DodgeService.IsInvulnerable(player)
 end
 
@@ -68,7 +76,7 @@ function StatusEffectService.GetSlowMultiplier(humanoid)
 end
 
 function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
-	if isShuttingDown() or not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
+	if isShuttingDown() or not humanoid or humanoid.Health <= 0 or not isPlayerProfileLoaded(humanoid) or isPlayerDodging(humanoid) then return false end
 	multiplier = math.clamp(finiteNumber(multiplier, 0.8), MIN_SLOW_MULTIPLIER, MAX_SLOW_MULTIPLIER)
 	duration = math.clamp(finiteNumber(duration, 1), 0.1, 10)
 	local state = stateFor(humanoid)
@@ -81,7 +89,7 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	task.delay(duration, function()
 		if humanoid.Parent and state.Slow == token then
 			humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
-			if not isShuttingDown() and humanoid.Health > 0 and state.BaseWalkSpeed then
+			if not isShuttingDown() and isPlayerProfileLoaded(humanoid) and humanoid.Health > 0 and state.BaseWalkSpeed then
 				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
 			end
 			state.Slow = nil
@@ -93,7 +101,7 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 end
 
 function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval, attacker, range)
-	if isShuttingDown() or not humanoid or humanoid.Health <= 0 or isPlayerDodging(humanoid) then return false end
+	if isShuttingDown() or not humanoid or humanoid.Health <= 0 or not isPlayerProfileLoaded(humanoid) or isPlayerDodging(humanoid) then return false end
 	damagePerTick = math.clamp(finiteNumber(damagePerTick, 3), 1, 100)
 	local normalizedTicks = finiteNumber(ticks, 3)
 	if normalizedTicks == nil or normalizedTicks < 1 or normalizedTicks % 1 ~= 0 then return false end
@@ -105,7 +113,7 @@ function StatusEffectService.ApplyBurn(humanoid, damagePerTick, ticks, interval,
 	task.spawn(function()
 		for _ = 1, ticks do
 			task.wait(interval)
-			if isShuttingDown() or not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token then break end
+			if isShuttingDown() or not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token or not isPlayerProfileLoaded(humanoid) then break end
 			local character = humanoid.Parent
 			local player = character and Players:GetPlayerFromCharacter(character)
 			if player then
