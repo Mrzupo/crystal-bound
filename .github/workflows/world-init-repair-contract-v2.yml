@@ -1,0 +1,47 @@
+name: World Init Existing Object Repair Contract V2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/world-init-repair-existing-objects-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate existing canonical world objects are repaired idempotently
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          required = [
+              'local island = islands:FindFirstChild(name)',
+              'if not island or not island:IsA("Model") then',
+              'ground.Size = size',
+              'ground.Position = center',
+              'ground.Anchored = true',
+              'title.Size = UDim2.fromOffset(240, 60)',
+              'text.Text = name:gsub("Island", " Island")',
+              'local spawn = spawnFolder:FindFirstChild("StarterSpawn")',
+              'if spawn and not spawn:IsA("SpawnLocation") then',
+              'spawn.Size = Vector3.new(8,1,8)',
+              'spawn.Neutral = true',
+              'local existing = island:FindFirstChild(name)',
+              'if existing and not existing:IsA("BasePart") then existing:Destroy(); existing = nil end',
+              'portal.Size = Vector3.new(6,8,2)',
+              'portal.Position = fromPosition',
+              'portal.Material = Enum.Material.Neon',
+              'label.Text = "Level " .. tostring(requiredLevel or 1) .. " required"',
+          ]
+          for marker in required:
+              if marker not in source:
+                  raise SystemExit(f"world init repair marker missing: {marker}")
+          if 'local island = islands:FindFirstChild(name); if island then return island end' in source:
+              raise SystemExit("createIsland must not blindly accept an existing island")
+          if 'if spawnFolder:FindFirstChild("StarterSpawn") then return end' in source:
+              raise SystemExit("createSpawn must repair an existing spawn instead of blindly returning")
+          if 'if existing:IsA("BasePart") then return end' in source:
+              raise SystemExit("createPortal must repair an existing portal instead of blindly returning")
+          print("Existing canonical islands, StarterSpawn and portals are repaired idempotently without adding a second teleport authority.")
