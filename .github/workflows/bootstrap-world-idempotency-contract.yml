@@ -24,6 +24,10 @@ jobs:
               'if existing and not existing:IsA("BasePart") then existing:Destroy(); existing=nil end',
               'portal.Size=Vector3.new(6,8,2)',
               'portal.CanTouch=true',
+              'local spawn = spawnFolder:FindFirstChild("StarterSpawn")',
+              'if spawn and not spawn:IsA("SpawnLocation") then spawn:Destroy(); spawn = nil end',
+              'spawn.Size=Vector3.new(8,1,8)',
+              'spawn.Neutral=true',
               'local model=npcs:FindFirstChild(name)',
               'model:SetAttribute("Interactable",true)',
               'prompt.Enabled=true',
@@ -31,4 +35,4 @@ jobs:
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('Bootstrap world idempotency marker missing: ' + ', '.join(missing))
-          print('Bootstrap repairs canonical island, portal and interaction-NPC structures instead of trusting existing names.')
+          print('Bootstrap repairs canonical island, portal, spawn and interaction-NPC structures instead of trusting existing names.')
