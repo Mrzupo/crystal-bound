@@ -41,14 +41,17 @@ jobs:
               'local cooldownToken = (portalCooldownTokens[player] or 0) + 1',
               'portalCooldownTokens[player] == cooldownToken',
               'lastPositions[player] = nil',
-              'local playerCharacterConnections = setmetatable({}, { __mode = "k" })',
-              'local function disconnectPlayerCharacter(player)',
-              'playerCharacterConnections[player] = player.CharacterAdded:Connect',
-              'disconnectPlayerCharacter(player)',
-              'if not player or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character or portalCooldowns[player] then return end',
-              'if not player.Parent or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character then return end',
-              'player:GetAttribute("ProfileLoaded") ~= true',
-              'player:GetAttribute("ProfileLoaded") == true',
+              'local playerConnections = setmetatable({}, { __mode = "k" })',
+              'local readyCharacters = setmetatable({}, { __mode = "k" })',
+              'local function disconnectPlayer(player)',
+              'playerConnections[player] = connections',
+              'connections[#connections + 1] = player.CharacterAdded:Connect',
+              'connections[#connections + 1] = player:GetAttributeChangedSignal("ProfileLoaded"):Connect',
+              'disconnectPlayer(player)',
+              'readyCharacters[player] = nil',
+              'if not player or PlayerService.ShuttingDown or readyCharacters[player] ~= character or player.Character ~= character or portalCooldowns[player] then return end',
+              'if not player.Parent or PlayerService.ShuttingDown or readyCharacters[player] ~= character or player.Character ~= character then return end',
+              'if player.Parent and not PlayerService.ShuttingDown and readyCharacters[player] == candidate.Character and player.Character == candidate.Character then',
           ]
           for marker in required_tracking:
               if marker not in theme:
@@ -76,5 +79,5 @@ jobs:
           if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
               raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
 
-          print('World initialization, monotonic progression, bounded config, portal authority, readiness, tokenized portal lifecycle and shutdown lifecycle validated.')
+          print('World initialization, monotonic progression, bounded config, portal authority, character-bound readiness token, tokenized portal lifecycle and shutdown lifecycle validated.')
           PY
