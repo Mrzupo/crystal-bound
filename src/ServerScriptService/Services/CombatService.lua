@@ -58,8 +58,13 @@ local function fireCombatFeedback(targetModel, attacker, action, crystalId, crit
 	feedback:FireAllClients(targetModel, attacker.UserId, action, crystalId, critical == true, numericAmount)
 end
 
+local function getLoadedCombatProfile(player)
+	if not player or not player:IsA("Player") or not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] then return nil end
+	return PlayerService.Profiles[player]
+end
+
 local function fireProgress(player, levelsGained, mastery)
-	local profile = PlayerService.GetProfile(player)
+	local profile = getLoadedCombatProfile(player)
 	if not profile then return end
 	PlayerService.Sync(player)
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -86,10 +91,18 @@ local function advanceEnemyQuest(player, profile, enemyType)
 end
 
 local function advanceAbilityQuest(player, profile)
-	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return end
+	if not QuestSystem.IsActive(profile, "CRYSTAL_POWER") then return false end
 	local complete, progress, goal = QuestSystem.Advance(profile, "CRYSTAL_POWER", 1)
 	player:SetAttribute("QuestProgress", string.format("Crystal Power: %d/%d", progress, goal))
-	if complete then completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!") end
+	if complete then
+		completeQuest(player, profile, "CRYSTAL_POWER", "Crystal Power complete!")
+	else
+		local loadedProfile = getLoadedCombatProfile(player)
+		if loadedProfile == profile then
+			PlayerService.Sync(player)
+		end
+	end
+	return complete
 end
 
 local function giveLoot(player, profile, targetModel, enemyConfig)
