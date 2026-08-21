@@ -1,0 +1,25 @@
+name: Quest Availability Autosave Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/quest-availability-autosave-retry-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate unavailable profile returns nil for QuestMenu retry semantics
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/QuestAvailability.server.lua").read_text(encoding="utf-8")
+          if "local profile = PlayerService.GetProfile(player)" not in text:
+              raise SystemExit("Quest availability must use PlayerService.GetProfile")
+          if "if not profile then return nil end" not in text:
+              raise SystemExit("Unavailable profile must return nil so QuestMenu retry logic can distinguish it from a valid empty list")
+          if "if not profile then return {} end" in text:
+              raise SystemExit("Quest availability must not return a valid empty table while the profile is unavailable")
+          print("Quest availability returns nil during profile/autosave gating, preserving client retry semantics.")
