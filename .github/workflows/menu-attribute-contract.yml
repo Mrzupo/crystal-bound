@@ -52,6 +52,8 @@ jobs:
               problems.append("NPCMenuBridge must depend on PlayerService for shutdown lifecycle authority")
           if 'if PlayerService.ShuttingDown then return end' not in text["bridge"]:
               problems.append("NPCMenuBridge must reject prompt/deferred menu writes during shutdown")
+          if 'player:GetAttribute("ProfileLoaded") ~= true' not in text["bridge"]:
+              problems.append("NPCMenuBridge must reject menu writes before the current Character/profile is ready")
           if 'local function openDialog(player, npcId, character)' not in text["bridge"]:
               problems.append("NPCMenuBridge must bind deferred dialog opening to the triggering Character")
           if 'player.Character == character and character.Parent' not in text["bridge"]:
@@ -88,4 +90,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Menu attribute, Character-bound deferred-open, respawn cleanup, shutdown rejection and close-state contract validated.")
+          print("Menu attribute, Character-bound deferred-open, profile readiness, respawn cleanup, shutdown rejection and close-state contract validated.")
