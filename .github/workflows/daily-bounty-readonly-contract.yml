@@ -1,0 +1,35 @@
+name: Daily Bounty Readonly Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/daily-bounty-readonly-get-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure DailyBountyService.Get does not mutate profile state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          start = text.index("function DailyBountyService.Get")
+          end = text.index("return DailyBountyService", start)
+          block = text[start:end]
+          for marker in ("DailyBountyService.Refresh(profile)", "profile.DailyBounty =", "profile.DailyBounty.Progress =", "profile.DailyBounty.Claimed ="):
+              if marker in block:
+                  raise SystemExit(f"DailyBountyService.Get must remain side-effect free; found {marker}")
+          for marker in ("local stored =", "local definition =", "return snapshot({", "math.clamp(math.floor(finiteNumber"):
+              if marker not in block:
+                  raise SystemExit(f"DailyBountyService.Get read-normalization marker missing: {marker}")
+
+          refresh_start = text.index("function DailyBountyService.Refresh")
+          refresh_end = text.index("local function validPlayerProfile", refresh_start)
+          refresh_block = text[refresh_start:refresh_end]
+          if "profile.DailyBounty =" not in refresh_block:
+              raise SystemExit("Refresh must remain the canonical DailyBounty mutation owner")
+
+          print("DailyBountyService.Get is side-effect free; Refresh remains the canonical mutating path.")
