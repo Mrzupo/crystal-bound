@@ -1,0 +1,51 @@
+name: Remote Authority Hardening
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/remote-authority-hardening-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate rate-limit-first ordering and canonical NPC identity
+        shell: python
+        run: |
+          from pathlib import Path
+
+          checks = {
+              "ShopRemote.server.lua": ("local now = os.clock()", "if action ~= \"Buy\" then return end", "NEXT_REQUEST[player] = now + REQUEST_INTERVAL"),
+              "CraftingRemote.server.lua": ("local now = os.clock()", "if action ~= \"Craft\" then return end", "NEXT_REQUEST[player] = now + REQUEST_INTERVAL"),
+              "UseItemRemote.server.lua": ("local now = os.clock()", "local potion = ConsumableConfig.HealthPotion", "NEXT_USE[player] = now + USE_INTERVAL"),
+              "DodgeRemote.server.lua": ("local now = os.clock()", "DodgeService.TryDodge(player, direction)", "nextRequest[player] = now + REQUEST_INTERVAL"),
+          }
+          root = Path("src/ServerScriptService")
+          for filename, markers in checks.items():
+              text = (root / filename).read_text(encoding="utf-8")
+              positions = [text.index(marker) for marker in markers]
+              limit_index = positions[2]
+              if limit_index > positions[1]:
+                  raise SystemExit(f"{filename}: rate limiter must be consumed before validation/action dispatch")
+              if "Players.PlayerRemoving:Connect(function(player)" not in text:
+                  raise SystemExit(f"{filename}: per-player limiter cleanup is missing")
+
+          bootstrap = (root / "Bootstrap.server.lua").read_text(encoding="utf-8")
+          near_start = bootstrap.index("local function isNearNPC")
+          near_end = bootstrap.index("end\n\nremotes.CombatRequest", near_start)
+          near_block = bootstrap[near_start:near_end]
+          for marker in ("npc:IsA(\"Model\")", "npc.Parent ~= folder", "npc:GetAttribute(\"Interactable\") ~= true"):
+              if marker not in near_block:
+                  raise SystemExit(f"Bootstrap isNearNPC missing canonical identity guard: {marker}")
+
+          dialog = (root / "NPCDialogRemote.server.lua").read_text(encoding="utf-8")
+          if 'npc:IsA("Model")' not in dialog or 'npc.Parent ~= folder' not in dialog or 'npc:GetAttribute("Interactable") ~= true' not in dialog:
+              raise SystemExit("NPCDialogRemote missing canonical NPC identity guard")
+
+          menu = (root / "NPCMenuBridge.server.lua").read_text(encoding="utf-8")
+          for marker in ("local function isCanonicalNPC(model)", 'model.Parent == folder', 'NPC_IDS[model.Name] == true', 'model:GetAttribute("Interactable") == true'):
+              if marker not in menu:
+                  raise SystemExit(f"NPCMenuBridge missing canonical identity marker: {marker}")
+
+          print("Remote rate-limit-first ordering and canonical NPC identity boundaries validated.")
