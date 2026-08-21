@@ -24,7 +24,7 @@ jobs:
               'local expected = math.max(MIN_WALK_SPEED, base)',
               'if math.abs(humanoid.WalkSpeed - expected) > SPEED_EPSILON then',
               'humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()',
-              'if player.Character ~= character then return end',
+              'snapshot.Character ~= player.Character',
               'disconnectHumanoid(player)',
               'local displacement = (root.Position - snapshot.Position).Magnitude',
               'root.CFrame = CFrame.new(snapshot.Position)',
