@@ -2,7 +2,7 @@ name: Boss Reward Transaction Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/boss-reward-partial-failure-v2"]
   pull_request:
 
 jobs:
@@ -23,14 +23,14 @@ jobs:
           xp = Path('src/ReplicatedStorage/Config/XPConfig.lua').read_text(encoding='utf-8')
           required = [
               'if model:GetAttribute("Rewarded") then return end',
-              'local validRewardConfig =',
+              'local validProgressionConfig =',
+              'local validDrop =',
               'xpReward <= XPConfig.MaxExperience',
               'moneyReward <= EconomyConfig.MaxMoney',
-              'InventoryConfig.GetItemConfig(dropId) ~= nil',
               'model:SetAttribute("Rewarded", true)',
               'XPService.AddXP(profile, xpReward)',
               'local _, earnedMoney = EconomyService.AddMoney(profile, moneyReward)',
-              'InventoryService.AddItem(profile, dropId, 1)',
+              'local coreAdded = validDrop and InventoryService.AddItem(profile, dropId, 1) or 0',
               'QuestService.Complete(player, profile, "GUARDIAN_TRIAL"',
               'earnedMoney < moneyReward',
               'DamageService.ClearTarget(model)',
@@ -45,11 +45,17 @@ jobs:
               raise SystemExit('Guardian reward lifecycle markers missing: ' + ', '.join(missing))
           if text.index('model:SetAttribute("Rewarded", true)') > text.index('XPService.AddXP(profile, xpReward)'):
               raise SystemExit('Guardian idempotency must be committed before reward mutation to block double processing')
+          if text.index('local validProgressionConfig =') > text.index('local validDrop ='):
+              raise SystemExit('Guardian reward validation must separate progression configuration from optional loot configuration')
+          if text.index('XPService.AddXP(profile, xpReward)') > text.index('local coreAdded = validDrop and InventoryService.AddItem(profile, dropId, 1) or 0'):
+              raise SystemExit('Guardian progression rewards must be applied before optional loot insertion')
+
           forbidden = [
               'profile.Money =',
               'profile.Inventory[dropId] =',
               'currentMoney + math.max(0, moneyReward or 0) + questMoney <= EconomyConfig.MaxMoney',
               'Spend some Money before claiming the Guardian reward.',
+              'and dropId ~= nil and InventoryConfig.GetItemConfig(dropId) ~= nil\n\n\t\tif validRewardConfig then',
           ]
           for marker in forbidden:
               if marker in text:
@@ -60,8 +66,10 @@ jobs:
               if 'PlayerService.Profiles[' in path_text and path.as_posix() not in {
                   'src/ServerScriptService/Services/PlayerService.lua',
                   'src/ServerScriptService/Services/BossService.lua',
+                  'src/ServerScriptService/Services/CombatService.lua',
+                  'src/ServerScriptService/WorldTheme.server.lua',
               }:
-                  raise SystemExit(f'Loaded-profile table access must remain restricted to canonical PlayerService/BossService owners: {path}')
+                  raise SystemExit(f'Loaded-profile table access must remain restricted to canonical persistence-aware owners: {path}')
 
           drop_match = re.search(r'Drop\s*=\s*"([A-Za-z0-9_]+)"', boss)
           if not drop_match:
@@ -80,4 +88,4 @@ jobs:
           if int(reward_match.group(1)) > max_xp or int(reward_match.group(2)) > max_money:
               raise SystemExit('Guardian reward config exceeds canonical progression/economy caps')
 
-          print('Guardian reward idempotency, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, leave/shutdown safety, lifecycle cleanup, cap validation and drop registration validated.')
+          print('Guardian reward idempotency, progression-vs-loot partial-failure isolation, wallet-cap-safe quest completion, canonical mutation ownership, autosave-safe loaded-profile reward access, leave/shutdown safety, lifecycle cleanup, cap validation and drop registration validated.')
