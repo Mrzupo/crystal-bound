@@ -1,0 +1,34 @@
+name: Bootstrap World Idempotency Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical world object repair
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          required = [
+              'if island and not island:IsA("Model") then island:Destroy(); island = nil end',
+              'local ground = island:FindFirstChild("Ground")',
+              'ground.Size = size',
+              'ground.Position = center',
+              'local existing = island:FindFirstChild(name)',
+              'if existing and not existing:IsA("BasePart") then existing:Destroy(); existing=nil end',
+              'portal.Size=Vector3.new(6,8,2)',
+              'portal.CanTouch=true',
+              'local model=npcs:FindFirstChild(name)',
+              'model:SetAttribute("Interactable",true)',
+              'prompt.Enabled=true',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('Bootstrap world idempotency marker missing: ' + ', '.join(missing))
+          print('Bootstrap repairs canonical island, portal and interaction-NPC structures instead of trusting existing names.')
