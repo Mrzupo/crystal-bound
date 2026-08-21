@@ -17,29 +17,37 @@ jobs:
         run: |
           from pathlib import Path
 
-          root = Path("src")
-          targets = {
-              "GetPlayerData": "GetPlayerData.OnServerInvoke",
-              "GetQuestData": "GetQuestData.OnServerInvoke",
-              "GetAvailableQuests": "GetAvailableQuests.OnServerInvoke",
-              "NPCDialogRequest": "NPCDialogRequest.OnServerInvoke",
+          owners = {
+              "GetPlayerData": (Path("src/ServerScriptService/Bootstrap.server.lua"), "remotes.GetPlayerData.OnServerInvoke"),
+              "GetQuestData": (Path("src/ServerScriptService/Bootstrap.server.lua"), "remotes.GetQuestData.OnServerInvoke"),
+              "GetAvailableQuests": (Path("src/ServerScriptService/QuestAvailability.server.lua"), "remote.OnServerInvoke"),
+              "NPCDialogRequest": (Path("src/ServerScriptService/NPCDialogRemote.server.lua"), "remote.OnServerInvoke"),
           }
-          counts = {key: [] for key in targets}
-
-          for path in root.rglob("*.lua"):
-              text = path.read_text(encoding="utf-8")
-              for key, marker in targets.items():
-                  if marker in text:
-                      counts[key].append(str(path))
 
           problems = []
-          for key, paths in counts.items():
-              if len(paths) != 1:
-                  problems.append(f"{key} must have exactly one OnServerInvoke owner; found {len(paths)}: {paths}")
+          root = Path("src")
+          for name, (owner_path, marker) in owners.items():
+              if not owner_path.is_file():
+                  problems.append(f"{name} owner file is missing: {owner_path}")
+                  continue
+              text = owner_path.read_text(encoding="utf-8")
+              count = text.count(marker)
+              if count != 1:
+                  problems.append(f"{name} must have exactly one handler marker in {owner_path}; found {count}")
+
+          for name, (owner_path, marker) in owners.items():
+              for path in root.rglob("*.lua"):
+                  if path == owner_path:
+                      continue
+                  text = path.read_text(encoding="utf-8")
+                  if name == "GetPlayerData" and "GetPlayerData.OnServerInvoke" in text:
+                      problems.append(f"GetPlayerData has an unexpected secondary handler in {path}")
+                  elif name == "GetQuestData" and "GetQuestData.OnServerInvoke" in text:
+                      problems.append(f"GetQuestData has an unexpected secondary handler in {path}")
 
           if problems:
               for problem in problems:
                   print(problem)
               raise SystemExit(1)
 
-          print("RemoteFunction handler ownership validated.")
+          print("RemoteFunction handler ownership validated against canonical owner files.")

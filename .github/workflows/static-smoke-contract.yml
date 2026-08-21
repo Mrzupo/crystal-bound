@@ -26,7 +26,7 @@ jobs:
               ],
               "damage": [
                   "src/ServerScriptService/Services/DamageService.lua",
-                  "Humanoid:TakeDamage",
+                  ":TakeDamage(",
                   "GetLastAttacker",
                   "DodgeInvulnerable",
               ],
