@@ -62,7 +62,7 @@ jobs:
           for marker in [
               'player:SetAttribute("ProfileLoaded", false)',
               'player:SetAttribute("ProfileLoaded", true)',
-              'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent then',
+              'if PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Profiles[player] == nil or not player.Parent',
           ]:
               if marker not in player_service:
                   problems.append(f"PlayerService loaded-state lifecycle marker missing: {marker}")
