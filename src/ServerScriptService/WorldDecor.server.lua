@@ -20,9 +20,11 @@ local function at(center, offset)
 	return center + offset
 end
 
-local function clearDecor(island, markerName)
+local function clearDecor(island, markerName, legacyNames)
+	local legacy = {}
+	for _, name in ipairs(legacyNames or {}) do legacy[name] = true end
 	for _, child in ipairs(island:GetChildren()) do
-		if child:GetAttribute("CrystalBoundDecor") == true then
+		if child:GetAttribute("CrystalBoundDecor") == true or legacy[child.Name] then
 			child:Destroy()
 		end
 	end
@@ -84,7 +86,7 @@ if starter then
 		and starter:FindFirstChild("TrainingCamp")
 		and starter.TrainingCamp:GetAttribute("CrystalBoundDecor") == true
 	if not ready then
-		clearDecor(starter, "StarterDecorReady")
+		clearDecor(starter, "StarterDecorReady", { "TreeTrunk", "TreeCanopy", "Rock", "TrainingCamp" })
 		for _, offset in ipairs({ Vector3.new(-45, 1, 38), Vector3.new(-18, 1, 42), Vector3.new(42, 1, 35), Vector3.new(46, 1, -35) }) do
 			addTree(starter, at(starterCenter, offset), Enum.Material.Grass)
 		end
@@ -102,7 +104,7 @@ local tideCenter = WorldConfig.Islands.TIDE.Center
 if tide then
 	local ready = tide:FindFirstChild("TideDecorReady") and hasCount(tide, "Rock", 4) and hasCount(tide, "AncientCrystal", 9)
 	if not ready then
-		clearDecor(tide, "TideDecorReady")
+		clearDecor(tide, "TideDecorReady", { "Rock", "AncientCrystal" })
 		for _, offset in ipairs({ Vector3.new(-35, 1, -35), Vector3.new(30, 1, -32), Vector3.new(-25, 1, 35), Vector3.new(35, 1, 32) }) do
 			addRock(tide, at(tideCenter, offset), Vector3.new(7, 3, 6), Enum.Material.Sandstone)
 		end
@@ -118,7 +120,7 @@ local ancientCenter = WorldConfig.Islands.ANCIENT.Center
 if ancient then
 	local ready = ancient:FindFirstChild("DecorReady") and hasCount(ancient, "AncientPillar", 4) and hasCount(ancient, "PillarCap", 4) and hasCount(ancient, "AncientCrystal", 6)
 	if not ready then
-		clearDecor(ancient, "DecorReady")
+		clearDecor(ancient, "DecorReady", { "AncientPillar", "PillarCap", "AncientCrystal" })
 		for _, data in ipairs({ { Vector3.new(-40, 1, -35), 10 }, { Vector3.new(40, 1, -30), 8 }, { Vector3.new(-35, 1, 35), 7 }, { Vector3.new(45, 1, 40), 11 } }) do
 			addAncientPillar(ancient, at(ancientCenter, data[1]), data[2])
 		end
@@ -133,7 +135,7 @@ local windCenter = WorldConfig.Islands.WIND.Center
 if wind then
 	local ready = wind:FindFirstChild("WindDecorReady") and hasCount(wind, "WindRock", 3) and hasCount(wind, "AncientCrystal", 3)
 	if not ready then
-		clearDecor(wind, "WindDecorReady")
+		clearDecor(wind, "WindDecorReady", { "WindRock", "AncientCrystal" })
 		for _, offset in ipairs({ Vector3.new(-30, 1, 35), Vector3.new(35, 1, 35), Vector3.new(-15, 1, -35) }) do
 			local rock = addPart(wind, "WindRock", Vector3.new(7, 4, 7), at(windCenter, offset), Enum.Material.Slate)
 			rock.Shape = Enum.PartType.Ball
