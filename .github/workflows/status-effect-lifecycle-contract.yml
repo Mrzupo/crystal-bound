@@ -18,6 +18,9 @@ jobs:
           text = Path("src/ServerScriptService/Services/StatusEffectService.lua").read_text(encoding="utf-8")
           required = [
               'local active = setmetatable({}, { __mode = "k" })',
+              'local function getPlayer(humanoid)',
+              'local function isPlayerProfileLoaded(humanoid)',
+              'return player == nil or player:GetAttribute("ProfileLoaded") == true',
               'local token = {}',
               'state.Slow == token',
               'state.Burn ~= token',
@@ -26,10 +29,11 @@ jobs:
               'state.SlowMultiplier = nil',
               'state.Burn = nil',
               'active[humanoid] = nil',
-              'if humanoid.Parent and humanoid.Health > 0 and state.Slow == token then',
-              'if not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token then break end',
+              'not isPlayerProfileLoaded(humanoid)',
+              'if humanoid.Parent and state.Slow == token then',
+              'if isShuttingDown() or not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token or not isPlayerProfileLoaded(humanoid) then break end',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
-              raise SystemExit("missing status-effect lifecycle markers: " + ", ".join(missing))
-          print("Status effect cancellation, death/destroy guards and cleanup contract validated.")
+              raise SystemExit("missing status-effect lifecycle/readiness markers: " + ", ".join(missing))
+          print("Status effect cancellation, loaded-player readiness, death/destroy guards and cleanup contract validated.")
