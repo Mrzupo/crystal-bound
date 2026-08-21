@@ -1,0 +1,66 @@
+name: Crafting Config Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate-crafting-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shared crafting config
+        shell: python
+        run: |
+          from pathlib import Path
+          import math
+          import re
+
+          config = Path('src/ReplicatedStorage/Config/CraftingConfig.lua').read_text(encoding='utf-8')
+          inventory = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
+          service = Path('src/ServerScriptService/Services/CraftingService.lua').read_text(encoding='utf-8')
+          ui = Path('src/StarterPlayer/StarterPlayerScripts/CraftingMenu.client.lua').read_text(encoding='utf-8')
+          if not all(marker in config for marker in ('Recipes', 'Inputs', 'Output')):
+              raise SystemExit('CraftingConfig must define Recipes, Inputs and Output')
+
+          recipe_outputs = re.findall(r'\b[A-Za-z0-9_]+\s*=\s*\{(?:(?!\b[A-Za-z0-9_]+\s*=\s*\{).)*?Output\s*=\s*"([A-Za-z0-9_]+)"', config, re.S)
+          if not recipe_outputs:
+              raise SystemExit('CraftingConfig must contain at least one recipe with an Output')
+          input_sections = re.findall(r'Inputs\s*=\s*\{(.*?)\}', config, re.S)
+          if not input_sections:
+              raise SystemExit('CraftingConfig must contain at least one Inputs block')
+
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          amount_matches = re.findall(rf'\bAmount\s*=\s*({numeric})', config)
+          if not amount_matches:
+              raise SystemExit('CraftingConfig must define at least one recipe Amount')
+          for raw in amount_matches:
+              value = float(raw)
+              if not math.isfinite(value) or value < 1 or value > 1000 or value % 1 != 0:
+                  raise SystemExit(f'Crafting Amount out of bounds: {value}')
+
+          max_per = re.search(rf'\bMaxPerCraft\s*=\s*({numeric})', config)
+          if not max_per or not (1 <= float(max_per.group(1)) <= 1000 and float(max_per.group(1)) % 1 == 0):
+              raise SystemExit('CraftingConfig.MaxPerCraft must be a finite integer within 1..1000')
+
+          for item_id in recipe_outputs:
+              if f'{item_id} = ' not in inventory:
+                  raise SystemExit(f'Crafting output is not registered: {item_id}')
+          input_count = 0
+          for section in input_sections:
+              for item_id, raw in re.findall(r'([A-Za-z0-9_]+)\s*=\s*(' + numeric + r')', section):
+                  input_count += 1
+                  value = float(raw)
+                  if f'{item_id} = ' not in inventory:
+                      raise SystemExit(f'Crafting input is not registered: {item_id}')
+                  if not math.isfinite(value) or value < 1 or value > 1000000 or value % 1 != 0:
+                      raise SystemExit(f'Crafting input amount out of bounds: {item_id}={value}')
+          if input_count == 0:
+              raise SystemExit('CraftingConfig Inputs blocks must contain at least one positive integer item amount')
+
+          for marker in ('positiveInteger', 'safeProduct', 'recipe.Output ~= outputId', 'InventoryConfig.GetItemConfig(itemId)'):
+              if marker not in service:
+                  raise SystemExit(f'CraftingService missing runtime safety marker: {marker}')
+          if 'CraftingConfig' not in ui:
+              raise SystemExit('Crafting UI must consume shared CraftingConfig')
+          print('Crafting signed numeric bounds, non-empty recipe/input structure, item registration and runtime multiplication guards validated.')
