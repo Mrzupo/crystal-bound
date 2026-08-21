@@ -1,0 +1,51 @@
+name: Persistence Read Purity
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/persistence-read-purity-v1"]
+  pull_request:
+
+jobs:
+  validate-read-purity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate side-effect-free persistence readers
+        shell: python
+        run: |
+          from pathlib import Path
+
+          bounty = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
+          mastery = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+
+          bounty_start = bounty.index("function DailyBountyService.Get(profile)")
+          bounty_block = bounty[bounty_start:]
+          if "DailyBountyService.Refresh(profile)" in bounty_block:
+              raise SystemExit("DailyBountyService.Get must not call mutating Refresh")
+          if "local function readSnapshot(profile)" not in bounty:
+              raise SystemExit("DailyBountyService must provide a detached read snapshot path")
+          if "function DailyBountyService.Refresh(profile)" not in bounty or "function DailyBountyService.AddProgress(" not in bounty:
+              raise SystemExit("DailyBounty mutation owners are missing")
+
+          readers = (
+              ("Get", "function CrystalMastery.Get(profile, crystalId)", "function CrystalMastery.GetRequiredXP"),
+              ("GetBonuses", "function CrystalMastery.GetBonuses(profile, crystalId)", "function CrystalMastery.GetUpgradeCost"),
+              ("GetUpgradeCost", "function CrystalMastery.GetUpgradeCost(profile, crystalId)", "function CrystalMastery.Upgrade"),
+          )
+          for name, start_marker, end_marker in readers:
+              start = mastery.index(start_marker)
+              end = mastery.index(end_marker, start)
+              block = mastery[start:end]
+              if "ensure(profile, crystalId)" in block:
+                  raise SystemExit(f"CrystalMastery.{name} must not call mutating ensure()")
+              if "profile.CrystalMastery =" in block:
+                  raise SystemExit(f"CrystalMastery.{name} must not initialize persisted mastery state")
+
+          if "local function readMastery(profile, crystalId)" not in mastery:
+              raise SystemExit("CrystalMastery must centralize side-effect-free mastery reads")
+          if "function CrystalMastery.AddXP" not in mastery or "function CrystalMastery.Upgrade" not in mastery:
+              raise SystemExit("CrystalMastery explicit mutation owners are missing")
+          if "InventoryConfig.GetItemConfig(itemId)" not in mastery:
+              raise SystemExit("CrystalMastery upgrade-cost reads must validate canonical inventory material IDs")
+
+          print("Persistence read purity validated for DailyBounty and CrystalMastery.")
