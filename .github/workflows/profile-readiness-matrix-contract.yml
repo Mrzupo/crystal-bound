@@ -1,0 +1,68 @@
+name: Profile Readiness Matrix Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate all character-dependent gameplay readiness boundaries
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path('src/ServerScriptService')
+          files = {
+              'damage': root / 'Services/DamageService.lua',
+              'dodge': root / 'Services/DodgeService.lua',
+              'ability': root / 'Services/CrystalAbilityService.lua',
+              'quest': root / 'Services/QuestService.lua',
+              'bounty': root / 'Services/DailyBountyService.lua',
+              'status': root / 'Services/StatusEffectService.lua',
+              'speed': root / 'StatusSpeedGuardV2.server.lua',
+              'npc': root / 'Services/NPCService.lua',
+              'boss': root / 'Services/BossService.lua',
+              'telegraph': root / 'BossTelegraph.server.lua',
+              'portal': root / 'WorldTheme.server.lua',
+              'npcmenu': root / 'NPCMenuBridge.server.lua',
+              'shop': root / 'ShopRemote.server.lua',
+              'craft': root / 'CraftingRemote.server.lua',
+              'useitem': root / 'UseItemRemote.server.lua',
+              'bootstrap': root / 'Bootstrap.server.lua',
+          }
+          text = {name: path.read_text(encoding='utf-8') for name, path in files.items()}
+
+          required = {
+              'damage': ['ProfileLoaded', 'isProfileLoaded'],
+              'dodge': ['ProfileLoaded', 'readyCharacters'],
+              'ability': ['ProfileLoaded', 'PlayerService.Profiles[player] == profile'],
+              'quest': ['ProfileLoaded', 'PlayerService.Profiles[player] == profile'],
+              'bounty': ['ProfileLoaded', 'PlayerService.Profiles[player] == profile'],
+              'status': ['ProfileLoaded', 'isPlayerProfileLoaded'],
+              'speed': ['ProfileLoaded', 'GetAttributeChangedSignal("ProfileLoaded")'],
+              'npc': ['ProfileLoaded', 'AIStarted'],
+              'boss': ['ProfileLoaded', 'CrystalGuardian'],
+              'telegraph': ['ProfileLoaded', 'targetCharacter'],
+              'portal': ['ProfileLoaded', 'PortalExpectedDestination'],
+              'npcmenu': ['ProfileLoaded', 'player.Character == character'],
+              'shop': ['ProfileLoaded', 'ShopService.Buy'],
+              'craft': ['ProfileLoaded', 'CraftingService.Craft'],
+              'useitem': ['ProfileLoaded', 'PlayerService.Heal(player, healAmount)'],
+              'bootstrap': ['ProfileLoaded', 'CrystalUpgradeRequest', 'QuestRequest'],
+          }
+
+          problems = []
+          for name, markers in required.items():
+              for marker in markers:
+                  if marker not in text[name]:
+                      problems.append(f'{name}: missing readiness marker {marker}')
+
+          if problems:
+              for problem in problems:
+                  print(' - ' + problem)
+              raise SystemExit(1)
+          print('Cross-service ProfileLoaded readiness matrix validated.')
