@@ -40,8 +40,28 @@ jobs:
                   print(f" - EnemyConfig missing field: {problem}")
               raise SystemExit(1)
 
-          if "function EnemyConfig.Get(typeId)" not in text or "local source = EnemyConfig.Types[typeId]" not in text or "local function clone(value)" not in text or "local result = clone(source)" not in text or "result.Respawn = math.clamp" not in text:
-              raise SystemExit("EnemyConfig.Get must perform strict lookup, detached deep-copy and central Respawn normalization")
+          getter_markers = [
+              "function EnemyConfig.Get(typeId)",
+              "local source = EnemyConfig.Types[typeId]",
+              "local function clone(value)",
+              "local result = clone(source)",
+              "result.Health = math.clamp",
+              "result.Level = math.clamp",
+              "result.XP = math.clamp",
+              "result.Money = math.clamp",
+              "result.Respawn = math.clamp",
+              "result.AggroRange = math.clamp",
+              "result.AttackRange = math.clamp",
+              "result.AttackDamage = math.clamp",
+              "result.AttackCooldown = math.clamp",
+              "result.DropChance = math.clamp",
+              "result.Special.Cooldown = math.clamp",
+              "result.Special.Range = math.clamp",
+              "result.Special.BonusDamage = math.clamp",
+          ]
+          for marker in getter_markers:
+              if marker not in text:
+                  raise SystemExit(f"EnemyConfig.Get missing centralized runtime-bound marker: {marker}")
           if "return EnemyConfig.Types.TrainingDummy" in text:
               raise SystemExit("EnemyConfig.Get must not silently fall back to TrainingDummy")
           if "function EnemyConfig.IsValid(typeId)" not in text:
@@ -105,4 +125,4 @@ jobs:
               if offset < 0 or offset > 100:
                   raise SystemExit("Enemy TeleportOffset is outside 0..100")
 
-          print("EnemyConfig combat bounds, aggro bounds, centralized Respawn normalization, detached deep-copy lookup, strict lookup, lifecycle, special movement and canonical loot validated.")
+          print("EnemyConfig centralized runtime bounds, combat bounds, aggro bounds, Respawn normalization, detached deep-copy lookup, lifecycle, special movement and canonical loot validated.")
