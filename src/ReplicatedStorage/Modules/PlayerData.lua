@@ -130,7 +130,11 @@ function PlayerData.Reconcile(input)
 			normalizedMastery[crystalId] = { Level = level, XP = xp }
 		end
 	end
-	if not normalizedMastery.EMBER and table.find(owned, "EMBER") then normalizedMastery.EMBER = { Level = 1, XP = 0 } end
+	for _, crystalId in ipairs(owned) do
+		if not normalizedMastery[crystalId] then
+			normalizedMastery[crystalId] = { Level = 1, XP = 0 }
+		end
+	end
 	data.CrystalMastery = normalizedMastery
 
 	local stats = type(data.Stats) == "table" and data.Stats or {}
