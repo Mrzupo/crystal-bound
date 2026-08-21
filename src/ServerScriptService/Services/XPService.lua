@@ -57,16 +57,12 @@ end
 
 function XPService.GetLevel(profile)
 	local level = normalizedLevel(profile)
-	profile.Level = level
-	if level >= XPConfig.MaxLevel then profile.Experience = 0 end
 	return level
 end
 
 function XPService.GetXP(profile)
 	local xp = normalizedXP(profile)
-	profile.Experience = xp
 	if normalizedLevel(profile) >= XPConfig.MaxLevel then
-		profile.Experience = 0
 		return 0
 	end
 	return xp
