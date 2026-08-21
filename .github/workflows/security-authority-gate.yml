@@ -35,12 +35,30 @@ jobs:
               text = path.read_text(encoding="utf-8")
               if "profile.Money =" in text:
                   money_owners.append(str(path))
-              if re.search(r'profile\.Inventory\[[^\]]+\]\s*=', text):
+              if re.search(r'profile\\.Inventory\\[[^\\]]+\\]\\s*=', text):
                   inventory_direct.append(str(path))
           if money_owners != ["src/ServerScriptService/Services/EconomyService.lua"]:
               raise SystemExit(f"Direct profile.Money mutation escaped EconomyService: {money_owners}")
           if inventory_direct != ["src/ServerScriptService/Services/InventoryService.lua"]:
               raise SystemExit(f"Direct profile.Inventory mutation escaped InventoryService: {inventory_direct}")
+
+          profile_loaded_writes = []
+          for path in server_files:
+              text = path.read_text(encoding="utf-8")
+              if 'SetAttribute("ProfileLoaded"' in text:
+                  profile_loaded_writes.append(str(path))
+          allowed_profile_loaded_owner = "src/ServerScriptService/Services/PlayerService.lua"
+          if profile_loaded_writes != [allowed_profile_loaded_owner]:
+              raise SystemExit(f"ProfileLoaded must have exactly one server write owner: {profile_loaded_writes}")
+
+          player_service = (root / "ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          for marker in (
+              'player:SetAttribute("ProfileLoaded", false)',
+              'player:SetAttribute("ProfileLoaded", true)',
+              'if not PlayerService.ShuttingDown and player:GetAttribute("ProfileLoaded") == true then',
+          ):
+              if marker not in player_service:
+                  raise SystemExit(f"PlayerService ProfileLoaded readiness marker missing: {marker}")
 
           invoke_counts = {}
           for path in server_files:
@@ -56,4 +74,4 @@ jobs:
           for path, count in invoke_counts.items():
               if path not in allowed or count != allowed[path]:
                   raise SystemExit(f"Unexpected OnServerInvoke ownership/count: {path} -> {count}")
-          print("Repository-wide gameplay authority gate validated.")
+          print("Repository-wide gameplay authority gate validated, including server-owned ProfileLoaded readiness.")
