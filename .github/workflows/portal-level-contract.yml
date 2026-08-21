@@ -13,6 +13,8 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           world = Path('src/ReplicatedStorage/Config/WorldConfig.lua').read_text(encoding='utf-8')
           bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
           theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
@@ -38,17 +40,22 @@ jobs:
               raise SystemExit('Portal UI must derive the displayed gate from the server-side requiredLevel argument')
 
           destinations = {
-              'TidePortal': 'Vector3.new(120,4,0)',
-              'StarterPortal': 'Vector3.new(48,4,0)',
-              'WindPortal': 'Vector3.new(280,4,0)',
-              'TideReturnPortal': 'Vector3.new(210,4,0)',
-              'AncientPortal': 'Vector3.new(440,4,0)',
-              'WindReturnPortal': 'Vector3.new(380,4,0)',
+              'TidePortal': (120, 4, 0),
+              'StarterPortal': (48, 4, 0),
+              'WindPortal': (280, 4, 0),
+              'TideReturnPortal': (210, 4, 0),
+              'AncientPortal': (440, 4, 0),
+              'WindReturnPortal': (380, 4, 0),
           }
-          for portal, destination in destinations.items():
-              if destination not in bootstrap:
-                  raise SystemExit(f'{portal} Bootstrap destination drift: missing {destination}')
-              if destination not in theme:
-                  raise SystemExit(f'{portal} WorldTheme destination drift: missing {destination}')
+
+          def has_vector3(text, values):
+              pattern = r'Vector3\.new\(\s*' + r'\s*,\s*'.join(re.escape(str(v)) for v in values) + r'\s*\)'
+              return re.search(pattern, text) is not None
+
+          for portal, values in destinations.items():
+              if not has_vector3(bootstrap, values):
+                  raise SystemExit(f'{portal} Bootstrap destination drift: missing numeric Vector3 {values}')
+              if not has_vector3(theme, values):
+                  raise SystemExit(f'{portal} WorldTheme destination drift: missing numeric Vector3 {values}')
 
           print('World/portal canonical level and destination consistency contract validated.')
