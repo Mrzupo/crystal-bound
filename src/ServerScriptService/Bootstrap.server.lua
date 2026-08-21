@@ -88,6 +88,7 @@ remotes.QuestRequest.OnServerEvent:Connect(function(player, action, questId)
 	local now = os.clock()
 	if now < (nextQuestRequest[player] or 0) then return end
 	nextQuestRequest[player] = now + QUEST_REQUEST_INTERVAL
+	if action == "Start" and player:GetAttribute("ProfileLoaded") ~= true then return end
 
 	local profile = PlayerService.GetProfile(player)
 	if profile and action == "Start" and type(questId) == "string" then
@@ -107,6 +108,7 @@ remotes.InventoryRequest.OnServerEvent:Connect(function(player, action, itemId, 
 
 	local profile = PlayerService.GetProfile(player); if not profile then return end
 	if action == "Sell" and type(itemId) == "string" then
+		if player:GetAttribute("ProfileLoaded") ~= true then return end
 		if not isNearNPC(player, "MaterialTrader") then player:SetAttribute("ShopMessage", "You need to be near the Material Trader."); return end
 		local ok, earned = EconomyService.SellItem(profile, itemId, amount or 1, InventoryService)
 		if ok then PlayerService.Sync(player); remotes.MoneyChanged:FireClient(player, profile.Money); remotes.InventoryChanged:FireClient(player, InventoryService.GetInventory(profile)); player:SetAttribute("ShopMessage", string.format("Sold %s for %d Money", itemId, earned)) else player:SetAttribute("ShopMessage", "You do not have that item.") end
@@ -130,6 +132,7 @@ remotes.CrystalUpgradeRequest.OnServerEvent:Connect(function(player, crystalId)
 	if now < (nextCrystalUpgradeRequest[player] or 0) then return end
 	nextCrystalUpgradeRequest[player] = now + CRYSTAL_UPGRADE_INTERVAL
 	if type(crystalId) ~= "string" or not CrystalSystem.Exists(crystalId) then return end
+	if player:GetAttribute("ProfileLoaded") ~= true then return end
 	if not isNearNPC(player, "CrystalKeeper") then player:SetAttribute("CrystalMessage", "Go to the Crystal Keeper to upgrade your crystal."); return end
 	local profile = PlayerService.GetProfile(player); if not profile or not CrystalService.OwnsCrystal(profile, crystalId) then return end
 	local mastery = CrystalMastery.Get(profile, crystalId); if mastery.Level >= CrystalUpgradeConfig.MaxLevel then player:SetAttribute("CrystalMessage", crystalId .. " mastery is already maxed."); return end
