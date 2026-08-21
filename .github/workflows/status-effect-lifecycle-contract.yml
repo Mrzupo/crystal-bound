@@ -30,6 +30,7 @@ jobs:
               'state.Burn = nil',
               'active[humanoid] = nil',
               'not isPlayerProfileLoaded(humanoid)',
+              'if not isShuttingDown() and isPlayerProfileLoaded(humanoid) and humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then',
               'if humanoid.Parent and state.Slow == token then',
               'if isShuttingDown() or not humanoid.Parent or humanoid.Health <= 0 or state.Burn ~= token or not isPlayerProfileLoaded(humanoid) then break end',
           ]
