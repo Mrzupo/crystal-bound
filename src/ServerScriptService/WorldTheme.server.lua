@@ -37,7 +37,8 @@ local portalCooldowns = setmetatable({}, { __mode = "k" })
 local portalCooldownTokens = setmetatable({}, { __mode = "k" })
 local lastPositions = setmetatable({}, { __mode = "k" })
 local portalConnections = setmetatable({}, { __mode = "k" })
-local playerCharacterConnections = setmetatable({}, { __mode = "k" })
+local playerConnections = setmetatable({}, { __mode = "k" })
+local readyCharacters = setmetatable({}, { __mode = "k" })
 
 local function getRoot(player)
 	local character = player.Character
@@ -60,7 +61,7 @@ local function clearPortalState(player)
 end
 
 local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
-	if not player.Parent or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character then return end
+	if not player.Parent or PlayerService.ShuttingDown or readyCharacters[player] ~= character or player.Character ~= character then return end
 	local profile = PlayerService.GetProfile(player)
 	if not profile or profile.Level < requiredLevel then return end
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -73,10 +74,15 @@ local function tryArmArrival(player, character, destination, beforePosition, req
 	portalCandidates[player] = nil
 end
 
-local function disconnectPlayerCharacter(player)
-	local connection = playerCharacterConnections[player]
-	if connection and connection.Connected then connection:Disconnect() end
-	playerCharacterConnections[player] = nil
+local function disconnectPlayer(player)
+	local connections = playerConnections[player]
+	if connections then
+		for _, connection in ipairs(connections) do
+			if connection and connection.Connected then connection:Disconnect() end
+		end
+	end
+	playerConnections[player] = nil
+	readyCharacters[player] = nil
 end
 
 local function bindPortal(portal)
@@ -86,7 +92,7 @@ local function bindPortal(portal)
 	portalConnections[portal] = portal.Touched:Connect(function(hit)
 		local character = hit and hit:FindFirstAncestorOfClass("Model")
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character or portalCooldowns[player] then return end
+		if not player or PlayerService.ShuttingDown or readyCharacters[player] ~= character or player.Character ~= character or portalCooldowns[player] then return end
 		local profile = PlayerService.GetProfile(player)
 		if not profile or profile.Level < target.RequiredLevel then return end
 		local root = character:FindFirstChild("HumanoidRootPart")
@@ -145,7 +151,7 @@ for islandName, theme in pairs(themes) do
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	disconnectPlayerCharacter(player)
+	disconnectPlayer(player)
 	clearPortalState(player)
 	lastPositions[player] = nil
 end)
@@ -154,16 +160,29 @@ bindExistingPortals()
 islands.DescendantAdded:Connect(bindPortal)
 
 local function bindPlayer(player)
-	disconnectPlayerCharacter(player)
+	disconnectPlayer(player)
 	clearPortalState(player)
 	rememberPosition(player)
-	playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+	local connections = {}
+	playerConnections[player] = connections
+	connections[#connections + 1] = player.CharacterAdded:Connect(function(character)
 		if PlayerService.ShuttingDown then return end
+		readyCharacters[player] = nil
 		clearPortalState(player)
 		task.defer(function()
 			if player.Parent and not PlayerService.ShuttingDown and player.Character == character then rememberPosition(player) end
 		end)
 	end)
+	connections[#connections + 1] = player:GetAttributeChangedSignal("ProfileLoaded"):Connect(function()
+		if player:GetAttribute("ProfileLoaded") == true and player.Character then
+			readyCharacters[player] = player.Character
+		else
+			readyCharacters[player] = nil
+		end
+	end)
+	if player.Character and player:GetAttribute("ProfileLoaded") == true then
+		readyCharacters[player] = player.Character
+	end
 end
 
 for _, player in ipairs(Players:GetPlayers()) do bindPlayer(player) end
@@ -179,7 +198,7 @@ task.spawn(function()
 		for player, candidate in pairs(portalCandidates) do
 			if now > candidate.ExpiresAt then
 				portalCandidates[player] = nil
-			elseif player.Parent and not PlayerService.ShuttingDown and player:GetAttribute("ProfileLoaded") == true and player.Character == candidate.Character then
+			elseif player.Parent and not PlayerService.ShuttingDown and readyCharacters[player] == candidate.Character and player.Character == candidate.Character then
 				tryArmArrival(player, candidate.Character, candidate.Destination, candidate.BeforePosition, candidate.RequiredLevel)
 			end
 		end
