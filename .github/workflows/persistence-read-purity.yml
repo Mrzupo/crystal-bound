@@ -17,6 +17,8 @@ jobs:
 
           bounty = Path("src/ServerScriptService/Services/DailyBountyService.lua").read_text(encoding="utf-8")
           mastery = Path("src/ReplicatedStorage/Modules/CrystalMastery.lua").read_text(encoding="utf-8")
+          xp = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
+          economy = Path("src/ServerScriptService/Services/EconomyService.lua").read_text(encoding="utf-8")
 
           bounty_start = bounty.index("function DailyBountyService.Get(profile)")
           bounty_block = bounty[bounty_start:]
@@ -48,4 +50,18 @@ jobs:
           if "InventoryConfig.GetItemConfig(itemId)" not in mastery:
               raise SystemExit("CrystalMastery upgrade-cost reads must validate canonical inventory material IDs")
 
-          print("Persistence read purity validated for DailyBounty and CrystalMastery.")
+          for text, name, readers in (
+              (xp, "XPService", [("GetLevel", "function XPService.GetLevel(profile)", "function XPService.GetXP"), ("GetXP", "function XPService.GetXP(profile)", "function XPService.GetRequiredXP")]),
+              (economy, "EconomyService", [("GetMoney", "function EconomyService.GetMoney(profile)", "function EconomyService.CanAfford"), ("CanAfford", "function EconomyService.CanAfford(profile, amount)", "function EconomyService.GetSellPrice")]),
+          ):
+              for reader_name, start_marker, end_marker in readers:
+                  start = text.index(start_marker)
+                  end = text.index(end_marker, start)
+                  block = text[start:end]
+                  if "profile.Level =" in block or "profile.Experience =" in block or "profile.Money =" in block:
+                      raise SystemExit(f"{name}.{reader_name} must not mutate persisted profile state")
+
+          if "function XPService.AddXP" not in xp or "function EconomyService.AddMoney" not in economy:
+              raise SystemExit("Explicit XP/Economy mutation owners are missing")
+
+          print("Persistence read purity validated for DailyBounty, CrystalMastery, XP and Economy.")
