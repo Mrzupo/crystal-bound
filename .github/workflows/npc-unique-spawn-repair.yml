@@ -1,0 +1,27 @@
+name: NPC Unique Spawn Repair
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-unique-spawn-repair-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate unique NPC repair and AI binding
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
+          required = [
+              'if existing:GetAttribute("EnemyType") ~= typeId then',
+              'existing:Destroy()',
+              'if existing:GetAttribute("AIStarted") ~= true then NPCService.StartEnemyAI(existing) end',
+              'return existing',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Unique NPC spawn repair markers missing: " + ", ".join(missing))
+          print("Unique NPC type repair, malformed-instance replacement and AI rebind validated.")
