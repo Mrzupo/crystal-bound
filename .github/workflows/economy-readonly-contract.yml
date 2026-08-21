@@ -1,0 +1,29 @@
+name: Economy Readonly Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/economy-readonly-reads-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate economy reads do not mutate the profile
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/EconomyService.lua").read_text(encoding="utf-8")
+          get_start = text.index("function EconomyService.GetMoney")
+          afford_start = text.index("function EconomyService.CanAfford", get_start)
+          sell_start = text.index("function EconomyService.GetSellPrice", afford_start)
+          get_block = text[get_start:afford_start]
+          afford_block = text[afford_start:sell_start]
+          for block_name, block in (("GetMoney", get_block), ("CanAfford", afford_block)):
+              if "profile.Money =" in block:
+                  raise SystemExit(f"EconomyService.{block_name} must be side-effect free")
+          if "return math.clamp" not in get_block or "return current >= amount" not in afford_block:
+              raise SystemExit("Economy read APIs must still return normalized values")
+          print("Economy read APIs return normalized values without mutating persisted money state.")
