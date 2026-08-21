@@ -213,6 +213,7 @@ local function refreshQuests()
 	questRefreshBusy = false
 	if not ok or type(result) ~= "table" then return end
 	if not player.Parent or questRefreshGeneration ~= requestGeneration or player.Character ~= requestCharacter then return end
+	if player:GetAttribute("ProfileLoaded") ~= true then return end
 	local gui = ensureHud()
 	local quest = gui:FindFirstChild("Quest")
 	if not quest then return end
@@ -262,7 +263,7 @@ local function refreshBoss()
 	bossBar.HPBack.HPText.Text = string.format("%d / %d HP", math.max(0, math.floor(humanoid.Health)), math.floor(humanoid.MaxHealth))
 end
 
-for _, attribute in ipairs({ "Level", "Experience", "Money", "EquippedCrystal", "CrystalMasteryLevel", "CrystalMasteryXP", "AchievementCount", "Title" }) do
+for _, attribute in ipairs({ "ProfileLoaded", "Level", "Experience", "Money", "EquippedCrystal", "CrystalMasteryLevel", "CrystalMasteryXP", "AchievementCount", "Title" }) do
 	player:GetAttributeChangedSignal(attribute):Connect(function()
 		refreshHud()
 		scheduleQuestRefresh()
