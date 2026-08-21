@@ -1,0 +1,32 @@
+name: Quest Remote Canonical Keeper Contract V5
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/bootstrap-npc-identity-v5"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical NPC identity for Bootstrap interactions
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          for marker in (
+              'local function isNearCanonicalNPC(player, npcName, range)',
+              'if npcName ~= "CrystalKeeper" and npcName ~= "MaterialTrader" then return false end',
+              'npc:IsA("Model")',
+              'npc.Parent ~= folder',
+              'npc:GetAttribute("Interactable") ~= true',
+              'local npc = folder and folder:FindFirstChild(npcName)',
+              'if not isNearCanonicalNPC(player, "CrystalKeeper") then',
+              'if not isNearCanonicalNPC(player, "MaterialTrader") then',
+          ):
+              if marker not in text:
+                  raise SystemExit(f"missing Bootstrap NPC authority marker: {marker}")
+          if 'local function isNearNPC(' in text:
+              raise SystemExit("Bootstrap must not retain the weaker name-only isNearNPC helper")
+          print("Quest, sell and crystal-upgrade proximity checks share canonical interactable NPC identity validation.")
