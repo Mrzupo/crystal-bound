@@ -1,0 +1,24 @@
+name: Combat Rate Limit Before Action Contract V2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/combat-rate-limit-before-validation-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate CombatService request limiter precedes action validation
+        shell: python
+        run: |
+          from pathlib import Path
+          source = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          start = source.index("function CombatService.HandleRequest")
+          block = source[start:source.index("function CombatService.CleanupPlayer", start)]
+          gate = block.index("nextRequest[player] = requestNow + REQUEST_INTERVAL")
+          action = block.index("if not VALID_ACTIONS[action] then return end")
+          if gate > action:
+              raise SystemExit("Combat request rate-limit window must be consumed before action validation")
+          print("Combat malformed actions consume the per-player request window before validation.")
