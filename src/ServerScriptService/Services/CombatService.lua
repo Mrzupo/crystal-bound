@@ -147,6 +147,7 @@ end
 
 function CombatService.HandleRequest(player, action, target)
 	if not player:IsA("Player") then return end
+	if player:GetAttribute("ProfileLoaded") ~= true then return end
 	local requestNow = os.clock()
 	if requestNow < (nextRequest[player] or 0) then return end
 	nextRequest[player] = requestNow + REQUEST_INTERVAL

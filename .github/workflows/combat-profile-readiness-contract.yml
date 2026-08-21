@@ -1,0 +1,29 @@
+name: Combat Profile Readiness Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate CombatRequest is Character-ready before gameplay
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          start = text.index("function CombatService.HandleRequest")
+          end = text.index("function CombatService.CleanupPlayer", start)
+          block = text[start:end]
+          ready = block.index('if player:GetAttribute("ProfileLoaded") ~= true then return end')
+          limiter = block.index('nextRequest[player] = requestNow + REQUEST_INTERVAL')
+          validation = block.index('if not VALID_ACTIONS[action] then return end')
+          if ready > limiter:
+              raise SystemExit("Combat ProfileLoaded gate must precede request processing")
+          if limiter > validation:
+              raise SystemExit("Combat request limiter must remain ahead of action validation")
+          print("CombatRequest requires current ProfileLoaded readiness before gameplay or rate-limit processing.")
