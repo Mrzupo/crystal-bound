@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Config.CrystalUpgradeConfig)
 local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
+local InventoryConfig = require(ReplicatedStorage.Config.InventoryConfig)
 
 local CrystalMastery = {}
 
@@ -57,9 +58,19 @@ local function ensure(profile, crystalId)
 	return mastery
 end
 
+local function readMastery(profile, crystalId)
+	if type(profile) ~= "table" or not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end
+	local mastery = type(profile.CrystalMastery) == "table" and profile.CrystalMastery[crystalId] or nil
+	local maxLevel = math.max(1, math.floor(finiteNumber(Config.MaxLevel) or 10))
+	local maxExperience = math.max(0, math.floor(finiteNumber(Config.MaxExperience) or 100000000))
+	local level = math.clamp(math.floor(finiteNumber(type(mastery) == "table" and mastery.Level) or 1), 1, maxLevel)
+	local xp = math.clamp(math.floor(finiteNumber(type(mastery) == "table" and mastery.XP) or 0), 0, maxExperience)
+	if level >= maxLevel then xp = 0 end
+	return { Level = level, XP = xp }
+end
+
 function CrystalMastery.Get(profile, crystalId)
-	local mastery = ensure(profile, crystalId)
-	return mastery and { Level = mastery.Level, XP = mastery.XP } or neutralMastery()
+	return readMastery(profile, crystalId) or neutralMastery()
 end
 
 function CrystalMastery.GetRequiredXP(level)
@@ -101,15 +112,7 @@ function CrystalMastery.AddXP(profile, crystalId, amount)
 end
 
 function CrystalMastery.GetBonuses(profile, crystalId)
-	if not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then
-		return {
-			DamageMultiplier = 1,
-			AbilityDamageMultiplier = 1,
-			MaxHealthBonus = 0,
-			WalkSpeedBonus = 0,
-		}
-	end
-	local mastery = ensure(profile, crystalId)
+	local mastery = readMastery(profile, crystalId)
 	if not mastery then
 		return {
 			DamageMultiplier = 1,
@@ -133,17 +136,18 @@ end
 
 function CrystalMastery.GetUpgradeCost(profile, crystalId)
 	if not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end
-	local mastery = ensure(profile, crystalId)
-	if not mastery then return nil end
 	local maxLevel = math.max(1, math.floor(finiteNumber(Config.MaxLevel) or 10))
-	if mastery.Level >= maxLevel then return {} end
+	local masteryState = type(profile.CrystalMastery) == "table" and profile.CrystalMastery[crystalId] or nil
+	local masteryLevel = type(masteryState) == "table" and finiteNumber(masteryState.Level) or nil
+	local safeLevel = math.clamp(math.floor(masteryLevel or 1), 1, maxLevel)
+	if safeLevel >= maxLevel then return {} end
 	local base = type(Config.BaseCosts) == "table" and Config.BaseCosts[crystalId] or nil
 	if type(base) ~= "table" or next(base) == nil then return nil end
 	local cost = {}
-	local multiplier = math.max(1, mastery.Level)
+	local multiplier = math.max(1, safeLevel)
 	for itemId, amount in pairs(base) do
 		local safeAmount = finiteNumber(amount)
-		if type(itemId) ~= "string" or not safeAmount or safeAmount <= 0 or safeAmount % 1 ~= 0 then return nil end
+		if type(itemId) ~= "string" or not InventoryConfig.GetItemConfig(itemId) or not safeAmount or safeAmount <= 0 or safeAmount % 1 ~= 0 then return nil end
 		local total = math.floor(safeAmount) * multiplier
 		if total > 1000000000 then return nil end
 		cost[itemId] = total
