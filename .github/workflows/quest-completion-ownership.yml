@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Ensure QuestSystem completion remains service-owned
+      - name: Ensure QuestSystem completion remains service-owned and profile-bound
         shell: python
         run: |
           from pathlib import Path
@@ -27,6 +27,11 @@ jobs:
 
           service = (root / "ServerScriptService/Services/QuestService.lua").read_text(encoding="utf-8")
           for marker in (
+              "local PlayerService = require(script.Parent.PlayerService)",
+              "local function validPlayerProfile(player, profile)",
+              'player:GetAttribute("ProfileLoaded") == true',
+              "PlayerService.Profiles[player] == profile",
+              "if not validPlayerProfile(player, profile) then return false end",
               "QuestSystem.IsActive(profile, questId)",
               "QuestSystem.Complete(profile, questId)",
               "XPService.AddXP(profile, rewardXP)",
@@ -54,4 +59,4 @@ jobs:
                   if f'"{quest_id}"' in text and "QuestService.Complete" in text:
                       raise SystemExit(f"Unexpected server-triggered quest completion owner for {quest_id}: {path}")
 
-          print("Quest completion ownership and server-triggered special quest ownership validated.")
+          print("Quest completion ownership, canonical player/profile context and server-triggered special quest ownership validated.")
