@@ -31,6 +31,7 @@ local sellOrder = shopConfig.SellOrder or {}
 local inventory = {}
 local questRefreshBusy = false
 local questRefreshQueued = false
+local questRefreshGeneration = 0
 local lastBossRefresh = 0
 local BOSS_REFRESH_INTERVAL = 0.1
 local localAbilityReadyAt = 0
@@ -206,9 +207,12 @@ end
 local function refreshQuests()
 	if questRefreshBusy then return end
 	questRefreshBusy = true
+	local requestGeneration = questRefreshGeneration
+	local requestCharacter = player.Character
 	local ok, result = pcall(function() return getQuestData:InvokeServer() end)
 	questRefreshBusy = false
 	if not ok or type(result) ~= "table" then return end
+	if not player.Parent or questRefreshGeneration ~= requestGeneration or player.Character ~= requestCharacter then return end
 	local gui = ensureHud()
 	local quest = gui:FindFirstChild("Quest")
 	if not quest then return end
@@ -231,9 +235,10 @@ end
 local function scheduleQuestRefresh()
 	if questRefreshQueued or questRefreshBusy then return end
 	questRefreshQueued = true
+	local queuedGeneration = questRefreshGeneration
 	task.delay(0.1, function()
 		questRefreshQueued = false
-		if player.Parent then refreshQuests() end
+		if player.Parent and questRefreshGeneration == queuedGeneration then refreshQuests() end
 	end)
 end
 
@@ -278,6 +283,14 @@ levelUp.OnClientEvent:Connect(function(level)
 	refreshHud(); scheduleQuestRefresh()
 end)
 inventoryChanged.OnClientEvent:Connect(function(data) inventory = type(data) == "table" and data or {}; refreshHud() end)
+
+player.CharacterAdded:Connect(function()
+	questRefreshGeneration += 1
+	questRefreshQueued = false
+	task.defer(function()
+		if player.Parent then refreshQuests() end
+	end)
+end)
 
 refreshHud()
 refreshQuests()
