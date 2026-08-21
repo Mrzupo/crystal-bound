@@ -14,6 +14,8 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           text = Path("src/ServerScriptService/SessionHeartbeat.server.lua").read_text(encoding="utf-8")
           player_service = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
           required = [
@@ -36,6 +38,20 @@ jobs:
           if flag_index > begin_shutdown_index:
               raise SystemExit('The global shutdown flag must be published before PlayerService enters shutdown state')
 
+          shutdown_match = re.search(r'SHUTDOWN_TIMEOUT\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)', text)
+          if not shutdown_match:
+              raise SystemExit('SessionHeartbeat must define numeric SHUTDOWN_TIMEOUT')
+          shutdown_timeout = float(shutdown_match.group(1))
+          if shutdown_timeout <= 0 or shutdown_timeout > 30:
+              raise SystemExit('SHUTDOWN_TIMEOUT must remain within a safe 0..30 second server-shutdown window')
+
+          removal_match = re.search(r'REMOVAL_OPERATION_TIMEOUT\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)', player_service)
+          if not removal_match:
+              raise SystemExit('PlayerService must define REMOVAL_OPERATION_TIMEOUT')
+          removal_timeout = float(removal_match.group(1))
+          if removal_timeout <= 0 or removal_timeout >= shutdown_timeout:
+              raise SystemExit('REMOVAL_OPERATION_TIMEOUT must be positive and strictly shorter than SHUTDOWN_TIMEOUT')
+
           root = Path("src/ServerScriptService")
           remove_calls = []
           for path in root.rglob("*.lua"):
@@ -49,7 +65,7 @@ jobs:
               "RemovalResults = setmetatable({}, { __mode = \"k\" })",
               "function PlayerService.HasLoadedProfile(player)",
               "if PlayerService.Closing[player] then",
-              "while PlayerService.Closing[player] and os.clock() - started < OPERATION_TIMEOUT do",
+              "while PlayerService.Closing[player] and os.clock() - started < REMOVAL_OPERATION_TIMEOUT do",
               "return PlayerService.RemovalResults[player] == true",
               "PlayerService.RemovalResults[player] = true",
               "PlayerService.RemovalResults[player] = false",
@@ -58,4 +74,4 @@ jobs:
           ):
               if marker not in player_service:
                   raise SystemExit("PlayerService missing shutdown guard: " + marker)
-          print("Session shutdown persistence, duplicate-remove serialization, global gameplay shutdown guard and ordered published shutdown flag validated.")
+          print("Session shutdown persistence, dedicated removal contention timeout, duplicate-remove serialization, global gameplay shutdown guard and ordered published shutdown flag validated.")
