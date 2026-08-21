@@ -1,5 +1,5 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlayerService = require(script.Parent.Services.PlayerService)
 local InventoryService = require(script.Parent.Services.InventoryService)
 local ConsumableConfig = require(ReplicatedStorage.Config.ConsumableConfig)
@@ -29,6 +29,7 @@ remote.OnServerEvent:Connect(function(player, itemId)
 	local potion = ConsumableConfig.HealthPotion
 	if type(potion) ~= "table" or type(potion.ItemId) ~= "string" then return end
 	if type(itemId) ~= "string" or itemId ~= potion.ItemId then return end
+	if player:GetAttribute("ProfileLoaded") ~= true then return end
 	local healAmount = finiteNumber(potion.HealAmount, 0)
 	if healAmount <= 0 then
 		player:SetAttribute("ShopMessage", "Health Potion configuration is unavailable.")
