@@ -60,7 +60,7 @@ local function clearPortalState(player)
 end
 
 local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
-	if not player.Parent or PlayerService.ShuttingDown or player.Character ~= character then return end
+	if not player.Parent or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character then return end
 	local profile = PlayerService.GetProfile(player)
 	if not profile or profile.Level < requiredLevel then return end
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -86,7 +86,7 @@ local function bindPortal(portal)
 	portalConnections[portal] = portal.Touched:Connect(function(hit)
 		local character = hit and hit:FindFirstAncestorOfClass("Model")
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player or PlayerService.ShuttingDown or player.Character ~= character or portalCooldowns[player] then return end
+		if not player or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character or portalCooldowns[player] then return end
 		local profile = PlayerService.GetProfile(player)
 		if not profile or profile.Level < target.RequiredLevel then return end
 		local root = character:FindFirstChild("HumanoidRootPart")
@@ -179,7 +179,7 @@ task.spawn(function()
 		for player, candidate in pairs(portalCandidates) do
 			if now > candidate.ExpiresAt then
 				portalCandidates[player] = nil
-			elseif player.Parent and not PlayerService.ShuttingDown and player.Character == candidate.Character then
+			elseif player.Parent and not PlayerService.ShuttingDown and player:GetAttribute("ProfileLoaded") == true and player.Character == candidate.Character then
 				tryArmArrival(player, candidate.Character, candidate.Destination, candidate.BeforePosition, candidate.RequiredLevel)
 			end
 		end
