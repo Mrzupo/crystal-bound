@@ -44,6 +44,11 @@ local function getRoot(player)
 	return character and character:FindFirstChild("HumanoidRootPart")
 end
 
+local function getLoadedProfileForPortal(player)
+	if not player.Parent or PlayerService.ShuttingDown or PlayerService.Closing[player] then return nil end
+	return PlayerService.Profiles[player]
+end
+
 local function rememberPosition(player)
 	local root = getRoot(player)
 	if root then
@@ -61,7 +66,7 @@ end
 
 local function tryArmArrival(player, character, destination, beforePosition, requiredLevel)
 	if not player.Parent or PlayerService.ShuttingDown or player.Character ~= character then return end
-	local profile = PlayerService.GetProfile(player)
+	local profile = getLoadedProfileForPortal(player)
 	if not profile or profile.Level < requiredLevel then return end
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
@@ -87,7 +92,7 @@ local function bindPortal(portal)
 		local character = hit and hit:FindFirstAncestorOfClass("Model")
 		local player = character and Players:GetPlayerFromCharacter(character)
 		if not player or PlayerService.ShuttingDown or player.Character ~= character or portalCooldowns[player] then return end
-		local profile = PlayerService.GetProfile(player)
+		local profile = getLoadedProfileForPortal(player)
 		if not profile or profile.Level < target.RequiredLevel then return end
 		local root = character:FindFirstChild("HumanoidRootPart")
 		if not root then return end

@@ -1,0 +1,33 @@
+name: Portal Autosave Authority V8
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/portal-autosave-race-v8"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate autosave-safe portal profile access
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/WorldTheme.server.lua").read_text(encoding="utf-8")
+          for marker in (
+              "local function getLoadedProfileForPortal(player)",
+              "PlayerService.ShuttingDown",
+              "PlayerService.Closing[player]",
+              "return PlayerService.Profiles[player]",
+              "local profile = getLoadedProfileForPortal(player)",
+              "local function tryArmArrival",
+          ):
+              if marker not in text:
+                  raise SystemExit(f"portal autosave authority marker missing: {marker}")
+
+          if "PlayerService.GetProfile(player)" in text:
+              raise SystemExit("WorldTheme portal authority must not use GetProfile during autosave")
+
+          print("Portal authority uses the loaded server profile directly while rejecting Closing/Shutdown state.")
