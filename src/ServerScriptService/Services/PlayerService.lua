@@ -21,6 +21,7 @@ local PlayerService = {
 	ShuttingDown = false,
 }
 local OPERATION_TIMEOUT = 10
+local REMOVAL_OPERATION_TIMEOUT = 20
 local SAVE_SETTLE_ATTEMPTS = 3
 local DEFAULT_CRYSTAL = "EMBER"
 local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
@@ -140,10 +141,11 @@ local function bindCharacterWhenReady(player, character)
 	player:SetAttribute("DeathMessage", "")
 end
 
-local function acquireOperation(player)
+local function acquireOperation(player, timeout)
 	local started = os.clock()
+	local limit = timeout or OPERATION_TIMEOUT
 	while PlayerService.Operations[player] do
-		if os.clock() - started >= OPERATION_TIMEOUT then return false end
+		if os.clock() - started >= limit then return false end
 		task.wait(0.05)
 	end
 	PlayerService.Operations[player] = true
@@ -454,7 +456,7 @@ function PlayerService.Remove(player)
 	end
 	if PlayerService.Closing[player] then
 		local started = os.clock()
-		while PlayerService.Closing[player] and os.clock() - started < OPERATION_TIMEOUT do
+		while PlayerService.Closing[player] and os.clock() - started < REMOVAL_OPERATION_TIMEOUT do
 			task.wait(0.05)
 		end
 		if PlayerService.Closing[player] then return false end
@@ -464,7 +466,7 @@ function PlayerService.Remove(player)
 	PlayerService.Closing[player] = true
 	PlayerService.RemovalResults[player] = nil
 	if player.Parent then player:SetAttribute("ProfileLoaded", false) end
-	if not acquireOperation(player) then
+	if not acquireOperation(player, REMOVAL_OPERATION_TIMEOUT) then
 		PlayerService.RemovalResults[player] = false
 		PlayerService.Closing[player] = nil
 		return false
