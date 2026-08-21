@@ -1,0 +1,41 @@
+name: Portal Target Consistency Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Bootstrap and WorldTheme portal destinations remain identical
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          theme = Path('src/ServerScriptService/WorldTheme.server.lua').read_text(encoding='utf-8')
+
+          expected = {
+              'TidePortal': 'Vector3.new(120,4,0)',
+              'StarterPortal': 'Vector3.new(48,4,0)',
+              'WindPortal': 'Vector3.new(280,4,0)',
+              'TideReturnPortal': 'Vector3.new(210,4,0)',
+              'AncientPortal': 'Vector3.new(440,4,0)',
+              'WindReturnPortal': 'Vector3.new(380,4,0)',
+          }
+
+          for name, destination in expected.items():
+              if name not in bootstrap or destination not in bootstrap:
+                  raise SystemExit(f'Bootstrap portal destination missing or drifted: {name} -> {destination}')
+              theme_form = "Destination = " + destination
+              if theme_form not in theme:
+                  raise SystemExit(f'WorldTheme portal destination missing or drifted: {name} -> {destination}')
+
+          portal_names = re.findall(r'createPortal\([^,]+,"([A-Za-z]+Portal)"', bootstrap)
+          if sorted(portal_names) != sorted(expected):
+              raise SystemExit(f'Portal definition set drifted: {portal_names}')
+          print('Bootstrap/WorldTheme portal destination consistency validated.')
