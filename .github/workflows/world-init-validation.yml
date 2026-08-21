@@ -45,8 +45,8 @@ jobs:
               'local function disconnectPlayerCharacter(player)',
               'playerCharacterConnections[player] = player.CharacterAdded:Connect',
               'disconnectPlayerCharacter(player)',
-              'if not player or PlayerService.ShuttingDown or player.Character ~= character or portalCooldowns[player] then return end',
-              'if not player.Parent or PlayerService.ShuttingDown or player.Character ~= character then return end',
+              'if not player or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character or portalCooldowns[player] then return end',
+              'if not player.Parent or PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= character then return end',
               'player:GetAttribute("ProfileLoaded") ~= true',
               'player:GetAttribute("ProfileLoaded") == true',
           ]
