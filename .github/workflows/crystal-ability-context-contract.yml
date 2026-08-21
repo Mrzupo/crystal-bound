@@ -22,10 +22,16 @@ jobs:
 
           required = [
               "local CrystalSystem = require",
+              "local PlayerService = require",
+              "player:GetAttribute(\"ProfileLoaded\") ~= true",
+              "PlayerService.Profiles[player] ~= profile",
               "CrystalSystem.Exists(crystalId)",
               "profile.Crystals.Equipped ~= crystalId",
               "CrystalSystem.Owns(profile, crystalId)",
+              "local npcFolder = Workspace:FindFirstChild(\"NPCs\")",
+              "targetModel.Parent ~= npcFolder",
               "targetModel:GetAttribute(\"Enemy\") ~= true",
+              "not targetHumanoid or targetHumanoid.Health <= 0",
               "(targetRoot.Position - playerRoot.Position).Magnitude > safeRange",
               "if crystalId == \"TIDE\" then",
               "local applied = PlayerService.Heal(player, healAmount)",
@@ -49,4 +55,4 @@ jobs:
               if 'combatRemote:FireServer("Ability", nil)' not in text:
                   raise SystemExit(f"{name} must send targetless TIDE Ability requests")
 
-          print("Crystal ability ownership/range context and targetless TIDE self-ability contract validated.")
+          print("Crystal ability ownership/profile/range/NPC identity context and targetless TIDE self-ability contract validated.")
