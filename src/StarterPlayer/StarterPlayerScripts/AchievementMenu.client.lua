@@ -9,14 +9,23 @@ local AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)
 local open = false
 local gui
 local panel
+local refreshGeneration = 0
+local refreshInFlight = false
+local ACHIEVEMENT_RETRY_DELAY = 0.25
+local refresh
 
 local function finiteNumber(value, fallback)
-	local number = tonumber(value)
 	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then return fallback end
 	return value
 end
 
+local function invalidateRefresh()
+	refreshGeneration += 1
+	refreshInFlight = false
+end
+
 local function closeMenu()
+	invalidateRefresh()
 	open = false
 	if panel then panel.Visible = false end
 	player:SetAttribute("OpenAchievementMenu", nil)
@@ -74,10 +83,34 @@ local function ensureGui()
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() list.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 8) end)
 end
 
-local function refresh()
+local function scheduleAchievementRetry(staleGeneration)
+	task.delay(ACHIEVEMENT_RETRY_DELAY, function()
+		if open and staleGeneration == refreshGeneration then
+			refresh()
+		end
+	end)
+end
+
+refresh = function()
 	ensureGui()
+	if refreshInFlight then return end
+	refreshInFlight = true
+	refreshGeneration += 1
+	local generation = refreshGeneration
+	local character = player.Character
+	local expectedOpenState = player:GetAttribute("OpenAchievementMenu")
 	local ok, data = pcall(function() return getPlayerData:InvokeServer() end)
-	if not ok or type(data) ~= "table" then return end
+	if generation ~= refreshGeneration or not open or player.Character ~= character or player:GetAttribute("OpenAchievementMenu") ~= expectedOpenState then
+		if generation == refreshGeneration then
+			refreshInFlight = false
+		end
+		return
+	end
+	refreshInFlight = false
+	if not ok or type(data) ~= "table" then
+		scheduleAchievementRetry(generation)
+		return
+	end
 	for _, child in ipairs(panel.List:GetChildren()) do if child:IsA("Frame") then child:Destroy() end end
 	local unlocked = {}
 	local achievements = type(data.Achievements) == "table" and data.Achievements or {}
@@ -114,8 +147,26 @@ end
 
 ensureGui()
 player:GetAttributeChangedSignal("OpenAchievementMenu"):Connect(function()
-	if player:GetAttribute("OpenAchievementMenu") == nil then return end
+	if player:GetAttribute("OpenAchievementMenu") == nil then
+		invalidateRefresh()
+		open = false
+		panel.Visible = false
+		return
+	end
 	openMenu()
+end)
+
+player.CharacterAdded:Connect(function()
+	invalidateRefresh()
+	open = false
+	panel.Visible = false
+	player:SetAttribute("OpenAchievementMenu", nil)
+end)
+player.CharacterRemoving:Connect(function()
+	invalidateRefresh()
+	open = false
+	panel.Visible = false
+	player:SetAttribute("OpenAchievementMenu", nil)
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
