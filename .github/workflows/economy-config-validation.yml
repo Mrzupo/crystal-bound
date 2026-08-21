@@ -2,7 +2,6 @@ name: Economy Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
   pull_request:
 
 jobs:
@@ -14,29 +13,27 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import math
           import re
 
-          economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
-          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
-          service = Path("src/ServerScriptService/Services/EconomyService.lua").read_text(encoding="utf-8")
-          match = re.search(
-              r"StartingMoney\s*=\s*([0-9]+).*?MinMoney\s*=\s*([0-9]+).*?MaxMoney\s*=\s*([0-9]+)",
-              economy,
-              re.S,
-          )
-          if not match:
-              raise SystemExit("EconomyConfig must define StartingMoney, MinMoney and MaxMoney as non-negative integers")
-          starting, minimum, maximum = map(int, match.groups())
-          if minimum < 0 or maximum < minimum:
-              raise SystemExit("EconomyConfig money bounds are invalid")
-          if not minimum <= starting <= maximum:
-              raise SystemExit("EconomyConfig.StartingMoney must be within MinMoney..MaxMoney")
-          if "Money = EconomyConfig.StartingMoney" not in player_data:
-              raise SystemExit("PlayerData must consume EconomyConfig.StartingMoney")
-          if "function nonNegativeInteger" not in service:
-              raise SystemExit("EconomyService must enforce integer-only money transaction amounts")
-          if "amount % 1 ~= 0" not in service:
-              raise SystemExit("EconomyService must reject fractional money amounts")
-          if "math.clamp(before + amount, Config.MinMoney, Config.MaxMoney)" not in service:
-              raise SystemExit("EconomyService must clamp money to canonical configured bounds")
-          print(f"Economy config validated: starting={starting}, min={minimum}, max={maximum}.")
+          economy = Path('src/ReplicatedStorage/Config/EconomyConfig.lua').read_text(encoding='utf-8')
+          player_data = Path('src/ReplicatedStorage/Modules/PlayerData.lua').read_text(encoding='utf-8')
+          service = Path('src/ServerScriptService/Services/EconomyService.lua').read_text(encoding='utf-8')
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          values = {}
+          for key in ('StartingMoney', 'MinMoney', 'MaxMoney'):
+              match = re.search(rf'\b{key}\s*=\s*({numeric})', economy)
+              if not match:
+                  raise SystemExit(f'EconomyConfig missing {key}')
+              value = float(match.group(1))
+              if not math.isfinite(value) or value < 0 or value > 1_000_000_000 or value % 1 != 0:
+                  raise SystemExit(f'EconomyConfig {key} outside finite integer 0..1e9 bound: {value}')
+              values[key] = value
+          if values['MinMoney'] > values['MaxMoney'] or not values['MinMoney'] <= values['StartingMoney'] <= values['MaxMoney']:
+              raise SystemExit('EconomyConfig money bounds are inconsistent')
+          if 'Money = EconomyConfig.StartingMoney' not in player_data:
+              raise SystemExit('PlayerData must consume EconomyConfig.StartingMoney')
+          for marker in ('function nonNegativeInteger', 'amount % 1 ~= 0', 'math.clamp(before + amount, Config.MinMoney, Config.MaxMoney)'):
+              if marker not in service:
+                  raise SystemExit(f'EconomyService runtime boundary missing: {marker}')
+          print('Economy signed numeric bounds, canonical starting money and transaction guards validated.')
