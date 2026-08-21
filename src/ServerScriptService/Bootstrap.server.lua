@@ -17,6 +17,7 @@ local CrystalUpgradeConfig = require(ReplicatedStorage.Config.CrystalUpgradeConf
 local WorldConfig = require(ReplicatedStorage.Config.WorldConfig)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 local InteractionConfig = require(ReplicatedStorage.Config.InteractionConfig)
+local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)
 local NPCService = require(script.Parent.Services.NPCService)
 
 local AUTOSAVE_INTERVAL = 60
@@ -308,8 +309,10 @@ local function spawnQuestGiver(npcs) spawnSimpleNPC(npcs,"CrystalKeeper",Vector3
 local function spawnTrader(npcs) spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end) end
 local function spawnEnemy(npcs,typeId,position,uniqueName)
 	if PlayerService.ShuttingDown or npcs:FindFirstChild(uniqueName) then return end
-	NPCService.CreateEnemy(typeId,position,npcs,function(_,config)
-		task.delay(config.Respawn,function()
+	local config = EnemyConfig.Get(typeId)
+	local respawn = math.max(1.5, finiteNumber(config and config.Respawn, 10))
+	NPCService.CreateEnemy(typeId,position,npcs,function()
+		task.delay(respawn,function()
 			if not PlayerService.ShuttingDown and npcs.Parent then spawnEnemy(npcs,typeId,position,uniqueName) end
 		end,uniqueName)
 	end,uniqueName)

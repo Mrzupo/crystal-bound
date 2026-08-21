@@ -1,0 +1,30 @@
+name: Bootstrap Enemy Respawn Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical EnemyConfig-driven respawn scheduling
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
+          for marker in (
+              'local EnemyConfig = require(ReplicatedStorage.Config.EnemyConfig)',
+              'local function spawnEnemy(npcs,typeId,position,uniqueName)',
+              'local config = EnemyConfig.Get(typeId)',
+              'local respawn = math.max(1.5, finiteNumber(config and config.Respawn, 10))',
+              'NPCService.CreateEnemy(typeId,position,npcs,function()',
+              'task.delay(respawn,function()',
+          ):
+              if marker not in text:
+                  raise SystemExit("Bootstrap respawn marker missing: " + marker)
+          if 'function(_,config)' in text:
+              raise SystemExit("Bootstrap must not assume a config argument from NPCService.CreateEnemy death callbacks")
+          print("Bootstrap unique-enemy respawn scheduling uses canonical EnemyConfig and the actual CreateEnemy callback contract.")
