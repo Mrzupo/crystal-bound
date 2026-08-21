@@ -34,14 +34,16 @@ local function getNearestPlayer(position, maxDistance)
 	local nearestCharacter
 	local nearestDistance = maxDistance
 	for _, player in ipairs(Players:GetPlayers()) do
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if humanoid and humanoid.Health > 0 and root then
-			local distance = (root.Position - position).Magnitude
-			if distance < nearestDistance then
-				nearestDistance = distance
-				nearestCharacter = character
+		if player:GetAttribute("ProfileLoaded") == true then
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if humanoid and humanoid.Health > 0 and root then
+				local distance = (root.Position - position).Magnitude
+				if distance < nearestDistance then
+					nearestDistance = distance
+					nearestCharacter = character
+				end
 			end
 		end
 	end
@@ -301,11 +303,22 @@ end
 function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local config = EnemyConfig.Get(typeId)
 	if not config or typeof(position) ~= "Vector3" or not parent then return nil end
+	local resolvedName = uniqueName or config.DisplayName:gsub("%s+", "")
+	if uniqueName then
+		local existing = parent:FindFirstChild(uniqueName)
+		if existing then
+			if existing:IsA("Model") and existing:GetAttribute("Enemy") == true then
+				local existingHumanoid = existing:FindFirstChildOfClass("Humanoid")
+				if existingHumanoid and existingHumanoid.Health > 0 then return existing end
+			end
+			return nil
+		end
+	end
 	local health = math.clamp(finiteNumber(config.Health, 100), 1, 1000000)
 	local xp = math.max(0, finiteNumber(config.XP, 0))
 	local money = math.max(0, finiteNumber(config.Money, 0))
 	local model = Instance.new("Model")
-	model.Name = uniqueName or config.DisplayName:gsub("%s+", "")
+	model.Name = resolvedName
 	model:SetAttribute("Enemy", true)
 	model:SetAttribute("EnemyType", typeId)
 	model:SetAttribute("RewardXP", xp)
