@@ -26,7 +26,7 @@ remote.OnServerInvoke = function(player)
 	end
 	nextRequest[player] = now + REQUEST_INTERVAL
 	local profile = PlayerService.GetProfile(player)
-	if not profile then return {} end
+	if not profile then return nil end
 	return QuestSystem.GetAvailable(profile)
 end
 
