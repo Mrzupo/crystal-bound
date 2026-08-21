@@ -179,29 +179,115 @@ end
 
 local function ensureWorldFolders() for _, name in ipairs({ "NPCs", "Islands", "Spawn" }) do local folder = Workspace:FindFirstChild(name); if not folder then folder = Instance.new("Folder"); folder.Name = name; folder.Parent = Workspace end end; return Workspace.NPCs, Workspace.Islands, Workspace.Spawn end
 local function createIsland(islands, name, center, size)
-	local island = islands:FindFirstChild(name); if island then return island end
-	island = Instance.new("Model"); island.Name = name; island.Parent = islands; island:SetAttribute("IslandId", name)
-	local ground = Instance.new("Part"); ground.Name = "Ground"; ground.Size = size; ground.Position = center; ground.Anchored = true; ground.Material = name == "WindIsland" and Enum.Material.Slate or name == "AncientRuins" and Enum.Material.Rock or Enum.Material.Grass; ground.Parent = island
-	local title = Instance.new("BillboardGui"); title.Name = "IslandTitle"; title.Size = UDim2.fromOffset(240, 60); title.StudsOffset = Vector3.new(0, 12, 0); title.AlwaysOnTop = true; title.Parent = ground
-	local text = Instance.new("TextLabel"); text.Size = UDim2.fromScale(1, 1); text.BackgroundTransparency = 1; text.Text = name:gsub("Island", " Island"); text.Font = Enum.Font.GothamBold; text.TextSize = 26; text.Parent = title; return island
+	local island = islands:FindFirstChild(name)
+	if island and not island:IsA("Model") then island:Destroy(); island = nil end
+	island = island or Instance.new("Model")
+	island.Name = name
+	island.Parent = islands
+	island:SetAttribute("IslandId", name)
+
+	local ground = island:FindFirstChild("Ground")
+	if ground and not ground:IsA("Part") then ground:Destroy(); ground = nil end
+	ground = ground or Instance.new("Part")
+	ground.Name = "Ground"
+	ground.Size = size
+	ground.Position = center
+	ground.Anchored = true
+	ground.CanCollide = true
+	ground.CanTouch = true
+	ground.CanQuery = true
+	ground.Material = name == "WindIsland" and Enum.Material.Slate or name == "AncientRuins" and Enum.Material.Rock or name == "TideIsland" and Enum.Material.Sand or Enum.Material.Grass
+	ground.Parent = island
+
+	local title = ground:FindFirstChild("IslandTitle")
+	if title and not title:IsA("BillboardGui") then title:Destroy(); title = nil end
+	title = title or Instance.new("BillboardGui")
+	title.Name = "IslandTitle"
+	title.Size = UDim2.fromOffset(240, 60)
+	title.StudsOffset = Vector3.new(0, 12, 0)
+	title.AlwaysOnTop = true
+	title.Parent = ground
+	local text = title:FindFirstChild("Text")
+	if text and not text:IsA("TextLabel") then text:Destroy(); text = nil end
+	text = text or Instance.new("TextLabel")
+	text.Name = "Text"
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Text = name:gsub("Island", " Island")
+	text.Font = Enum.Font.GothamBold
+	text.TextSize = 26
+	text.Parent = title
+	return island
 end
 local function createSpawn(spawnFolder) if spawnFolder:FindFirstChild("StarterSpawn") then return end; local spawn = Instance.new("SpawnLocation"); spawn.Name="StarterSpawn"; spawn.Size=Vector3.new(8,1,8); spawn.Position=Vector3.new(0,3,8); spawn.Anchored=true; spawn.Neutral=true; spawn.Parent=spawnFolder end
 local function createPortal(island, name, fromPosition, destination, requiredLevel)
 	local existing = island:FindFirstChild(name)
-	if existing then
-		if existing:IsA("BasePart") then return end
-		existing:Destroy()
-	end
-	local portal=Instance.new("Part"); portal.Name=name; portal.Size=Vector3.new(6,8,2); portal.Position=fromPosition; portal.Anchored=true; portal.Material=Enum.Material.Neon; portal.Parent=island
-	local gui=Instance.new("BillboardGui"); gui.Size=UDim2.fromOffset(260,60); gui.StudsOffset=Vector3.new(0,6,0); gui.AlwaysOnTop=true; gui.Parent=portal
-	local label=Instance.new("TextLabel"); label.Size=UDim2.fromScale(1,1); label.BackgroundTransparency=1; label.Text="Level "..tostring(requiredLevel or 1).." required"; label.Font=Enum.Font.GothamBold; label.TextSize=18; label.Parent=gui
+	if existing and not existing:IsA("BasePart") then existing:Destroy(); existing=nil end
+	local portal = existing or Instance.new("Part")
+	portal.Name=name
+	portal.Size=Vector3.new(6,8,2)
+	portal.Position=fromPosition
+	portal.Anchored=true
+	portal.CanCollide=false
+	portal.CanTouch=true
+	portal.CanQuery=true
+	portal.Material=Enum.Material.Neon
+	portal.Parent=island
+	local gui=portal:FindFirstChild("PortalLabel")
+	if gui and not gui:IsA("BillboardGui") then gui:Destroy(); gui=nil end
+	gui=gui or Instance.new("BillboardGui")
+	gui.Name="PortalLabel"
+	gui.Size=UDim2.fromOffset(260,60)
+	gui.StudsOffset=Vector3.new(0,6,0)
+	gui.AlwaysOnTop=true
+	gui.Parent=portal
+	local label=gui:FindFirstChild("Text")
+	if label and not label:IsA("TextLabel") then label:Destroy(); label=nil end
+	label=label or Instance.new("TextLabel")
+	label.Name="Text"
+	label.Size=UDim2.fromScale(1,1)
+	label.BackgroundTransparency=1
+	label.Text="Level "..tostring(requiredLevel or 1).." required"
+	label.Font=Enum.Font.GothamBold
+	label.TextSize=18
+	label.Parent=gui
 end
 local function spawnSimpleNPC(npcs,name,position,objectText,actionText,callback)
-	if npcs:FindFirstChild(name) then return end
-	local model=Instance.new("Model"); model.Name=name; model:SetAttribute("Interactable",true); model.Parent=npcs
-	local body=Instance.new("Part"); body.Name="Torso"; body.Size=Vector3.new(3,4,2); body.Position=position; body.Anchored=true; body.Parent=model
-	local head=Instance.new("Part"); head.Name="Head"; head.Shape=Enum.PartType.Ball; head.Size=Vector3.new(2,2,2); head.Position=position+Vector3.new(0,3,0); head.Anchored=true; head.Parent=model
-	model.PrimaryPart=body; local prompt=Instance.new("ProximityPrompt"); prompt.ActionText=actionText; prompt.ObjectText=objectText; prompt.MaxActivationDistance=12; prompt.Parent=body; prompt.Triggered:Connect(callback)
+	local model=npcs:FindFirstChild(name)
+	if model and not model:IsA("Model") then model:Destroy(); model=nil end
+	local body = model and model:FindFirstChild("Torso")
+	local head = model and model:FindFirstChild("Head")
+	local prompt = body and body:FindFirstChildOfClass("ProximityPrompt")
+	local valid = model and body and body:IsA("Part") and head and head:IsA("Part") and prompt and prompt:IsA("ProximityPrompt") and model.PrimaryPart == body
+	if not valid then
+		if model then model:Destroy() end
+		model=Instance.new("Model")
+		model.Name=name
+		model.Parent=npcs
+		body=Instance.new("Part")
+		body.Name="Torso"
+		body.Parent=model
+		head=Instance.new("Part")
+		head.Name="Head"
+		head.Shape=Enum.PartType.Ball
+		head.Parent=model
+		model.PrimaryPart=body
+		prompt=Instance.new("ProximityPrompt")
+		prompt.Parent=body
+		prompt.Triggered:Connect(callback)
+	end
+	model:SetAttribute("Interactable",true)
+	body.Size=Vector3.new(3,4,2)
+	body.Position=position
+	body.Anchored=true
+	head.Size=Vector3.new(2,2,2)
+	head.Position=position+Vector3.new(0,3,0)
+	head.Anchored=true
+	model.PrimaryPart=body
+	prompt.ActionText=actionText
+	prompt.ObjectText=objectText
+	prompt.MaxActivationDistance=12
+	prompt.Enabled=true
 end
 local function spawnQuestGiver(npcs) spawnSimpleNPC(npcs,"CrystalKeeper",Vector3.new(12,3,-2),"Crystal Keeper","Talk",function() end) end
 local function spawnTrader(npcs) spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end) end
