@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate world initialization and portal lifecycle contracts
+      - name: Validate world initialization, decor idempotency and portal lifecycle contracts
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,9 +22,12 @@ jobs:
           for marker in ['StarterDecorReady', 'TideDecorReady', 'WindDecorReady', 'DecorReady']:
               if marker not in decor:
                   raise SystemExit(f'missing world decor idempotency marker: {marker}')
-          for marker in ['WorldConfig.Islands.STARTER', 'WorldConfig.Islands.TIDE', 'WorldConfig.Islands.WIND', 'WorldConfig.Islands.ANCIENT']:
+          for marker in ['CrystalBoundDecor', 'local function clearDecor(island, markerName)', 'local function hasCount(island, name, expected)']:
               if marker not in decor:
-                  raise SystemExit(f'WorldDecor must consume canonical world center: {marker}')
+                  raise SystemExit(f'WorldDecor partial-repair marker missing: {marker}')
+          for marker in ['hasCount(starter, "TreeTrunk", 4)', 'hasCount(tide, "AncientCrystal", 9)', 'hasCount(ancient, "AncientPillar", 4)', 'hasCount(wind, "WindRock", 3)']:
+              if marker not in decor:
+                  raise SystemExit(f'WorldDecor structural readiness marker missing: {marker}')
           for island in ['StarterIsland', 'TideIsland', 'WindIsland', 'AncientRuins']:
               if island not in theme:
                   raise SystemExit(f'missing world theme: {island}')
@@ -74,5 +77,5 @@ jobs:
           if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
               raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
 
-          print('World initialization, monotonic progression, bounded config, portal authority, tokenized portal lifecycle and shutdown lifecycle validated.')
+          print('World initialization, partial-repair decor idempotency, monotonic progression, bounded config, portal authority, tokenized portal lifecycle and shutdown lifecycle validated.')
           PY
