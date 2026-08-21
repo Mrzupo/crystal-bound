@@ -34,6 +34,14 @@ jobs:
               'portal.Position = fromPosition',
               'portal.Material = Enum.Material.Neon',
               'label.Text = "Level " .. tostring(requiredLevel or 1) .. " required"',
+              'model:SetAttribute("Interactable", true)',
+              'local body = model:FindFirstChild("Torso")',
+              'body.Size = Vector3.new(3,4,2)',
+              'body.Position = position',
+              'local head = model:FindFirstChild("Head")',
+              'model.PrimaryPart = body',
+              'local prompt = body:FindFirstChildOfClass("ProximityPrompt")',
+              'prompt.MaxActivationDistance = 12',
           ]
           for marker in required:
               if marker not in source:
@@ -44,4 +52,6 @@ jobs:
               raise SystemExit("createSpawn must repair an existing spawn instead of blindly returning")
           if 'if existing:IsA("BasePart") then return end' in source:
               raise SystemExit("createPortal must repair an existing portal instead of blindly returning")
-          print("Existing canonical islands, StarterSpawn and portals are repaired idempotently without adding a second teleport authority.")
+          if 'if npcs:FindFirstChild(name) then return end' in source:
+              raise SystemExit("spawnSimpleNPC must repair an existing canonical NPC instead of blindly returning")
+          print("Existing canonical islands, StarterSpawn, portals and NPC interaction models are repaired idempotently without adding a second teleport authority.")
