@@ -21,12 +21,12 @@ jobs:
           text = path.read_text(encoding="utf-8")
 
           required = [
-              'typeof(value) == "number"',
+              'return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge',
               'function isFiniteVector3(value)',
               'finiteNumber(value.X)',
               'finiteNumber(value.Y)',
               'finiteNumber(value.Z)',
-              'typeof(destination) ~= "Vector3"',
+              'if not isLiveModel(model) or not isFiniteVector3(destination) then return nil end',
               'function keyFor(goal)',
               'math.floor(goal.X / 4)',
               'math.floor(goal.Y / 4)',
