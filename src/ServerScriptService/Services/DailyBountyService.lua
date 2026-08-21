@@ -82,7 +82,17 @@ function DailyBountyService.Refresh(profile)
 	return profile.DailyBounty
 end
 
+local function validPlayerProfile(player, profile, PlayerService)
+	return player ~= nil
+		and player:IsA("Player")
+		and player:GetAttribute("ProfileLoaded") == true
+		and type(profile) == "table"
+		and type(PlayerService) == "table"
+		and PlayerService.Profiles[player] == profile
+end
+
 function DailyBountyService.AddProgress(player, profile, enemyType, EconomyService, PlayerService)
+	if not validPlayerProfile(player, profile, PlayerService) then return false end
 	local bounty = DailyBountyService.Refresh(profile)
 	if bounty.Claimed or bounty.EnemyType ~= enemyType then return false end
 	bounty.Progress = math.min(bounty.Goal, bounty.Progress + 1)
