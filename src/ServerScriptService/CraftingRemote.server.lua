@@ -38,11 +38,11 @@ local function isNearTrader(player)
 end
 
 remote.OnServerEvent:Connect(function(player, action, outputId, amount)
-	if action ~= "Craft" then return end
-	if player:GetAttribute("ProfileLoaded") ~= true then return end
 	local now = os.clock()
 	if now < (NEXT_REQUEST[player] or 0) then return end
 	NEXT_REQUEST[player] = now + REQUEST_INTERVAL
+	if action ~= "Craft" then return end
+	if player:GetAttribute("ProfileLoaded") ~= true then return end
 
 	local profile = PlayerService.GetProfile(player)
 	if not profile then return end
