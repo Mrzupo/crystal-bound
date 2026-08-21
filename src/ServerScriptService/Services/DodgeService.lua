@@ -30,8 +30,12 @@ local function clearForceField(character)
 end
 
 local function disconnectPlayer(player)
-	local connection = playerConnections[player]
-	if connection and connection.Connected then connection:Disconnect() end
+	local connections = playerConnections[player]
+	if connections then
+		for _, connection in ipairs(connections) do
+			if connection and connection.Connected then connection:Disconnect() end
+		end
+	end
 	playerConnections[player] = nil
 end
 
@@ -163,10 +167,12 @@ end
 
 local function bindPlayer(player)
 	disconnectPlayer(player)
-	playerConnections[player] = player.CharacterAdded:Connect(function(character)
+	local connections = {}
+	playerConnections[player] = connections
+	connections[#connections + 1] = player.CharacterAdded:Connect(function(character)
 		resetForRespawn(player, character)
 	end)
-	player:GetAttributeChangedSignal("ProfileLoaded"):Connect(function()
+	connections[#connections + 1] = player:GetAttributeChangedSignal("ProfileLoaded"):Connect(function()
 		if player:GetAttribute("ProfileLoaded") == true and player.Character then
 			readyCharacters[player] = player.Character
 		else
