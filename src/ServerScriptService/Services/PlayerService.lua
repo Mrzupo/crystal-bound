@@ -116,14 +116,13 @@ end
 
 local function bindCharacterWhenReady(player, character)
 	if PlayerService.ShuttingDown then return end
-	local deadline = os.clock() + OPERATION_TIMEOUT
-	while PlayerService.Saving[player] and os.clock() < deadline do
+	while PlayerService.Saving[player] do
 		task.wait(0.1)
 		if PlayerService.ShuttingDown or not player.Parent or PlayerService.Closing[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then
 			return
 		end
 	end
-	if PlayerService.ShuttingDown or PlayerService.Saving[player] or not PlayerService.Profiles[player] or PlayerService.Closing[player] or not player.Parent or player.Character ~= character or not character.Parent then return end
+	if PlayerService.ShuttingDown or not PlayerService.Profiles[player] or PlayerService.Closing[player] or not player.Parent or player.Character ~= character or not character.Parent then return end
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
 	if PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then return end
 	if humanoid then ensureAnimator(character) end
