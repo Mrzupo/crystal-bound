@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local CrystalConfig = require(ReplicatedStorage.Config.CrystalConfig)
 local CrystalSystem = require(ReplicatedStorage.Modules.CrystalSystem)
@@ -18,6 +19,8 @@ end
 
 local function validPlayerProfile(player, profile, crystalId)
 	if not player or not player:IsA("Player") or type(profile) ~= "table" then return false end
+	if player:GetAttribute("ProfileLoaded") ~= true then return false end
+	if PlayerService.Profiles[player] ~= profile then return false end
 	if not CrystalSystem.Exists(crystalId) then return false end
 	if type(profile.Crystals) ~= "table" or profile.Crystals.Equipped ~= crystalId then return false end
 	return CrystalSystem.Owns(profile, crystalId)
@@ -48,9 +51,15 @@ local function executeGale(player, targetModel, abilityDamage, abilityRange)
 		return { Success = false, Message = nil, Hits = {} }
 	end
 
+	local npcFolder = Workspace:FindFirstChild("NPCs")
+	local targetHumanoid = targetModel and targetModel:FindFirstChildOfClass("Humanoid")
+	if not npcFolder or not targetModel or targetModel.Parent ~= npcFolder or targetModel:GetAttribute("Enemy") ~= true or not targetHumanoid or targetHumanoid.Health <= 0 then
+		return { Success = false, Message = nil, Hits = {} }
+	end
+
 	local character = player.Character
 	local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
-	local targetRoot = targetModel and (targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart)
+	local targetRoot = targetModel:FindFirstChild("HumanoidRootPart") or targetModel.PrimaryPart
 	if not playerRoot or not targetRoot then
 		return { Success = false, Message = nil, Hits = {} }
 	end
@@ -96,9 +105,6 @@ function CrystalAbilityService.Execute(player, profile, crystalId, targetModel, 
 		return executeTide(player)
 	elseif crystalId == "GALE" then
 		if not targetModel or not targetModel:IsA("Model") then
-			return { Success = false, Message = nil, Hits = {} }
-		end
-		if targetModel:GetAttribute("Enemy") ~= true then
 			return { Success = false, Message = nil, Hits = {} }
 		end
 		return executeGale(player, targetModel, abilityDamage, abilityRange)
