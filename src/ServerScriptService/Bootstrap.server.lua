@@ -78,7 +78,8 @@ local remotes = ReplicatedStorage.Remotes
 local function isNearNPC(player, npcName, range)
 	local character = player.Character; local root = character and character:FindFirstChild("HumanoidRootPart")
 	local folder = Workspace:FindFirstChild("NPCs"); local npc = folder and folder:FindFirstChild(npcName)
-	local npcRoot = npc and (npc.PrimaryPart or npc:FindFirstChild("Torso"))
+	if not folder or not npc or not npc:IsA("Model") or npc.Parent ~= folder or npc:GetAttribute("Interactable") ~= true then return false end
+	local npcRoot = npc.PrimaryPart or npc:FindFirstChild("Torso")
 	local safeRange = finiteNumber(range, NPC_INTERACTION_RANGE)
 	return root and npcRoot and (root.Position - npcRoot.Position).Magnitude <= math.clamp(safeRange, 4, 50)
 end
