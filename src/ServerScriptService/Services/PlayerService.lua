@@ -22,6 +22,7 @@ local PlayerService = {
 }
 local OPERATION_TIMEOUT = 10
 local SAVE_SETTLE_ATTEMPTS = 3
+local CHARACTER_SYNC_RETRIES = 3
 local DEFAULT_CRYSTAL = "EMBER"
 local BASE_WALK_SPEED = math.max(1, tonumber(MovementConfig.BaseWalkSpeed) or 16)
 local MIN_WALK_SPEED = math.max(1, tonumber(MovementConfig.MinWalkSpeed) or 6)
@@ -114,16 +115,16 @@ local function syncTitleTag(character, title)
 	label.Parent = tag
 end
 
-local function bindCharacterWhenReady(player, character)
+local function bindCharacterWhenReady(player, character, attempt)
 	if PlayerService.ShuttingDown then return end
-	local deadline = os.clock() + OPERATION_TIMEOUT
-	while PlayerService.Saving[player] and os.clock() < deadline do
+	attempt = math.max(1, math.floor(tonumber(attempt) or 1))
+	while PlayerService.Saving[player] do
 		task.wait(0.1)
 		if PlayerService.ShuttingDown or not player.Parent or PlayerService.Closing[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then
 			return
 		end
 	end
-	if PlayerService.ShuttingDown or PlayerService.Saving[player] or not PlayerService.Profiles[player] or PlayerService.Closing[player] or not player.Parent or player.Character ~= character or not character.Parent then return end
+	if PlayerService.ShuttingDown or not PlayerService.Profiles[player] or PlayerService.Closing[player] or not player.Parent or player.Character ~= character or not character.Parent then return end
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
 	if PlayerService.ShuttingDown or PlayerService.Closing[player] or PlayerService.Saving[player] or PlayerService.Profiles[player] == nil or player.Character ~= character or not character.Parent then return end
 	if humanoid then ensureAnimator(character) end
@@ -133,7 +134,19 @@ local function bindCharacterWhenReady(player, character)
 	end, debug.traceback)
 	if not syncSuccess then
 		player:SetAttribute("ProfileLoaded", false)
-		warn(("Crystal Bound: Character PlayerService.Sync failed for %s; error=%s"):format(player.Name, tostring(syncError)))
+		warn(("Crystal Bound: Character PlayerService.Sync failed for %s (attempt %d/%d); error=%s"):format(player.Name, attempt, CHARACTER_SYNC_RETRIES, tostring(syncError)))
+		if attempt < CHARACTER_SYNC_RETRIES then
+			task.delay(0.5 * attempt, function()
+				if player.Parent and not PlayerService.ShuttingDown and not PlayerService.Closing[player] and PlayerService.Profiles[player] and player.Character == character and character.Parent then
+					bindCharacterWhenReady(player, character, attempt + 1)
+				end
+			end)
+		else
+			player:SetAttribute("ProfileLoadFailed", "Character initialization failed")
+			if player.Parent then
+				player:Kick("Unable to initialize your character safely. Please rejoin.")
+			end
+		end
 		return
 	end
 	bindHumanoid(player, humanoid)
@@ -290,7 +303,7 @@ function PlayerService.Load(player)
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
 		player:SetAttribute("ProfileLoaded", false)
 		task.defer(function()
-			bindCharacterWhenReady(player, character)
+			bindCharacterWhenReady(player, character, 1)
 		end)
 	end)
 	if PlayerService.ShuttingDown or PlayerService.Closing[player] or not player.Parent then

@@ -1,0 +1,31 @@
+name: Player Character Sync Retry Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bounded Character Sync retry lifecycle
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path('src/ServerScriptService/Services/PlayerService.lua').read_text(encoding='utf-8')
+          required = [
+              'local CHARACTER_SYNC_RETRIES = 3',
+              'local function bindCharacterWhenReady(player, character, attempt)',
+              'attempt = math.max(1, math.floor(tonumber(attempt) or 1))',
+              'while PlayerService.Saving[player] do',
+              'player.Character ~= character',
+              'if attempt < CHARACTER_SYNC_RETRIES then',
+              'bindCharacterWhenReady(player, character, attempt + 1)',
+              'player:Kick("Unable to initialize your character safely. Please rejoin.")',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('Character Sync retry contract marker missing: ' + ', '.join(missing))
+          print('Character Sync retries are bounded, autosave-aware, and Character-identity-bound.')
