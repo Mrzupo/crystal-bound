@@ -1,0 +1,33 @@
+name: Player Load Sync Failure Cleanup Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/player-load-sync-failure-cleanup-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate initial Sync failure cleanup
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          start = source.index("local syncSuccess, syncError = xpcall(function()", source.index("function PlayerService.Load"))
+          end = source.index("if not PlayerService.ShuttingDown and not PlayerService.Closing[player]", start)
+          block = source[start:end]
+          required = [
+              'if not syncSuccess then',
+              'local released = releaseLoadedToken()',
+              'cleanupRemovedPlayer(player)',
+              'return nil, "Profile initialization failed"',
+          ]
+          for marker in required:
+              if marker not in block:
+                  raise SystemExit(f"Initial Sync failure cleanup marker missing: {marker}")
+          if block.index("cleanupRemovedPlayer(player)") < block.index("local released = releaseLoadedToken()"):
+              raise SystemExit("SessionLock release must succeed before terminal player cleanup")
+          print("Initial PlayerService.Sync failure releases the SessionLock and disconnects player lifecycle state before returning.")
