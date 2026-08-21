@@ -37,16 +37,13 @@ function EconomyService.RemoveMoney(profile, amount)
 end
 
 function EconomyService.GetMoney(profile)
-	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
-	profile.Money = current
-	return current
+	return math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
 end
 
 function EconomyService.CanAfford(profile, amount)
 	amount = nonNegativeInteger(amount)
 	if amount == nil then return false end
 	local current = math.clamp(finiteNumber(profile.Money) or 0, Config.MinMoney, Config.MaxMoney)
-	profile.Money = current
 	return current >= amount
 end
 
