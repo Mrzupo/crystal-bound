@@ -20,13 +20,12 @@ jobs:
           required = [
               'local bossName = uniqueName or "CrystalGuardian"',
               'local existing = parent:FindFirstChild(bossName)',
-              'existing:GetAttribute("BossId") == "CrystalGuardian"',
+              'if existing:IsA("Model") and existing:GetAttribute("BossId") == "CrystalGuardian" then',
               'return existing',
-              '-- Reserved boss identity: remove a corrupt/non-boss object instead of spawning a name collision.',
               'existing:Destroy()',
-              'if parent.Parent and not parent:FindFirstChild(bossName) then',
+              'if not PlayerService.ShuttingDown and parent.Parent and not parent:FindFirstChild(bossName) then',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit("Guardian creation idempotency guard missing: " + ", ".join(missing))
-          print("Guardian creation idempotency and reserved-name collision contract validated.")
+          print("Guardian creation idempotency and reserved-name collision contract validated against runtime implementation.")
