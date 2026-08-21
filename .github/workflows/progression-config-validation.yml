@@ -16,25 +16,47 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import math
+          import re
 
           xp = Path("src/ReplicatedStorage/Config/XPConfig.lua").read_text(encoding="utf-8")
           economy = Path("src/ReplicatedStorage/Config/EconomyConfig.lua").read_text(encoding="utf-8")
           xp_service = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
 
-          problems = []
-          for marker in ["MaxLevel = 100", "BaseXP = 100", "Growth = 1.25"]:
-              if marker not in xp:
-                  problems.append(f"XPConfig missing expected marker: {marker}")
-          for marker in ["MinMoney = 0", "MaxMoney = 1000000000"]:
-              if marker not in economy:
-                  problems.append(f"EconomyConfig missing expected marker: {marker}")
-          if "math.min(XPConfig.MaxExperience, experience + amount)" not in xp_service:
-              problems.append("XPService must cap accumulated XP using XPConfig.MaxExperience")
-          if "amount % 1 ~= 0" not in xp_service:
-              problems.append("XPService must reject fractional XP amounts")
+          def require_number(text, key):
+              match = re.search(rf"\b{re.escape(key)}\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", text)
+              if not match:
+                  raise SystemExit(f"missing numeric config field: {key}")
+              value = float(match.group(1))
+              if not math.isfinite(value):
+                  raise SystemExit(f"non-finite config field: {key}")
+              return value
 
-          if problems:
-              for problem in problems:
-                  print(f" - {problem}")
-              raise SystemExit(1)
-          print("XP and economy progression bounds validated.")
+          max_level = require_number(xp, "MaxLevel")
+          max_experience = require_number(xp, "MaxExperience")
+          base_xp = require_number(xp, "BaseXP")
+          growth = require_number(xp, "Growth")
+          min_money = require_number(economy, "MinMoney")
+          max_money = require_number(economy, "MaxMoney")
+
+          if max_level < 1 or max_level > 1000 or max_level % 1 != 0:
+              raise SystemExit("XPConfig MaxLevel must be a finite integer within 1..1000")
+          if max_experience < 1 or max_experience > 10_000_000_000 or max_experience % 1 != 0:
+              raise SystemExit("XPConfig MaxExperience must be a finite integer within 1..10^10")
+          if base_xp < 1 or base_xp > max_experience:
+              raise SystemExit("XPConfig BaseXP must be within 1..MaxExperience")
+          if growth <= 0 or growth > 10:
+              raise SystemExit("XPConfig Growth must be within (0, 10]")
+          if min_money < 0 or min_money > 10_000_000_000:
+              raise SystemExit("EconomyConfig MinMoney must be within 0..10^10")
+          if max_money < min_money or max_money > 10_000_000_000:
+              raise SystemExit("EconomyConfig MaxMoney must be >= MinMoney and <= 10^10")
+
+          if "math.min(XPConfig.MaxExperience, experience + amount)" not in xp_service:
+              raise SystemExit("XPService must cap accumulated XP using XPConfig.MaxExperience")
+          if "amount % 1 ~= 0" not in xp_service:
+              raise SystemExit("XPService must reject fractional XP amounts")
+          if "amount < 0" not in xp_service:
+              raise SystemExit("XPService must reject negative XP amounts")
+
+          print("XP and economy progression bounds validated semantically.")
