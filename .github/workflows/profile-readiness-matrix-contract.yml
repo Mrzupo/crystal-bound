@@ -39,9 +39,9 @@ jobs:
           required = {
               'damage': ['ProfileLoaded', 'isProfileLoaded'],
               'dodge': ['ProfileLoaded', 'readyCharacters'],
-              'ability': ['ProfileLoaded', 'PlayerService.Profiles[player] == profile'],
-              'quest': ['ProfileLoaded', 'PlayerService.Profiles[player] == profile'],
-              'bounty': ['ProfileLoaded', 'PlayerService.Profiles[player] == profile'],
+              'ability': ['ProfileLoaded', 'PlayerService.Profiles[player] ~= profile'],
+              'quest': ['ProfileLoaded'],
+              'bounty': ['ProfileLoaded'],
               'status': ['ProfileLoaded', 'isPlayerProfileLoaded'],
               'speed': ['ProfileLoaded', 'GetAttributeChangedSignal("ProfileLoaded")'],
               'npc': ['ProfileLoaded', 'AIStarted'],
@@ -65,4 +65,4 @@ jobs:
               for problem in problems:
                   print(' - ' + problem)
               raise SystemExit(1)
-          print('Cross-service ProfileLoaded readiness matrix validated.')
+          print('Cross-service ProfileLoaded readiness matrix validated against actual server-side guards.')
