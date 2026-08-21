@@ -270,11 +270,33 @@ local function createPortal(island, name, fromPosition, destination, requiredLev
 	label.TextSize = 18
 end
 local function spawnSimpleNPC(npcs,name,position,objectText,actionText,callback)
-	if npcs:FindFirstChild(name) then return end
-	local model=Instance.new("Model"); model.Name=name; model:SetAttribute("Interactable",true); model.Parent=npcs
-	local body=Instance.new("Part"); body.Name="Torso"; body.Size=Vector3.new(3,4,2); body.Position=position; body.Anchored=true; body.Parent=model
-	local head=Instance.new("Part"); head.Name="Head"; head.Shape=Enum.PartType.Ball; head.Size=Vector3.new(2,2,2); head.Position=position+Vector3.new(0,3,0); head.Anchored=true; head.Parent=model
-	model.PrimaryPart=body; local prompt=Instance.new("ProximityPrompt"); prompt.ActionText=actionText; prompt.ObjectText=objectText; prompt.MaxActivationDistance=12; prompt.Parent=body; prompt.Triggered:Connect(callback)
+	local model = npcs:FindFirstChild(name)
+	if model and not model:IsA("Model") then model:Destroy(); model = nil end
+	if not model then
+		model = Instance.new("Model")
+		model.Name = name
+		model.Parent = npcs
+	end
+	model:SetAttribute("Interactable", true)
+	local body = model:FindFirstChild("Torso")
+	if body and not body:IsA("Part") then body:Destroy(); body = nil end
+	if not body then body = Instance.new("Part"); body.Name = "Torso"; body.Parent = model end
+	body.Size = Vector3.new(3,4,2)
+	body.Position = position
+	body.Anchored = true
+	local head = model:FindFirstChild("Head")
+	if head and not head:IsA("Part") then head:Destroy(); head = nil end
+	if not head then head = Instance.new("Part"); head.Name = "Head"; head.Parent = model end
+	head.Shape = Enum.PartType.Ball
+	head.Size = Vector3.new(2,2,2)
+	head.Position = position + Vector3.new(0,3,0)
+	head.Anchored = true
+	model.PrimaryPart = body
+	local prompt = body:FindFirstChildOfClass("ProximityPrompt")
+	if not prompt then prompt = Instance.new("ProximityPrompt"); prompt.Parent = body; prompt.Triggered:Connect(callback) end
+	prompt.ActionText = actionText
+	prompt.ObjectText = objectText
+	prompt.MaxActivationDistance = 12
 end
 local function spawnQuestGiver(npcs) spawnSimpleNPC(npcs,"CrystalKeeper",Vector3.new(12,3,-2),"Crystal Keeper","Talk",function() end) end
 local function spawnTrader(npcs) spawnSimpleNPC(npcs,"MaterialTrader",Vector3.new(20,3,10),"Material Trader","Talk",function() end) end
@@ -339,7 +361,7 @@ end
 
 Players.PlayerAdded:Connect(function(player)
 	task.spawn(loadPlayer, player)
-end)
+end
 for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(loadPlayer, player)
 end
