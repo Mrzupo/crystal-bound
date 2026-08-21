@@ -176,22 +176,98 @@ end
 
 local function ensureWorldFolders() for _, name in ipairs({ "NPCs", "Islands", "Spawn" }) do local folder = Workspace:FindFirstChild(name); if not folder then folder = Instance.new("Folder"); folder.Name = name; folder.Parent = Workspace end end; return Workspace.NPCs, Workspace.Islands, Workspace.Spawn end
 local function createIsland(islands, name, center, size)
-	local island = islands:FindFirstChild(name); if island then return island end
-	island = Instance.new("Model"); island.Name = name; island.Parent = islands; island:SetAttribute("IslandId", name)
-	local ground = Instance.new("Part"); ground.Name = "Ground"; ground.Size = size; ground.Position = center; ground.Anchored = true; ground.Material = name == "WindIsland" and Enum.Material.Slate or name == "AncientRuins" and Enum.Material.Rock or Enum.Material.Grass; ground.Parent = island
-	local title = Instance.new("BillboardGui"); title.Name = "IslandTitle"; title.Size = UDim2.fromOffset(240, 60); title.StudsOffset = Vector3.new(0, 12, 0); title.AlwaysOnTop = true; title.Parent = ground
-	local text = Instance.new("TextLabel"); text.Size = UDim2.fromScale(1, 1); text.BackgroundTransparency = 1; text.Text = name:gsub("Island", " Island"); text.Font = Enum.Font.GothamBold; text.TextSize = 26; text.Parent = title; return island
+	local island = islands:FindFirstChild(name)
+	if not island or not island:IsA("Model") then
+		if island then island:Destroy() end
+		island = Instance.new("Model")
+		island.Name = name
+		island.Parent = islands
+	end
+	island:SetAttribute("IslandId", name)
+	local material = name == "WindIsland" and Enum.Material.Slate or name == "AncientRuins" and Enum.Material.Rock or Enum.Material.Grass
+	local ground = island:FindFirstChild("Ground")
+	if not ground or not ground:IsA("Part") then
+		if ground then ground:Destroy() end
+		ground = Instance.new("Part")
+		ground.Name = "Ground"
+		ground.Parent = island
+	end
+	ground.Size = size
+	ground.Position = center
+	ground.Anchored = true
+	ground.Material = material
+	local title = ground:FindFirstChild("IslandTitle")
+	if not title or not title:IsA("BillboardGui") then
+		if title then title:Destroy() end
+		title = Instance.new("BillboardGui")
+		title.Name = "IslandTitle"
+		title.Parent = ground
+	end
+	title.Size = UDim2.fromOffset(240, 60)
+	title.StudsOffset = Vector3.new(0, 12, 0)
+	title.AlwaysOnTop = true
+	local text = title:FindFirstChild("Text")
+	if not text or not text:IsA("TextLabel") then
+		if text then text:Destroy() end
+		text = Instance.new("TextLabel")
+		text.Name = "Text"
+		text.Parent = title
+	end
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Text = name:gsub("Island", " Island")
+	text.Font = Enum.Font.GothamBold
+	text.TextSize = 26
+	return island
 end
-local function createSpawn(spawnFolder) if spawnFolder:FindFirstChild("StarterSpawn") then return end; local spawn = Instance.new("SpawnLocation"); spawn.Name="StarterSpawn"; spawn.Size=Vector3.new(8,1,8); spawn.Position=Vector3.new(0,3,8); spawn.Anchored=true; spawn.Neutral=true; spawn.Parent=spawnFolder end
+local function createSpawn(spawnFolder)
+	local spawn = spawnFolder:FindFirstChild("StarterSpawn")
+	if spawn and not spawn:IsA("SpawnLocation") then spawn:Destroy(); spawn = nil end
+	if not spawn then
+		spawn = Instance.new("SpawnLocation")
+		spawn.Name = "StarterSpawn"
+		spawn.Parent = spawnFolder
+	end
+	spawn.Size = Vector3.new(8,1,8)
+	spawn.Position = Vector3.new(0,3,8)
+	spawn.Anchored = true
+	spawn.Neutral = true
+end
 local function createPortal(island, name, fromPosition, destination, requiredLevel)
 	local existing = island:FindFirstChild(name)
-	if existing then
-		if existing:IsA("BasePart") then return end
-		existing:Destroy()
+	if existing and not existing:IsA("BasePart") then existing:Destroy(); existing = nil end
+	local portal = existing
+	if not portal then
+		portal = Instance.new("Part")
+		portal.Name = name
+		portal.Parent = island
 	end
-	local portal=Instance.new("Part"); portal.Name=name; portal.Size=Vector3.new(6,8,2); portal.Position=fromPosition; portal.Anchored=true; portal.Material=Enum.Material.Neon; portal.Parent=island
-	local gui=Instance.new("BillboardGui"); gui.Size=UDim2.fromOffset(260,60); gui.StudsOffset=Vector3.new(0,6,0); gui.AlwaysOnTop=true; gui.Parent=portal
-	local label=Instance.new("TextLabel"); label.Size=UDim2.fromScale(1,1); label.BackgroundTransparency=1; label.Text="Level "..tostring(requiredLevel or 1).." required"; label.Font=Enum.Font.GothamBold; label.TextSize=18; label.Parent=gui
+	portal.Size = Vector3.new(6,8,2)
+	portal.Position = fromPosition
+	portal.Anchored = true
+	portal.Material = Enum.Material.Neon
+	local gui = portal:FindFirstChild("BillboardGui")
+	if not gui or not gui:IsA("BillboardGui") then
+		if gui then gui:Destroy() end
+		gui = Instance.new("BillboardGui")
+		gui.Name = "BillboardGui"
+		gui.Parent = portal
+	end
+	gui.Size = UDim2.fromOffset(260,60)
+	gui.StudsOffset = Vector3.new(0,6,0)
+	gui.AlwaysOnTop = true
+	local label = gui:FindFirstChild("Label")
+	if not label or not label:IsA("TextLabel") then
+		if label then label:Destroy() end
+		label = Instance.new("TextLabel")
+		label.Name = "Label"
+		label.Parent = gui
+	end
+	label.Size = UDim2.fromScale(1,1)
+	label.BackgroundTransparency = 1
+	label.Text = "Level " .. tostring(requiredLevel or 1) .. " required"
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 18
 end
 local function spawnSimpleNPC(npcs,name,position,objectText,actionText,callback)
 	if npcs:FindFirstChild(name) then return end
