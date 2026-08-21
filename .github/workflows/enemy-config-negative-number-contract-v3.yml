@@ -1,0 +1,42 @@
+name: Enemy Config Negative Number Contract V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/enemy-config-negative-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate signed EnemyConfig numeric coverage
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          text = Path("src/ReplicatedStorage/Config/EnemyConfig.lua").read_text(encoding="utf-8")
+          values = re.findall(r"(Respawn|AttackRange|AttackDamage|AttackCooldown|AggroRange)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)", text)
+          for field, raw in values:
+              value = float(raw)
+              if field == "Respawn" and not 1.5 <= value <= 600:
+                  raise SystemExit(f"Enemy Respawn outside 1.5..600: {value}")
+              if field in {"AttackRange", "AggroRange"} and not 0 <= value <= 1000:
+                  raise SystemExit(f"Enemy {field} outside 0..1000: {value}")
+              if field == "AttackDamage" and not 0 <= value <= 1000:
+                  raise SystemExit(f"Enemy AttackDamage outside 0..1000: {value}")
+              if field == "AttackCooldown" and not 0.1 <= value <= 60:
+                  raise SystemExit(f"Enemy AttackCooldown outside 0.1..60: {value}")
+
+          for label, pattern, minimum, maximum in (
+              ("SpecialCooldown", r"Special = \{\s*Cooldown = (-?[0-9]+(?:\.[0-9]+)?)", 0.1, 60),
+              ("SpecialRange", r"Special = \{.*?Range = (-?[0-9]+(?:\.[0-9]+)?)", 0.1, 1000),
+              ("TeleportOffset", r"TeleportOffset = (-?[0-9]+(?:\.[0-9]+)?)", 0, 100),
+          ):
+              for raw in re.findall(pattern, text, re.S):
+                  value = float(raw)
+                  if not minimum <= value <= maximum:
+                      raise SystemExit(f"Enemy {label} outside {minimum}..{maximum}: {value}")
+
+          print("EnemyConfig signed-number validation covers Respawn, attack, aggro and special-movement bounds.")
