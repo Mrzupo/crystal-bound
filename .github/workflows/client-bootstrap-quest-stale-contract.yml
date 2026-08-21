@@ -1,0 +1,32 @@
+name: Client Bootstrap Quest Stale Response Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Character-bound Quest HUD responses
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path('src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua').read_text(encoding='utf-8')
+          required = [
+              'local questRefreshGeneration = 0',
+              'local requestGeneration = questRefreshGeneration',
+              'local requestCharacter = player.Character',
+              'questRefreshGeneration ~= requestGeneration',
+              'player.Character ~= requestCharacter',
+              'local queuedGeneration = questRefreshGeneration',
+              'questRefreshGeneration == queuedGeneration',
+              'player.CharacterAdded:Connect(function()',
+              'questRefreshGeneration += 1',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('ClientBootstrap quest stale-response guard missing: ' + ', '.join(missing))
+          print('ClientBootstrap quest RemoteFunction responses are generation- and Character-bound.')
