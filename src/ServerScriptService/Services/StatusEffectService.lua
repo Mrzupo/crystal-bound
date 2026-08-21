@@ -61,7 +61,7 @@ local function clearState(humanoid, state)
 	state.SlowMultiplier = nil
 	state.Burn = nil
 	humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
-	if not isShuttingDown() and humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
+	if not isShuttingDown() and isPlayerProfileLoaded(humanoid) and humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
 		humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
 	end
 	state.BaseWalkSpeed = nil
