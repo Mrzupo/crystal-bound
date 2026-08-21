@@ -2,7 +2,7 @@ name: Crystal Upgrade Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/crystal-mastery-readonly-v2"]
   pull_request:
 
 jobs:
@@ -25,9 +25,9 @@ jobs:
               if f'{item} = ' not in inventory:
                   raise SystemExit(f"Mastery material is not registered in InventoryConfig: {item}")
 
-          max_level = re.search(r"MaxLevel\s*=\s*(\d+)", config)
-          max_xp = re.search(r"MaxExperience\s*=\s*(\d+)", config)
-          growth = re.search(r"Growth\s*=\s*([0-9]+(?:\.[0-9]+)?)", config)
+          max_level = re.search(r"MaxLevel\s*=\s*(-?[0-9]+)", config)
+          max_xp = re.search(r"MaxExperience\s*=\s*(-?[0-9]+)", config)
+          growth = re.search(r"Growth\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)", config)
           if not max_level or not 1 <= int(max_level.group(1)) <= 100:
               raise SystemExit("MaxLevel must be within 1..100")
           if not max_xp or not 1 <= int(max_xp.group(1)) <= 100000000:
@@ -50,20 +50,22 @@ jobs:
                   raise SystemExit(f"{field} outside {minimum}..{maximum}: {value}")
 
           base_costs = config.split("BaseCosts", 1)[1] if "BaseCosts" in config else ""
-          costs = re.findall(r"(EmberShard|TidePearl|GaleFeather)\s*=\s*(\d+)", base_costs)
-          if len(costs) != 3 or any(int(amount) <= 0 or int(amount) > 1000000 for _, amount in costs):
-              raise SystemExit("Crystal mastery base costs must be positive and <= 1000000")
+          costs = re.findall(r"(EmberShard|TidePearl|GaleFeather)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)", base_costs)
+          if len(costs) != 3 or any(float(amount) <= 0 or float(amount) > 1000000 or float(amount) % 1 != 0 for _, amount in costs):
+              raise SystemExit("Crystal mastery base costs must be positive integers and <= 1000000")
 
           required_mastery_markers = [
               "local function validCrystalId(crystalId)",
               "local function ownsCrystal(profile, crystalId)",
               "local function ensure(profile, crystalId)",
-              "if type(profile) ~= \"table\" or not validCrystalId(crystalId) or not ownsCrystal(profile, crystalId) then return nil end",
+              "local function readMastery(profile, crystalId)",
               "function CrystalMastery.Get(profile, crystalId)",
-              "return mastery and { Level = mastery.Level, XP = mastery.XP } or neutralMastery()",
+              "return readMastery(profile, crystalId) or neutralMastery()",
               "function CrystalMastery.AddXP",
+              "function CrystalMastery.GetBonuses(profile, crystalId)",
               "function CrystalMastery.GetUpgradeCost",
               "function CrystalMastery.Upgrade",
+              "InventoryConfig.GetItemConfig(itemId)",
               "boundedPositiveConfig(Config.DamagePerLevel, 0, 1)",
               "boundedPositiveConfig(Config.AbilityDamagePerLevel, 0, 1)",
               "boundedPositiveConfig(Config.HealthPerLevel, 0, 100)",
@@ -71,6 +73,11 @@ jobs:
           ]
           missing = [marker for marker in required_mastery_markers if marker not in mastery]
           if missing:
-              raise SystemExit("CrystalMastery strict ID/ownership/bonus boundary missing: " + ", ".join(missing))
+              raise SystemExit("CrystalMastery strict ID/ownership/read/mutation boundary missing: " + ", ".join(missing))
 
-          print("Crystal upgrade config, bonus bounds, material ownership and strict invalid-ID/ownership semantics validated.")
+          read_block_start = mastery.index("function CrystalMastery.Get(profile, crystalId)")
+          read_block_end = mastery.index("function CrystalMastery.GetRequiredXP", read_block_start)
+          if "ensure(profile, crystalId)" in mastery[read_block_start:read_block_end]:
+              raise SystemExit("CrystalMastery.Get must remain side-effect free")
+
+          print("Crystal upgrade config, bonus bounds, material ownership and current CrystalMastery read/write ownership semantics validated.")
