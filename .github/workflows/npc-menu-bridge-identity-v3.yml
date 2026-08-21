@@ -1,0 +1,27 @@
+name: NPC Menu Bridge Identity V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-menu-bridge-identity-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical NPC prompt binding
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/NPCMenuBridge.server.lua").read_text(encoding="utf-8")
+          for marker in (
+              'local function isCanonicalInteractableModel(model)',
+              'model.Parent == folder',
+              'model.Name == "CrystalKeeper" or model.Name == "MaterialTrader"',
+              'model:GetAttribute("Interactable") == true',
+              'if not isCanonicalInteractableModel(model) then return end',
+          ):
+              if marker not in text:
+                  raise SystemExit(f"NPCMenuBridge canonical identity marker missing: {marker}")
+          print("NPCMenuBridge binds only canonical direct-child interactable NPC models and revalidates them on trigger.")
