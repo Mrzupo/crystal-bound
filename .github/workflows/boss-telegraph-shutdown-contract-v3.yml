@@ -1,0 +1,35 @@
+name: Boss Telegraph Shutdown Contract V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/boss-telegraph-shutdown-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Guardian telegraph shutdown and impact guards
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/BossTelegraph.server.lua").read_text(encoding="utf-8")
+          required = [
+              "if not PlayerService.ShuttingDown then",
+              "if PlayerService.ShuttingDown then return end",
+              "local function getTarget()",
+              "if PlayerService.ShuttingDown then return nil, nil end",
+              "while Workspace.Parent and not PlayerService.ShuttingDown do",
+              "if PlayerService.ShuttingDown or not guardian.Parent then return end",
+              "local currentGuardianRoot = guardian:FindFirstChild(\"HumanoidRootPart\") or guardian.PrimaryPart",
+              "local attackerRange = math.clamp((currentRoot.Position - currentGuardianRoot.Position).Magnitude, 0.1, 1000)",
+          ]
+          missing = [marker for marker in required if marker not in source]
+          if missing:
+              raise SystemExit("Boss telegraph shutdown/impact marker missing: " + ", ".join(missing))
+          cast_block = source[source.index("local function cast"):]
+          if cast_block.index("if PlayerService.ShuttingDown then return end") > cast_block.index("createTelegraph(position)"):
+              raise SystemExit("Guardian cast must reject shutdown before creating a telegraph")
+          print("Guardian startup, telegraph creation, target selection, delayed impact and impact-time attacker range remain lifecycle-safe.")
