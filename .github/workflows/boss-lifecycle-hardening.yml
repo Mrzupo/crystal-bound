@@ -23,6 +23,9 @@ jobs:
                   raise SystemExit("GuardianArena repair marker missing: " + marker)
           if "if arena:FindFirstChild(\"Floor\") then return end" in arena:
               raise SystemExit("GuardianArena must not treat an existing Floor as proof the complete arena is valid")
+          for marker in ("hazard.Shape = Enum.PartType.Cylinder", "hazard.Size = Vector3.new(0.6, 8, 8)", "hazard.CanQuery = false", "hazard:SetAttribute(\"CrystalBoundHazardReady\", true)"):
+              if marker not in arena:
+                  raise SystemExit("GuardianArena hazard repair marker missing: " + marker)
           if 'player:GetAttribute("ProfileLoaded") == true' not in arena or "not PlayerService.Closing[player]" not in arena:
               raise SystemExit("GuardianArena hazard must reject unloaded/closing players")
 
