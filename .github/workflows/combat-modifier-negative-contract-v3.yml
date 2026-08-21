@@ -1,0 +1,46 @@
+name: Combat Modifier Negative Contract V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/combat-modifier-negative-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate signed critical-hit configuration coverage
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path("src/ReplicatedStorage/Config/CombatModifierConfig.lua").read_text(encoding="utf-8")
+          service = Path("src/ServerScriptService/Services/CombatModifierService.lua").read_text(encoding="utf-8")
+          match = re.search(
+              r"BaseChance\s*=\s*(-?[0-9]+(?:\.[0-9]+)?).*?ChancePerMasteryLevel\s*=\s*(-?[0-9]+(?:\.[0-9]+)?).*?MaxChance\s*=\s*(-?[0-9]+(?:\.[0-9]+)?).*?Multiplier\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)",
+              config,
+              re.S,
+          )
+          if not match:
+              raise SystemExit("Unable to parse Critical configuration with signed-number support")
+          base, per_level, maximum, multiplier = map(float, match.groups())
+          if not 0 <= base <= 1:
+              raise SystemExit("Critical BaseChance must be within 0..1")
+          if not 0 <= per_level <= 1:
+              raise SystemExit("Critical ChancePerMasteryLevel must be within 0..1")
+          if not base <= maximum <= 1:
+              raise SystemExit("Critical MaxChance must be within BaseChance..1")
+          if not 1 <= multiplier <= 10:
+              raise SystemExit("Critical Multiplier must be within 1..10")
+          for marker in (
+              'local baseChance = math.clamp(finiteNumber(config.BaseChance, 0.08), 0, 1)',
+              'local chancePerLevel = math.clamp(finiteNumber(config.ChancePerMasteryLevel, 0.01), 0, 1)',
+              'local maxChance = math.clamp(finiteNumber(config.MaxChance, 0.22), baseChance, 1)',
+              'local multiplier = math.clamp(finiteNumber(config.Multiplier, 1.65), 1, 10)',
+          ):
+              if marker not in service:
+                  raise SystemExit(f"CombatModifierService runtime bound missing: {marker}")
+
+          print("Combat modifier config bounds parse signed values and reject negative malformed entries.")
