@@ -14,6 +14,7 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import math
           import re
 
           service = Path("src/ServerScriptService/Services/QuestService.lua").read_text(encoding="utf-8")
@@ -43,17 +44,41 @@ jobs:
           if completion > economy_call:
               raise SystemExit("Quest completion must precede the deterministic EconomyService payout, with EconomyService owning the Money cap")
 
-          max_money_match = re.search(r"MaxMoney\s*=\s*(\d+)", economy)
-          max_xp_match = re.search(r"MaxExperience\s*=\s*(\d+)", xp)
-          max_money = int(max_money_match.group(1)) if max_money_match else 1000000000
-          max_xp = int(max_xp_match.group(1)) if max_xp_match else 1000000000
-          rewards = re.findall(r"\{\s*Id\s*=\s*\"?([^,\s\"]+)\"?\s*,.*?XP\s*=\s*([0-9]+).*?Money\s*=\s*([0-9]+)", config, re.S)
+          def number_field(text, key, fallback=None):
+              match = re.search(rf"\b{re.escape(key)}\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", text)
+              if not match:
+                  if fallback is None:
+                      raise SystemExit(f"Missing numeric config field: {key}")
+                  return float(fallback)
+              value = float(match.group(1))
+              if not math.isfinite(value):
+                  raise SystemExit(f"Non-finite config field: {key}")
+              return value
+
+          max_money = number_field(economy, "MaxMoney", 1_000_000_000)
+          max_xp = number_field(xp, "MaxExperience", 1_000_000_000)
+          if max_money < 0 or max_money > 10_000_000_000:
+              raise SystemExit("EconomyConfig.MaxMoney outside safe range")
+          if max_xp < 1 or max_xp > 10_000_000_000:
+              raise SystemExit("XPConfig.MaxExperience outside safe range")
+
+          numeric = r"(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)"
+          rewards = re.findall(rf"\{\s*Id\s*=\s*\"?([^,\s\"]+)\"?\s*,.*?XP\s*=\s*{numeric}.*?Money\s*=\s*{numeric}", config, re.S)
           if not rewards:
-              rewards = [(name, int(xp_value), int(money_value)) for name, xp_value, money_value in re.findall(r"([A-Z0-9_]+).*?XP\s*=\s*(\d+).*?Money\s*=\s*(\d+)", config, re.S)]
-          for quest_id, reward_xp, reward_money in rewards:
-              if int(reward_xp) > max_xp:
+              rewards = [(name, xp_value, money_value) for name, xp_value, money_value in re.findall(rf"([A-Z0-9_]+).*?XP\s*=\s*{numeric}.*?Money\s*=\s*{numeric}", config, re.S)]
+          if not rewards:
+              raise SystemExit("QuestSystem must expose reward XP/Money entries for validation")
+
+          for quest_id, reward_xp_raw, reward_money_raw in rewards:
+              reward_xp = float(reward_xp_raw)
+              reward_money = float(reward_money_raw)
+              if not math.isfinite(reward_xp) or reward_xp < 0 or reward_xp % 1 != 0:
+                  raise SystemExit(f"Quest reward XP must be a finite non-negative integer: {quest_id}")
+              if not math.isfinite(reward_money) or reward_money < 0 or reward_money % 1 != 0:
+                  raise SystemExit(f"Quest reward Money must be a finite non-negative integer: {quest_id}")
+              if reward_xp > max_xp:
                   raise SystemExit(f"Quest reward XP exceeds XPConfig.MaxExperience: {quest_id}")
-              if int(reward_money) > max_money:
+              if reward_money > max_money:
                   raise SystemExit(f"Quest reward Money exceeds EconomyConfig.MaxMoney: {quest_id}")
 
           print("Quest reward numeric validation, completion ordering and EconomyService-owned Money cap passed.")
