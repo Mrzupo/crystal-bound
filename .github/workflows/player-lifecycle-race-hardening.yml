@@ -1,0 +1,44 @@
+name: Player Lifecycle Race Hardening
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/player-lifecycle-races-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Character autosave wait and initial Sync cleanup
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/PlayerService.lua").read_text(encoding="utf-8")
+          start = text.index("local function bindCharacterWhenReady")
+          end = text.index("local function acquireOperation", start)
+          character_block = text[start:end]
+          if "while PlayerService.Saving[player] do" not in character_block:
+              raise SystemExit("Character initialization must wait for autosave without a fixed deadline")
+          if "os.clock() + OPERATION_TIMEOUT" in character_block:
+              raise SystemExit("Character initialization must not retain the fixed 10s autosave deadline")
+          for marker in (
+              "PlayerService.ShuttingDown",
+              "PlayerService.Closing[player]",
+              "PlayerService.Profiles[player] == nil",
+              "player.Character ~= character",
+          ):
+              if marker not in character_block:
+                  raise SystemExit("Character autosave wait missing lifecycle guard: " + marker)
+
+          sync_start = text.index("local syncSuccess, syncError = xpcall(function()", text.index("function PlayerService.Load(player)"))
+          sync_block = text[sync_start:]
+          first_cleanup = sync_block.find("cleanupRemovedPlayer(player)")
+          failure = sync_block.find('return nil, "Profile initialization failed"')
+          if first_cleanup == -1 or failure == -1 or first_cleanup > failure:
+              raise SystemExit("Initial PlayerService.Sync failure must clean Character/profile state before returning")
+          if "local released = releaseLoadedToken()" not in sync_block[:failure]:
+              raise SystemExit("Initial Sync failure must release the claimed SessionLock before cleanup")
+
+          print("Character autosave wait and initial Sync failure cleanup are race-safe.")
