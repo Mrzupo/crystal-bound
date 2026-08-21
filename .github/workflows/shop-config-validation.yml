@@ -2,7 +2,6 @@ name: Shop Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
   pull_request:
 
 jobs:
@@ -13,40 +12,46 @@ jobs:
       - name: Validate shared shop config and inventory registration
         shell: python
         run: |
-          import re
           from pathlib import Path
-          config = Path("src/ReplicatedStorage/Config/ShopConfig.lua").read_text(encoding="utf-8")
-          inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
-          shop = Path("src/ServerScriptService/Services/ShopService.lua").read_text(encoding="utf-8")
-          ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
-          bootstrap = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
+          import math
+          import re
 
-          if "Offers" not in config or "SellOrder" not in config:
-              raise SystemExit("ShopConfig must define Offers and SellOrder")
+          config = Path('src/ReplicatedStorage/Config/ShopConfig.lua').read_text(encoding='utf-8')
+          inventory = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
+          shop = Path('src/ServerScriptService/Services/ShopService.lua').read_text(encoding='utf-8')
+          ui = Path('src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua').read_text(encoding='utf-8')
 
-          prices = [int(value) for value in re.findall(r"Price\s*=\s*(\d+)", config)]
-          limits = [int(value) for value in re.findall(r"MaxPerPurchase\s*=\s*(\d+)", config)]
-          if not prices or any(value <= 0 for value in prices):
-              raise SystemExit("ShopConfig prices must all be positive")
-          if not limits or any(value <= 0 for value in limits):
-              raise SystemExit("ShopConfig MaxPerPurchase values must all be positive")
+          if 'Offers' not in config or 'SellOrder' not in config:
+              raise SystemExit('ShopConfig must define Offers and SellOrder')
 
-          offer_ids = re.findall(r"ItemId\s*=\s*\"([^\"]+)\"", config)
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          for field, minimum, maximum in (('Price', 1, 1_000_000_000), ('MaxPerPurchase', 1, 1000)):
+              matches = re.findall(rf'\b{field}\s*=\s*({numeric})', config)
+              if not matches:
+                  raise SystemExit(f'ShopConfig must define {field}')
+              for raw in matches:
+                  value = float(raw)
+                  if not math.isfinite(value) or value < minimum or value > maximum or value % 1 != 0:
+                      raise SystemExit(f'ShopConfig {field} outside bounds: {value}')
+
+          offer_ids = re.findall(r'ItemId\s*=\s*"([^"]+)"', config)
           if not offer_ids:
-              raise SystemExit("ShopConfig must define at least one ItemId offer")
-          sell_section = config.split("SellOrder", 1)[1]
-          sell_ids = re.findall(r'\"([A-Za-z0-9_]+)\"', sell_section)
-          all_shop_items = sorted(set(offer_ids + sell_ids))
-          for item_id in all_shop_items:
-              if f"{item_id} = " not in inventory:
-                  raise SystemExit(f"InventoryConfig missing shop item referenced by ShopConfig: {item_id}")
+              raise SystemExit('ShopConfig must define at least one ItemId offer')
+          sell_section = config.split('SellOrder', 1)[1]
+          sell_ids = re.findall(r'"([A-Za-z0-9_]+)"', sell_section)
+          for item_id in sorted(set(offer_ids + sell_ids)):
+              if f'{item_id} = ' not in inventory:
+                  raise SystemExit(f'InventoryConfig missing shop item: {item_id}')
 
-          if "ShopConfig" not in shop:
-              raise SystemExit("ShopService must consume shared ShopConfig")
-          if "positiveInteger" not in shop:
-              raise SystemExit("ShopService must reject invalid purchase amounts")
-          if "ShopConfig" not in ui or "InventoryConfig" not in ui:
-              raise SystemExit("ShopMenu must consume shared ShopConfig and InventoryConfig")
-          if "ShopConfig" not in bootstrap or "local sellOrder = shopConfig.SellOrder" not in bootstrap:
-              raise SystemExit("ClientBootstrap must consume shared ShopConfig.SellOrder")
-          print("Shop configuration, offer IDs, SellOrder IDs and inventory registration validated.")
+          for source, markers in {
+              'ShopService': ('positiveInteger', 'ShopConfig', 'InventoryConfig.GetMaxStackSize'),
+              'ShopMenu': ('ShopConfig', 'InventoryConfig'),
+              'ClientBootstrap': ('local sellOrder = shopConfig.SellOrder',),
+          }.items():
+              text = {'ShopService': shop, 'ShopMenu': ui, 'ClientBootstrap': bootstrap}[source]
+              for marker in markers:
+                  if marker not in text:
+                      raise SystemExit(f'{source} missing shared-shop marker: {marker}')
+
+          print('Shop prices and per-purchase limits use finite signed parsing and strict positive integer bounds.')
