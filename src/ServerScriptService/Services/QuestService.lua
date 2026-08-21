@@ -19,6 +19,14 @@ local function finiteNonNegativeInteger(value)
 	return math.floor(number)
 end
 
+local function validPlayerProfile(player, profile)
+	return player ~= nil
+		and player:IsA("Player")
+		and player:GetAttribute("ProfileLoaded") == true
+		and PlayerService.Profiles[player] == profile
+		and type(profile) == "table"
+end
+
 local function sync(player, profile)
 	player:SetAttribute("ActiveQuestCount", #(profile.ActiveQuests or {}))
 	player:SetAttribute("CompletedQuestCount", #(profile.CompletedQuests or {}))
@@ -42,9 +50,10 @@ function QuestService.GetCompleted(profile)
 end
 
 function QuestService.Start(player, profile, questId)
+	if not validPlayerProfile(player, profile) then return false end
 	local allowed, reason = QuestSystem.CanStart(profile, questId)
 	if not allowed then
-		if player and reason then player:SetAttribute("QuestMessage", reason) end
+		if reason then player:SetAttribute("QuestMessage", reason) end
 		return false
 	end
 	local started = QuestSystem.Start(profile, questId)
@@ -58,22 +67,21 @@ function QuestService.Start(player, profile, questId)
 end
 
 function QuestService.Complete(player, profile, questId, message)
+	if not validPlayerProfile(player, profile) then return false end
 	local definition = QuestSystem.GetDefinition(questId)
 	if not definition or not QuestSystem.IsActive(profile, questId) then return false end
 
 	local progress = QuestSystem.GetProgress(profile, questId)
 	local reachedGoal = progress >= (definition.Goal or 0)
 	if not reachedGoal and not SERVER_TRIGGERED_SINGLE_STEP[questId] then
-		if player then
-			player:SetAttribute("QuestMessage", string.format("Complete the objective first: %d/%d", progress, definition.Goal or 0))
-		end
+		player:SetAttribute("QuestMessage", string.format("Complete the objective first: %d/%d", progress, definition.Goal or 0))
 		return false
 	end
 
 	local rewardXP = finiteNonNegativeInteger(definition.XP)
 	local rewardMoney = finiteNonNegativeInteger(definition.Money)
 	if rewardXP == nil or rewardMoney == nil then
-		if player then player:SetAttribute("QuestMessage", "Quest reward configuration is unavailable.") end
+		player:SetAttribute("QuestMessage", "Quest reward configuration is unavailable.")
 		return false
 	end
 
@@ -83,18 +91,17 @@ function QuestService.Complete(player, profile, questId, message)
 	local _, earnedMoney = EconomyService.AddMoney(profile, rewardMoney)
 	PlayerService.Sync(player)
 	sync(player, profile)
-	if player then
-		if earnedMoney < rewardMoney then
-			player:SetAttribute("QuestMessage", string.format("%s (Money capped at wallet limit; +%d Money)", message or (definition.Name .. " complete!"), earnedMoney))
-		else
-			player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!"))
-		end
+	if earnedMoney < rewardMoney then
+		player:SetAttribute("QuestMessage", string.format("%s (Money capped at wallet limit; +%d Money)", message or (definition.Name .. " complete!"), earnedMoney))
+	else
+		player:SetAttribute("QuestMessage", message or (definition.Name .. " complete!"))
 	end
 	QuestService.TryStartNext(player, profile)
 	return true
 end
 
 function QuestService.TryStartNext(player, profile)
+	if not validPlayerProfile(player, profile) then return false end
 	for _, questId in ipairs(QuestSystem.GetChainOrder()) do
 		local allowed = QuestSystem.CanStart(profile, questId)
 		if allowed then
