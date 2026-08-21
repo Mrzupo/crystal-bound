@@ -40,7 +40,6 @@ local function bindPlayer(player)
 	playerCharacterConnections[player] = player.CharacterAdded:Connect(function(character)
 		if PlayerService.ShuttingDown then return end
 		if player.Parent and player.Character == character then
-			player:SetAttribute("ProfileLoaded", false)
 			clearMenus(player)
 		end
 	end)
