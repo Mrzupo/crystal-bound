@@ -150,9 +150,6 @@ local function watchCharacter(player, character)
 	humanoidConnections[player] = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 		refresh(player)
 	end)
-	if player:GetAttribute("ProfileLoaded") == true then
-		refresh(player)
-	end
 end
 
 local function bind(player)
