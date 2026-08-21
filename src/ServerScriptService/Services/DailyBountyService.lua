@@ -46,6 +46,45 @@ local function snapshot(bounty)
 	}
 end
 
+local function readSnapshot(profile)
+	local stored = type(profile) == "table" and type(profile.DailyBounty) == "table" and profile.DailyBounty or {}
+	local date = utcDate()
+	local definition
+	local progress = 0
+	local claimed = stored.Claimed == true
+
+	if stored.Date == date then
+		definition = findDefinition(stored.EnemyType)
+		if definition then
+			progress = finiteNumber(stored.Progress, 0)
+		else
+			definition = nil
+			claimed = false
+		end
+	end
+
+	if not definition then
+		local index = indexForDate(date)
+		definition = index and GOALS[index]
+		progress = 0
+		claimed = false
+	end
+	if not definition then return {} end
+
+	local goal = math.clamp(math.floor(finiteNumber(definition.Goal, 1)), 1, 100)
+	progress = math.clamp(math.floor(progress), 0, goal)
+	local rewardMoney = math.clamp(math.floor(finiteNumber(definition.RewardMoney, 0)), 0, EconomyConfig.MaxMoney)
+	if claimed and progress < goal then claimed = false end
+	return {
+		Date = date,
+		EnemyType = definition.EnemyType,
+		Goal = goal,
+		Progress = progress,
+		RewardMoney = rewardMoney,
+		Claimed = claimed,
+	}
+end
+
 function DailyBountyService.Refresh(profile)
 	profile.DailyBounty = type(profile.DailyBounty) == "table" and profile.DailyBounty or {}
 	local date = utcDate()
@@ -126,7 +165,7 @@ function DailyBountyService.AddProgress(player, profile, enemyType, EconomyServi
 end
 
 function DailyBountyService.Get(profile)
-	return snapshot(DailyBountyService.Refresh(profile))
+	return readSnapshot(profile)
 end
 
 return DailyBountyService
