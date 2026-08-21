@@ -1,0 +1,59 @@
+name: Stale UI Authority
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/stale-ui-hardening-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Character-bound client RemoteFunction responses
+        shell: python
+        run: |
+          from pathlib import Path
+
+          root = Path("src/StarterPlayer/StarterPlayerScripts")
+          quest = (root / "QuestMenu.client.lua").read_text(encoding="utf-8")
+          achievement = (root / "AchievementMenu.client.lua").read_text(encoding="utf-8")
+          dialog = (root / "NPCDialogMenu.client.lua").read_text(encoding="utf-8")
+
+          for marker in (
+              "local loadGeneration = 0",
+              "local loadQueued = false",
+              "generation ~= loadGeneration",
+              "player.Character ~= character",
+              'player:GetAttribute("OpenQuestMenu") ~= expectedOpenState',
+              "player.CharacterAdded:Connect(function()",
+              "player.CharacterRemoving:Connect(function()",
+          ):
+              if marker not in quest:
+                  raise SystemExit("QuestMenu stale-response marker missing: " + marker)
+
+          for marker in (
+              "local refreshGeneration = 0",
+              "local refreshInFlight = false",
+              "generation ~= refreshGeneration",
+              "player.Character ~= character",
+              'player:GetAttribute("OpenAchievementMenu") ~= expectedOpenState',
+              "player.CharacterAdded:Connect(function()",
+              "player.CharacterRemoving:Connect(function()",
+          ):
+              if marker not in achievement:
+                  raise SystemExit("AchievementMenu stale-response marker missing: " + marker)
+
+          for marker in (
+              "local dialogRequestGeneration = 0",
+              "local function invalidateDialogRequest()",
+              "generation ~= dialogRequestGeneration",
+              "player.Character ~= character",
+              'player:GetAttribute("OpenNPCDialog") ~= npcId',
+              "player.CharacterAdded:Connect(function()",
+              "player.CharacterRemoving:Connect(function()",
+          ):
+              if marker not in dialog:
+                  raise SystemExit("NPCDialogMenu stale-response marker missing: " + marker)
+
+          print("Quest, Achievement and NPC dialog RemoteFunction responses are Character/menu-generation bound.")
