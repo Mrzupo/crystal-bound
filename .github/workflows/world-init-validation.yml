@@ -47,6 +47,8 @@ jobs:
               'disconnectPlayerCharacter(player)',
               'if not player or PlayerService.ShuttingDown or player.Character ~= character or portalCooldowns[player] then return end',
               'if not player.Parent or PlayerService.ShuttingDown or player.Character ~= character then return end',
+              'player:GetAttribute("ProfileLoaded") ~= true',
+              'player:GetAttribute("ProfileLoaded") == true',
           ]
           for marker in required_tracking:
               if marker not in theme:
@@ -74,5 +76,5 @@ jobs:
           if 'portal.Touched:Connect' in bootstrap or 'root.CFrame = CFrame.new(destination)' in bootstrap:
               raise SystemExit('Bootstrap must not own portal touch/teleport authority; WorldTheme is canonical')
 
-          print('World initialization, monotonic progression, bounded config, portal authority, tokenized portal lifecycle and shutdown lifecycle validated.')
+          print('World initialization, monotonic progression, bounded config, portal authority, readiness, tokenized portal lifecycle and shutdown lifecycle validated.')
           PY
