@@ -38,10 +38,13 @@ jobs:
               'local slow = StatusEffectService.GetSlowMultiplier(humanoid)',
               'player:GetAttribute("ProfileLoaded") ~= true',
               'player:GetAttributeChangedSignal("ProfileLoaded")',
+              'task.defer(function()\n\t\t\twatchCharacter(player, character)',
           ]
           missing = [token for token in required if token not in guard]
           if missing:
               raise SystemExit('StatusSpeedGuardV2 contract missing: ' + ', '.join(missing))
+          if 'if player:GetAttribute("ProfileLoaded") == true then\n\t\trefresh(player)' in guard:
+              raise SystemExit('CharacterAdded must not refresh movement authority from the stale pre-respawn ProfileLoaded state')
           if 'humanoid:GetAttribute("CrystalBoundSlowMultiplier")' in guard:
               raise SystemExit('StatusSpeedGuardV2 must not trust Humanoid slow attributes for gameplay authority')
 
@@ -55,5 +58,5 @@ jobs:
           if missing_effects:
               raise SystemExit('StatusEffectService server-owned slow state contract missing: ' + ', '.join(missing_effects))
 
-          print('Status speed guard lifecycle, ProfileLoaded readiness and server-owned slow authority validated.')
+          print('Status speed guard lifecycle, ProfileLoaded readiness, deferred respawn refresh and server-owned slow authority validated.')
           PY
