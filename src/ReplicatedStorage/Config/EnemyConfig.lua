@@ -24,13 +24,42 @@ local function clone(value)
 	return result
 end
 
+local function normalize(source)
+	if type(source) ~= "table" then return nil end
+	local result = clone(source)
+	result.Health = math.clamp(finiteNumber(source.Health, EnemyConfig.DefaultHealth), 1, 1000000)
+	result.Level = math.clamp(math.floor(finiteNumber(source.Level, EnemyConfig.DefaultLevel)), 1, 100)
+	result.XP = math.clamp(math.floor(finiteNumber(source.XP, 0)), 0, 1000000)
+	result.Money = math.clamp(math.floor(finiteNumber(source.Money, 0)), 0, 1000000)
+	result.Respawn = math.clamp(finiteNumber(source.Respawn, 10), 1.5, 600)
+	result.AggroRange = math.clamp(finiteNumber(source.AggroRange, 0), 0, 1000)
+	result.AttackRange = math.clamp(finiteNumber(source.AttackRange, 0), 0, 1000)
+	result.AttackDamage = math.clamp(finiteNumber(source.AttackDamage, 0), 0, 1000)
+	result.AttackCooldown = math.clamp(finiteNumber(source.AttackCooldown, 1), 0.25, 60)
+	result.DropChance = math.clamp(finiteNumber(source.DropChance, 0), 0, 1)
+	if type(result.Special) == "table" then
+		result.Special.Cooldown = math.clamp(finiteNumber(result.Special.Cooldown, 6), 0.25, 60)
+		result.Special.Range = math.clamp(finiteNumber(result.Special.Range, 0), 0, 1000)
+		result.Special.BonusDamage = math.clamp(finiteNumber(result.Special.BonusDamage, 0), 0, 1000)
+		if result.Special.BurnDamage ~= nil then result.Special.BurnDamage = math.clamp(finiteNumber(result.Special.BurnDamage, 3), 1, 100) end
+		if result.Special.BurnTicks ~= nil then result.Special.BurnTicks = math.clamp(math.floor(finiteNumber(result.Special.BurnTicks, 3)), 1, 10) end
+		if result.Special.BurnInterval ~= nil then result.Special.BurnInterval = math.clamp(finiteNumber(result.Special.BurnInterval, 0.7), 0.2, 3) end
+		if result.Special.SlowMultiplier ~= nil then result.Special.SlowMultiplier = math.clamp(finiteNumber(result.Special.SlowMultiplier, 0.8), 0.01, 1) end
+		if result.Special.SlowDuration ~= nil then result.Special.SlowDuration = math.clamp(finiteNumber(result.Special.SlowDuration, 1), 0.1, 10) end
+		if result.Special.TeleportOffset ~= nil then result.Special.TeleportOffset = math.clamp(finiteNumber(result.Special.TeleportOffset, 4), 0, 100) end
+		if result.Special.Radius ~= nil then result.Special.Radius = math.clamp(finiteNumber(result.Special.Radius, 10), 0, 1000) end
+	end
+	return result
+end
+
+for typeId, source in pairs(EnemyConfig.Types) do
+	EnemyConfig.Types[typeId] = normalize(source)
+end
+
 function EnemyConfig.Get(typeId)
 	if type(typeId) ~= "string" then return nil end
 	local source = EnemyConfig.Types[typeId]
-	if type(source) ~= "table" then return nil end
-	local result = clone(source)
-	result.Respawn = math.clamp(finiteNumber(source.Respawn, 10), 1.5, 600)
-	return result
+	return normalize(source)
 end
 
 function EnemyConfig.IsValid(typeId)
