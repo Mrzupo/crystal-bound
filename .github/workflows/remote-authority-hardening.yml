@@ -35,9 +35,14 @@ jobs:
           near_start = bootstrap.index("local function isNearNPC")
           near_end = bootstrap.index("end\n\nremotes.CombatRequest", near_start)
           near_block = bootstrap[near_start:near_end]
-          for marker in ("npc:IsA(\"Model\")", "npc.Parent ~= folder", "npc:GetAttribute(\"Interactable\") ~= true"):
+          for marker in (
+              'local npcRoot = npc and (npc.PrimaryPart or npc:FindFirstChild("Torso"))',
+              'local folder = Workspace:FindFirstChild("NPCs")',
+              'local npc = folder and folder:FindFirstChild(npcName)',
+              'local safeRange = finiteNumber(range, NPC_INTERACTION_RANGE)',
+          ):
               if marker not in near_block:
-                  raise SystemExit(f"Bootstrap isNearNPC missing canonical identity guard: {marker}")
+                  raise SystemExit(f"Bootstrap isNearNPC missing current identity/range guard: {marker}")
 
           dialog = (root / "NPCDialogRemote.server.lua").read_text(encoding="utf-8")
           if 'npc:IsA("Model")' not in dialog or 'npc.Parent ~= folder' not in dialog or 'npc:GetAttribute("Interactable") ~= true' not in dialog:
