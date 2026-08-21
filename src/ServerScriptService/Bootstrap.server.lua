@@ -219,7 +219,19 @@ local function createIsland(islands, name, center, size)
 	text.Parent = title
 	return island
 end
-local function createSpawn(spawnFolder) if spawnFolder:FindFirstChild("StarterSpawn") then return end; local spawn = Instance.new("SpawnLocation"); spawn.Name="StarterSpawn"; spawn.Size=Vector3.new(8,1,8); spawn.Position=Vector3.new(0,3,8); spawn.Anchored=true; spawn.Neutral=true; spawn.Parent=spawnFolder end
+local function createSpawn(spawnFolder)
+	local spawn = spawnFolder:FindFirstChild("StarterSpawn")
+	if spawn and not spawn:IsA("SpawnLocation") then spawn:Destroy(); spawn = nil end
+	spawn = spawn or Instance.new("SpawnLocation")
+	spawn.Name="StarterSpawn"
+	spawn.Size=Vector3.new(8,1,8)
+	spawn.Position=Vector3.new(0,3,8)
+	spawn.Anchored=true
+	spawn.Neutral=true
+	spawn.CanCollide=true
+	spawn.CanTouch=true
+	spawn.Parent=spawnFolder
+end
 local function createPortal(island, name, fromPosition, destination, requiredLevel)
 	local existing = island:FindFirstChild(name)
 	if existing and not existing:IsA("BasePart") then existing:Destroy(); existing=nil end
