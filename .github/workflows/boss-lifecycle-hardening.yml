@@ -1,0 +1,38 @@
+name: Boss Lifecycle Hardening
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/boss-lifecycle-hardening-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate idempotent Guardian arena and stale telegraph protection
+        shell: python
+        run: |
+          from pathlib import Path
+
+          arena = Path("src/ServerScriptService/BossArena.server.lua").read_text(encoding="utf-8")
+          telegraph = Path("src/ServerScriptService/BossTelegraph.server.lua").read_text(encoding="utf-8")
+
+          for marker in ("local function ensurePart", "ensurePart(\"Floor\"", "ensurePart(\"Ring\"", "ensurePart(\"Pylon" ):
+              if marker not in arena:
+                  raise SystemExit("GuardianArena repair marker missing: " + marker)
+          if "if arena:FindFirstChild(\"Floor\") then return end" in arena:
+              raise SystemExit("GuardianArena must not treat an existing Floor as proof the complete arena is valid")
+          if 'player:GetAttribute("ProfileLoaded") == true' not in arena or "not PlayerService.Closing[player]" not in arena:
+              raise SystemExit("GuardianArena hazard must reject unloaded/closing players")
+
+          if "if not PlayerService.ShuttingDown then" not in telegraph:
+              raise SystemExit("GuardianTelegraph startup must be shutdown-gated")
+          if "local currentGuardian = NPCs:FindFirstChild(\"CrystalGuardian\")" not in telegraph:
+              raise SystemExit("GuardianTelegraph impact must re-resolve the current Guardian")
+          if "if currentGuardian ~= guardian then return end" not in telegraph:
+              raise SystemExit("GuardianTelegraph delayed impact must reject a replaced Guardian instance")
+          if "local currentGuardianRoot = guardian:FindFirstChild(\"HumanoidRootPart\")" not in telegraph:
+              raise SystemExit("GuardianTelegraph delayed impact must use the current Guardian root")
+
+          print("Guardian arena repair and telegraph Character/Guardian/shutdown lifecycle guards validated.")
