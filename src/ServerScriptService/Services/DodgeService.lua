@@ -7,6 +7,7 @@ local DodgeService = {}
 local cooldowns = setmetatable({}, { __mode = "k" })
 local playerConnections = setmetatable({}, { __mode = "k" })
 local invulnerabilityTokens = setmetatable({}, { __mode = "k" })
+local readyCharacters = setmetatable({}, { __mode = "k" })
 
 local function finiteNumber(value, fallback)
 	local number = tonumber(value)
@@ -59,6 +60,7 @@ function DodgeService.TryDodge(player, direction)
 	if not player or not player:IsA("Player") then return false, "Invalid player" end
 	if player:GetAttribute("ProfileLoaded") ~= true then return false, "Profile not ready" end
 	local character = player.Character
+	if readyCharacters[player] ~= character then return false, "Character not ready" end
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not humanoid or humanoid.Health <= 0 or not root then return false, "Not ready" end
@@ -140,6 +142,7 @@ function DodgeService.CleanupPlayer(player)
 	disconnectPlayer(player)
 	invalidateInvulnerability(player)
 	cooldowns[player] = nil
+	readyCharacters[player] = nil
 	if player.Character then clearForceField(player.Character) end
 	if player.Parent then
 		player:SetAttribute("DodgeInvulnerable", false)
@@ -147,22 +150,35 @@ function DodgeService.CleanupPlayer(player)
 	end
 end
 
-local function resetForRespawn(player)
+local function resetForRespawn(player, character)
 	invalidateInvulnerability(player)
 	cooldowns[player] = 0
+	readyCharacters[player] = nil
 	if player.Parent then
 		player:SetAttribute("DodgeInvulnerable", false)
 		player:SetAttribute("DodgeCooldownEnd", 0)
 	end
-	if player.Character then clearForceField(player.Character) end
+	if character then clearForceField(character) end
 end
 
 local function bindPlayer(player)
 	disconnectPlayer(player)
-	playerConnections[player] = player.CharacterAdded:Connect(function()
-		resetForRespawn(player)
+	playerConnections[player] = player.CharacterAdded:Connect(function(character)
+		resetForRespawn(player, character)
 	end)
-	if player.Character then resetForRespawn(player) end
+	player:GetAttributeChangedSignal("ProfileLoaded"):Connect(function()
+		if player:GetAttribute("ProfileLoaded") == true and player.Character then
+			readyCharacters[player] = player.Character
+		else
+			readyCharacters[player] = nil
+		end
+	end)
+	if player.Character then
+		resetForRespawn(player, player.Character)
+		if player:GetAttribute("ProfileLoaded") == true then
+			readyCharacters[player] = player.Character
+		end
+	end
 end
 
 Players.PlayerAdded:Connect(bindPlayer)
