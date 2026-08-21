@@ -1,0 +1,30 @@
+name: XP Readonly Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/xp-readonly-reads-current"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate XP getters do not mutate the profile
+        shell: python
+        run: |
+          from pathlib import Path
+
+          text = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
+          level_start = text.index("function XPService.GetLevel")
+          xp_start = text.index("function XPService.GetXP", level_start)
+          required_start = text.index("function XPService.GetRequiredXP", xp_start)
+          level_block = text[level_start:xp_start]
+          xp_block = text[xp_start:required_start]
+          for block_name, block in (("GetLevel", level_block), ("GetXP", xp_block)):
+              for marker in ("profile.Level =", "profile.Experience ="):
+                  if marker in block:
+                      raise SystemExit(f"XPService.{block_name} must be side-effect free; found {marker}")
+          if "return level" not in level_block or "return xp" not in xp_block:
+              raise SystemExit("XPService getters must still return normalized values")
+          print("XP read APIs return normalized values without mutating persisted profile state.")
