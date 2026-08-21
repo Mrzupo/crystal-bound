@@ -36,6 +36,8 @@ jobs:
               'refresh(player)',
               'local StatusEffectService = require(script.Parent.Services.StatusEffectService)',
               'local slow = StatusEffectService.GetSlowMultiplier(humanoid)',
+              'player:GetAttribute("ProfileLoaded") ~= true',
+              'player:GetAttributeChangedSignal("ProfileLoaded")',
           ]
           missing = [token for token in required if token not in guard]
           if missing:
@@ -53,5 +55,5 @@ jobs:
           if missing_effects:
               raise SystemExit('StatusEffectService server-owned slow state contract missing: ' + ', '.join(missing_effects))
 
-          print('Status speed guard lifecycle and server-owned slow authority validated.')
+          print('Status speed guard lifecycle, ProfileLoaded readiness and server-owned slow authority validated.')
           PY
