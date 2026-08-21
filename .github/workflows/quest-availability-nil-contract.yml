@@ -1,0 +1,24 @@
+name: Quest Availability Nil Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate unavailable-profile response semantics
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/QuestAvailability.server.lua").read_text(encoding="utf-8")
+          if "if not profile then return nil end" not in text:
+              raise SystemExit("QuestAvailability must return nil while the authoritative profile is unavailable")
+          if "if not profile then return {} end" in text:
+              raise SystemExit("QuestAvailability must not return an empty table for an unavailable profile")
+          if "nextRequest[player]" not in text or "Players.PlayerRemoving" not in text:
+              raise SystemExit("QuestAvailability rate-limit cleanup contract missing")
+          print("QuestAvailability unavailable-profile semantics and request cleanup validated.")
