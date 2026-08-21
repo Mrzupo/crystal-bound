@@ -1,0 +1,25 @@
+name: Dodge Rate Limit Contract V2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/dodge-rate-limit-before-validation-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Dodge rate limit is consumed before profile validation
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/DodgeRemote.server.lua").read_text(encoding="utf-8")
+          gate = text.index("local now = os.clock()")
+          consume = text.index("nextRequest[player] = now + REQUEST_INTERVAL", gate)
+          validate = text.index("if PlayerService.ShuttingDown or not PlayerService.GetProfile(player) then return end", consume)
+          if not consume < validate:
+              raise SystemExit("Dodge rate-limit window must be consumed before shutdown/profile validation")
+          if "Players.PlayerRemoving:Connect(function(player)" not in text:
+              raise SystemExit("Dodge rate-limit state must be cleaned on PlayerRemoving")
+          print("Dodge requests consume the per-player rate-limit window before profile/shutdown validation.")
