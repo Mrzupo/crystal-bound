@@ -2,8 +2,8 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local DodgeService = require(script.Parent.Services.DodgeService)
-local PlayerService = require(script.Parent.Services.PlayerService)
+local DodgeService = require(script.Parent.DodgeService)
+local PlayerService = require(script.Parent.PlayerService)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 
 local NPCs = Workspace:WaitForChild("NPCs")
@@ -85,33 +85,9 @@ local function createArena()
 end
 
 local function setPhaseHazard(enabled)
-	if phaseActive == enabled then return end
-	phaseActive = enabled
-	if enabled then
-		for index = 1, 4 do
-			local hazard = hazardParts[index]
-			if not hazard or not hazard.Parent then
-				hazard = Instance.new("Part")
-				hazard.Name = "PhaseHazard" .. index
-				hazard.Parent = arena
-				hazardParts[index] = hazard
-			end
-			hazard.Shape = Enum.PartType.Cylinder
-			hazard.Size = Vector3.new(0.6, 8, 8)
-			hazard.CFrame = CFrame.new(pillarPositions[index] + Vector3.new(0, -2.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
-			hazard.Anchored = true
-			hazard.CanCollide = false
-			hazard.CanTouch = false
-			hazard.CanQuery = false
-			hazard.Material = Enum.Material.Neon
-			hazard.Color = Color3.fromRGB(255, 90, 120)
-			hazard.Transparency = math.min(hazard.Transparency, 0.05)
-			if not hazard:GetAttribute("CrystalBoundHazardReady") then
-				hazard:SetAttribute("CrystalBoundHazardReady", true)
-				TweenService:Create(hazard, TweenInfo.new(0.4), { Transparency = 0.05 }):Play()
-			end
-		end
-	else
+	if not enabled then
+		if not phaseActive then return end
+		phaseActive = false
 		for index, hazard in pairs(hazardParts) do
 			if hazard.Parent then
 				TweenService:Create(hazard, TweenInfo.new(0.35), { Transparency = 1 }):Play()
@@ -121,6 +97,34 @@ local function setPhaseHazard(enabled)
 			end
 			hazardParts[index] = nil
 		end
+		return
+	end
+
+	phaseActive = true
+	for index = 1, 4 do
+		local hazard = hazardParts[index]
+		if not hazard or not hazard.Parent then
+			hazard = Instance.new("Part")
+			hazard.Name = "PhaseHazard" .. index
+			hazard.Parent = arena
+			hazardParts[index] = hazard
+	end
+	hazard.Shape = Enum.PartType.Cylinder
+	hazard.Size = Vector3.new(0.6, 8, 8)
+	hazard.CFrame = CFrame.new(pillarPositions[index] + Vector3.new(0, -2.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	hazard.Anchored = true
+	hazard.CanCollide = false
+	hazard.CanTouch = false
+	hazard.CanQuery = false
+	hazard.Material = Enum.Material.Neon
+	hazard.Color = Color3.fromRGB(255, 90, 120)
+	if not hazard:GetAttribute("CrystalBoundHazardReady") then
+		hazard.Transparency = 0.25
+		hazard:SetAttribute("CrystalBoundHazardReady", true)
+		TweenService:Create(hazard, TweenInfo.new(0.4), { Transparency = 0.05 }):Play()
+	else
+		hazard.Transparency = 0.05
+	end
 	end
 end
 
