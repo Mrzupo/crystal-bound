@@ -7,7 +7,12 @@ local PlayerService = require(script.Parent.Services.PlayerService)
 local BossConfig = require(ReplicatedStorage.Config.BossConfig)
 
 local NPCs = Workspace:WaitForChild("NPCs")
-local arena = Workspace:FindFirstChild("GuardianArena") or Instance.new("Folder")
+local arena = Workspace:FindFirstChild("GuardianArena")
+if arena and not arena:IsA("Folder") then
+	arena:Destroy()
+	arena = nil
+end
+arena = arena or Instance.new("Folder")
 arena.Name = "GuardianArena"
 arena.Parent = Workspace
 local bossConfig = BossConfig.CrystalGuardian
@@ -31,38 +36,51 @@ local function finiteNumber(value, fallback)
 	return number
 end
 
+local function ensurePart(name, shape, parent)
+	local part = parent:FindFirstChild(name)
+	if part and not part:IsA("Part") then
+		part:Destroy()
+		part = nil
+	end
+	if not part then
+		part = Instance.new("Part")
+		part.Name = name
+		part.Parent = parent
+	end
+	if shape then part.Shape = shape end
+	return part
+end
+
 local function createArena()
-	if arena:FindFirstChild("Floor") then return end
-	local floor = Instance.new("Part")
-	floor.Name = "Floor"
+	local floor = ensurePart("Floor", Enum.PartType.Block, arena)
 	floor.Size = Vector3.new(54, 1, 54)
 	floor.Position = center
 	floor.Anchored = true
+	floor.CanCollide = true
+	floor.CanTouch = true
 	floor.Material = Enum.Material.Slate
 	floor.Color = Color3.fromRGB(45, 35, 65)
-	floor.Parent = arena
 
-	local ring = Instance.new("Part")
-	ring.Name = "Ring"
-	ring.Shape = Enum.PartType.Cylinder
+	local ring = ensurePart("Ring", Enum.PartType.Cylinder, arena)
 	ring.Size = Vector3.new(1, 50, 50)
 	ring.CFrame = CFrame.new(center + Vector3.new(0, 0.7, 0)) * CFrame.Angles(0, 0, math.rad(90))
 	ring.Anchored = true
 	ring.CanCollide = false
+	ring.CanTouch = false
+	ring.CanQuery = false
 	ring.Material = Enum.Material.Neon
 	ring.Color = Color3.fromRGB(150, 90, 230)
 	ring.Transparency = 0.45
-	ring.Parent = arena
 
 	for index, position in ipairs(pillarPositions) do
-		local pillar = Instance.new("Part")
-		pillar.Name = "Pylon" .. index
+		local pillar = ensurePart("Pylon" .. index, Enum.PartType.Block, arena)
 		pillar.Size = Vector3.new(3, 8, 3)
 		pillar.Position = position
 		pillar.Anchored = true
+		pillar.CanCollide = true
+		pillar.CanTouch = true
 		pillar.Material = Enum.Material.Neon
 		pillar.Color = Color3.fromRGB(135, 95, 220)
-		pillar.Parent = arena
 	end
 end
 
@@ -71,6 +89,8 @@ local function setPhaseHazard(enabled)
 	phaseActive = enabled
 	if enabled then
 		for index = 1, 4 do
+			local old = hazardParts[index]
+			if old and old.Parent then continue end
 			local hazard = Instance.new("Part")
 			hazard.Name = "PhaseHazard" .. index
 			hazard.Shape = Enum.PartType.Cylinder
@@ -79,6 +99,7 @@ local function setPhaseHazard(enabled)
 			hazard.Anchored = true
 			hazard.CanCollide = false
 			hazard.CanTouch = false
+			hazard.CanQuery = false
 			hazard.Material = Enum.Material.Neon
 			hazard.Color = Color3.fromRGB(255, 90, 120)
 			hazard.Transparency = 0.25
@@ -104,13 +125,15 @@ local function applyHazardDamage()
 	local halfExtent = math.clamp(finiteNumber(config.HalfExtent, 23), 0, 1000)
 	local damage = math.clamp(finiteNumber(config.Damage, 0), 0, 1000)
 	for _, player in ipairs(Players:GetPlayers()) do
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if humanoid and humanoid.Health > 0 and root then
-			local offset = root.Position - center
-			if math.abs(offset.X) <= halfExtent and math.abs(offset.Z) <= halfExtent then
-				DodgeService.ApplyDamage(player, humanoid, damage, nil, "Environmental", 0)
+		if player:GetAttribute("ProfileLoaded") == true and not PlayerService.Closing[player] then
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if humanoid and humanoid.Health > 0 and root then
+				local offset = root.Position - center
+				if math.abs(offset.X) <= halfExtent and math.abs(offset.Z) <= halfExtent then
+					DodgeService.ApplyDamage(player, humanoid, damage, nil, "Environmental", 0)
+				end
 			end
 		end
 	end
