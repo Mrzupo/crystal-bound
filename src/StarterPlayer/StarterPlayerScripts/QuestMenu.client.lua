@@ -12,8 +12,10 @@ local open = false
 local data = nil
 local available = {}
 local loading = false
+local retryQueued = false
 local lastLoad = 0
 local LOAD_INTERVAL = 0.2
+local RETRY_DELAY = 0.25
 local loadData
 
 local function finiteNumber(value, fallback)
@@ -166,7 +168,15 @@ loadData = function(force)
 	local ok, response = pcall(function() return getQuestData:InvokeServer() end)
 	if ok and type(response) == "table" then data = response end
 	local okAvailable, responseAvailable = pcall(function() return getAvailableQuests:InvokeServer() end)
-	if okAvailable and type(responseAvailable) == "table" then available = responseAvailable end
+	if okAvailable and type(responseAvailable) == "table" then
+		available = responseAvailable
+	elseif open and not retryQueued then
+		retryQueued = true
+		task.delay(RETRY_DELAY, function()
+			retryQueued = false
+			if open then loadData(true) end
+		end)
+	end
 	loading = false
 	refresh()
 end
