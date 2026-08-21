@@ -14,6 +14,7 @@ local MENU_ATTRIBUTES = {
 	"OpenNPCDialog",
 }
 local playerCharacterConnections = setmetatable({}, { __mode = "k" })
+local waitingPromptConnections = setmetatable({}, { __mode = "k" })
 local NPC_IDS = {
 	CrystalKeeper = true,
 	MaterialTrader = true,
@@ -71,11 +72,36 @@ local function openDialog(player, npcId, character)
 	end)
 end
 
+local function clearWaitingPrompt(prompt)
+	local connection = waitingPromptConnections[prompt]
+	if connection then
+		if connection.Connected then connection:Disconnect() end
+		waitingPromptConnections[prompt] = nil
+	end
+end
+
 local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
-	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
-	if not isCanonicalNPC(model) then return end
+	if not model then return end
+	if not isCanonicalNPC(model) then
+		if not waitingPromptConnections[prompt] then
+			waitingPromptConnections[prompt] = model:GetAttributeChangedSignal("Interactable"):Connect(function()
+				if not prompt.Parent or not model.Parent then
+					clearWaitingPrompt(prompt)
+					return
+				end
+				if isCanonicalNPC(model) then
+					clearWaitingPrompt(prompt)
+					bindPrompt(prompt)
+				end
+			end)
+		end
+		return
+	end
+
+	clearWaitingPrompt(prompt)
+	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	prompt.Triggered:Connect(function(player)
 		if PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 		if isNearModel(player, model) then
