@@ -40,6 +40,7 @@ end
 
 remote.OnServerEvent:Connect(function(player, action, itemId, amount)
 	if action ~= "Buy" then return end
+	if player:GetAttribute("ProfileLoaded") ~= true then return end
 	local now = os.clock()
 	if now < (NEXT_REQUEST[player] or 0) then return end
 	NEXT_REQUEST[player] = now + REQUEST_INTERVAL
