@@ -257,7 +257,10 @@ local function refreshBoss()
 	if not humanoid or humanoid.Health <= 0 then bossBar.Visible = false return end
 	bossBar.Visible = true
 	local phase = boss:GetAttribute("BossPhase") or 1
-	bossBar.Name.Text = string.format("Crystal Guardian  •  Phase %d", phase)
+	local bossNameLabel = bossBar:FindFirstChild("Name")
+	if bossNameLabel and bossNameLabel:IsA("TextLabel") then
+		bossNameLabel.Text = string.format("Crystal Guardian  •  Phase %d", phase)
+	end
 	local ratio = math.clamp(humanoid.Health / math.max(1, humanoid.MaxHealth), 0, 1)
 	bossBar.HPBack.HPFill.Size = UDim2.fromScale(ratio, 1)
 	bossBar.HPBack.HPText.Text = string.format("%d / %d HP", math.max(0, math.floor(humanoid.Health)), math.floor(humanoid.MaxHealth))
