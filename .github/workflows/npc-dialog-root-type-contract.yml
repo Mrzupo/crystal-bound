@@ -1,0 +1,27 @@
+name: NPC Dialog Root Type Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/npc-dialog-root-type-guard-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate NPC dialog root type guard
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/NPCDialogRemote.server.lua").read_text(encoding="utf-8")
+          required = (
+              'local npcRoot = npc.PrimaryPart or npc:FindFirstChild("Torso")',
+              'if not root or not npcRoot or not npcRoot:IsA("BasePart") then return false end',
+              'return (root.Position - npcRoot.Position).Magnitude <= NPC_INTERACTION_RANGE',
+          )
+          missing = [marker for marker in required if marker not in source]
+          if missing:
+              raise SystemExit("NPC dialog root type guard missing: " + ", ".join(missing))
+          print("NPC dialog proximity requires a valid BasePart root before Position access.")
