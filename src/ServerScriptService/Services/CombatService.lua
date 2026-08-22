@@ -115,7 +115,7 @@ local function rewardDefeat(player, profile, targetModel, action, crystalId)
 	if targetModel:GetAttribute("BossId") ~= nil or targetModel:GetAttribute("Enemy") ~= true or targetModel:GetAttribute("DeathRewarded") == true then return end
 	local enemyType = targetModel:GetAttribute("EnemyType")
 	if type(enemyType) ~= "string" then return end
-	local enemyConfig = EnemyConfig.Types[enemyType]
+	local enemyConfig = EnemyConfig.Get(enemyType)
 	if type(enemyConfig) ~= "table" then return end
 
 	local xpGain = validNonNegativeInteger(enemyConfig.XP)
