@@ -23,7 +23,7 @@ jobs:
           for marker in ("GetOrdered", "IsValidTitle", "AchievementSystem.Get"):
               if marker not in system:
                   raise SystemExit(f"AchievementSystem missing canonical API: {marker}")
-          if "AchievementSystem = require(script.Parent.AchievementSystem)" not in player_data:
+          if "AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)" not in player_data:
               raise SystemExit("PlayerData must consume AchievementSystem")
           if "AchievementSystem = require(ReplicatedStorage.Modules.AchievementSystem)" not in menu:
               raise SystemExit("AchievementMenu must consume AchievementSystem")
