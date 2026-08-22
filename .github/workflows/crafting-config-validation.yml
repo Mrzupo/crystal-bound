@@ -32,26 +32,38 @@ jobs:
           outputs = re.findall(r"Output\s*=\s*[\"']([A-Za-z0-9_]+)[\"']", config)
           if not outputs:
               raise SystemExit("CraftingConfig must define recipe outputs")
+
+          input_sections = re.findall(r"Inputs\s*=\s*\{(.*?)\}", config, re.S)
+          if len(outputs) != len(input_sections):
+              raise SystemExit("Each crafting recipe must define exactly one Output and one Inputs block")
+
+          input_ids = []
+          for index, section in enumerate(input_sections, 1):
+              ids = re.findall(r"([A-Za-z0-9_]+)\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", section)
+              if not ids:
+                  raise SystemExit(f"Crafting recipe #{index} must contain at least one input")
+              for item_id, raw_amount in ids:
+                  value = float(raw_amount)
+                  if not value.is_integer() or value <= 0 or value > 1000000:
+                      raise SystemExit(f"Crafting recipe #{index} input {item_id} must be a positive integer <= 1000000")
+                  input_ids.append(item_id)
+                  if f"{item_id} = " not in inventory:
+                      raise SystemExit(f"Crafting input is not registered in InventoryConfig: {item_id}")
+
           for item_id in outputs:
               if f"{item_id} = " not in inventory:
                   raise SystemExit(f"Crafting output is not registered in InventoryConfig: {item_id}")
 
-          input_sections = re.findall(r"Inputs\s*=\s*\{(.*?)\}", config, re.S)
-          input_ids = []
-          for section in input_sections:
-              input_ids.extend(re.findall(r"([A-Za-z0-9_]+)\s*=\s*\d+", section))
-          if not input_ids:
-              raise SystemExit("CraftingConfig must define at least one input")
-          for item_id in input_ids:
-              if f"{item_id} = " not in inventory:
-                  raise SystemExit(f"Crafting input is not registered in InventoryConfig: {item_id}")
+          amounts = [float(value) for value in re.findall(r"\bAmount\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", config)]
+          if len(amounts) != len(outputs) or any(not value.is_integer() or value <= 0 or value > 1000 for value in amounts):
+              raise SystemExit("Every crafting recipe must define a finite positive integer Amount <= 1000")
 
-          amounts = [int(value) for value in re.findall(r"\bAmount\s*=\s*(\d+)", config)]
-          if not amounts or any(value <= 0 for value in amounts):
-              raise SystemExit("Crafting recipe output amounts must be positive")
-          input_amounts = [int(value) for value in re.findall(r"\b[A-Za-z0-9_]+\s*=\s*(\d+)", "\n".join(input_sections))]
-          if not input_amounts or any(value <= 0 for value in input_amounts):
-              raise SystemExit("Crafting recipe input amounts must be positive")
+          max_per = re.search(r"\bMaxPerCraft\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", config)
+          if not max_per:
+              raise SystemExit("CraftingConfig.MaxPerCraft must be defined")
+          max_per_value = float(max_per.group(1))
+          if not max_per_value.is_integer() or max_per_value < 1 or max_per_value > 1000:
+              raise SystemExit("CraftingConfig.MaxPerCraft must be a finite integer within 1..1000")
 
           if "positiveInteger" not in service:
               raise SystemExit("CraftingService must reject invalid craft amounts")
@@ -63,4 +75,5 @@ jobs:
               raise SystemExit("CraftingService must reject unregistered input item IDs at runtime")
           if "CraftingConfig" not in ui:
               raise SystemExit("Crafting UI must consume shared CraftingConfig")
-          print("Crafting configuration and item-registration contract validated.")
+
+          print("Crafting per-recipe structure, signed numeric bounds, item registration and runtime multiplication guards validated.")
