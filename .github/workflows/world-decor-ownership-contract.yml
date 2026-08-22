@@ -1,0 +1,24 @@
+name: World Decor Ownership Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate generated decor ownership
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path('src/ServerScriptService/WorldDecor.server.lua').read_text(encoding='utf-8')
+          if 'child:GetAttribute("CrystalBoundDecor") == true' not in source:
+              raise SystemExit('WorldDecor must restrict cleanup to CrystalBoundDecor-owned instances')
+          if 'or legacy[child.Name]' in source:
+              raise SystemExit('WorldDecor must not delete untagged legacy/future world objects by name')
+          if 'local legacy = {}' in source and 'for _, name in ipairs(legacyNames' in source:
+              raise SystemExit('WorldDecor must not treat legacyNames as ownership evidence')
+          print('WorldDecor cleanup is ownership-tag based; legacy names are not deletion authority.')
