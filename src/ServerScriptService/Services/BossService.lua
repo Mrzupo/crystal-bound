@@ -119,16 +119,35 @@ end
 
 function BossService.IsBoss(model) return model and model:GetAttribute("BossId") ~= nil end
 
+local function isReusableGuardian(existing)
+	if not existing or not existing:IsA("Model") then return false end
+	if existing:GetAttribute("Enemy") ~= true or existing:GetAttribute("BossId") ~= "CrystalGuardian" then return false end
+	local humanoid = existing:FindFirstChildOfClass("Humanoid")
+	local root = existing:FindFirstChild("HumanoidRootPart") or existing.PrimaryPart
+	local body = existing:FindFirstChild("Body")
+	local head = existing:FindFirstChild("Head")
+	local healthBar = root and root:FindFirstChild("BossHealthBar")
+	return humanoid ~= nil
+		and humanoid.Health > 0
+		and root ~= nil
+		and root:IsA("BasePart")
+		and existing.PrimaryPart == root
+		and body ~= nil
+		and body:IsA("BasePart")
+		and head ~= nil
+		and head:IsA("BasePart")
+		and healthBar ~= nil
+		and healthBar:IsA("BillboardGui")
+end
+
 function BossService.CreateGuardian(position, parent, uniqueName)
 	if not parent or not parent.Parent or typeof(position) ~= "Vector3" or PlayerService.ShuttingDown then return nil end
 	local bossName = uniqueName or "CrystalGuardian"
 	local existing = parent:FindFirstChild(bossName)
-	if existing then
-		if existing:IsA("Model") and existing:GetAttribute("BossId") == "CrystalGuardian" then
-			return existing
-		end
-		existing:Destroy()
+	if existing and isReusableGuardian(existing) then
+		return existing
 	end
+	if existing then existing:Destroy() end
 
 	local config = BossConfig.CrystalGuardian
 	local phase2 = getPhase2Config(config)
