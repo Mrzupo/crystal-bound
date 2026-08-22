@@ -22,14 +22,21 @@ jobs:
           for marker in [
               "local function safePositive",
               "return math.min(number, 1000)",
-              "if not player or not player:IsA(\"Player\") then",
-              "if not targetModel or not targetModel:IsA(\"Model\") then",
-              "DamageType = \"CrystalAbilitySplash\"",
+              'if not player or not player:IsA("Player") or type(profile) ~= "table" then',
+              'if not targetModel or not targetModel:IsA("Model") then',
+              'DamageType = "CrystalAbilitySplash"',
           ]:
               if marker not in text:
                   problems.append(f"missing ability safety guard: {marker}")
+          for marker in [
+              'if player:GetAttribute("ProfileLoaded") ~= true then return false end',
+              'if PlayerService.Profiles[player] ~= profile then return false end',
+              'if not CrystalSystem.Exists(crystalId) then return false end',
+          ]:
+              if marker not in text:
+                  problems.append(f"missing ability profile/ownership guard: {marker}")
           if problems:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Crystal ability input and runtime bounds validated.")
+          print("Crystal ability input, profile identity and runtime bounds validated.")
