@@ -76,6 +76,7 @@ local function waitForNPCReadiness(prompt, model)
 		end
 	end
 	connections[#connections + 1] = model:GetAttributeChangedSignal("Interactable"):Connect(reconsider)
+	connections[#connections + 1] = model:GetPropertyChangedSignal("Name"):Connect(reconsider)
 	connections[#connections + 1] = model.AncestryChanged:Connect(reconsider)
 	connections[#connections + 1] = prompt.AncestryChanged:Connect(reconsider)
 end
