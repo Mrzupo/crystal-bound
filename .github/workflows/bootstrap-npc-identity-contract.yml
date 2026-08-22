@@ -1,0 +1,33 @@
+name: Bootstrap NPC Identity Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical bootstrap NPC interactions
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+          start = text.index('local function isNearNPC')
+          end = text.index('remotes.CombatRequest', start)
+          block = text[start:end]
+          required = (
+              'local folder = Workspace:FindFirstChild("NPCs")',
+              'local npc = folder and folder:FindFirstChild(npcName)',
+              'npc:IsA("Model")',
+              'npc.Parent ~= folder',
+              'npc:GetAttribute("Interactable") ~= true',
+              'local npcRoot = npc.PrimaryPart or npc:FindFirstChild("Torso")',
+              'local safeRange = finiteNumber(range, NPC_INTERACTION_RANGE)',
+          )
+          missing = [marker for marker in required if marker not in block]
+          if missing:
+              raise SystemExit('Bootstrap NPC identity guard missing: ' + ', '.join(missing))
+          print('Bootstrap interactions require canonical direct-child Interactable NPC identity and bounded range.')
