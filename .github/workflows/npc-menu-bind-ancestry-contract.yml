@@ -1,0 +1,30 @@
+name: NPC Menu Prompt Ancestry Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate prompt readiness transitions
+        shell: python
+        run: |
+          from pathlib import Path
+          source = Path('src/ServerScriptService/NPCMenuBridge.server.lua').read_text(encoding='utf-8')
+          required = (
+              'local waitingPromptConnections = setmetatable({}, { __mode = "k" })',
+              'model:GetAttributeChangedSignal("Interactable"):Connect(reconsider)',
+              'model.AncestryChanged:Connect(reconsider)',
+              'prompt.AncestryChanged:Connect(reconsider)',
+              'if not isCanonicalNPC(model) then',
+              'prompt:SetAttribute("CrystalBoundMenuBound", true)',
+          )
+          for marker in required:
+              if marker not in source:
+                  raise SystemExit(f'NPCMenuBridge missing readiness marker: {marker}')
+          if source.find('prompt:SetAttribute("CrystalBoundMenuBound", true)') < source.find('if not isCanonicalNPC(model) then'):
+              raise SystemExit('NPCMenuBridge must not bind a prompt before canonical NPC validation')
+          print('NPC prompt binding waits for canonical identity, Interactable readiness and ancestry transitions.')
