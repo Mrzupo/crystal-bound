@@ -1,0 +1,25 @@
+name: Client Boss Bar Property Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/client-bossbar-name-property-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate BossBar child label access
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/StarterPlayer/StarterPlayerScripts/ClientBootstrap.client.lua").read_text(encoding="utf-8")
+          if 'local bossNameLabel = bossBar:FindFirstChild("Name")' not in source:
+              raise SystemExit("ClientBootstrap must resolve the BossBar Name TextLabel as a child instance")
+          if 'bossBar.Name.Text =' in source:
+              raise SystemExit("ClientBootstrap must not index the Frame Name property as a TextLabel")
+          if 'bossNameLabel.Text = string.format("Crystal Guardian' not in source:
+              raise SystemExit("ClientBootstrap must update the resolved BossBar name label")
+          print("BossBar child label access is property-safe and regression protected.")
