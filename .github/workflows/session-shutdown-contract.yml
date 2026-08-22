@@ -49,7 +49,7 @@ jobs:
               "RemovalResults = setmetatable({}, { __mode = \"k\" })",
               "function PlayerService.HasLoadedProfile(player)",
               "if PlayerService.Closing[player] then",
-              "while PlayerService.Closing[player] and os.clock() - started < OPERATION_TIMEOUT do",
+              "while PlayerService.Closing[player] and os.clock() - started < REMOVAL_OPERATION_TIMEOUT do",
               "return PlayerService.RemovalResults[player] == true",
               "PlayerService.RemovalResults[player] = true",
               "PlayerService.RemovalResults[player] = false",
