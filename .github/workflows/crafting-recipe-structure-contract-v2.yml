@@ -1,0 +1,28 @@
+name: Crafting Recipe Structure Contract v2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate per-recipe structure contract
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path(".github/workflows/crafting-config-validation.yml").read_text(encoding="utf-8")
+          required = [
+              "if len(outputs) != len(input_sections):",
+              "if not ids:",
+              "value <= 1000000",
+              "value > 1000",
+              "MaxPerCraft",
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit("Crafting contract missing per-recipe bound: " + ", ".join(missing))
+          print("Per-recipe crafting structure contract present.")
