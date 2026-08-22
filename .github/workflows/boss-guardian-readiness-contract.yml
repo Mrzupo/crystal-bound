@@ -1,0 +1,31 @@
+name: Boss Guardian Readiness Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate reusable Guardian structure
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('src/ServerScriptService/Services/BossService.lua').read_text(encoding='utf-8')
+          required = [
+              'local function isReusableGuardian(existing)',
+              'existing:GetAttribute("Enemy") ~= true',
+              'existing:GetAttribute("BossId") ~= "CrystalGuardian"',
+              'existing.PrimaryPart == root',
+              'local body = existing:FindFirstChild("Body")',
+              'local head = existing:FindFirstChild("Head")',
+              'local healthBar = root and root:FindFirstChild("BossHealthBar")',
+              'if existing and isReusableGuardian(existing) then',
+          ]
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit('Guardian structural readiness markers missing: ' + ', '.join(missing))
+          print('Guardian reuse requires canonical identity, live structure and BossHealthBar.')
