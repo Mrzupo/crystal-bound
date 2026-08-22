@@ -21,10 +21,8 @@ local function at(center, offset)
 end
 
 local function clearDecor(island, markerName, legacyNames)
-	local legacy = {}
-	for _, name in ipairs(legacyNames or {}) do legacy[name] = true end
 	for _, child in ipairs(island:GetChildren()) do
-		if child:GetAttribute("CrystalBoundDecor") == true or legacy[child.Name] then
+		if child:GetAttribute("CrystalBoundDecor") == true then
 			child:Destroy()
 		end
 	end
