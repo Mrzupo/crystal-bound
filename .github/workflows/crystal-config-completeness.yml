@@ -18,21 +18,35 @@ jobs:
 
           text = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
 
-          def keys(block_name):
-              match = re.search(rf'{block_name}\s*=\s*\{{(.*?)\n\t\}},', text, re.S)
+          def block(name):
+              match = re.search(rf'{re.escape(name)}\s*=\s*\{{(.*?)\n\t\}},', text, re.S)
               if not match:
-                  raise SystemExit(f"CrystalConfig missing block: {block_name}")
-              return set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*\{{', match.group(1), re.M))
+                  raise SystemExit(f"CrystalConfig missing block: {name}")
+              return match.group(1)
+
+          def table_keys(name):
+              return set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*\{', block(name), re.M))
+
+          def scalar_keys(name):
+              return set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*,?$', block(name), re.M))
+
+          definitions = table_keys("Definitions")
+          unlock_levels = scalar_keys("UnlockLevels")
+          basic_attack = table_keys("BasicAttack")
+          abilities = table_keys("Abilities")
+          passives = table_keys("Passives")
+
+          if not definitions:
+              raise SystemExit("CrystalConfig Definitions must expose at least one canonical Crystal")
 
           sources = {
-              "Definitions": keys("Definitions"),
-              "UnlockLevels": set(re.findall(r'^\s*([A-Z][A-Z0-9_]*)\s*=\s*\d+,?$', re.search(r'UnlockLevels\s*=\s*\{(.*?)\n\t\},', text, re.S).group(1), re.M)),
-              "BasicAttack": keys("BasicAttack"),
-              "Abilities": keys("Abilities"),
-              "Passives": keys("Passives"),
+              "UnlockLevels": unlock_levels,
+              "BasicAttack": basic_attack,
+              "Abilities": abilities,
+              "Passives": passives,
           }
-          expected = sources["Definitions"]
           for name, values in sources.items():
-              if values != expected:
-                  raise SystemExit(f"CrystalConfig source drift for {name}: expected {sorted(expected)}, found {sorted(values)}")
-          print("CrystalConfig canonical source completeness validated.")
+              if values != definitions:
+                  raise SystemExit(f"CrystalConfig source drift for {name}: expected {sorted(definitions)}, found {sorted(values)}")
+
+          print("CrystalConfig canonical Definitions, UnlockLevels, BasicAttack, Abilities and Passives completeness validated.")

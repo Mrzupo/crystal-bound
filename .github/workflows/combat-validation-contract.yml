@@ -25,19 +25,22 @@ jobs:
           problems = []
           if "math.clamp(number, 0, 1000)" not in hitbox:
               problems.append("Hitbox radius cap must remain 1000")
-          if "if not maxRange or maxRange <= 0 or maxRange > 1000 then return false end" not in damage:
-              problems.append("DamageService must reject non-positive or range above 1000")
+          for marker in (
+              "local maxRange = finiteNumber(request.Range)",
+              "if not maxRange or maxRange <= 0 or maxRange > 1000 then return false end",
+          ):
+              if marker not in damage:
+                  problems.append("DamageService missing authoritative range gate: " + marker)
           if "request.Amount > 0" not in validators:
               problems.append("DamageValidators must reject zero and negative damage")
-          if "local MAX_RANGE = 1000" not in validators or "request.Range > MAX_RANGE" not in validators:
-              problems.append("DamageValidators must centrally bound attacker range")
           if "DamageTypes.Environmental" not in validators:
               problems.append("DamageValidators must explicitly gate Environmental damage")
           for marker in (
               "local function boundedPositive",
-              "local safeRange = boundedPositive(config.Range, 0.1, 1000)",
+              "local isTideSelfAbility = action == \"Ability\" and crystalId == \"TIDE\"",
+              "local safeRange = not isTideSelfAbility and boundedPositive(config.Range, 0.1, 1000) or nil",
               "local safeCooldown = boundedPositive(config.Cooldown, 0.05, 60)",
-              "local safeBaseDamage = boundedPositive(config.Damage, 0.1, 1000)",
+              "local safeBaseDamage = not isTideSelfAbility and boundedPositive(config.Damage, 0.1, 1000) or nil",
               "local function validNonNegativeInteger",
               "if xpGain == nil or moneyGain == nil then return end",
               "targetModel:SetAttribute(\"DeathRewarded\", true)",
@@ -49,4 +52,4 @@ jobs:
               for problem in problems:
                   print(f" - {problem}")
               raise SystemExit(1)
-          print("Combat validation, request bounds and defeat-reward config gates validated.")
+          print("Combat validation, authoritative range bounds, TIDE-safe ability config and defeat-reward gates validated.")
