@@ -18,10 +18,10 @@ jobs:
           source = Path("src/ServerScriptService/NPCDialogRemote.server.lua").read_text(encoding="utf-8")
           required = (
               'local npcRoot = npc.PrimaryPart or npc:FindFirstChild("Torso")',
-              'if not root or not npcRoot or not npcRoot:IsA("BasePart") then return false end',
+              'if not root or not root:IsA("BasePart") or not npcRoot or not npcRoot:IsA("BasePart") then return false end',
               'return (root.Position - npcRoot.Position).Magnitude <= NPC_INTERACTION_RANGE',
           )
           missing = [marker for marker in required if marker not in source]
           if missing:
               raise SystemExit("NPC dialog root type guard missing: " + ", ".join(missing))
-          print("NPC dialog proximity requires a valid BasePart root before Position access.")
+          print("NPC dialog proximity requires valid BasePart roots before Position access.")
