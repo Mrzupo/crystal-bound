@@ -17,6 +17,7 @@ jobs:
           required = (
               'local waitingPromptConnections = setmetatable({}, { __mode = "k" })',
               'model:GetAttributeChangedSignal("Interactable"):Connect(reconsider)',
+              'model:GetPropertyChangedSignal("Name"):Connect(reconsider)',
               'model.AncestryChanged:Connect(reconsider)',
               'prompt.AncestryChanged:Connect(reconsider)',
               'if not isCanonicalNPC(model) then',
@@ -27,4 +28,4 @@ jobs:
                   raise SystemExit(f'NPCMenuBridge missing readiness marker: {marker}')
           if source.find('prompt:SetAttribute("CrystalBoundMenuBound", true)') < source.find('if not isCanonicalNPC(model) then'):
               raise SystemExit('NPCMenuBridge must not bind a prompt before canonical NPC validation')
-          print('NPC prompt binding waits for canonical identity, Interactable readiness and ancestry transitions.')
+          print('NPC prompt binding waits for canonical identity, Interactable readiness, name and ancestry transitions.')
