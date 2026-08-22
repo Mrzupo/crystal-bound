@@ -20,11 +20,16 @@ jobs:
               'if player:GetAttribute("ProfileLoaded") == true then',
               'local resolvedName = uniqueName or config.DisplayName:gsub("%s+", "")',
               'local existing = parent:FindFirstChild(uniqueName)',
-              'existing:GetAttribute("Enemy") == true',
-              'local existingHumanoid = existing:FindFirstChildOfClass("Humanoid")',
-              'if existingHumanoid and existingHumanoid.Health > 0 then return existing end',
+              'local function isReusableEnemyModel(existing, typeId)',
+              'existing:GetAttribute("Enemy") ~= true',
+              'existing:GetAttribute("EnemyType") ~= typeId',
+              'existing.PrimaryPart == root',
+              'local body = existing:FindFirstChild("Body")',
+              'local head = existing:FindFirstChild("Head")',
+              'local healthBar = root and root:FindFirstChild("EnemyHealthBar")',
+              'if existing:GetAttribute("AIStarted") ~= true then NPCService.StartEnemyAI(existing) end',
           ]
           missing = [marker for marker in required if marker not in text]
           if missing:
               raise SystemExit('NPC readiness/idempotency markers missing: ' + ', '.join(missing))
-          print('NPC loaded-player target selection and unique-name spawn idempotency validated.')
+          print('NPC loaded-player targeting, complete unique-NPC structural readiness, malformed replacement and AI rebind validated.')
