@@ -2,7 +2,6 @@ name: Movement Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
   pull_request:
 
 jobs:
@@ -14,39 +13,31 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import math
           import re
-          config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
-          for path in [
-              "src/ServerScriptService/Services/PlayerService.lua",
-              "src/ServerScriptService/Services/StatusEffectService.lua",
-              "src/ServerScriptService/StatusSpeedGuardV2.server.lua",
-          ]:
-              text = Path(path).read_text(encoding="utf-8")
-              if "MovementConfig" not in text:
-                  raise SystemExit(f"{path} must consume shared MovementConfig")
-          for marker in (
-              "BaseWalkSpeed =", "MinWalkSpeed =", "MaxWalkSpeedBonus =", "MinSlowMultiplier =", "MaxSlowMultiplier =",
-              "MaxObservedSpeed =", "ExtraDistanceTolerance =", "GraceDuration =",
-              "PositionCheckInterval =", "PortalArrivalTolerance =",
-          ):
-              if marker not in config:
-                  raise SystemExit(f"MovementConfig missing {marker}")
 
-          values = {key: float(value) for key, value in re.findall(r"(BaseWalkSpeed|MinWalkSpeed|MaxWalkSpeedBonus|MinSlowMultiplier|MaxSlowMultiplier|MaxObservedSpeed|ExtraDistanceTolerance|GraceDuration|PositionCheckInterval|PortalArrivalTolerance)\s*=\s*([0-9.]+)", config)}
-          if not 1 <= values["MinWalkSpeed"] <= values["BaseWalkSpeed"] <= 200:
-              raise SystemExit("WalkSpeed bounds are invalid")
-          if not 0 <= values["MaxWalkSpeedBonus"] <= 100:
-              raise SystemExit("MaxWalkSpeedBonus is outside the 0..100 bound")
-          if not 0 < values["MinSlowMultiplier"] <= values["MaxSlowMultiplier"] <= 10:
-              raise SystemExit("Slow multiplier bounds are invalid")
-          if not 16 <= values["MaxObservedSpeed"] <= 200:
-              raise SystemExit("MaxObservedSpeed is outside the 16..200 bound")
-          if not 2 <= values["ExtraDistanceTolerance"] <= 50:
-              raise SystemExit("ExtraDistanceTolerance is outside the 2..50 bound")
-          if not 0.1 <= values["GraceDuration"] <= 5:
-              raise SystemExit("GraceDuration is outside the 0.1..5 bound")
-          if not 0.05 <= values["PositionCheckInterval"] <= 1:
-              raise SystemExit("PositionCheckInterval is outside the 0.05..1 bound")
-          if not 4 <= values["PortalArrivalTolerance"] <= 50:
-              raise SystemExit("PortalArrivalTolerance is outside the 4..50 bound")
-          print("MovementConfig speed, slow, position, portal and WalkSpeed bonus bounds validated.")
+          config = Path('src/ReplicatedStorage/Config/MovementConfig.lua').read_text(encoding='utf-8')
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          bounds = {
+              'BaseWalkSpeed': (1, 200), 'MinWalkSpeed': (1, 200), 'MaxWalkSpeedBonus': (0, 100),
+              'MinSlowMultiplier': (0.01, 1), 'MaxSlowMultiplier': (0.01, 10),
+              'MaxObservedSpeed': (16, 200), 'ExtraDistanceTolerance': (2, 50),
+              'GraceDuration': (0.1, 5), 'PositionCheckInterval': (0.05, 1), 'PortalArrivalTolerance': (4, 50),
+          }
+          values = {}
+          for field, (minimum, maximum) in bounds.items():
+              match = re.search(rf'\b{field}\s*=\s*({numeric})', config)
+              if not match:
+                  raise SystemExit(f'MovementConfig missing {field}')
+              value = float(match.group(1))
+              if not math.isfinite(value) or value < minimum or value > maximum:
+                  raise SystemExit(f'MovementConfig {field} outside bounds: {value}')
+              values[field] = value
+          if not values['MinWalkSpeed'] <= values['BaseWalkSpeed']:
+              raise SystemExit('MinWalkSpeed must not exceed BaseWalkSpeed')
+          if not values['MinSlowMultiplier'] <= values['MaxSlowMultiplier']:
+              raise SystemExit('Slow multiplier bounds are inconsistent')
+          for path in ('src/ServerScriptService/Services/PlayerService.lua', 'src/ServerScriptService/Services/StatusEffectService.lua', 'src/ServerScriptService/StatusSpeedGuardV2.server.lua'):
+              if 'MovementConfig' not in Path(path).read_text(encoding='utf-8'):
+                  raise SystemExit(f'{path} must consume shared MovementConfig')
+          print('MovementConfig signed finite bounds and cross-service ownership validated.')

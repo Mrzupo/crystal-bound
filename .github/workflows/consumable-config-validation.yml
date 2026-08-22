@@ -2,7 +2,6 @@ name: Consumable Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
   pull_request:
 
 jobs:
@@ -13,23 +12,26 @@ jobs:
       - name: Validate shared health potion config
         shell: python
         run: |
-          import re
           from pathlib import Path
-          config = Path("src/ReplicatedStorage/Config/ConsumableConfig.lua").read_text(encoding="utf-8")
-          inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
-          remote = Path("src/ServerScriptService/UseItemRemote.server.lua").read_text(encoding="utf-8")
-          ui = Path("src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua").read_text(encoding="utf-8")
-          if "HealthPotion" not in config or not re.search(r"HealAmount\s*=\s*[1-9]\d*", config):
-              raise SystemExit("ConsumableConfig must define a positive HealthPotion HealAmount")
-          match = re.search(r"HealAmount\s*=\s*([0-9]+)", config)
-          if not match or not 0 < int(match.group(1)) <= 1000:
-              raise SystemExit("HealthPotion HealAmount must remain within 1..1000")
-          if "HealthPotion" not in inventory:
-              raise SystemExit("InventoryConfig must contain HealthPotion")
-          if "ConsumableConfig" not in remote or "ConsumableConfig" not in ui:
-              raise SystemExit("UseItemRemote and ShopMenu must consume shared ConsumableConfig")
-          if "math.clamp(healAmount, 0.1, 1000)" not in remote:
-              raise SystemExit("UseItemRemote must clamp runtime heal configuration to 0.1..1000")
-          if "+ 60" in remote or "restored 60 HP" in remote:
-              raise SystemExit("UseItemRemote must not hardcode potion healing")
-          print("Consumable config and runtime heal boundary validated.")
+          import math
+          import re
+          config = Path('src/ReplicatedStorage/Config/ConsumableConfig.lua').read_text(encoding='utf-8')
+          inventory = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
+          remote = Path('src/ServerScriptService/UseItemRemote.server.lua').read_text(encoding='utf-8')
+          ui = Path('src/StarterPlayer/StarterPlayerScripts/ShopMenu.client.lua').read_text(encoding='utf-8')
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          match = re.search(rf'\bHealAmount\s*=\s*({numeric})', config)
+          if 'HealthPotion' not in config or not match:
+              raise SystemExit('ConsumableConfig must define HealthPotion and HealAmount')
+          value = float(match.group(1))
+          if not math.isfinite(value) or value <= 0 or value > 1000:
+              raise SystemExit(f'HealthPotion HealAmount outside 0..1000: {value}')
+          if 'HealthPotion' not in inventory:
+              raise SystemExit('InventoryConfig must contain HealthPotion')
+          if 'ConsumableConfig' not in remote or 'ConsumableConfig' not in ui:
+              raise SystemExit('UseItemRemote and ShopMenu must consume shared ConsumableConfig')
+          if 'math.clamp(healAmount, 0.1, 1000)' not in remote:
+              raise SystemExit('UseItemRemote must bound runtime heal configuration')
+          if '+ 60' in remote or 'restored 60 HP' in remote:
+              raise SystemExit('UseItemRemote must not hardcode potion healing')
+          print('Consumable signed numeric bounds and runtime heal ownership validated.')
