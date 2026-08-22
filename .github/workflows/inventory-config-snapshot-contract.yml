@@ -20,6 +20,8 @@ jobs:
               raise SystemExit("InventoryConfig must define a detached item-copy helper")
           if "function InventoryConfig.GetItemConfig(id) return copyItem(Items[id]) end" not in text:
               raise SystemExit("InventoryConfig.GetItemConfig must return a detached item snapshot")
-          if "function InventoryConfig.GetMaxStackSize(id) return (Items[id] and Items[id].MaxStackSize)" not in text:
-              raise SystemExit("InventoryConfig must keep MaxStackSize reads canonical")
-          print("InventoryConfig detached item-read contract validated.")
+          if "function InventoryConfig.GetMaxStackSize(id)" not in text:
+              raise SystemExit("InventoryConfig must expose a canonical MaxStackSize getter")
+          if "InventoryConfig.DefaultMaxStackSize" not in text or "math.clamp(math.floor(raw or InventoryConfig.DefaultMaxStackSize), 1, 1000)" not in text:
+              raise SystemExit("InventoryConfig.GetMaxStackSize must normalize stack size through the canonical default and bounds")
+          print("InventoryConfig detached item reads and canonical MaxStackSize normalization validated.")
