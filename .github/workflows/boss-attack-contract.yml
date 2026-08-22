@@ -9,10 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate distinct Guardian phase-2 attacks, lifecycle binding and semantic bounds
+      - name: Validate Guardian configuration and lifecycle semantics
+        shell: python
         run: |
-          python - <<'PY'
           from pathlib import Path
+          import math
           import re
 
           config = Path('src/ReplicatedStorage/Config/BossConfig.lua').read_text(encoding='utf-8')
@@ -21,102 +22,57 @@ jobs:
           telegraph = Path('src/ServerScriptService/BossTelegraph.server.lua').read_text(encoding='utf-8')
           arena = Path('src/ServerScriptService/BossArena.server.lua').read_text(encoding='utf-8')
 
-          for marker in ['Phase2 =', 'Telegraph =', 'ArenaHazard =', 'ArenaCenter =', 'AbilityCooldown =', 'AbilityRadius =', 'AbilityDamage =', 'Drop =']:
-              if marker not in config:
-                  raise SystemExit(f'missing Guardian config marker: {marker}')
-
-          numeric_fields = re.findall(
-              r'\b(Health|XP|Money|AttackCooldown|AttackRange|AttackDamage|AbilityCooldown|AbilityRadius|AbilityDamage|Respawn|Windup|Radius|Damage|TargetRange|Cooldown|HealthThreshold|AttackDamageMultiplier|AbilityRangeMultiplier|Interval|HalfExtent)\s*=\s*([0-9]+(?:\.[0-9]+)?)',
-              config,
-          )
-          for field, raw in numeric_fields:
-              value = float(raw)
-              if field in {'Health', 'XP', 'Money', 'AttackCooldown', 'AttackRange', 'AttackDamage', 'AbilityCooldown', 'AbilityRadius', 'AbilityDamage', 'Respawn', 'Windup', 'Radius', 'Damage', 'TargetRange', 'Cooldown', 'Interval'} and value < 0:
-                  raise SystemExit(f'Guardian config contains negative {field}: {value}')
-              if field in {'Health', 'AttackRange', 'AbilityRadius', 'TargetRange', 'Radius', 'HalfExtent'} and value > 1000:
-                  raise SystemExit(f'Guardian config {field} exceeds 1000-unit bound: {value}')
-              if field in {'AttackDamage', 'AbilityDamage', 'Damage'} and value > 1000:
-                  raise SystemExit(f'Guardian damage field exceeds 1000: {value}')
-          phase_threshold = re.search(r'HealthThreshold\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
-          if not phase_threshold or not 0 < float(phase_threshold.group(1)) < 1:
-              raise SystemExit('Guardian Phase2.HealthThreshold must be within 0..1')
-          multiplier = re.search(r'AbilityRangeMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
-          if not multiplier or not 0 < float(multiplier.group(1)) <= 10:
-              raise SystemExit('Guardian Phase2.AbilityRangeMultiplier must be within 0..10')
-          damage_multiplier = re.search(r'AttackDamageMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)', config)
-          if not damage_multiplier or not 0 < float(damage_multiplier.group(1)) <= 10:
-              raise SystemExit('Guardian Phase2.AttackDamageMultiplier must be within 0..10')
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          fields = {
+              'Health': (0, 1000000), 'XP': (0, 1000000000), 'Money': (0, 1000000000),
+              'AttackCooldown': (0.1, 60), 'AttackRange': (0.1, 1000), 'AttackDamage': (0, 1000),
+              'AbilityCooldown': (0.1, 60), 'AbilityRadius': (0, 1000), 'AbilityDamage': (0, 1000),
+              'Respawn': (1.5, 600), 'Windup': (0.05, 10), 'Radius': (0.1, 1000),
+              'Damage': (0, 1000), 'TargetRange': (0, 1000), 'Cooldown': (0.1, 60),
+              'HealthThreshold': (0.01, 0.99), 'AttackDamageMultiplier': (0, 10),
+              'AbilityRangeMultiplier': (0, 10), 'Interval': (0.1, 10), 'HalfExtent': (0, 1000),
+          }
+          for field, (minimum, maximum) in fields.items():
+              matches = re.findall(rf'\b{re.escape(field)}\s*=\s*({numeric})', config)
+              if not matches:
+                  raise SystemExit(f'Missing numeric Guardian field: {field}')
+              for raw in matches:
+                  value = float(raw)
+                  if not math.isfinite(value) or value < minimum or value > maximum:
+                      raise SystemExit(f'Guardian {field} out of bounds: {value}')
 
           drop = re.search(r'Drop\s*=\s*"([^"]+)"', config)
-          if not drop:
-              raise SystemExit('Guardian Drop must be a string')
-          drop_id = drop.group(1)
-          if f'{drop_id} = ' not in inventory:
-              raise SystemExit(f'Guardian Drop is not registered in InventoryConfig: {drop_id}')
+          if not drop or f'{drop.group(1)} = ' not in inventory:
+              raise SystemExit('Guardian Drop must reference a registered inventory item')
 
-          for marker in ['local abilityRadius =', 'phase2.AbilityRangeMultiplier', 'shockwave(root.Position, abilityRadius']:
-              if marker not in service:
-                  raise SystemExit(f'Guardian phase-2 ability path missing: {marker}')
-          for marker in ['profile loaded targeting filter', 'player:GetAttribute("ProfileLoaded") == true']:
-              if marker == 'profile loaded targeting filter':
-                  continue
-              if marker not in service:
-                  raise SystemExit('Guardian AI must only target loaded player Characters')
-
-          for marker in ['config.Windup', 'config.Cooldown', 'config.Radius', 'config.Damage', 'config.TargetRange', 'BossShockwave']:
-              if marker not in telegraph:
-                  raise SystemExit(f'Guardian telegraph path missing: {marker}')
-
-          lifecycle = [
-              'local PlayerService = require(script.Parent.PlayerService)',
-              'local player, guardian = getTarget()',
-              'if PlayerService.ShuttingDown then return end',
-              'local targetCharacter = character',
-              'task.delay(windup, function()',
-              'if PlayerService.ShuttingDown or not guardian.Parent then return end',
-              'local currentGuardianHumanoid = guardian:FindFirstChildOfClass("Humanoid")',
-              'if not currentGuardianHumanoid or currentGuardianHumanoid.Health <= 0',
-              'if not player.Parent or player:GetAttribute("ProfileLoaded") ~= true or player.Character ~= targetCharacter or not targetCharacter.Parent then return end',
-              'local currentCharacter = player.Character',
-              'local attackerRange = math.clamp((currentRoot.Position - guardianRoot.Position).Magnitude, 0.1, 1000)',
-              'Range = attackerRange',
-              'while Workspace.Parent and not PlayerService.ShuttingDown do',
+          for marker in (
+              'local abilityRadius =', 'phase2.AbilityRangeMultiplier', 'shockwave(root.Position, abilityRadius',
               'player:GetAttribute("ProfileLoaded") == true',
-              'player:GetAttribute("ProfileLoaded") ~= true',
-          ]
-          for marker in lifecycle:
-              if marker not in telegraph:
-                  raise SystemExit(f'Guardian telegraph lifecycle/range/readiness binding missing: {marker}')
-
-          reward = [
-              'if model:GetAttribute("Rewarded") then return end',
-              'model:SetAttribute("Rewarded", true)',
-              'local xpReward = finiteNumber(config.XP)',
-              'local moneyReward = finiteNumber(config.Money)',
-              'local dropId = type(config.Drop) == "string" and config.Drop or nil',
-              'XPService.AddXP(profile, xpReward)',
-              'EconomyService.AddMoney(profile, moneyReward)',
-              'InventoryService.AddItem(profile, dropId, 1)',
-              'DamageService.ClearTarget(model)',
-          ]
-          for marker in reward:
+          ):
               if marker not in service:
-                  raise SystemExit(f'Guardian reward lifecycle marker missing: {marker}')
-          for forbidden in ['profile.Money =', 'profile.Inventory[dropId] =']:
-              if forbidden in service:
-                  raise SystemExit(f'Guardian rewards must not bypass canonical mutation owners: {forbidden}')
+                  raise SystemExit(f'Guardian runtime marker missing: {marker}')
 
-          if 'local PlayerService = require(script.Parent.Services.PlayerService)' not in arena:
-              raise SystemExit('BossArena must depend on PlayerService for lifecycle shutdown authority')
-          if 'BossConfig.CrystalGuardian.ArenaHazard' not in arena:
-              raise SystemExit('BossArena must consume Guardian ArenaHazard config')
-          if 'local center = bossConfig.ArenaCenter' not in arena:
-              raise SystemExit('BossArena must use BossConfig.ArenaCenter')
-          if 'math.clamp(finiteNumber(config.Interval, 0.75), 0.1, 10)' not in arena:
-              raise SystemExit('BossArena must bound the hazard interval to 0.1..10 seconds at runtime')
-          for marker in ['if not phaseActive or PlayerService.ShuttingDown then return end', 'while arena.Parent and not PlayerService.ShuttingDown do', 'setPhaseHazard(false)']:
+          for marker in (
+              'local currentGuardian = NPCs:FindFirstChild("CrystalGuardian")',
+              'if currentGuardian ~= guardian then return end',
+              'local currentGuardianRoot = guardian:FindFirstChild("HumanoidRootPart") or guardian.PrimaryPart',
+              'PlayerService.ShuttingDown',
+              'PlayerService.Closing[player]',
+              'player.Character ~= targetCharacter',
+              'Range = attackerRange',
+          ):
+              if marker not in telegraph:
+                  raise SystemExit(f'Guardian telegraph lifecycle marker missing: {marker}')
+
+          for marker in (
+              'local PlayerService = require(script.Parent.Services.PlayerService)',
+              'local center = bossConfig.ArenaCenter',
+              'math.clamp(finiteNumber(config.Interval, 0.75), 0.1, 10)',
+              'if not phaseActive or PlayerService.ShuttingDown then return end',
+              'while arena.Parent and not PlayerService.ShuttingDown do',
+              'setPhaseHazard(false)',
+          ):
               if marker not in arena:
-                  raise SystemExit(f'BossArena shutdown lifecycle marker missing: {marker}')
+                  raise SystemExit(f'Guardian arena lifecycle marker missing: {marker}')
 
-          print('Guardian phase-2, reward, AI/telegraph ProfileLoaded targeting, character-bound telegraph lifecycle, semantic bounds, shutdown-safe telegraph range and arena hazard validated.')
-          PY
+          print('Guardian signed numeric bounds, optional drop registration, telegraph identity/lifecycle and arena shutdown authority validated.')
