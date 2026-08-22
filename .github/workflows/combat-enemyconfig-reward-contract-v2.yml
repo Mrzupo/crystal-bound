@@ -1,0 +1,22 @@
+name: Combat EnemyConfig Reward Contract v2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate normalized EnemyConfig reward source
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          if "local enemyConfig = EnemyConfig.Get(enemyType)" not in text:
+              raise SystemExit("CombatService rewardDefeat must use EnemyConfig.Get(enemyType)")
+          if "EnemyConfig.Types[enemyType]" in text:
+              raise SystemExit("CombatService rewardDefeat must not bypass normalized EnemyConfig.Get")
+          print("Enemy reward accounting consumes normalized EnemyConfig.Get output.")
