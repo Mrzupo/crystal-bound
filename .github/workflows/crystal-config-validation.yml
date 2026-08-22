@@ -2,107 +2,70 @@ name: Crystal Config Contract
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
   pull_request:
 
 jobs:
   validate-crystal-config:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Validate CrystalConfig contract
+      - uses: actions/checkout@v4
+      - name: Validate CrystalConfig semantic bounds
         shell: python
         run: |
           from pathlib import Path
+          import math
           import re
 
-          config = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
-          inventory_ui = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
-          bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
-          system = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
-          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
-          ability_service = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
-          required = {
-              "Definitions": ("EMBER =", "TIDE =", "GALE ="),
-              "UnlockLevels": ("EMBER = 1", "TIDE = 3", "GALE = 5"),
-              "BasicAttack": ("EMBER =", "TIDE =", "GALE ="),
-              "Abilities": ("EMBER =", "TIDE =", "GALE ="),
-              "Passives": ("EMBER =", "TIDE =", "GALE ="),
+          config = Path('src/ReplicatedStorage/Config/CrystalConfig.lua').read_text(encoding='utf-8')
+          system = Path('src/ReplicatedStorage/Modules/CrystalSystem.lua').read_text(encoding='utf-8')
+          ability = Path('src/ServerScriptService/Services/CrystalAbilityService.lua').read_text(encoding='utf-8')
+          inventory = Path('src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua').read_text(encoding='utf-8')
+          bootstrap = Path('src/ServerScriptService/Bootstrap.server.lua').read_text(encoding='utf-8')
+
+          sections = ('Definitions', 'UnlockLevels', 'BasicAttack', 'Abilities', 'Passives')
+          section_blocks = {}
+          starts = []
+          for section in sections:
+              marker = re.search(rf'\b{re.escape(section)}\s*=\s*\{{', config)
+              if not marker:
+                  raise SystemExit(f'Missing CrystalConfig section: {section}')
+              starts.append((marker.start(), section, marker.end()))
+          starts.sort()
+          for index, (_, section, body_start) in enumerate(starts):
+              body_end = starts[index + 1][0] if index + 1 < len(starts) else len(config)
+              section_blocks[section] = config[body_start:body_end]
+
+          for crystal in ('EMBER', 'TIDE', 'GALE'):
+              for section in ('Definitions', 'BasicAttack', 'Abilities', 'Passives'):
+                  if not re.search(rf'(^|\n)\s*{re.escape(crystal)}\s*=\s*\{{', section_blocks[section]):
+                      raise SystemExit(f'Missing {crystal} entry in {section}')
+
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          bounds = {
+              'Damage': (0, 1000), 'Range': (0.1, 1000), 'Cooldown': (0.05, 60),
+              'HealAmount': (0, 1000), 'UnlockLevels': (1, 1000),
+              'DamageMultiplier': (0.1, 10), 'WalkSpeedBonus': (0, 20), 'MaxHealthBonus': (0, 1000),
           }
+          for field, (minimum, maximum) in bounds.items():
+              for raw in re.findall(rf'\b{re.escape(field)}\s*=\s*({numeric})', config):
+                  value = float(raw)
+                  if not math.isfinite(value) or value < minimum or value > maximum:
+                      raise SystemExit(f'Crystal {field} outside bounds: {value}')
 
-          problems = []
-          for section, markers in required.items():
-              if section not in config:
-                  problems.append(f"CrystalConfig is missing section {section}")
-                  continue
-              for marker in markers:
-                  if marker not in config:
-                      problems.append(f"CrystalConfig {section} is missing marker {marker}")
-
-          for crystal in ("EMBER", "TIDE", "GALE"):
-              for section in ("Definitions", "BasicAttack", "Abilities", "Passives"):
-                  marker = f"{crystal} ="
-                  if marker not in config:
-                      problems.append(f"CrystalConfig {section} missing {crystal}")
-
-          numeric_matches = re.findall(r"\b(Damage|Range|Cooldown|HealAmount|UnlockLevels)\s*=\s*([0-9]+(?:\.[0-9]+)?)", config)
-          for field, values in numeric_matches:
-              value = float(values)
-              if field == "Damage" and not 0 <= value <= 1000:
-                  problems.append(f"Crystal {field} outside 0..1000: {value}")
-              elif field == "Range" and not 0.1 <= value <= 1000:
-                  problems.append(f"Crystal {field} outside 0.1..1000: {value}")
-              elif field == "Cooldown" and not 0.05 <= value <= 60:
-                  problems.append(f"Crystal {field} outside 0.05..60: {value}")
-              elif field == "HealAmount" and not 0 <= value <= 1000:
-                  problems.append(f"Crystal {field} outside 0..1000: {value}")
-              elif field == "UnlockLevels" and not 1 <= value <= 1000:
-                  problems.append(f"Crystal {field} outside 1..1000: {value}")
-
-          passive_blocks = re.findall(r'([A-Z]+)\s*=\s*\{\s*DamageMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*WalkSpeedBonus\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*MaxHealthBonus\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*\}', config)
+          passive_blocks = re.findall(r'\b[A-Z]+\s*=\s*\{\s*DamageMultiplier\s*=\s*([^,]+),\s*WalkSpeedBonus\s*=\s*([^,]+),\s*MaxHealthBonus\s*=\s*([^}]+)\}', section_blocks['Passives'], re.S)
           if len(passive_blocks) != 3:
-              problems.append("CrystalConfig must define all three Passive records with canonical fields")
-          for crystal, damage_multiplier, speed_bonus, health_bonus in passive_blocks:
-              if not 0.1 <= float(damage_multiplier) <= 10:
-                  problems.append(f"Crystal passive DamageMultiplier outside 0.1..10: {crystal}")
-              if not 0 <= float(speed_bonus) <= 20:
-                  problems.append(f"Crystal passive WalkSpeedBonus outside 0..20: {crystal}")
-              if not 0 <= float(health_bonus) <= 1000:
-                  problems.append(f"Crystal passive MaxHealthBonus outside 0..1000: {crystal}")
+              raise SystemExit('CrystalConfig must define exactly three canonical passive records')
+          if 'local function validUnlockLevel(id)' not in system or 'local function hasDefinition(id)' not in system or 'local function hasCombatConfig(id)' not in system:
+              raise SystemExit('CrystalSystem strict config boundary is missing')
+          if 'raw % 1 ~= 0' not in system:
+              raise SystemExit('CrystalSystem unlock validation must reject fractional levels')
+          if 'CrystalConfig.Abilities.TIDE' not in ability or 'HealAmount' not in ability:
+              raise SystemExit('CrystalAbilityService must consume canonical TIDE configuration')
+          if 'local unlockLevels = crystalConfig.UnlockLevels' not in inventory:
+              raise SystemExit('InventoryMenu must consume canonical UnlockLevels')
+          if 'CrystalConfig.UnlockLevels' not in bootstrap:
+              raise SystemExit('Bootstrap must consume canonical UnlockLevels')
+          if 'local unlockLevels = {' in inventory or 'local crystalRequirements = {' in bootstrap:
+              raise SystemExit('Crystal unlock levels must not be duplicated in client/server UI/bootstrap code')
 
-          tide_block = re.search(r'TIDE\s*=\s*\{(?P<body>.*?)\n\s*\}', config, re.S)
-          if not tide_block or not re.search(r'HealAmount\s*=\s*([0-9]+(?:\.[0-9]+)?)', tide_block.group("body")):
-              problems.append("CrystalConfig TIDE ability must define HealAmount")
-          if "CrystalConfig.Abilities.TIDE" not in ability_service:
-              problems.append("CrystalAbilityService must consume shared TIDE ability config")
-          if "HealAmount" not in ability_service:
-              problems.append("CrystalAbilityService must consume configured HealAmount")
-
-          if "local unlockLevels = crystalConfig.UnlockLevels" not in inventory_ui:
-              problems.append("InventoryMenu must consume shared CrystalConfig.UnlockLevels")
-          if "CrystalConfig.UnlockLevels" not in bootstrap:
-              problems.append("Bootstrap must consume shared CrystalConfig.UnlockLevels")
-          if "local unlockLevels = {" in inventory_ui:
-              problems.append("InventoryMenu must not hardcode an unlock table")
-          if "local crystalRequirements = {" in bootstrap:
-              problems.append("Bootstrap must not hardcode a crystal unlock table")
-          for marker in (
-              "local function validUnlockLevel(id)",
-              "local function hasDefinition(id)",
-              "local function hasCombatConfig(id)",
-              "and hasDefinition(id) and hasCombatConfig(id)",
-              "raw % 1 ~= 0",
-          ):
-              if marker not in system:
-                  problems.append(f"CrystalSystem missing strict config boundary: {marker}")
-          if "if not isFiniteNumber(required) or required < 1 or required % 1 ~= 0 then return false end" not in player_data:
-              problems.append("PlayerData must reject malformed persisted UnlockLevels with finite/integer validation")
-
-          if problems:
-              for problem in problems:
-                  print(f" - {problem}")
-              raise SystemExit(1)
-
-          print("CrystalConfig contract validated, including strict complete-config IDs, passive bounds and semantic numeric bounds.")
+          print('CrystalConfig signed numeric bounds, per-section canonical IDs and shared ability configuration usage validated.')

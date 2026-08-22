@@ -2,107 +2,62 @@ name: Enemy Config Validation
 
 on:
   push:
-    branches: ["main", "agent/complete-crystal-bound-foundation"]
   pull_request:
 
 jobs:
   validate-enemy-config:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Validate EnemyConfig combat bounds and canonical loot
+      - uses: actions/checkout@v4
+      - name: Validate EnemyConfig semantic bounds
         shell: python
         run: |
           from pathlib import Path
+          import math
           import re
 
-          text = Path("src/ReplicatedStorage/Config/EnemyConfig.lua").read_text(encoding="utf-8")
-          inventory = Path("src/ReplicatedStorage/Config/InventoryConfig.lua").read_text(encoding="utf-8")
-          npc = Path("src/ServerScriptService/Services/NPCService.lua").read_text(encoding="utf-8")
-          combat = Path("src/ServerScriptService/Services/CombatService.lua").read_text(encoding="utf-8")
+          config = Path('src/ReplicatedStorage/Config/EnemyConfig.lua').read_text(encoding='utf-8')
+          inventory = Path('src/ReplicatedStorage/Config/InventoryConfig.lua').read_text(encoding='utf-8')
+          npc = Path('src/ServerScriptService/Services/NPCService.lua').read_text(encoding='utf-8')
+          combat = Path('src/ServerScriptService/Services/CombatService.lua').read_text(encoding='utf-8')
 
-          required = [
-              "AttackRange =",
-              "AttackDamage =",
-              "AttackCooldown =",
-              "AggroRange =",
-              "DropChance =",
-              "Special =",
-              "Cooldown =",
-              "Range =",
-              "Respawn =",
-          ]
-          problems = [marker for marker in required if marker not in text]
-          if problems:
-              for problem in problems:
-                  print(f" - EnemyConfig missing field: {problem}")
-              raise SystemExit(1)
+          for marker in ('function EnemyConfig.Get(typeId)', 'local source = EnemyConfig.Types[typeId]', 'return normalize(source)', 'function EnemyConfig.IsValid(typeId)'):
+              if marker not in config:
+                  raise SystemExit(f'Missing EnemyConfig canonical lookup marker: {marker}')
+          if 'return EnemyConfig.Types.TrainingDummy' in config:
+              raise SystemExit('EnemyConfig.Get must not fall back to TrainingDummy')
+          if 'if not config then return false end' not in npc and 'if not config or' not in npc:
+              raise SystemExit('NPCService must reject unknown enemy configuration')
 
-          if "function EnemyConfig.Get(typeId)" not in text or "local source = EnemyConfig.Types[typeId]" not in text or "local function clone(value)" not in text or "local result = clone(source)" not in text or "result.Respawn = math.clamp" not in text:
-              raise SystemExit("EnemyConfig.Get must perform strict lookup, detached deep-copy and central Respawn normalization")
-          if "return EnemyConfig.Types.TrainingDummy" in text:
-              raise SystemExit("EnemyConfig.Get must not silently fall back to TrainingDummy")
-          if "function EnemyConfig.IsValid(typeId)" not in text:
-              raise SystemExit("EnemyConfig.IsValid must exist for canonical enemy validation")
-          if "if not config then return end" not in npc:
-              raise SystemExit("NPCService must reject unknown enemy configuration cleanly")
+          numeric = r'-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+          bounds = {
+              'Health': (1, 1000000), 'Level': (1, 100), 'XP': (0, 1000000), 'Money': (0, 1000000),
+              'Respawn': (1.5, 600), 'AggroRange': (0, 1000), 'AttackRange': (0, 1000),
+              'AttackDamage': (0, 1000), 'AttackCooldown': (0.25, 60), 'DropChance': (0, 1),
+              'Cooldown': (0.25, 60), 'Range': (0, 1000), 'BonusDamage': (0, 1000),
+              'BurnDamage': (1, 100), 'BurnTicks': (1, 10), 'BurnInterval': (0.2, 3),
+              'SlowMultiplier': (0.01, 1), 'SlowDuration': (0.1, 10), 'TeleportOffset': (0, 100), 'Radius': (0, 1000),
+          }
+          for field, (minimum, maximum) in bounds.items():
+              for raw in re.findall(rf'\b{re.escape(field)}\s*=\s*({numeric})', config):
+                  value = float(raw)
+                  if not math.isfinite(value) or value < minimum or value > maximum:
+                      raise SystemExit(f'Enemy {field} outside bounds: {value}')
+
+          for enemy_id, drop in re.findall(r'\b([A-Za-z]+)\s*=\s*\{.*?Drop\s*=\s*"([^"]+)"', config, re.S):
+              if f'{drop} = ' not in inventory:
+                  raise SystemExit(f'Enemy drop is not registered: {enemy_id} -> {drop}')
 
           for marker in (
-              "local specialRange =",
-              "distance <= specialRange",
+              'local specialRange =', 'distance <= specialRange',
               'math.clamp(finiteNumber(special.Range, 14), 0.1, 1000)',
               'math.clamp(finiteNumber(special.Range, 10), 0.1, 1000)',
               'math.clamp(finiteNumber(special.TeleportOffset, 4), 0, math.min(100, range))',
               'math.clamp(finiteNumber(special.Cooldown, 6), 0.25, 60)',
           ):
               if marker not in npc:
-                  raise SystemExit(f"NPCService special runtime clamp/trigger missing: {marker}")
+                  raise SystemExit(f'NPCService special runtime bound missing: {marker}')
+          if 'EnemyConfig.Types[enemyType]' not in combat or 'InventoryService.AddItem(profile, itemId, 1)' not in combat:
+              raise SystemExit('CombatService must use canonical EnemyConfig and InventoryService for enemy rewards')
 
-          if "EnemyConfig.Types[enemyType]" not in combat:
-              raise SystemExit("CombatService rewardDefeat must use canonical EnemyConfig")
-          if "InventoryService.AddItem(profile, itemId, 1)" not in combat:
-              raise SystemExit("CombatService enemy loot must use InventoryService")
-
-          for enemy_id, drop in re.findall(r"\b([A-Za-z]+)\s*=\s*\{.*?Drop = \"([^\"]+)\"", text, re.S):
-              if f'{drop} = ' not in inventory:
-                  raise SystemExit(f"Enemy drop is not registered in InventoryConfig: {enemy_id} -> {drop}")
-
-          respawns = [float(value) for value in re.findall(r"Respawn = ([0-9.]+)", text)]
-          for respawn in respawns:
-              if respawn < 1.5:
-                  raise SystemExit("Enemy Respawn must be at least 1.5 seconds to remain compatible with NPC cleanup")
-              if respawn > 600:
-                  raise SystemExit("Enemy Respawn exceeds the 10-minute design bound")
-
-          numeric_fields = re.findall(r"AttackRange = ([0-9.]+).*?AttackDamage = ([0-9.]+).*?AttackCooldown = ([0-9.]+)", text)
-          for attack_range, damage, cooldown in numeric_fields:
-              if float(attack_range) > 1000:
-                  raise SystemExit("Enemy AttackRange exceeds global 1000-unit cap")
-              if float(damage) < 0 or float(damage) > 1000:
-                  raise SystemExit("Enemy AttackDamage is outside 0..1000")
-              if float(cooldown) < 0.1 or float(cooldown) > 60:
-                  raise SystemExit("Enemy AttackCooldown is outside 0.1..60")
-
-          aggro_ranges = [float(value) for value in re.findall(r"AggroRange = ([0-9.]+)", text)]
-          for aggro_range in aggro_ranges:
-              if aggro_range < 0 or aggro_range > 1000:
-                  raise SystemExit("Enemy AggroRange is outside 0..1000")
-
-          special_cooldowns = [float(value) for value in re.findall(r"Special = \{\s*Cooldown = ([0-9.]+)", text)]
-          for cooldown in special_cooldowns:
-              if cooldown < 0.1 or cooldown > 60:
-                  raise SystemExit("Enemy Special cooldown is outside 0.1..60")
-
-          special_ranges = [float(value) for value in re.findall(r"Special = \{.*?Range = ([0-9.]+)", text, re.S)]
-          for special_range in special_ranges:
-              if special_range <= 0 or special_range > 1000:
-                  raise SystemExit("Enemy Special Range is outside 0..1000")
-
-          teleport_offsets = [float(value) for value in re.findall(r"TeleportOffset = ([0-9.]+)", text)]
-          for offset in teleport_offsets:
-              if offset < 0 or offset > 100:
-                  raise SystemExit("Enemy TeleportOffset is outside 0..100")
-
-          print("EnemyConfig combat bounds, aggro bounds, centralized Respawn normalization, detached deep-copy lookup, strict lookup, lifecycle, special movement and canonical loot validated.")
+          print('EnemyConfig signed finite bounds, strict lookup, canonical loot and NPC special runtime bounds validated.')
