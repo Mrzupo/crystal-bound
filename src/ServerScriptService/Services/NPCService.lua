@@ -300,26 +300,38 @@ function NPCService.StartEnemyAI(model)
 	return true
 end
 
+local function isReusableEnemyModel(existing, typeId)
+	if not existing or not existing:IsA("Model") or existing:GetAttribute("Enemy") ~= true then return false end
+	if existing:GetAttribute("EnemyType") ~= typeId then return false end
+	local humanoid = existing:FindFirstChildOfClass("Humanoid")
+	local root = existing:FindFirstChild("HumanoidRootPart") or existing.PrimaryPart
+	local body = existing:FindFirstChild("Body")
+	local head = existing:FindFirstChild("Head")
+	local healthBar = root and root:FindFirstChild("EnemyHealthBar")
+	return humanoid ~= nil
+		and humanoid.Health > 0
+		and root ~= nil
+		and root:IsA("BasePart")
+		and existing.PrimaryPart == root
+		and body ~= nil
+		and body:IsA("BasePart")
+		and head ~= nil
+		and head:IsA("BasePart")
+		and healthBar ~= nil
+		and healthBar:IsA("BillboardGui")
+end
+
 function NPCService.CreateEnemy(typeId, position, parent, onDeath, uniqueName)
 	local config = EnemyConfig.Get(typeId)
 	if not config or typeof(position) ~= "Vector3" or not parent then return nil end
 	local resolvedName = uniqueName or config.DisplayName:gsub("%s+", "")
 	if uniqueName then
 		local existing = parent:FindFirstChild(uniqueName)
-		if existing then
-			if existing:IsA("Model") and existing:GetAttribute("Enemy") == true then
-				local existingHumanoid = existing:FindFirstChildOfClass("Humanoid")
-				if existingHumanoid and existingHumanoid.Health > 0 then
-					if existing:GetAttribute("EnemyType") ~= typeId then
-						existing:Destroy()
-					else
-						if existing:GetAttribute("AIStarted") ~= true then NPCService.StartEnemyAI(existing) end
-						return existing
-					end
-				end
-			end
-			existing:Destroy()
+		if existing and isReusableEnemyModel(existing, typeId) then
+			if existing:GetAttribute("AIStarted") ~= true then NPCService.StartEnemyAI(existing) end
+			return existing
 		end
+		if existing then existing:Destroy() end
 	end
 	local health = math.clamp(finiteNumber(config.Health, 100), 1, 1000000)
 	local xp = math.max(0, finiteNumber(config.XP, 0))
