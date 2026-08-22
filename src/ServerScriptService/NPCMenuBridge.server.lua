@@ -14,6 +14,7 @@ local MENU_ATTRIBUTES = {
 	"OpenNPCDialog",
 }
 local playerCharacterConnections = setmetatable({}, { __mode = "k" })
+local waitingPromptConnections = setmetatable({}, { __mode = "k" })
 local NPC_IDS = {
 	CrystalKeeper = true,
 	MaterialTrader = true,
@@ -49,6 +50,37 @@ local function disconnectPlayer(player)
 	playerCharacterConnections[player] = nil
 end
 
+local function clearWaitingPrompt(prompt)
+	local connections = waitingPromptConnections[prompt]
+	if connections then
+		for _, connection in ipairs(connections) do
+			if connection and connection.Connected then connection:Disconnect() end
+		end
+	end
+	waitingPromptConnections[prompt] = nil
+end
+
+local bindPrompt
+local function waitForNPCReadiness(prompt, model)
+	if waitingPromptConnections[prompt] then return end
+	local connections = {}
+	waitingPromptConnections[prompt] = connections
+	local function reconsider()
+		if not prompt.Parent or not model.Parent then
+			clearWaitingPrompt(prompt)
+			return
+		end
+		if isCanonicalNPC(model) then
+			clearWaitingPrompt(prompt)
+			bindPrompt(prompt)
+		end
+	end
+	connections[#connections + 1] = model:GetAttributeChangedSignal("Interactable"):Connect(reconsider)
+	connections[#connections + 1] = model:GetPropertyChangedSignal("Name"):Connect(reconsider)
+	connections[#connections + 1] = model.AncestryChanged:Connect(reconsider)
+	connections[#connections + 1] = prompt.AncestryChanged:Connect(reconsider)
+end
+
 local function bindPlayer(player)
 	disconnectPlayer(player)
 	clearMenus(player)
@@ -71,11 +103,16 @@ local function openDialog(player, npcId, character)
 	end)
 end
 
-local function bindPrompt(prompt)
+bindPrompt = function(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
-	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
-	if not isCanonicalNPC(model) then return end
+	if not model then return end
+	if not isCanonicalNPC(model) then
+		waitForNPCReadiness(prompt, model)
+		return
+	end
+	clearWaitingPrompt(prompt)
+	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	prompt.Triggered:Connect(function(player)
 		if PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 		if isNearModel(player, model) then
