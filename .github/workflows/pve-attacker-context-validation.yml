@@ -59,13 +59,15 @@ jobs:
               if marker not in damage:
                   problems.append(f"central DamageService target/attacker boundary missing: {marker}")
 
-          for marker in [
-              'player:SetAttribute("ProfileLoaded", false)',
-              'player:SetAttribute("ProfileLoaded", true)',
-              'if not PlayerService.ShuttingDown and not PlayerService.Closing[player] and player.Parent then',
-          ]:
-              if marker not in player_service:
-                  problems.append(f"PlayerService loaded-state lifecycle marker missing: {marker}")
+          if 'player:SetAttribute("ProfileLoaded", false)' not in player_service or 'player:SetAttribute("ProfileLoaded", true)' not in player_service:
+              problems.append("PlayerService must explicitly transition ProfileLoaded state")
+          closing_guards = (
+              'PlayerService.Closing[player]',
+              'PlayerService.ShuttingDown',
+              'player.Parent',
+          )
+          if not all(marker in player_service for marker in closing_guards):
+              problems.append("PlayerService must retain explicit shutdown/closing/parent lifecycle guards")
 
           if problems:
               for problem in problems:
