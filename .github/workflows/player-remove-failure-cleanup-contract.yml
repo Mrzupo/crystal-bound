@@ -1,0 +1,33 @@
+name: Player Removal Failure Cleanup Contract
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate local quarantine after removal failure
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path('src/ServerScriptService/PlayerLifecycle.server.lua').read_text(encoding='utf-8')
+          required = (
+              'local function cleanupFailedRemoval(player)',
+              'cleanupUnloadedPlayer(player)',
+              'PlayerService.Profiles[player] = nil',
+              'PlayerService.ProfileRevisions[player] = nil',
+              'PlayerService.RemovalResults[player] = false',
+              'PlayerService.Closing[player] = true',
+              'if not ok then',
+              'cleanupFailedRemoval(player)',
+          )
+          for marker in required:
+              if marker not in source:
+                  raise SystemExit(f'PlayerLifecycle removal-failure quarantine marker missing: {marker}')
+          if 'SafeProfileStore.Release' in source or 'PlayerService.Release' in source:
+              raise SystemExit('PlayerLifecycle must not release the persistent SessionLock when Remove fails')
+          print('Player removal failures quarantine local state without releasing the persistent SessionLock.')
