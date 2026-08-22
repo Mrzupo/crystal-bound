@@ -39,7 +39,7 @@ jobs:
               'BossesDefeated = clampInt(stats.BossesDefeated, 0, 1000000000, defaults.Stats.BossesDefeated)',
               'AncientGolemsDefeated = clampInt(stats.AncientGolemsDefeated, 0, 1000000000, defaults.Stats.AncientGolemsDefeated)',
               'CrystalBatsDefeated = clampInt(stats.CrystalBatsDefeated, 0, 1000000000, defaults.Stats.CrystalBatsDefeated)',
-              'xp = capExperienceBelowNextLevel(level, xp, maxLevel',
+              'data.CrystalMastery[crystalId] = { Level = level, XP = xp }',
               'CrystalMastery.GetRequiredXP',
               'data.Achievements = normalizeList(data.Achievements, isAchievementId)',
               'local canonicalTitles = {}',
