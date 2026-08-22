@@ -15,10 +15,21 @@ local function cleanupUnloadedPlayer(player)
 	PlayerService.HumanoidConnections[player] = nil
 end
 
+local function cleanupFailedRemoval(player)
+	cleanupUnloadedPlayer(player)
+	PlayerService.Profiles[player] = nil
+	PlayerService.ProfileRevisions[player] = nil
+	PlayerService.RemovalResults[player] = false
+	PlayerService.Closing[player] = true
+	if player.Parent then player:SetAttribute("ProfileLoaded", false) end
+end
+
 Players.PlayerRemoving:Connect(function(player)
 	local ok = PlayerService.Remove(player)
 	if not ok then
-		warn(("Crystal Bound: profile remove failed for %s."):format(player.Name))
+		warn(("Crystal Bound: profile remove failed for %s; local player state was quarantined and the session lock was retained by PlayerService."):format(player.Name))
+		cleanupFailedRemoval(player)
+		return
 	end
 	if PlayerService.Profiles[player] == nil then
 		cleanupUnloadedPlayer(player)
