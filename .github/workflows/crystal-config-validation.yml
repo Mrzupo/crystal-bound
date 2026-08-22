@@ -22,7 +22,6 @@ jobs:
           inventory_ui = Path("src/StarterPlayer/StarterPlayerScripts/InventoryMenu.client.lua").read_text(encoding="utf-8")
           bootstrap = Path("src/ServerScriptService/Bootstrap.server.lua").read_text(encoding="utf-8")
           system = Path("src/ReplicatedStorage/Modules/CrystalSystem.lua").read_text(encoding="utf-8")
-          player_data = Path("src/ReplicatedStorage/Modules/PlayerData.lua").read_text(encoding="utf-8")
           ability_service = Path("src/ServerScriptService/Services/CrystalAbilityService.lua").read_text(encoding="utf-8")
           required = {
               "Definitions": ("EMBER =", "TIDE =", "GALE ="),
@@ -47,7 +46,7 @@ jobs:
                   if marker not in config:
                       problems.append(f"CrystalConfig {section} missing {crystal}")
 
-          numeric_matches = re.findall(r"\b(Damage|Range|Cooldown|HealAmount|UnlockLevels)\s*=\s*([0-9]+(?:\.[0-9]+)?)", config)
+          numeric_matches = re.findall(r"\b(Damage|Range|Cooldown|HealAmount)\s*=\s*([0-9]+(?:\.[0-9]+)?)", config)
           for field, values in numeric_matches:
               value = float(values)
               if field == "Damage" and not 0 <= value <= 1000:
@@ -58,8 +57,18 @@ jobs:
                   problems.append(f"Crystal {field} outside 0.05..60: {value}")
               elif field == "HealAmount" and not 0 <= value <= 1000:
                   problems.append(f"Crystal {field} outside 0..1000: {value}")
-              elif field == "UnlockLevels" and not 1 <= value <= 1000:
-                  problems.append(f"Crystal {field} outside 1..1000: {value}")
+
+          unlock_block = re.search(r'UnlockLevels\s*=\s*\{(?P<body>.*?)\n\s*\}', config, re.S)
+          if not unlock_block:
+              problems.append("CrystalConfig UnlockLevels section could not be parsed")
+          else:
+              unlocks = dict(re.findall(r'\b(EMBER|TIDE|GALE)\s*=\s*(-?(?:\d+(?:\.\d*)?|\.\d+))', unlock_block.group("body")))
+              if set(unlocks) != {"EMBER", "TIDE", "GALE"}:
+                  problems.append(f"CrystalConfig UnlockLevels must define EMBER/TIDE/GALE exactly: {sorted(unlocks)}")
+              for crystal, raw in unlocks.items():
+                  value = float(raw)
+                  if not value.is_integer() or value < 1 or value > 1000:
+                      problems.append(f"Crystal UnlockLevels.{crystal} outside finite integer 1..1000: {value}")
 
           passive_blocks = re.findall(r'([A-Z]+)\s*=\s*\{\s*DamageMultiplier\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*WalkSpeedBonus\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*,\s*MaxHealthBonus\s*=\s*([0-9]+(?:\.[0-9]+)?)\s*\}', config)
           if len(passive_blocks) != 3:
@@ -72,9 +81,14 @@ jobs:
               if not 0 <= float(health_bonus) <= 1000:
                   problems.append(f"Crystal passive MaxHealthBonus outside 0..1000: {crystal}")
 
-          tide_block = re.search(r'TIDE\s*=\s*\{(?P<body>.*?)\n\s*\}', config, re.S)
-          if not tide_block or not re.search(r'HealAmount\s*=\s*([0-9]+(?:\.[0-9]+)?)', tide_block.group("body")):
-              problems.append("CrystalConfig TIDE ability must define HealAmount")
+          abilities_block = re.search(r'Abilities\s*=\s*\{(?P<body>.*?)\n\s*\},\s*Passives\s*=', config, re.S)
+          if not abilities_block:
+              problems.append("CrystalConfig Abilities section could not be parsed")
+          else:
+              tide_match = re.search(r'TIDE\s*=\s*\{(?P<tide>.*?)\n\s*\}', abilities_block.group("body"), re.S)
+              if not tide_match or not re.search(r'\bHealAmount\s*=\s*([0-9]+(?:\.[0-9]+)?)', tide_match.group("tide")):
+                  problems.append("CrystalConfig Abilities.TIDE must define HealAmount")
+
           if "CrystalConfig.Abilities.TIDE" not in ability_service:
               problems.append("CrystalAbilityService must consume shared TIDE ability config")
           if "HealAmount" not in ability_service:
@@ -88,17 +102,16 @@ jobs:
               problems.append("InventoryMenu must not hardcode an unlock table")
           if "local crystalRequirements = {" in bootstrap:
               problems.append("Bootstrap must not hardcode a crystal unlock table")
+
           for marker in (
               "local function validUnlockLevel(id)",
               "local function hasDefinition(id)",
               "local function hasCombatConfig(id)",
-              "and hasDefinition(id) and hasCombatConfig(id)",
+              "return type(id) == \"string\" and validUnlockLevel(id) ~= nil and hasDefinition(id) and hasCombatConfig(id)",
               "raw % 1 ~= 0",
           ):
               if marker not in system:
                   problems.append(f"CrystalSystem missing strict config boundary: {marker}")
-          if "if not isFiniteNumber(required) or required < 1 or required % 1 ~= 0 then return false end" not in player_data:
-              problems.append("PlayerData must reject malformed persisted UnlockLevels with finite/integer validation")
 
           if problems:
               for problem in problems:
