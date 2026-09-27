@@ -1,0 +1,26 @@
+name: Use Item Rate Limit V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/use-item-rate-limit-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate UseItem rate limit is consumed before validation
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path("src/ServerScriptService/UseItemRemote.server.lua").read_text(encoding="utf-8")
+          limit = text.index("local now = os.clock()")
+          gate = text.index("if now < (NEXT_USE[player] or 0) then return end", limit)
+          consume = text.index("NEXT_USE[player] = now + USE_INTERVAL", gate)
+          validate = text.index("local potion = ConsumableConfig.HealthPotion")
+          if not consume < validate:
+              raise SystemExit("UseItem rate-limit window must be consumed before config or payload validation")
+          if "Players.PlayerRemoving:Connect(function(player)" not in text:
+              raise SystemExit("UseItem rate-limit state must be cleaned on PlayerRemoving")
+          print("UseItem requests consume the per-player rate-limit window before validation, including malformed payloads.")

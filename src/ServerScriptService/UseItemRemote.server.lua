@@ -20,9 +20,8 @@ local NEXT_USE = setmetatable({}, { __mode = "k" })
 local USE_INTERVAL = 0.2
 
 local function finiteNumber(value, fallback)
-	local number = tonumber(value)
-	if type(number) ~= "number" or number ~= number or number == math.huge or number == -math.huge then return fallback end
-	return number
+	if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then return fallback end
+	return value
 end
 
 remote.OnServerEvent:Connect(function(player, itemId)
