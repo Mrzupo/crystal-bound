@@ -1,0 +1,61 @@
+name: Crystal Config Negative Number Contract V3
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/crystal-config-negative-number-v3"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate negative CrystalConfig coverage including nested UnlockLevels
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path("src/ReplicatedStorage/Config/CrystalConfig.lua").read_text(encoding="utf-8")
+
+          numeric_matches = re.findall(
+              r"\b(Damage|Range|Cooldown|HealAmount)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)",
+              config,
+          )
+          for field, raw in numeric_matches:
+              value = float(raw)
+              if field == "Damage" and not 0 <= value <= 1000:
+                  raise SystemExit(f"Crystal {field} outside 0..1000: {value}")
+              if field == "Range" and not 0.1 <= value <= 1000:
+                  raise SystemExit(f"Crystal {field} outside 0.1..1000: {value}")
+              if field == "Cooldown" and not 0.05 <= value <= 60:
+                  raise SystemExit(f"Crystal {field} outside 0.05..60: {value}")
+              if field == "HealAmount" and not 0 <= value <= 1000:
+                  raise SystemExit(f"Crystal {field} outside 0..1000: {value}")
+
+          unlock_block = re.search(r"UnlockLevels\s*=\s*\{(?P<body>.*?)\n\s*\}", config, re.S)
+          if not unlock_block:
+              raise SystemExit("CrystalConfig UnlockLevels table missing")
+          unlock_matches = re.findall(r"\b([A-Z]+)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)", unlock_block.group("body"))
+          if len(unlock_matches) != 3:
+              raise SystemExit(f"Expected all three UnlockLevels entries, found {len(unlock_matches)}")
+          for crystal, raw in unlock_matches:
+              value = float(raw)
+              if value < 1 or value > 1000 or value % 1 != 0:
+                  raise SystemExit(f"Crystal UnlockLevels {crystal} outside 1..1000 integer range: {value}")
+
+          passive_block = re.findall(
+              r'([A-Z]+)\s*=\s*\{\s*DamageMultiplier\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)\s*,\s*WalkSpeedBonus\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)\s*,\s*MaxHealthBonus\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)\s*\}',
+              config,
+          )
+          if len(passive_block) != 3:
+              raise SystemExit("CrystalConfig must define all three passive records")
+          for crystal, damage_multiplier, speed_bonus, health_bonus in passive_block:
+              if not 0.1 <= float(damage_multiplier) <= 10:
+                  raise SystemExit(f"Crystal passive DamageMultiplier outside 0.1..10: {crystal}")
+              if not 0 <= float(speed_bonus) <= 20:
+                  raise SystemExit(f"Crystal passive WalkSpeedBonus outside 0..20: {crystal}")
+              if not 0 <= float(health_bonus) <= 1000:
+                  raise SystemExit(f"Crystal passive MaxHealthBonus outside 0..1000: {crystal}")
+
+          print("CrystalConfig negative-number coverage validates nested UnlockLevels and all relevant numeric/passive bounds.")
