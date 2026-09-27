@@ -36,7 +36,8 @@ local function isNearTrader(player)
 	local trader = folder and folder:FindFirstChild("MaterialTrader")
 	if not folder or not trader or not trader:IsA("Model") or trader.Parent ~= folder or trader:GetAttribute("Interactable") ~= true then return false end
 	local traderRoot = trader.PrimaryPart or trader:FindFirstChild("Torso")
-	return root and traderRoot and (root.Position - traderRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
+	if not root or not root:IsA("BasePart") or not traderRoot or not traderRoot:IsA("BasePart") then return false end
+	return (root.Position - traderRoot.Position).Magnitude <= NPC_INTERACTION_RANGE
 end
 
 remote.OnServerEvent:Connect(function(player, action, itemId, amount)

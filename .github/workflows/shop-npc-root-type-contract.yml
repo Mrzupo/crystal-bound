@@ -1,0 +1,27 @@
+name: Shop NPC Root Type Contract
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/shop-npc-root-type-guard-v1"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate trader root type guard
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source = Path("src/ServerScriptService/ShopRemote.server.lua").read_text(encoding="utf-8")
+          required = (
+              'local traderRoot = trader.PrimaryPart or trader:FindFirstChild("Torso")',
+              'if not root or not root:IsA("BasePart") or not traderRoot or not traderRoot:IsA("BasePart") then return false end',
+              'return (root.Position - traderRoot.Position).Magnitude <= NPC_INTERACTION_RANGE',
+          )
+          missing = [marker for marker in required if marker not in source]
+          if missing:
+              raise SystemExit("Shop NPC root type guard missing: " + ", ".join(missing))
+          print("Shop NPC proximity requires valid BasePart roots before Position access.")
