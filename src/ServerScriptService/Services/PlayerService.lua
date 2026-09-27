@@ -59,20 +59,21 @@ end
 local function bindHumanoid(player, humanoid)
 	cleanupHumanoidConnections(player)
 	if not humanoid then return end
+	local character = humanoid.Parent
+	if not character or player.Character ~= character then return end
 	local connections = {}
 	PlayerService.HumanoidConnections[player] = connections
 	local function updateHealth()
-		if not player.Parent or not humanoid.Parent then return end
+		if not player.Parent or player.Character ~= character or humanoid.Parent ~= character then return end
 		player:SetAttribute("Health", math.max(0, humanoid.Health))
 		player:SetAttribute("MaxHealth", math.max(1, humanoid.MaxHealth))
 	end
 	table.insert(connections, humanoid.HealthChanged:Connect(updateHealth))
 	table.insert(connections, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(updateHealth))
 	table.insert(connections, humanoid.Died:Connect(function()
-		if player.Parent then
-			player:SetAttribute("Health", 0)
-			player:SetAttribute("DeathMessage", "You were defeated. Respawning...")
-		end
+		if not player.Parent or player.Character ~= character or humanoid.Parent ~= character then return end
+		player:SetAttribute("Health", 0)
+		player:SetAttribute("DeathMessage", "You were defeated. Respawning...")
 	end))
 	updateHealth()
 end
@@ -304,6 +305,7 @@ function PlayerService.Load(player)
 	cleanupHumanoidConnections(player)
 	if PlayerService.CharacterConnections[player] then PlayerService.CharacterConnections[player]:Disconnect() end
 	PlayerService.CharacterConnections[player] = player.CharacterAdded:Connect(function(character)
+		cleanupHumanoidConnections(player)
 		player:SetAttribute("ProfileLoaded", false)
 		task.defer(function()
 			bindCharacterWhenReady(player, character, 1)
