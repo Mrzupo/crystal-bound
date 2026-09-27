@@ -6,7 +6,7 @@
 
 ## Current Verified Commit
 
-`9f036b97108987076c840a82136776658fc5eca6` — verified as the branch tip during this review on 2026-09-27. Repository content was inspected from that commit through GitHub. The local workspace was not used as source of truth.
+`cbd8aa735a99a61855c3741ce9dfefb3c63b5f60` — this documentation-only commit, verified as the branch tip on 2026-09-27. Production source was audited at parent commit `9f036b97108987076c840a82136776658fc5eca6`; this commit changes no production files. Repository content was inspected through GitHub. The local workspace was not used as source of truth.
 
 ## Project Status
 
