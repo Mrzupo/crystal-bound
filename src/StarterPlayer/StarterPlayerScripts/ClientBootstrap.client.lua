@@ -32,6 +32,8 @@ local inventory = {}
 local questRefreshBusy = false
 local questRefreshQueued = false
 local questRefreshGeneration = 0
+local questRefreshQueueVersion = 0
+local queuedQuestRefreshDelay = 0
 local QUEST_REFRESH_AFTER_STATE_CHANGE = 0.85
 local lastBossRefresh = 0
 local BOSS_REFRESH_INTERVAL = 0.1
@@ -235,11 +237,18 @@ local function refreshQuests()
 end
 
 local function scheduleQuestRefresh(delay)
-	if questRefreshQueued or questRefreshBusy then return end
+	local requestedDelay = delay or 0.1
+	if questRefreshBusy then return end
+	if questRefreshQueued and requestedDelay <= queuedQuestRefreshDelay then return end
 	questRefreshQueued = true
+	queuedQuestRefreshDelay = requestedDelay
+	questRefreshQueueVersion += 1
+	local queueVersion = questRefreshQueueVersion
 	local queuedGeneration = questRefreshGeneration
-	task.delay(delay or 0.1, function()
+	task.delay(requestedDelay, function()
+		if queueVersion ~= questRefreshQueueVersion then return end
 		questRefreshQueued = false
+		queuedQuestRefreshDelay = 0
 		if player.Parent and questRefreshGeneration == queuedGeneration then refreshQuests() end
 	end)
 end
@@ -295,7 +304,9 @@ inventoryChanged.OnClientEvent:Connect(function(data) inventory = type(data) == 
 
 player.CharacterAdded:Connect(function()
 	questRefreshGeneration += 1
+	questRefreshQueueVersion += 1
 	questRefreshQueued = false
+	queuedQuestRefreshDelay = 0
 	task.defer(function()
 		if player.Parent then refreshQuests() end
 	end)
