@@ -39,9 +39,32 @@ jobs:
               if marker not in remote:
                   raise SystemExit(f"NPCDialogRemote authority marker missing: {marker}")
 
+          ids_match = re.search(r'local NPC_IDS = \{(.*?)\n\}', bridge, re.S)
+          if not ids_match:
+              raise SystemExit("NPC menu bridge is missing the NPC_IDS allowlist")
+          npc_ids = {
+              line.strip().rstrip(",")
+              for line in ids_match.group(1).splitlines()
+              if line.strip()
+          }
+          allowed_npcs = {"CrystalKeeper = true", "MaterialTrader = true"}
+          if npc_ids != allowed_npcs:
+              raise SystemExit(f"Unexpected canonical NPC allowlist: {sorted(npc_ids)}")
+
+          canonical_start = bridge.index("local function isCanonicalNPC(model)")
+          canonical_end = bridge.index("\nend", canonical_start)
+          canonical = bridge[canonical_start:canonical_end]
           for marker in (
-              'model.Name == "CrystalKeeper" or model.Name == "MaterialTrader"',
-              'isNearModel(player, model)',
+              'model:IsA("Model")',
+              "model.Parent == folder",
+              "NPC_IDS[model.Name] == true",
+              'model:GetAttribute("Interactable") == true',
+          ):
+              if marker not in canonical:
+                  raise SystemExit(f"NPC menu bridge canonical guard missing: {marker}")
+
+          for marker in (
+              "isNearModel(player, model)",
               'player:SetAttribute("OpenNPCDialog", npcId)',
           ):
               if marker not in bridge:
