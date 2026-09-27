@@ -32,6 +32,7 @@ local inventory = {}
 local questRefreshBusy = false
 local questRefreshQueued = false
 local questRefreshGeneration = 0
+local QUEST_REFRESH_AFTER_STATE_CHANGE = 0.4
 local lastBossRefresh = 0
 local BOSS_REFRESH_INTERVAL = 0.1
 local localAbilityReadyAt = 0
@@ -233,11 +234,11 @@ local function refreshQuests()
 	quest.Text = string.format("Quest: %s  •  %d/%d", name, progress, goal)
 end
 
-local function scheduleQuestRefresh()
+local function scheduleQuestRefresh(delay)
 	if questRefreshQueued or questRefreshBusy then return end
 	questRefreshQueued = true
 	local queuedGeneration = questRefreshGeneration
-	task.delay(0.1, function()
+	task.delay(delay or 0.1, function()
 		questRefreshQueued = false
 		if player.Parent and questRefreshGeneration == queuedGeneration then refreshQuests() end
 	end)
@@ -272,6 +273,10 @@ for _, attribute in ipairs({ "ProfileLoaded", "Level", "Experience", "Money", "E
 		scheduleQuestRefresh()
 	end)
 end
+
+player:GetAttributeChangedSignal("ActiveQuestCount"):Connect(function()
+	scheduleQuestRefresh(QUEST_REFRESH_AFTER_STATE_CHANGE)
+end)
 
 xpChanged.OnClientEvent:Connect(function() refreshHud(); scheduleQuestRefresh() end)
 moneyChanged.OnClientEvent:Connect(function() refreshHud(); scheduleQuestRefresh() end)
