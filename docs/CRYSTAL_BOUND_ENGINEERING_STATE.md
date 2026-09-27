@@ -75,7 +75,7 @@ GitHub Actions results queried for commit `9f036b97108987076c840a82136776658fc5e
 
 A red static contract is not automatically a production bug. Contract/script errors are distinguished above where the Action log established them; remaining failures need individual source-versus-contract review.
 
-Point-6-related current-HEAD runs: Player Health Connection Lifecycle (36325096406) failed only its old function-signature marker; Status Effect Stale Callback Contract (36325096087) failed inside its Python check with `ValueError: substring not found`; Status Speed Guard Lifecycle (36325095867) expected an inline character-check marker; Enemy Lifecycle Validation (36325096147) expected a Bootstrap duplicate guard while NPCService performs unique-name reuse; NPC Readiness and Spawn Idempotency Contract (36325096000) expected a one-line return marker. Boss Lifecycle Hardening and Status Effect Lifecycle Contract passed as listed above. No new test was run locally.
+Pre-fix audit-HEAD point-6 runs: Player Health Connection Lifecycle (36325096406) failed only its stale `bindCharacterWhenReady(player, character)` signature marker; it did not exercise the Humanoid-listener race. Status Effect Stale Callback Contract (36325096087) crashed with `ValueError: substring not found`; Status Speed Guard Lifecycle (36325095867), Enemy Lifecycle Validation (36325096147), and NPC Readiness and Spawn Idempotency Contract (36325096000) failed implementation-specific marker checks. Boss Lifecycle Hardening and Status Effect Lifecycle Contract passed, as listed above. For the PlayerService fix commits, the available GitHub Actions query (which returns PR-triggered runs) returned no runs, and combined commit statuses were empty; no current workflow result is available.
 
 ## Known Risks
 
@@ -84,7 +84,7 @@ Point-6-related current-HEAD runs: Player Health Connection Lifecycle (363250964
 3. **Reward rollback:** quest, achievement, and combat/boss reward state is not wrapped in a general rollback transaction if an unexpected error interrupts synchronous mutations. No interrupted reward was observed.
 4. **Snapshot freshness:** an already-open Achievement Menu is not refreshed by achievement-state changes.
 5. **Persistence failure at departure:** final save/release failure preserves the DataStore lock but discards the server's in-memory profile during cleanup. The player may need to rejoin after the lock timeout; runtime failure behavior has not been exercised.
-7. **Deferred NPC dialog state:** the deferred open can apply stale dialog state after the NPC or menu context changes, but subsequent server dialog options are proximity/canonical-NPC checked; no persistent or authority impact was found.
+6. **Deferred NPC dialog state:** the deferred open can apply stale dialog state after the NPC or menu context changes, but subsequent server dialog options are proximity/canonical-NPC checked; no persistent or authority impact was found.
 
 ## Runtime Validation
 
