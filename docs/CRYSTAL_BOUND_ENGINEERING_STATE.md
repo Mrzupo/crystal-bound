@@ -6,7 +6,7 @@
 
 ## Current Verified Commit
 
-`cbd8aa735a99a61855c3741ce9dfefb3c63b5f60` — this documentation-only commit, verified as the branch tip on 2026-09-27. Production source was audited at parent commit `9f036b97108987076c840a82136776658fc5eca6`; this commit changes no production files. Repository content was inspected through GitHub. The local workspace was not used as source of truth.
+`fdfef785392dc72f3f114b7fb4724e8710bb98dd` — actual branch HEAD verified at the start of the Delayed Callbacks / Lifecycle Races audit on 2026-09-27. The production source in this commit matches the source baseline from `9f036b97108987076c840a82136776658fc5eca6`; intervening commits were documentation-only. This audit inspected repository content through GitHub; the local workspace was not used as source of truth.
 
 ## Project Status
 
@@ -21,7 +21,15 @@ The Actions run set queried for this exact commit contained 158 workflow runs, o
 - **Rewards / Achievement Atomicity (static source review):** quest reward values are validated before quest completion, and BossService validates progression reward fields before setting its rewarded flag. Achievement checks mutate the achievement list before PlayerService credits its configured reward. These operations are synchronous and later persisted with the profile; there is no explicit rollback transaction if an unexpected runtime error interrupts the sequence. No such runtime error was observed. Money cap behavior can grant less than the configured amount.
 - **GetPlayerData / Client Snapshot Semantics (static source review):** Bootstrap rate-limits the RemoteFunction, requires `ProfileLoaded`, selects a fixed set of profile fields, and returns a deep copy. `AchievementMenu.client.lua` is the only client script found that calls this remote. It protects refreshes against menu/character changes, but does not subscribe to achievement changes while already open; its displayed unlocked state can remain stale until the next refresh/reopen.
 - **NPC Spawn / World Lifecycle (static source review):** Bootstrap repairs canonical islands/portals/spawn and canonical interaction NPCs. Enemy spawns use unique names, server attributes, and a death/respawn callback; NPCService reuses a live matching enemy and starts AI only once. On a unique-name collision with an invalid/unowned instance, NPCService destroys that instance. Bootstrap likewise destroys a same-name non-Model or malformed canonical NPC. These are conditional ownership risks if unrelated instances are placed in the reserved NPC folder. WorldDecor waits up to 30 seconds for each island; a missing island at timeout is skipped for that startup.
-- The requested audit sequence supplied points 1–5; point 6 was truncated in the message and is awaiting clarification.
+- **6. Delayed Callbacks / Lifecycle Races (static source review at `fdfef785392dc72f3f114b7fb4724e8710bb98dd`):** searched all 89 Lua/Luau files for task delays/spawns/defers/waits, legacy delay/spawn/wait, RunService frame events, connections, player lifecycle events, Humanoid death, and NPC respawn. No server Heartbeat/Stepped loop was found; client `ClientBootstrap` uses RenderStepped only for HUD refresh.
+  - **A — conditional Production-Bug, player presentation state:** `PlayerService.bindHumanoid` connects HealthChanged, MaxHealth-changed, and Died callbacks. Their closures check player/humanoid Parent, but do not capture/check that `player.Character == humanoid.Parent`. Old Humanoid connections are disconnected when the replacement is later bound, after CharacterAdded's deferred/retry initialization. A stale or already-queued old Humanoid callback can therefore overwrite the new character's Health/MaxHealth attributes or set DeathMessage after respawn. This changes replicated UI attributes, not the profile/rewards. Minimal patch: capture the bound character and reject each callback unless it is still `player.Character`; disconnect old Humanoid connections as soon as CharacterAdded begins to narrow the gap.
+  - **A — low-impact transient UI race:** `NPCMenuBridge.openDialog` defers setting OpenNPCDialog and checks player/profile/character identity, but not the NPC instance or a dialog generation. If the NPC/menu state changes before the defer runs, it can reopen a stale dialog attribute for the same character. `NPCDialogRemote` independently checks canonical NPC and proximity before returning options, so this does not bypass server authority or mutate rewards. Minimal hardening if desired: generation token and recheck the same canonical, nearby NPC in the deferred callback.
+  - **B — robust status/dodge callbacks:** StatusEffectService's slow timeout uses per-effect token identity; burn loops recheck token, Humanoid parent/health, profile-loaded state, and server shutdown before each bounded tick. Dodge timeouts use per-player tokens, check player lifetime, and clear the ForceField only if the same Character remains current; respawn/removal invalidate the token.
+  - **B — robust player/session callbacks:** PlayerService load work has per-UserId load tokens, exception-safe cleanup, current-load checks, Character identity checks, Closing/shutdown checks, and exact session-token release. Character sync retries are bounded and revalidate player/profile/Character after waits. Save/heartbeat/shutdown work is serialized per player and gated by shutdown/profile/session ownership. PlayerRemoving handlers clear the relevant per-player connections or cooldown/rate-limit state. The Humanoid attribute-listener exception is described above.
+  - **B — robust NPC/boss lifecycle:** enemy AI loops are tied to their model/Humanoid lifetime and stop on model removal, death, or shutdown. Enemy death cleanup affects only the captured old model; delayed respawn checks shutdown and the captured NPC folder, then NPCService's unique-name path reuses a living same-type enemy instead of duplicating it. Boss reward logic runs synchronously in Died, has a Rewarded guard and live-profile check; delayed old-model removal targets only that instance, while respawn checks shutdown, parent lifetime, and that no same-name Guardian exists. Boss Telegraph windup rechecks exact Guardian identity, phase/health, player/profile/Closing state, and exact Character identity before damage. BossArena hazard cleanup captures only the old hazard instance; reactivation creates a new slot/instance.
+  - **B — robust portal lifecycle:** WorldTheme cooldown callbacks compare per-player tokens; PlayerRemoving invalidates tokens and clears candidates. Deferred arrival work checks candidate Character, destination, expiry, ready-character identity, and current player Character. Character and ProfileLoaded connections are disconnected/reset per player.
+  - **C — harmless delayed presentation/maintenance:** client VFX/message callbacks operate on their own temporary Instances and check Parent before cleanup; camera/health listeners use Character identity/generation guards. Quest/NPC/Achievement menu retries check open/request generation and Character state before applying responses. Some stale QuestMenu retries can cause an extra fresh request, but do not apply old data. Periodic NPC, boss, movement, and session loops are bounded by object/player membership or a shutdown flag. Quest completion and reward functions are synchronous; no delayed quest/reward mutation path was found.
+  - **D — Contract/CI failures are separate:** current-HEAD Actions run `Player Health Connection Lifecycle` failed on a source signature marker expecting the older `bindCharacterWhenReady(player, character)` signature; that failure does not exercise the stale-Humanoid callback described above. `Status Effect Stale Callback Contract` crashed with `ValueError: substring not found`. `Status Speed Guard Lifecycle` and `Enemy Lifecycle Validation` failed implementation-specific marker checks despite current-Character validation and unique-name spawn idempotency in code. Treat these as contract/CI evidence, not runtime results.
 
 ## Completed Fixes
 
@@ -47,7 +55,7 @@ Successful GitHub Actions runs associated with the verified commit:
 - Economy Reward Accounting — run 36324026723.
 - Boss Death Reward Respawn Contract — run 36324026143.
 
-These are individual static GitHub Actions results, not an overall green CI result and not Roblox runtime evidence.
+Additional passing lifecycle-related runs queried at the audit-start HEAD `fdfef785392dc72f3f114b7fb4724e8710bb98dd`: Boss Lifecycle Hardening (36325095847), Status Effect Lifecycle Contract (36325095004), Player Health Sync Contract (36325094866), and Combat Profile Readiness Contract (36325094999). These are individual static GitHub Actions results, not an overall green CI result and not Roblox runtime evidence.
 
 ## Known Failed Contracts
 
@@ -66,6 +74,8 @@ GitHub Actions results queried for commit `9f036b97108987076c840a82136776658fc5e
 
 A red static contract is not automatically a production bug. Contract/script errors are distinguished above where the Action log established them; remaining failures need individual source-versus-contract review.
 
+Point-6-related current-HEAD runs: Player Health Connection Lifecycle (36325096406) failed only its old function-signature marker; Status Effect Stale Callback Contract (36325096087) failed inside its Python check with `ValueError: substring not found`; Status Speed Guard Lifecycle (36325095867) expected an inline character-check marker; Enemy Lifecycle Validation (36325096147) expected a Bootstrap duplicate guard while NPCService performs unique-name reuse; NPC Readiness and Spawn Idempotency Contract (36325096000) expected a one-line return marker. Boss Lifecycle Hardening and Status Effect Lifecycle Contract passed as listed above. No new test was run locally.
+
 ## Known Risks
 
 1. **WorldDecor ownership:** `clearDecor` deletes unmarked direct children by generic names (`Rock`, `TreeTrunk`, `AncientCrystal`, and others) and deletes the readiness marker by name. A foreign same-name object can be destroyed during regeneration.
@@ -73,6 +83,8 @@ A red static contract is not automatically a production bug. Contract/script err
 3. **Reward rollback:** quest, achievement, and combat/boss reward state is not wrapped in a general rollback transaction if an unexpected error interrupts synchronous mutations. No interrupted reward was observed.
 4. **Snapshot freshness:** an already-open Achievement Menu is not refreshed by achievement-state changes.
 5. **Persistence failure at departure:** final save/release failure preserves the DataStore lock but discards the server's in-memory profile during cleanup. The player may need to rejoin after the lock timeout; runtime failure behavior has not been exercised.
+6. **Delayed old Humanoid callbacks:** HealthChanged, MaxHealth, and Died handlers lack a current-Character identity guard and may overwrite replicated health/death UI state during respawn.
+7. **Deferred NPC dialog state:** the deferred open can apply stale dialog state after the NPC or menu context changes, but subsequent server dialog options are proximity/canonical-NPC checked; no persistent or authority impact was found.
 
 ## Runtime Validation
 
@@ -85,11 +97,13 @@ No Roblox Studio or Roblox server runtime test was performed for this audit. No 
 - Reward idempotency/partial-delivery policy and the unclassified reward-related failures.
 - Whether the Achievement Menu should refresh while open and whether any other consumer needs snapshot versioning.
 - Ownership boundaries for malformed/colliding NPCs and world initialization timing.
-- The user's audit item 6 and any subsequent items, once supplied.
+- Runtime reproduction of the stale Humanoid callback race and validation after any targeted identity-guard fix.
+- Whether to generation-guard the low-impact deferred NPC dialog open.
+- DataStore failure and multiplayer/respawn runtime scenarios remain untested.
 
 ## Next Recommended Step
 
-Review and implement a minimal WorldDecor ownership-only cleanup policy: destroy only instances carrying `CrystalBoundDecor == true`, including readiness markers. Decide separately how to handle pre-attribute legacy decor, since generic names cannot safely establish ownership. This is the highest-priority confirmed destructive collision risk. No production patch has been made.
+Make a minimal targeted patch in `PlayerService.bindHumanoid`: capture the Character associated with the bound Humanoid and make HealthChanged, MaxHealth-changed, and Died callbacks return unless that Character is still `player.Character`; disconnect old Humanoid listeners at CharacterAdded. This addresses the confirmed stale-attribute race without touching profile/reward logic. Keep the WorldDecor ownership fix as the next previously identified production task. No production patch has been made by this audit.
 
 ## Important Constraints
 
