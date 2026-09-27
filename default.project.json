@@ -31,4 +31,4 @@
     "StarterGui": {"$className": "StarterGui", "MainUI": {"$className": "ScreenGui", "ResetOnSpawn": false, "IgnoreGuiInset": true}},
     "Workspace": {"$className": "Workspace", "NPCs": {"$className": "Folder"}, "Islands": {"$className": "Folder"}, "Spawn": {"$className": "Folder"}}
   }
-}
+}}}
