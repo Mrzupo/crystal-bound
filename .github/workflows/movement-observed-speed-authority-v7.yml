@@ -1,0 +1,38 @@
+name: Movement Observed Speed Authority V7
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/movement-authority-cap-v7"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate movement cap against canonical speed and Dodge
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          config = Path("src/ReplicatedStorage/Config/MovementConfig.lua").read_text(encoding="utf-8")
+          dodge = Path("src/ReplicatedStorage/Config/DodgeConfig.lua").read_text(encoding="utf-8")
+          values = dict((key, float(value)) for key, value in re.findall(r"(BaseWalkSpeed|MaxWalkSpeedBonus|MaxObservedSpeed|ExtraDistanceTolerance)\s*=\s*([0-9.]+)", config))
+          dodge_boost = float(re.search(r"Boost\s*=\s*([0-9.]+)", dodge).group(1))
+
+          canonical_max = values["BaseWalkSpeed"] + values["MaxWalkSpeedBonus"]
+          allowed = canonical_max + values["ExtraDistanceTolerance"]
+          if values["MaxObservedSpeed"] > allowed:
+              raise SystemExit("MaxObservedSpeed exceeds canonical WalkSpeed ceiling plus tolerance")
+          if values["MaxObservedSpeed"] < dodge_boost:
+              raise SystemExit("MaxObservedSpeed is below configured Dodge Boost")
+          if values["MaxObservedSpeed"] > 48:
+              raise SystemExit("Observed movement cap exceeds the 48-unit authority boundary")
+
+          guard = Path("src/ServerScriptService/StatusSpeedGuardV2.server.lua").read_text(encoding="utf-8")
+          for marker in ("MAX_OBSERVED_SPEED", "EXTRA_DISTANCE_TOLERANCE", "displacement > allowed"):
+              if marker not in guard:
+                  raise SystemExit(f"StatusSpeedGuardV2 missing movement authority marker: {marker}")
+
+          print("Observed movement cap is bounded by canonical player speed, configured Dodge Boost, and the 48-unit authority ceiling.")
