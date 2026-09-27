@@ -1,0 +1,45 @@
+name: Progression Economy Readonly Contract V2
+
+on:
+  push:
+    branches: ["main", "agent/complete-crystal-bound-foundation", "agent/progression-economy-readonly-v2"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure progression and economy read APIs do not mutate profile state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          economy = Path("src/ServerScriptService/Services/EconomyService.lua").read_text(encoding="utf-8")
+          for name, start_marker, end_marker in (
+              ("GetMoney", "function EconomyService.GetMoney", "function EconomyService.CanAfford"),
+              ("CanAfford", "function EconomyService.CanAfford", "function EconomyService.GetSellPrice"),
+          ):
+              start = economy.index(start_marker)
+              end = economy.index(end_marker, start)
+              if "profile.Money =" in economy[start:end]:
+                  raise SystemExit(f"{name} must not mutate persistent wallet state")
+
+          xp = Path("src/ServerScriptService/Services/XPService.lua").read_text(encoding="utf-8")
+          for name, start_marker, end_marker in (
+              ("GetLevel", "function XPService.GetLevel", "function XPService.GetXP"),
+              ("GetXP", "function XPService.GetXP", "function XPService.GetRequiredXP"),
+          ):
+              start = xp.index(start_marker)
+              end = xp.index(end_marker, start)
+              if "profile.Level =" in xp[start:end] or "profile.Experience =" in xp[start:end]:
+                  raise SystemExit(f"{name} must not mutate persistent progression state")
+
+          if "function EconomyService.AddMoney" not in economy or "function EconomyService.RemoveMoney" not in economy:
+              raise SystemExit("Economy mutation owners disappeared")
+          if "function XPService.AddXP" not in xp:
+              raise SystemExit("XP mutation owner disappeared")
+          if "profile.Money = nextMoney" not in economy or "profile.Level =" not in xp or "profile.Experience =" not in xp:
+              raise SystemExit("Canonical progression/economy mutation owners are incomplete")
+
+          print("XP and Economy read accessors are side-effect free; explicit mutation owners remain intact.")
