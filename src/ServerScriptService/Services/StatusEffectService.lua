@@ -55,16 +55,25 @@ local function isPlayerDodging(humanoid)
 	return player ~= nil and DodgeService.IsInvulnerable(player)
 end
 
+local function disconnectWalkSpeedSync(state)
+	if state and state.WalkSpeedConnection then
+		if state.WalkSpeedConnection.Connected then state.WalkSpeedConnection:Disconnect() end
+		state.WalkSpeedConnection = nil
+	end
+end
+
 local function clearState(humanoid, state)
 	if not state then return end
 	state.Slow = nil
 	state.SlowMultiplier = nil
 	state.Burn = nil
+	disconnectWalkSpeedSync(state)
 	humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
 	if not isShuttingDown() and isPlayerProfileLoaded(humanoid) and humanoid.Parent and humanoid.Health > 0 and state.BaseWalkSpeed then
 		humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
 	end
 	state.BaseWalkSpeed = nil
+	state.ApplyingWalkSpeed = nil
 end
 
 function StatusEffectService.GetSlowMultiplier(humanoid)
@@ -85,16 +94,23 @@ function StatusEffectService.ApplySlow(humanoid, multiplier, duration)
 	state.Slow = token
 	state.SlowMultiplier = multiplier
 	humanoid:SetAttribute("CrystalBoundSlowMultiplier", multiplier)
+	disconnectWalkSpeedSync(state)
+	state.WalkSpeedConnection = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if state.Slow ~= token or state.ApplyingWalkSpeed or not humanoid.Parent then return end
+		if isShuttingDown() or not isPlayerProfileLoaded(humanoid) or humanoid.Health <= 0 then return end
+		local baseWalkSpeed = getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed)
+		local expectedWalkSpeed = math.max(MIN_WALK_SPEED, baseWalkSpeed * state.SlowMultiplier)
+		if math.abs(humanoid.WalkSpeed - expectedWalkSpeed) < 0.001 then return end
+		state.ApplyingWalkSpeed = true
+		humanoid.WalkSpeed = expectedWalkSpeed
+		state.ApplyingWalkSpeed = nil
+	end)
+	state.ApplyingWalkSpeed = true
 	humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, state.BaseWalkSpeed * multiplier)
+	state.ApplyingWalkSpeed = nil
 	task.delay(duration, function()
 		if humanoid.Parent and state.Slow == token then
-			humanoid:SetAttribute("CrystalBoundSlowMultiplier", nil)
-			if not isShuttingDown() and isPlayerProfileLoaded(humanoid) and humanoid.Health > 0 and state.BaseWalkSpeed then
-				humanoid.WalkSpeed = math.max(MIN_WALK_SPEED, getCurrentBaseWalkSpeed(humanoid, state.BaseWalkSpeed))
-			end
-			state.Slow = nil
-			state.SlowMultiplier = nil
-			state.BaseWalkSpeed = nil
+			clearState(humanoid, state)
 		end
 	end)
 	return true
