@@ -73,15 +73,18 @@ end
 
 local function bindPrompt(prompt)
 	if not prompt:IsA("ProximityPrompt") or prompt:GetAttribute("CrystalBoundMenuBound") then return end
-	prompt:SetAttribute("CrystalBoundMenuBound", true)
 	local model = prompt:FindFirstAncestorOfClass("Model")
-	if not isCanonicalNPC(model) then return end
-	prompt.Triggered:Connect(function(player)
+	local folder = Workspace:FindFirstChild("NPCs")
+	if not folder or not model or not model:IsA("Model") or model.Parent ~= folder or NPC_IDS[model.Name] ~= true then return end
+	local connection = prompt.Triggered:Connect(function(player)
 		if PlayerService.ShuttingDown or player:GetAttribute("ProfileLoaded") ~= true then return end
 		if isNearModel(player, model) then
 			openDialog(player, model.Name, player.Character)
 		end
 	end)
+	if connection then
+		prompt:SetAttribute("CrystalBoundMenuBound", true)
+	end
 end
 
 local folder = Workspace:WaitForChild("NPCs")
